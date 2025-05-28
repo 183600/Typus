@@ -1,0 +1,11 @@
+pub mod compiler;
+pub mod source_manager;
+pub mod lexer;
+pub mod parser;
+pub mod ast;
+pub mod symbol_table;
+pub mod type_checker;
+pub mod ownership_checker;
+pub mod ir_generator;
+pub mod code_generator;
+pub mod error;
