@@ -1,0 +1,4 @@
+=== Complex Go Features Test ===
+Sent to channel
+Map assertion successful: map[a:1 b:2]
+=== Complex Test Completed ===

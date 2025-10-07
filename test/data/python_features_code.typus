@@ -1,0 +1,30 @@
+package main
+
+func main() {
+    // f-string
+    name := "world"
+    greeting := f"Hello, {name}!"
+    
+    // Multi-variable assignment
+    a, b := 1, 2
+    
+    // List comprehension
+    squares := [x*x for x in range(10)]
+    
+    // Dictionary comprehension
+    dict := {x: x*x for x in range(5)}
+    
+    // Set comprehension
+    unique := {x%2 for x in range(10)}
+    
+    // Generator expression
+    gen := (x*x for x in range(10))
+    
+    // With statement
+    with file as f:
+        content := f.read()
+    
+    // Async function
+    async def myFunc():
+        return await result
+}

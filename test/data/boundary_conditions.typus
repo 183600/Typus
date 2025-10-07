@@ -1,0 +1,116 @@
+package main
+
+// 边界条件测试文件
+import "fmt"
+import "math"
+
+func main() {
+    // 整数边界测试
+    maxInt64 := int64(9223372036854775807)
+    minInt64 := int64(-9223372036854775808)
+    maxUint64 := uint64(18446744073709551615)
+    
+    println("Max int64:", maxInt64)
+    println("Min int64:", minInt64)
+    println("Max uint64:", maxUint64)
+    
+    // 浮点数边界测试
+    maxFloat64 := math.MaxFloat64
+    minFloat64 := math.SmallestNonzeroFloat64
+    inf := math.Inf(1)
+    negInf := math.Inf(-1)
+    nan := math.NaN()
+    
+    println("Max float64:", maxFloat64)
+    println("Min float64:", minFloat64)
+    println("Positive infinity:", inf)
+    println("Negative infinity:", negInf)
+    println("NaN:", nan)
+    
+    // 字符串边界测试
+    emptyString := ""
+    singleChar := "a"
+    unicodeString := "Hello, 世界! 🌍"
+    veryLongString := ""
+    
+    // 创建一个很长的字符串
+    for i := 0; i < 1000; i++ {
+        veryLongString += "x"
+    }
+    
+    println("Empty string length:", len(emptyString))
+    println("Single char:", singleChar)
+    println("Unicode string:", unicodeString)
+    println("Very long string length:", len(veryLongString))
+    
+    // 数组边界测试
+    emptyArray := []int{}
+    singleElement := []int{42}
+    largeArray := make([]int, 1000000)
+    
+    println("Empty array length:", len(emptyArray))
+    println("Single element:", singleElement[0])
+    println("Large array length:", len(largeArray))
+    
+    // Map边界测试
+    emptyMap := make(map[string]int)
+    singleMap := map[string]int{"key": 1}
+    largeMap := make(map[string]int)
+    
+    for i := 0; i < 10000; i++ {
+        largeMap[fmt.Sprintf("key%d", i)] = i
+    }
+    
+    println("Empty map length:", len(emptyMap))
+    println("Single map value:", singleMap["key"])
+    println("Large map length:", len(largeMap))
+    
+    // 递归深度测试
+    deepRecursion(1000)
+    
+    // 循环边界测试
+    zeroIterations := 0
+    for i := 0; i < zeroIterations; i++ {
+        println("This should not print")
+    }
+    
+    oneIteration := 1
+    for i := 0; i < oneIteration; i++ {
+        println("Single iteration:", i)
+    }
+    
+    // 通道边界测试
+    unbufferedChan := make(chan int)
+    bufferedChan := make(chan int, 1000)
+    
+    go func() {
+        unbufferedChan <- 42
+    }()
+    
+    bufferedChan <- 1
+    bufferedChan <- 2
+    
+    println("Unbuffered channel:", <-unbufferedChan)
+    println("Buffered channel values:", <-bufferedChan, <-bufferedChan)
+    
+    // 指针边界测试
+    nilPointer := (*int)(nil)
+    validPointer := new(int)
+    *validPointer = 100
+    
+    if nilPointer == nil {
+        println("Nil pointer detected")
+    }
+    println("Valid pointer value:", *validPointer)
+}
+
+func deepRecursion(depth int) {
+    if depth <= 0 {
+        println("Reached recursion depth limit")
+        return
+    }
+    if depth%100 == 0 {
+        println("Recursion depth:", depth)
+    }
+    deepRecursion(depth - 1)
+}

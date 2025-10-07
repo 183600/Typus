@@ -1,0 +1,221 @@
+package main
+
+// 错误场景测试文件 - 测试编译器的错误处理能力
+
+import "fmt"
+import "os"
+
+func main() {
+    // 测试1: 未定义变量使用
+    // undefinedVar := 42  // 这行被注释掉
+    // println(undefinedVar)  // 应该编译错误
+    
+    // 测试2: 类型不匹配
+    var x int = 10
+    // var y string = x  // 应该编译错误 - 类型不匹配
+    
+    // 测试3: 函数参数数量错误
+    // result := add(5)  // 应该编译错误 - 参数数量不足
+    // result2 := add(5, 10, 15)  // 应该编译错误 - 参数数量过多
+    
+    // 测试4: 数组越界访问（运行时错误）
+    arr := []int{1, 2, 3}
+    // println(arr[10])  // 应该运行时错误
+    
+    // 测试5: 空指针解引用
+    var nilPtr *int
+    // println(*nilPtr)  // 应该运行时错误
+    
+    // 测试6: 除以零
+    // zero := 0
+    // result := 10 / zero  // 应该运行时错误
+    
+    // 测试7: 无限递归
+    // infiniteRecursion()  // 应该栈溢出
+    
+    // 测试8: 资源泄漏测试
+    resourceLeakTest()
+    
+    // 测试9: 死锁测试
+    // deadlockTest()  // 应该死锁
+    
+    // 测试10: 竞态条件测试
+    raceConditionTest()
+    
+    // 测试11: 内存分配失败测试
+    hugeMemoryAllocation()
+    
+    // 测试12: 文件操作错误
+    fileOperationErrors()
+    
+    // 测试13: 网络操作错误
+    networkOperationErrors()
+    
+    // 测试14: JSON解析错误
+    jsonParsingErrors()
+    
+    // 测试15: 类型断言错误
+    typeAssertionErrors()
+    
+    println("Error scenario tests completed")
+}
+
+func add(a, b int) int {
+    return a + b
+}
+
+func infiniteRecursion() {
+    infiniteRecursion() // 无限递归
+}
+
+func resourceLeakTest() {
+    // 模拟资源泄漏
+    for i := 0; i < 1000; i++ {
+        file, err := os.Create(fmt.Sprintf("/tmp/tempfile_%d.txt", i))
+        if err == nil {
+            file.WriteString("test data")
+            // 故意不关闭文件 - 模拟资源泄漏
+        }
+    }
+    
+    // 清理（在实际测试中应该执行）
+    for i := 0; i < 1000; i++ {
+        os.Remove(fmt.Sprintf("/tmp/tempfile_%d.txt", i))
+    }
+}
+
+func deadlockTest() {
+    ch1 := make(chan int)
+    ch2 := make(chan int)
+    
+    go func() {
+        <-ch1
+        ch2 <- 1
+    }()
+    
+    go func() {
+        <-ch2
+        ch1 <- 2
+    }()
+    
+    // 死锁：两个goroutine都在等待对方
+    select {}
+}
+
+func raceConditionTest() {
+    var counter int
+    var wg sync.WaitGroup
+    
+    for i := 0; i < 100; i++ {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            // 竞态条件：多个goroutine同时访问共享变量
+            temp := counter
+            temp++
+            counter = temp
+        }()
+    }
+    
+    wg.Wait()
+    println("Race condition result:", counter) // 结果不确定
+}
+
+func hugeMemoryAllocation() {
+    defer func() {
+        if r := recover(); r != nil {
+            println("Memory allocation failed:", r)
+        }
+    }()
+    
+    // 尝试分配大量内存
+    size := 1000000000 // 1GB
+    data := make([]byte, size)
+    
+    // 使用内存防止被优化掉
+    for i := 0; i < len(data); i += 1000000 {
+        data[i] = byte(i % 256)
+    }
+    
+    println("Huge allocation successful, size:", len(data))
+}
+
+func fileOperationErrors() {
+    // 测试不存在的文件
+    _, err := os.Open("/nonexistent/file.txt")
+    if err != nil {
+        println("Expected file error:", err)
+    }
+    
+    // 测试无权限文件
+    _, err = os.Open("/root/secret.txt")
+    if err != nil {
+        println("Expected permission error:", err)
+    }
+    
+    // 测试无效路径
+    _, err = os.Open("")
+    if err != nil {
+        println("Expected invalid path error:", err)
+    }
+}
+
+func networkOperationErrors() {
+    // 测试无效地址
+    conn, err := net.Dial("tcp", "invalid.address:99999")
+    if err != nil {
+        println("Expected network error:", err)
+    }
+    if conn != nil {
+        conn.Close()
+    }
+    
+    // 测试超时
+    conn, err = net.DialTimeout("tcp", "10.255.255.1:80", 1*time.Second)
+    if err != nil {
+        println("Expected timeout error:", err)
+    }
+    if conn != nil {
+        conn.Close()
+    }
+}
+
+func jsonParsingErrors() {
+    invalidJSON := "{invalid json}"
+    var data map[string]interface{}
+    err := json.Unmarshal([]byte(invalidJSON), &data)
+    if err != nil {
+        println("Expected JSON parse error:", err)
+    }
+    
+    // 测试类型不匹配
+    validJSON := `{"name": "test", "age": 25}`
+    var number int
+    err = json.Unmarshal([]byte(validJSON), &number)
+    if err != nil {
+        println("Expected JSON type error:", err)
+    }
+}
+
+func typeAssertionErrors() {
+    var i interface{} = "hello"
+    
+    // 错误的类型断言
+    num, ok := i.(int)
+    if !ok {
+        println("Expected type assertion failure")
+    } else {
+        println("Unexpected success:", num)
+    }
+    
+    // 恐慌的类型断言
+    defer func() {
+        if r := recover(); r != nil {
+            println("Recovered from panic:", r)
+        }
+    }()
+    
+    // 这会导致恐慌
+    str := i.(int) // 错误的类型断言
+    println("This should not print:", str)
+}

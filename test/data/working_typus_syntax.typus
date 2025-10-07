@@ -1,0 +1,419 @@
+//! ownership: on
+//! dependent_types: on
+//! constraints: on
+
+package main
+
+import (
+	"fmt"
+	"sync"
+	"unsafe"
+)
+
+// Test basic ownership types
+type Owned<T> struct {
+	value *T
+	owner_id int
+	moved bool
+}
+
+type Shared<T> struct {
+	value *T
+	ref_count *int
+	mutex *sync.RWMutex
+}
+
+type Unique<T> struct {
+	value *T
+	moved bool
+}
+
+// Test ownership operations
+func (o *Owned<T>) Move() Owned<T> {
+	if o.moved {
+		panic("Cannot move from already moved owned reference")
+	}
+	o.moved = true
+	return Owned<T>{
+		value: o.value,
+		owner_id: o.owner_id,
+		moved: false,
+	}
+}
+
+func (s *Shared<T>) Clone() Shared<T> {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	*s.ref_count++
+	return Shared<T>{
+		value: s.value,
+		ref_count: s.ref_count,
+		mutex: s.mutex,
+	}
+}
+
+func (u *Unique<T>) Move() Unique<T> {
+	if u.moved {
+		panic("Cannot move from already moved unique reference")
+	}
+	u.moved = true
+	return Unique<T>{
+		value: u.value,
+		moved: false,
+	}
+}
+
+// Test dependent types with runtime validation
+type PositiveInt struct {
+	value int
+}
+
+type NonEmptySlice struct {
+	data []int
+}
+
+type SafeString struct {
+	value string
+}
+
+func NewPositiveInt(value int) PositiveInt {
+	if value <= 0 {
+		panic("PositiveInt must be positive")
+	}
+	return PositiveInt{value: value}
+}
+
+func NewNonEmptySlice(data []int) NonEmptySlice {
+	if len(data) == 0 {
+		panic("NonEmptySlice cannot be empty")
+	}
+	return NonEmptySlice{data: data}
+}
+
+func NewSafeString(value string) SafeString {
+	if len(value) == 0 || value == "" {
+		panic("SafeString cannot be empty")
+	}
+	return SafeString{value: value}
+}
+
+// Test bounded types
+type BoundedInt struct {
+	value int
+	min int
+	max int
+}
+
+func NewBoundedInt(value, min, max int) BoundedInt {
+	if value < min || value > max {
+		panic(fmt.Sprintf("Value %d is out of bounds [%d, %d]", value, min, max))
+	}
+	return BoundedInt{value: value, min: min, max: max}
+}
+
+// Test matrix types
+type Matrix struct {
+	data [3][4]float64
+	rows int
+	cols int
+}
+
+func NewMatrix(rows, cols int) Matrix {
+	if rows <= 0 || cols <= 0 {
+		panic("Matrix dimensions must be positive")
+	}
+	return Matrix{
+		rows: rows,
+		cols: cols,
+	}
+}
+
+// Test container types
+type Container struct {
+	value interface{}
+	valid bool
+}
+
+func NewContainer(value interface{}) Container {
+	return Container{
+		value: value,
+		valid: true,
+	}
+}
+
+// Test result types
+type Result struct {
+	value interface{}
+	err error
+	is_err bool
+}
+
+func NewResultOk(value interface{}) Result {
+	return Result{
+		value: value,
+		is_err: false,
+	}
+}
+
+func NewResultErr(err error) Result {
+	return Result{
+		err: err,
+		is_err: true,
+	}
+}
+
+func (r Result) Unwrap() interface{} {
+	if r.is_err {
+		panic("Cannot unwrap error result")
+	}
+	return r.value
+}
+
+func (r Result) UnwrapErr() error {
+	if !r.is_err {
+		panic("Cannot unwrap error from ok result")
+	}
+	return r.err
+}
+
+// Test ownership with goroutines
+type ThreadSafeOwned struct {
+	data interface{}
+	mutex sync.Mutex
+	owner int
+	moved bool
+}
+
+func NewThreadSafeOwned(data interface{}) ThreadSafeOwned {
+	return ThreadSafeOwned{
+		data: data,
+		mutex: sync.Mutex{},
+		owner: 1,
+		moved: false,
+	}
+}
+
+func (tso *ThreadSafeOwned) Move() ThreadSafeOwned {
+	tso.mutex.Lock()
+	defer tso.mutex.Unlock()
+	if tso.moved {
+		panic("Cannot move from moved thread-safe owned reference")
+	}
+	tso.moved = true
+	return ThreadSafeOwned{
+		data: tso.data,
+		mutex: tso.mutex,
+		owner: tso.owner + 1,
+		moved: false,
+	}
+}
+
+func (tso *ThreadSafeOwned) WithAccess(fn func(interface{}) interface{}) ThreadSafeOwned {
+	tso.mutex.Lock()
+	defer tso.mutex.Unlock()
+	if tso.moved {
+		panic("Cannot access moved thread-safe owned reference")
+	}
+	newData := fn(tso.data)
+	return ThreadSafeOwned{
+		data: newData,
+		mutex: tso.mutex,
+		owner: tso.owner,
+		moved: false,
+	}
+}
+
+// Test functions
+func testBasicOwnership() {
+	fmt.Println("=== Testing Basic Ownership ===")
+
+	// Test owned types
+	var owned Owned<int> = Owned<int>{
+		value: new(int),
+		owner_id: 1,
+		moved: false,
+	}
+	*owned.value = 42
+	fmt.Printf("Owned value: %d\n", *owned.value)
+
+	movedOwned := owned.Move()
+	fmt.Printf("Moved owned value: %d\n", *movedOwned.value)
+
+	// Test shared types
+	var shared Shared<string> = Shared<string>{
+		value: new(string),
+		ref_count: new(int),
+		mutex: &sync.RWMutex{},
+	}
+	*shared.value = "Shared data"
+	*shared.ref_count = 1
+	fmt.Printf("Shared value: %s, ref count: %d\n", *shared.value, *shared.ref_count)
+
+	clonedShared := shared.Clone()
+	fmt.Printf("Cloned shared value: %s, ref count: %d\n", *clonedShared.value, *clonedShared.ref_count)
+
+	// Test unique types
+	var unique Unique<bool> = Unique<bool>{
+		value: new(bool),
+		moved: false,
+	}
+	*unique.value = true
+	fmt.Printf("Unique value: %t\n", *unique.value)
+
+	movedUnique := unique.Move()
+	fmt.Printf("Moved unique value: %t\n", *movedUnique.value)
+}
+
+func testDependentTypes() {
+	fmt.Println("\n=== Testing Dependent Types ===")
+
+	// Test positive integer
+	positive := NewPositiveInt(42)
+	fmt.Printf("Positive integer: %d\n", positive.value)
+
+	// Test non-empty slice
+	nonEmpty := NewNonEmptySlice([]int{1, 2, 3})
+	fmt.Printf("Non-empty slice: %v\n", nonEmpty.data)
+
+	// Test safe string
+	safeString := NewSafeString("Hello, World!")
+	fmt.Printf("Safe string: %s\n", safeString.value)
+
+	// Test bounded integer
+	bounded := NewBoundedInt(42, 0, 100)
+	fmt.Printf("Bounded integer: %d [%d, %d]\n", bounded.value, bounded.min, bounded.max)
+}
+
+func testComplexTypes() {
+	fmt.Println("\n=== Testing Complex Types ===")
+
+	// Test matrix
+	matrix := NewMatrix(3, 4)
+	fmt.Printf("Matrix: %dx%d\n", matrix.rows, matrix.cols)
+
+	// Test containers
+	intContainer := NewContainer(42)
+	stringContainer := NewContainer("Hello")
+	fmt.Printf("Int container: %v, String container: %v\n", intContainer.value, stringContainer.value)
+
+	// Test results
+	okResult := NewResultOk(42)
+	errResult := NewResultErr(fmt.Errorf("test error"))
+	fmt.Printf("Ok result: %v, Err result: %v\n", okResult.Unwrap(), errResult.UnwrapErr())
+}
+
+func testThreadSafety() {
+	fmt.Println("\n=== Testing Thread Safety ===")
+
+	// Test thread-safe owned
+	threadSafe := NewThreadSafeOwned(100)
+	fmt.Printf("Thread-safe value: %v\n", threadSafe.data)
+
+	movedThreadSafe := threadSafe.Move()
+	fmt.Printf("Moved thread-safe value: %v, new owner: %d\n", movedThreadSafe.data, movedThreadSafe.owner)
+
+	transformed := movedThreadSafe.WithAccess(func(x interface{}) interface{} {
+		return x.(int) * 2
+	})
+	fmt.Printf("Transformed thread-safe value: %v\n", transformed.data)
+}
+
+func testNestedDirectives() {
+	fmt.Println("\n=== Testing Nested Directives ===")
+
+	//! directives: ownership=on
+	{
+		owned := Owned<int>{
+			value: new(int),
+			owner_id: 1,
+			moved: false,
+		}
+		*owned.value = 100
+		fmt.Printf("Nested owned value: %d\n", *owned.value)
+	}
+
+	//! directives: dependent_types=on
+	{
+		positive := NewPositiveInt(200)
+		fmt.Printf("Nested positive value: %d\n", positive.value)
+	}
+}
+
+func testComplexOwnership() {
+	fmt.Println("\n=== Testing Complex Ownership ===")
+
+	// Create multiple owned values
+	owned1 := Owned<int>{value: new(int), owner_id: 1, moved: false}
+	owned2 := Owned<int>{value: new(int), owner_id: 2, moved: false}
+	owned3 := Owned<int>{value: new(int), owner_id: 3, moved: false}
+
+	*owned1.value = 1
+	*owned2.value = 2
+	*owned3.value = 3
+
+	fmt.Printf("Owned values: %d, %d, %d\n", *owned1.value, *owned2.value, *owned3.value)
+
+	// Move ownership patterns
+	moved1 := owned1.Move()
+	moved2 := owned2.Move()
+	moved3 := owned3.Move()
+
+	fmt.Printf("Moved values: %d, %d, %d\n", *moved1.value, *moved2.value, *moved3.value)
+}
+
+func testOwnershipChains() {
+	fmt.Println("\n=== Testing Ownership Chains ===")
+
+	threadSafe := NewThreadSafeOwned(50)
+
+	chain1 := threadSafe.WithAccess(func(x interface{}) interface{} {
+		return x.(int) + 10
+	})
+
+	chain2 := chain1.WithAccess(func(x interface{}) interface{} {
+		return x.(int) * 2
+	})
+
+	fmt.Printf("Original value: %v\n", threadSafe.data)
+	fmt.Printf("Chain1 value: %v\n", chain1.data)
+	fmt.Printf("Chain2 value: %v\n", chain2.data)
+}
+
+func testTypeValidation() {
+	fmt.Println("\n=== Testing Type Validation ===")
+
+	// Test even/odd validation
+	evenInt := func(x int) int {
+		if x%2 != 0 {
+			panic(fmt.Sprintf("%d is not even", x))
+		}
+		return x
+	}
+
+	oddInt := func(x int) int {
+		if x%2 != 1 {
+			panic(fmt.Sprintf("%d is not odd", x))
+		}
+		return x
+	}
+
+	even := evenInt(42)
+	odd := oddInt(43)
+
+	fmt.Printf("Even: %d, Odd: %d\n", even, odd)
+}
+
+func main() {
+	fmt.Println("=== Working Typus Syntax Test ===")
+
+	testBasicOwnership()
+	testDependentTypes()
+	testComplexTypes()
+	testThreadSafety()
+	testNestedDirectives()
+	testComplexOwnership()
+	testOwnershipChains()
+	testTypeValidation()
+
+	fmt.Println("\n=== All working Typus syntax tests completed successfully ===")
+}

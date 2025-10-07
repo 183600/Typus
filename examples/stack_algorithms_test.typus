@@ -1,0 +1,565 @@
+package main
+
+import (
+	"fmt"
+	"math"
+	"strconv"
+	"strings"
+)
+
+// Stack-based Algorithm Tests
+type AlgorithmStack struct {
+	elements []interface{}
+	top      int
+}
+
+func NewAlgorithmStack() *AlgorithmStack {
+	return &AlgorithmStack{
+		elements: make([]interface{}, 0),
+		top:      -1,
+	}
+}
+
+func (s *AlgorithmStack) Push(element interface{}) {
+	s.elements = append(s.elements, element)
+	s.top++
+}
+
+func (s *AlgorithmStack) Pop() interface{} {
+	if s.IsEmpty() {
+		return nil
+	}
+
+	element := s.elements[s.top]
+	s.elements = s.elements[:s.top]
+	s.top--
+	return element
+}
+
+func (s *AlgorithmStack) Peek() interface{} {
+	if s.IsEmpty() {
+		return nil
+	}
+	return s.elements[s.top]
+}
+
+func (s *AlgorithmStack) IsEmpty() bool {
+	return s.top < 0
+}
+
+func (s *AlgorithmStack) Size() int {
+	return s.top + 1
+}
+
+func (s *AlgorithmStack) ToSlice() []interface{} {
+	result := make([]interface{}, s.Size())
+	copy(result, s.elements)
+	return result
+}
+
+// === Algorithm 1: Infix to Postfix Conversion ===
+func infixToPostfix(expression string) string {
+	stack := NewAlgorithmStack()
+	postfix := ""
+
+	precedence := map[rune]int{
+		'+': 1,
+		'-': 1,
+		'*': 2,
+		'/': 2,
+		'^': 3,
+	}
+
+	for _, char := range expression {
+		switch {
+		case char == ' ':
+			continue
+		case isOperand(char):
+			postfix += string(char) + " "
+		case char == '(':
+			stack.Push(char)
+		case char == ')':
+			for !stack.IsEmpty() && stack.Peek() != '(' {
+				postfix += string(stack.Pop().(rune)) + " "
+			}
+			if !stack.IsEmpty() && stack.Peek() == '(' {
+				stack.Pop()
+			}
+		case isOperator(char):
+			for !stack.IsEmpty() && stack.Peek() != '(' &&
+				  precedence[char] <= precedence[stack.Peek().(rune)] {
+				postfix += string(stack.Pop().(rune)) + " "
+			}
+			stack.Push(char)
+		}
+	}
+
+	for !stack.IsEmpty() {
+		postfix += string(stack.Pop().(rune)) + " "
+	}
+
+	return strings.TrimSpace(postfix)
+}
+
+func isOperand(char rune) bool {
+	return (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9')
+}
+
+func isOperator(char rune) bool {
+	return char == '+' || char == '-' || char == '*' || char == '/' || char == '^'
+}
+
+// === Algorithm 2: Postfix Evaluation ===
+func evaluatePostfix(expression string) float64 {
+	stack := NewAlgorithmStack()
+
+	tokens := strings.Split(expression, " ")
+
+	for _, token := range tokens {
+		if token == "" {
+			continue
+		}
+
+		if num, err := strconv.ParseFloat(token, 64); err == nil {
+			stack.Push(num)
+		} else {
+			if stack.Size() < 2 {
+				fmt.Printf("Error: Invalid postfix expression\n")
+				return 0
+			}
+
+			b := stack.Pop().(float64)
+			a := stack.Pop().(float64)
+
+			var result float64
+			switch token {
+			case "+":
+				result = a + b
+			case "-":
+				result = a - b
+			case "*":
+				result = a * b
+			case "/":
+				result = a / b
+			case "^":
+				result = math.Pow(a, b)
+			default:
+				fmt.Printf("Error: Unknown operator %s\n", token)
+				return 0
+			}
+			stack.Push(result)
+		}
+	}
+
+	if stack.Size() != 1 {
+		fmt.Printf("Error: Invalid postfix expression\n")
+		return 0
+	}
+
+	return stack.Pop().(float64)
+}
+
+// === Algorithm 3: Stock Span Problem ===
+func calculateSpan(prices []int) []int {
+	n := len(prices)
+	if n == 0 {
+		return []int{}
+	}
+
+	stack := NewAlgorithmStack()
+	spans := make([]int, n)
+
+	stack.Push(0)
+	spans[0] = 1
+
+	for i := 1; i < n; i++ {
+		for !stack.IsEmpty() && prices[stack.Peek().(int)] <= prices[i] {
+			stack.Pop()
+		}
+
+		if stack.IsEmpty() {
+			spans[i] = i + 1
+		} else {
+			spans[i] = i - stack.Peek().(int)
+		}
+
+		stack.Push(i)
+	}
+
+	return spans
+}
+
+// === Algorithm 4: Next Greater Element ===
+func nextGreaterElement(arr []int) []int {
+	n := len(arr)
+	if n == 0 {
+		return []int{}
+	}
+
+	stack := NewAlgorithmStack()
+	result := make([]int, n)
+
+	for i := n - 1; i >= 0; i-- {
+		for !stack.IsEmpty() && stack.Peek().(int) <= arr[i] {
+			stack.Pop()
+		}
+
+		if stack.IsEmpty() {
+			result[i] = -1
+		} else {
+			result[i] = stack.Peek().(int)
+		}
+
+		stack.Push(arr[i])
+	}
+
+	return result
+}
+
+// === Algorithm 5: Balanced Parentheses with Multiple Types ===
+func isBalancedMultiple(expression string) bool {
+	stack := NewAlgorithmStack()
+
+	pairs := map[rune]rune{
+		')': '(',
+		']': '[',
+		'}': '{',
+	}
+
+	openingBrackets := "([{"
+
+	for _, char := range expression {
+		if strings.ContainsRune(openingBrackets, char) {
+			stack.Push(char)
+		} else if strings.ContainsRune(")]}", char) {
+			if stack.IsEmpty() || stack.Pop() != pairs[char] {
+				return false
+			}
+		}
+	}
+
+	return stack.IsEmpty()
+}
+
+// === Algorithm 6: Decimal to Binary Conversion ===
+func decimalToBinary(decimal int) string {
+	if decimal == 0 {
+		return "0"
+	}
+
+	stack := NewAlgorithmStack()
+
+	for decimal > 0 {
+		remainder := decimal % 2
+		stack.Push(remainder)
+		decimal = decimal / 2
+	}
+
+	binary := ""
+	for !stack.IsEmpty() {
+		binary += strconv.Itoa(stack.Pop().(int))
+	}
+
+	return binary
+}
+
+// === Algorithm 7: Tower of Hanoi Simulation ===
+func towerOfHanoi(n int, source, auxiliary, destination string) {
+	stack := NewAlgorithmStack()
+
+	// Push initial state: (n, source, auxiliary, destination)
+	stack.Push([]interface{}{n, source, auxiliary, destination})
+
+	moves := 0
+
+	for !stack.IsEmpty() {
+		state := stack.Pop().([]interface{})
+		currentN := state[0].(int)
+		currentSource := state[1].(string)
+		currentAuxiliary := state[2].(string)
+		currentDestination := state[3].(string)
+
+		if currentN == 1 {
+			fmt.Printf("Move disk 1 from %s to %s\n", currentSource, currentDestination)
+			moves++
+		} else {
+			// Push the recursive calls in reverse order
+			stack.Push([]interface{}{currentN - 1, currentAuxiliary, currentSource, currentDestination})
+			stack.Push([]interface{}{1, currentSource, currentAuxiliary, currentDestination})
+			stack.Push([]interface{}{currentN - 1, currentSource, currentDestination, currentAuxiliary})
+		}
+	}
+
+	fmt.Printf("Total moves: %d\n", moves)
+}
+
+// === Algorithm 8: Reverse Words in a Sentence ===
+func reverseWords(sentence string) string {
+	stack := NewAlgorithmStack()
+
+	words := strings.Split(sentence, " ")
+
+	for _, word := range words {
+		if word != "" {
+			stack.Push(word)
+		}
+	}
+
+	reversed := ""
+	for !stack.IsEmpty() {
+		reversed += stack.Pop().(string)
+		if !stack.IsEmpty() {
+			reversed += " "
+		}
+	}
+
+	return reversed
+}
+
+// === Algorithm 9: Maximum Rectangle in Histogram ===
+func largestRectangleArea(heights []int) int {
+	n := len(heights)
+	if n == 0 {
+		return 0
+	}
+
+	stack := NewAlgorithmStack()
+	maxArea := 0
+
+	for i := 0; i <= n; i++ {
+		var currentHeight int
+		if i == n {
+			currentHeight = 0
+		} else {
+			currentHeight = heights[i]
+		}
+
+		for !stack.IsEmpty() && currentHeight < heights[stack.Peek().(int)] {
+			height := heights[stack.Pop().(int)]
+			width := i
+			if !stack.IsEmpty() {
+				width = i - stack.Peek().(int) - 1
+			}
+			area := height * width
+			if area > maxArea {
+				maxArea = area
+			}
+		}
+
+		stack.Push(i)
+	}
+
+	return maxArea
+}
+
+// === Test Functions ===
+func testInfixToPostfix() {
+	fmt.Println("=== Infix to Postfix Conversion Test ===")
+
+	expressions := []string{
+		"A + B * C",
+		"(A + B) * C",
+		"A * B + C",
+		"A + B + C",
+		"A * (B + C)",
+		"A + B * C / D",
+	}
+
+	for _, expr := range expressions {
+		postfix := infixToPostfix(expr)
+		fmt.Printf("Infix: %-20s -> Postfix: %s\n", expr, postfix)
+	}
+
+	fmt.Println("✅ Infix to postfix conversion test completed")
+}
+
+func testPostfixEvaluation() {
+	fmt.Println("\n=== Postfix Evaluation Test ===")
+
+	expressions := []string{
+		"3 4 +",        // 7
+		"5 1 2 + 4 * +", // 5 + (1+2)*4 = 17
+		"4 13 5 / +",   // 4 + 13/5 = 6.6
+		"2 3 ^",        // 8
+		"10 2 8 * + 3 -", // 10 + 2*8 - 3 = 23
+	}
+
+	for _, expr := range expressions {
+		result := evaluatePostfix(expr)
+		fmt.Printf("Postfix: %-20s -> Result: %f\n", expr, result)
+	}
+
+	fmt.Println("✅ Postfix evaluation test completed")
+}
+
+func testStockSpanProblem() {
+	fmt.Println("\n=== Stock Span Problem Test ===")
+
+	testCases := [][]int{
+		{100, 80, 60, 70, 60, 75, 85},
+		{10, 4, 5, 90, 120, 80},
+		{60, 50, 40, 30, 20, 10},
+		{30, 40, 50, 60, 70, 80},
+	}
+
+	for i, prices := range testCases {
+		spans := calculateSpan(prices)
+		fmt.Printf("Test Case %d:\n", i+1)
+		fmt.Printf("  Prices: %v\n", prices)
+		fmt.Printf("  Spans:  %v\n", spans)
+		fmt.Println()
+	}
+
+	fmt.Println("✅ Stock span problem test completed")
+}
+
+func testNextGreaterElement() {
+	fmt.Println("\n=== Next Greater Element Test ===")
+
+	testCases := [][]int{
+		{4, 5, 2, 25},
+		{13, 7, 6, 12},
+		{1, 2, 3, 4},
+		{4, 3, 2, 1},
+	}
+
+	for i, arr := range testCases {
+		result := nextGreaterElement(arr)
+		fmt.Printf("Test Case %d:\n", i+1)
+		fmt.Printf("  Input:  %v\n", arr)
+		fmt.Printf("  Output: %v\n", result)
+		fmt.Println()
+	}
+
+	fmt.Println("✅ Next greater element test completed")
+}
+
+func testBalancedMultiple() {
+	fmt.Println("\n=== Balanced Parentheses with Multiple Types Test ===")
+
+	expressions := []struct {
+		expr     string
+		expected bool
+	}{
+		{"{[()]}", true},
+		{"{[(])}", false},
+		"{({[]})}", true,
+		"{{[[", false,
+		"}}))", false,
+		"()", true,
+		"({})", true},
+		"({[)]}", false,
+	}
+
+	for _, test := range expressions {
+		result := isBalancedMultiple(test.expr)
+		status := "✅"
+		if result != test.expected {
+			status = "❌"
+		}
+		fmt.Printf("%s Expression: %-10s -> Balanced: %t (Expected: %t)\n",
+			status, test.expr, result, test.expected)
+	}
+
+	fmt.Println("✅ Balanced parentheses test completed")
+}
+
+func testDecimalToBinary() {
+	fmt.Println("\n=== Decimal to Binary Conversion Test ===")
+
+	numbers := []int{0, 1, 2, 5, 10, 15, 16, 31, 32, 63, 64, 127, 128}
+
+	for _, num := range numbers {
+		binary := decimalToBinary(num)
+		fmt.Printf("Decimal: %3d -> Binary: %8s\n", num, binary)
+	}
+
+	fmt.Println("✅ Decimal to binary conversion test completed")
+}
+
+func testTowerOfHanoi() {
+	fmt.Println("\n=== Tower of Hanoi Simulation Test ===")
+
+	disks := []int{1, 2, 3, 4}
+
+	for _, n := range disks {
+		fmt.Printf("Tower of Hanoi with %d disks:\n", n)
+		towerOfHanoi(n, "A", "B", "C")
+		fmt.Println()
+	}
+
+	fmt.Println("✅ Tower of Hanoi simulation test completed")
+}
+
+func testReverseWords() {
+	fmt.Println("\n=== Reverse Words in Sentence Test ===")
+
+	sentences := []string{
+		"Hello World",
+		"Data Structures and Algorithms",
+		"Stack based algorithms are powerful",
+		"Go programming language",
+		"Reverse this sentence",
+	}
+
+	for _, sentence := range sentences {
+		reversed := reverseWords(sentence)
+		fmt.Printf("Original: %-40s -> Reversed: %s\n", sentence, reversed)
+	}
+
+	fmt.Println("✅ Reverse words test completed")
+}
+
+func testLargestRectangleArea() {
+	fmt.Println("\n=== Largest Rectangle in Histogram Test ===")
+
+	testCases := [][]int{
+		{2, 1, 5, 6, 2, 3},
+		{1, 2, 3, 4, 5},
+		{5, 4, 3, 2, 1},
+		{2, 2, 2, 2, 2},
+		{1, 2, 3, 2, 1},
+	}
+
+	for i, heights := range testCases {
+		area := largestRectangleArea(heights)
+		fmt.Printf("Test Case %d:\n", i+1)
+		fmt.Printf("  Heights: %v\n", heights)
+		fmt.Printf("  Max Area: %d\n", area)
+		fmt.Println()
+	}
+
+	fmt.Println("✅ Largest rectangle area test completed")
+}
+
+func runAllAlgorithmTests() {
+	fmt.Println("=== Stack Algorithm Test Suite ===")
+	fmt.Println("Testing various stack-based algorithms and applications")
+	fmt.Println()
+
+	testInfixToPostfix()
+	testPostfixEvaluation()
+	testStockSpanProblem()
+	testNextGreaterElement()
+	testBalancedMultiple()
+	testDecimalToBinary()
+	testTowerOfHanoi()
+	testReverseWords()
+	testLargestRectangleArea()
+
+	fmt.Println()
+	fmt.Println("=== All Algorithm Tests Completed ===")
+	fmt.Println("✅ Infix to postfix conversion tested")
+	fmt.Println("✅ Postfix evaluation tested")
+	fmt.Println("✅ Stock span problem tested")
+	fmt.Println("✅ Next greater element tested")
+	fmt.Println("✅ Balanced parentheses tested")
+	fmt.Println("✅ Decimal to binary conversion tested")
+	fmt.Println("✅ Tower of Hanoi simulation tested")
+	fmt.Println("✅ Reverse words in sentence tested")
+	fmt.Println("✅ Largest rectangle in histogram tested")
+}
+
+func main() {
+	runAllAlgorithmTests()
+}

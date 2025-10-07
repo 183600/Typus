@@ -1,0 +1,578 @@
+//! ownership: on
+//! dependent_types: on
+
+package main
+
+import (
+	"fmt"
+	"math"
+	"os"
+	"runtime"
+	"sync"
+	"time"
+)
+
+// ===== 基本类型和变量 =====
+var boolVar bool = true
+var intVar int = 42
+var float64Var float64 = 3.14159265359
+var stringVar string = "Hello, Typus!"
+
+// ===== 数组和切片 =====
+var array1 [5]int = [5]int{1, 2, 3, 4, 5}
+var slice1 []int = []int{1, 2, 3, 4, 5}
+
+// ===== Map =====
+var map1 = map[string]int{
+	"apple":  1,
+	"banana": 2,
+	"orange": 3,
+}
+
+// ===== 结构体定义 =====
+type Person struct {
+	Name    string
+	Age     int
+	Address *Address
+	Email   string
+}
+
+type Address struct {
+	Street  string
+	City    string
+	Country string
+}
+
+// ===== 接口定义 =====
+type Writer interface {
+	Write([]byte) (int, error)
+}
+
+type Reader interface {
+	Read([]byte) (int, error)
+}
+
+type ReadWriter interface {
+	Writer
+	Reader
+}
+
+// ===== 自定义类型 =====
+type ID int
+type Quantity float64
+type Status string
+
+// ===== 函数定义 =====
+
+// 基本函数
+func add(a, b int) int {
+	return a + b
+}
+
+func multiply(a, b float64) float64 {
+	return a * b
+}
+
+func divide(a, b float64) (float64, error) {
+	if b == 0 {
+		return 0, fmt.Errorf("division by zero")
+	}
+	return a / b, nil
+}
+
+func multipleReturn() (int, string, bool) {
+	return 42, "answer", true
+}
+
+// 可变参数函数
+func sum(numbers ...int) int {
+	total := 0
+	for _, num := range numbers {
+		total += num
+	}
+	return total
+}
+
+// 闭包函数
+func getCounter() func() int {
+	count := 0
+	return func() int {
+		count++
+		return count
+	}
+}
+
+// ===== 方法定义 =====
+
+type Circle struct {
+	radius float64
+}
+
+func (c Circle) Area() float64 {
+	return math.Pi * c.radius * c.radius
+}
+
+func (c *Circle) Scale(factor float64) {
+	c.radius *= factor
+}
+
+// ===== 错误处理 =====
+type CustomError struct {
+	Message string
+	Code    int
+}
+
+func (e CustomError) Error() string {
+	return fmt.Sprintf("Error %d: %s", e.Code, e.Message)
+}
+
+func riskyOperation() error {
+	return CustomError{Message: "something went wrong", Code: 500}
+}
+
+// ===== 通道和并发 =====
+func channelExample() {
+	ch := make(chan int)
+	go func() {
+		ch <- 42
+	}()
+	value := <-ch
+	fmt.Printf("Received: %d\n", value)
+
+	// 缓冲通道
+	bufCh := make(chan string, 3)
+	bufCh <- "hello"
+	bufCh <- "world"
+	close(bufCh)
+
+	for msg := range bufCh {
+		fmt.Println(msg)
+	}
+
+	// select 语句
+	ch1 := make(chan int)
+	ch2 := make(chan string)
+	
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		ch1 <- 1
+	}()
+	
+	go func() {
+		time.Sleep(150 * time.Millisecond)
+		ch2 <- "two"
+	}()
+	
+	select {
+	case val := <-ch1:
+		fmt.Printf("Received from ch1: %d\n", val)
+	case val := <-ch2:
+		fmt.Printf("Received from ch2: %s\n", val)
+	case <-time.After(200 * time.Millisecond):
+		fmt.Println("Timeout")
+	}
+}
+
+// ===== defer、panic 和 recover =====
+func deferExample() {
+	defer fmt.Println("First defer")
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("Recovered: %v\n", r)
+		}
+	}()
+	defer fmt.Println("Last defer")
+	
+	panic("Something went wrong!")
+}
+
+// ===== 互斥锁和并发 =====
+type SafeCounter struct {
+	mu    sync.Mutex
+	count int
+}
+
+func (sc *SafeCounter) Increment() {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+	sc.count++
+}
+
+func (sc *SafeCounter) Value() int {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+	return sc.count
+}
+
+func concurrentExample() {
+	var wg sync.WaitGroup
+	counter := &SafeCounter{}
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			counter.Increment()
+		}()
+	}
+
+	wg.Wait()
+	fmt.Printf("Final count: %d\n", counter.Value())
+}
+
+// ===== 反射 =====
+func reflectionExample() {
+	var x float64 = 3.4
+	fmt.Printf("Type: %T, Value: %v\n", x, x)
+}
+
+// ===== 类型断言和类型开关 =====
+func typeAssertion(i interface{}) {
+	switch v := i.(type) {
+	case int:
+		fmt.Printf("Integer: %d\n", v)
+	case string:
+		fmt.Printf("String: %s\n", v)
+	case bool:
+		fmt.Printf("Boolean: %t\n", v)
+	default:
+		fmt.Printf("Unknown type: %T\n", v)
+	}
+}
+
+// ===== 条件语句 =====
+func conditionalExample() {
+	x := 10
+	
+	if x > 5 {
+		fmt.Println("x is greater than 5")
+	} else if x < 5 {
+		fmt.Println("x is less than 5")
+	} else {
+		fmt.Println("x is 5")
+	}
+
+	// if with initialization
+	if y := x * 2; y > 15 {
+		fmt.Println("y is greater than 15")
+	}
+
+	// switch statement
+	switch x {
+	case 1:
+		fmt.Println("One")
+	case 2, 3, 4:
+		fmt.Println("Two, three or four")
+	case 10:
+		fmt.Println("Ten")
+		fallthrough
+	default:
+		fmt.Println("Default case")
+	}
+
+	// switch without condition
+	switch {
+	case x > 10:
+		fmt.Println("Greater than 10")
+	case x < 10:
+		fmt.Println("Less than 10")
+	default:
+		fmt.Println("Equal to 10")
+	}
+}
+
+// ===== 循环语句 =====
+func loopExample() {
+	// for loop
+	for i := 0; i < 5; i++ {
+		fmt.Printf("%d ", i)
+	}
+	fmt.Println()
+
+	// while-like loop
+	j := 0
+	for j < 5 {
+		fmt.Printf("%d ", j)
+		j++
+	}
+	fmt.Println()
+
+	// infinite loop with break
+	k := 0
+	for {
+		if k >= 5 {
+			break
+		}
+		fmt.Printf("%d ", k)
+		k++
+	}
+	fmt.Println()
+
+	// for with range
+	slice := []string{"a", "b", "c"}
+	for i, v := range slice {
+		fmt.Printf("Index %d: %s ", i, v)
+	}
+	fmt.Println()
+
+	// range over map
+	m := map[string]int{"a": 1, "b": 2, "c": 3}
+	for k, v := range m {
+		fmt.Printf("Key %s: %d ", k, v)
+	}
+	fmt.Println()
+
+	// range over string
+	for i, r := range "hello" {
+		fmt.Printf("Index %d: %c ", i, r)
+	}
+	fmt.Println()
+}
+
+// ===== 指针操作 =====
+func pointerExample() {
+	x := 42
+	p := &x
+	fmt.Printf("Value: %d, Pointer: %p, Dereferenced: %d\n", x, p, *p)
+	
+	*p = 100
+	fmt.Printf("After modification: %d\n", x)
+}
+
+// ===== go语句和协程 =====
+func goroutineExample() {
+	ch := make(chan string)
+	
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		ch <- "Hello from goroutine!"
+	}()
+	
+	msg := <-ch
+	fmt.Println(msg)
+	
+	// 使用 WaitGroup
+	var wg sync.WaitGroup
+	for i := 0; i < 3; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			fmt.Printf("Goroutine %d\n", id)
+			time.Sleep(time.Duration(id) * 100 * time.Millisecond)
+		}(i)
+	}
+	wg.Wait()
+}
+
+// ===== 文件操作 =====
+func fileExample() {
+	// 创建文件
+	file, err := os.Create("test.txt")
+	if err != nil {
+		fmt.Printf("Error creating file: %v\n", err)
+		return
+	}
+	defer file.Close()
+	
+	// 写入文件
+	_, err = file.WriteString("Hello, Typus File Operations!\n")
+	if err != nil {
+		fmt.Printf("Error writing to file: %v\n", err)
+		return
+	}
+	
+	// 读取文件
+	content, err := os.ReadFile("test.txt")
+	if err != nil {
+		fmt.Printf("Error reading file: %v\n", err)
+		return
+	}
+	
+	fmt.Printf("File content: %s", content)
+	
+	// 删除文件
+	err = os.Remove("test.txt")
+	if err != nil {
+		fmt.Printf("Error removing file: %v\n", err)
+	}
+}
+
+// ===== 字符串操作 =====
+func stringExample() {
+	str := "Hello, Typus!"
+	
+	// 基本操作
+	fmt.Printf("Length: %d\n", len(str))
+	fmt.Printf("Upper: %s\n", strings.ToUpper(str))
+	fmt.Printf("Lower: %s\n", strings.ToLower(str))
+	
+	// 包含检查
+	fmt.Printf("Contains 'Typus': %t\n", strings.Contains(str, "Typus"))
+	
+	// 分割和连接
+	parts := strings.Split(str, ", ")
+	fmt.Printf("Split: %v\n", parts)
+	joined := strings.Join(parts, " ")
+	fmt.Printf("Joined: %s\n", joined)
+	
+	// 修剪
+	trimmed := strings.TrimSpace("  hello world  ")
+	fmt.Printf("Trimmed: '%s'\n", trimmed)
+}
+
+// ===== 时间和日期 =====
+func timeExample() {
+	now := time.Now()
+	fmt.Printf("Current time: %s\n", now.Format(time.RFC3339))
+	fmt.Printf("Unix timestamp: %d\n", now.Unix())
+	
+	// 时间计算
+	future := now.Add(24 * time.Hour)
+	fmt.Printf("Tomorrow: %s\n", future.Format("2006-01-02"))
+	
+	// 时间间隔
+	duration := future.Sub(now)
+	fmt.Printf("Duration: %s\n", duration)
+	
+	// 睡眠
+	fmt.Println("Sleeping for 100ms...")
+	time.Sleep(100 * time.Millisecond)
+	fmt.Println("Done sleeping")
+}
+
+// ===== 数学运算 =====
+func mathExample() {
+	// 基本数学函数
+	fmt.Printf("Pi: %.6f\n", math.Pi)
+	fmt.Printf("Sqrt(16): %.2f\n", math.Sqrt(16))
+	fmt.Printf("Pow(2, 3): %.2f\n", math.Pow(2, 3))
+	fmt.Printf("Abs(-5): %.2f\n", math.Abs(-5))
+	fmt.Printf("Floor(3.7): %.2f\n", math.Floor(3.7))
+	fmt.Printf("Ceil(3.2): %.2f\n", math.Ceil(3.2))
+	fmt.Printf("Round(3.5): %.2f\n", math.Round(3.5))
+	
+	// 三角函数
+	fmt.Printf("Sin(Pi/2): %.6f\n", math.Sin(math.Pi/2))
+	fmt.Printf("Cos(0): %.6f\n", math.Cos(0))
+	fmt.Printf("Tan(Pi/4): %.6f\n", math.Tan(math.Pi/4))
+	
+	// 对数
+	fmt.Printf("Log(e): %.6f\n", math.Log(math.E))
+	fmt.Printf("Log10(100): %.6f\n", math.Log10(100))
+}
+
+// ===== 位运算 =====
+func bitExample() {
+	a := 60  // 0011 1100
+	b := 13  // 0000 1101
+	
+	fmt.Printf("a = %d (%08b)\n", a, a)
+	fmt.Printf("b = %d (%08b)\n", b, b)
+	fmt.Printf("a & b = %d (%08b)\n", a&b, a&b)
+	fmt.Printf("a | b = %d (%08b)\n", a|b, a|b)
+	fmt.Printf("a ^ b = %d (%08b)\n", a^b, a^b)
+	fmt.Printf("^a = %d (%08b)\n", ^a, ^a)
+	fmt.Printf("a << 2 = %d (%08b)\n", a<<2, a<<2)
+	fmt.Printf("a >> 2 = %d (%08b)\n", a>>2, a>>2)
+}
+
+// ===== 包初始化 =====
+func init() {
+	fmt.Println("Package initialized")
+}
+
+// ===== 主函数 =====
+func main() {
+	fmt.Println("=== Typus Comprehensive Syntax Test ===")
+	fmt.Printf("Typus Version: %s\n", "1.0.0")
+	fmt.Printf("Go Version: %s\n", runtime.Version())
+	fmt.Printf("OS: %s, Arch: %s\n", runtime.GOOS, runtime.GOARCH)
+	
+	fmt.Println("\n=== Basic Types ===")
+	fmt.Printf("bool: %t, int: %d, float64: %.2f, string: %s\n", boolVar, intVar, float64Var, stringVar)
+	
+	fmt.Println("\n=== Arrays and Slices ===")
+	fmt.Printf("Array: %v\n", array1)
+	fmt.Printf("Slice: %v (len=%d, cap=%d)\n", slice1, len(slice1), cap(slice1))
+	
+	fmt.Println("\n=== Maps ===")
+	fmt.Printf("Map: %v\n", map1)
+	
+	fmt.Println("\n=== Structs ===")
+	addr := &Address{Street: "123 Main St", City: "New York", Country: "USA"}
+	person := Person{Name: "John Doe", Age: 30, Address: addr, Email: "john@example.com"}
+	fmt.Printf("Person: %+v\n", person)
+	
+	fmt.Println("\n=== Functions ===")
+	fmt.Printf("Add: %d\n", add(5, 3))
+	fmt.Printf("Multiply: %.2f\n", multiply(2.5, 4.0))
+	if result, err := divide(10, 2); err == nil {
+		fmt.Printf("Divide: %.2f\n", result)
+	}
+	
+	a, b, c := multipleReturn()
+	fmt.Printf("Multiple return: %d, %s, %t\n", a, b, c)
+	
+	fmt.Printf("Sum: %d\n", sum(1, 2, 3, 4, 5))
+	
+	counter := getCounter()
+	fmt.Printf("Counter: %d\n", counter())
+	fmt.Printf("Counter: %d\n", counter())
+	
+	fmt.Println("\n=== Methods ===")
+	circle := Circle{radius: 5}
+	fmt.Printf("Circle area: %.2f\n", circle.Area())
+	circle.Scale(2)
+	fmt.Printf("Scaled radius: %.2f\n", circle.radius)
+	
+	fmt.Println("\n=== Error Handling ===")
+	if err := riskyOperation(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+	}
+	
+	fmt.Println("\n=== Channels ===")
+	channelExample()
+	
+	fmt.Println("\n=== Defer, Panic, Recover ===")
+	deferExample()
+	
+	fmt.Println("\n=== Concurrency ===")
+	concurrentExample()
+	
+	fmt.Println("\n=== Reflection ===")
+	reflectionExample()
+	
+	fmt.Println("\n=== Type Assertion ===")
+	typeAssertion(42)
+	typeAssertion("hello")
+	typeAssertion(true)
+	
+	fmt.Println("\n=== Conditionals ===")
+	conditionalExample()
+	
+	fmt.Println("\n=== Loops ===")
+	loopExample()
+	
+	fmt.Println("\n=== Pointers ===")
+	pointerExample()
+	
+	fmt.Println("\n=== Goroutines ===")
+	goroutineExample()
+	
+	fmt.Println("\n=== File Operations ===")
+	fileExample()
+	
+	fmt.Println("\n=== String Operations ===")
+	stringExample()
+	
+	fmt.Println("\n=== Time Operations ===")
+	timeExample()
+	
+	fmt.Println("\n=== Math Operations ===")
+	mathExample()
+	
+	fmt.Println("\n=== Bit Operations ===")
+	bitExample()
+	
+	fmt.Println("\n=== All comprehensive tests completed ===")
+}

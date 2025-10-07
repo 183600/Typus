@@ -1,0 +1,40 @@
+//! ownership: on
+
+// Test 1: Basic immutable borrowing
+x := 42
+y := &x
+println(x)  // Should be OK with immutable borrow
+println(y)
+
+// Test 2: Mutable borrowing (should fail)
+a := 100
+b := &mut a
+println(a)  // Should trigger UseWhileMutBorrowed error
+println(b)
+
+// Test 3: Borrowing lifecycle
+c := 200
+{
+    d := &mut c  // Mutable borrow in inner scope
+    println(d)
+}  // d goes out of scope, borrow should be released
+println(c)  // Should be OK after borrow is released
+
+// Test 4: Multiple immutable borrows (should be OK)
+e := 300
+f := &e  // First immutable borrow
+g := &e  // Second immutable borrow (should be OK)
+println(f, g)
+println(e)  // Should be OK with immutable borrows
+
+// Test 5: Multiple mutable borrows (should fail)
+h := 400
+i := &mut h  // First mutable borrow
+j := &mut h  // Second mutable borrow (should fail)
+println(i, j)
+
+// Test 6: Move after borrow (should fail)
+k := 500
+l := &k
+m := k  // Should fail - cannot move borrowed value
+println(l, m)

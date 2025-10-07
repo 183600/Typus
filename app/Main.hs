@@ -1,0 +1,150 @@
+module Main (main) where
+
+import Cli
+import CompilerUtils
+import Control.Monad (unless, forM_)
+import Control.Monad.Except
+import Control.Monad.IO.Class (liftIO)
+import System.Directory (doesFileExist, doesDirectoryExist, copyFile, createDirectoryIfMissing)
+import System.FilePath
+import System.IO.Temp (withSystemTempDirectory)
+import System.Exit (exitFailure)
+import Data.List (isInfixOf, isPrefixOf)
+import Data.Char (isSpace)
+import System.FilePath.Glob (glob)
+
+-- Define the IOResult type alias
+type IOResult = ExceptT String IO
+
+-- Helper function to replace substrings
+replace :: String -> String -> String -> String
+replace old new = go
+  where
+    go [] = []
+    go str
+      | old `isPrefixOf` str = new ++ go (drop (length old) str)
+      | (x:xs) <- str = x : go xs
+
+-- Extract embedded file patterns from Go code
+extractEmbeddedFiles :: String -> IO [FilePath]
+extractEmbeddedFiles content = do
+    let linesList = lines content
+    let goEmbedLines = filter (isPrefixOf "//go:embed") linesList
+    let patterns = map extractPattern goEmbedLines
+    -- Filter out quoted patterns and get file paths
+    let filePatterns = map parseQuotedPattern patterns
+    -- Use glob to find matching files
+    foundFiles <- mapM glob filePatterns
+    return $ concat foundFiles
+  where
+    extractPattern line = dropWhile isSpace (drop 11 line)  -- drop "//go:embed"
+    parseQuotedPattern pattern =
+        case words pattern of
+            [] -> ""
+            (first:_) -> if "\"" `isPrefixOf` first
+                        then drop 1 (init first)  -- Remove quotes
+                        else first
+
+-- Copy embedded files to temporary directory
+copyEmbeddedFiles :: FilePath -> FilePath -> String -> IO ()
+copyEmbeddedFiles inputFile tempDir sourceContent = do
+    embeddedFiles <- extractEmbeddedFiles sourceContent
+    let inputDir = takeDirectory inputFile
+    forM_ embeddedFiles $ \file -> do
+        -- For each found file, check if it exists relative to input file
+        let relFile = if isRelative file then file else takeFileName file
+        let sourceFile = inputDir </> relFile
+        exists <- doesFileExist sourceFile
+        if exists
+            then do
+                let destFile = tempDir </> relFile
+                createDirectoryIfMissing True (takeDirectory destFile)
+                copyFile sourceFile destFile
+                putStrLn $ "Copied embedded file: " ++ sourceFile ++ " -> " ++ destFile
+            else putStrLn $ "Warning: Embedded file not found: " ++ sourceFile
+
+main :: IO ()
+main = do
+    cliArgs <- parseArgs  -- 重命名为 cliArgs
+    result <- runExceptT (dispatch cliArgs)
+    case result of
+        Left err -> putStrLn ("Error: " ++ err) >> exitFailure
+        Right _  -> return ()
+
+dispatch :: Args -> IOResult ()
+dispatch (Convert inputPath outputPath) = do
+    isDir <- liftIO $ doesDirectoryExist inputPath
+    if isDir
+    then batchConvert inputPath outputPath
+    else convertFile inputPath outputPath
+
+dispatch (Check inputPath) = do
+    isDir <- liftIO $ doesDirectoryExist inputPath
+    if isDir
+    then batchCheck inputPath
+    else do
+        -- Convert file to temp directory and check
+        liftIO $ withSystemTempDirectory "typus_check" $ \tempDir -> do
+            result <- runExceptT $ do
+                -- Generate a safe filename that doesn't contain "test"
+                let baseName = takeBaseName inputPath
+                    safeName = if "test" `isInfixOf` baseName 
+                               then replace "test" "exec" baseName 
+                               else baseName
+                    tempGoPath = tempDir </> (safeName ++ ".go")
+                
+                convertFile inputPath tempGoPath
+                -- Create go.mod for proper Go module support
+                liftIO $ writeFile (tempDir </> "go.mod") "module temp\ngo 1.21\n"
+                -- Try to build the generated Go code
+                runGoCommandInDir ["build", tempGoPath] tempDir
+                liftIO $ putStrLn $ "Typus syntax and compilation OK: " ++ inputPath
+            case result of
+                Left err -> do
+                    putStrLn ("Error: Compilation error: " ++ err)
+                    exitFailure
+                Right _ -> return ()
+
+dispatch (Build buildArgs) = runGoCommand ("build" : buildArgs)
+
+dispatch (Run runArgs) = do
+    case runArgs of
+        [] -> throwError "Please specify a .typus file to run"
+        (inputFile:restArgs) -> do
+            exists <- liftIO $ doesFileExist inputFile
+            unless exists $ throwError $ "Input file does not exist: " ++ inputFile
+            
+            liftIO $ withSystemTempDirectory "typus_run" $ \tempDir -> do
+                result <- runExceptT $ do
+                    -- Generate a safe filename that doesn't contain "test"
+                    let baseName = takeBaseName inputFile
+                        safeName = if "test" `isInfixOf` baseName 
+                                   then replace "test" "exec" baseName 
+                                   else baseName
+                        tempGoPath = tempDir </> (safeName ++ ".go")
+                    
+                    -- Convert file
+                    convertFile inputFile tempGoPath
+                    
+                    -- Read source to find embedded files
+                    source <- liftIO $ readFile inputFile
+                    let isGoFile = takeExtension inputFile == ".go"
+                    let sourceContent = if isGoFile then source else source -- For typus files, use converted content
+                    
+                    -- Copy embedded files
+                    liftIO $ copyEmbeddedFiles inputFile tempDir sourceContent
+                    
+                    -- Create go.mod
+                    liftIO $ writeFile (tempDir </> "go.mod") "module temp\n\ngo 1.21\n"
+                    
+                    -- Run the generated Go file
+                    let goArgs = "run" : [takeFileName tempGoPath] ++ restArgs
+                    runGoCommandInDir goArgs tempDir
+                
+                case result of
+                    Left err -> putStrLn ("Error: " ++ err) >> exitFailure
+                    Right _ -> return ()
+
+dispatch Version = do
+    liftIO $ putStrLn "typus version 0.1.0"
+

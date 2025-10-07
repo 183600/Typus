@@ -1,0 +1,550 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"math"
+	"os"
+	"runtime"
+	"sync"
+	"time"
+)
+
+type (
+	// Basic types
+	MyInt     int
+	MyFloat   float64
+	MyString  string
+	MyBool    bool
+	MyRune    rune
+	MyByte    byte
+	MyUint    uint
+	MyUintptr uintptr
+
+	// Complex types
+	StructType struct {
+		Field1 int
+		Field2 string
+		Field3 *InnerStruct
+	}
+
+	InnerStruct struct {
+		InnerField float64
+	}
+
+	// Interface types
+	Reader interface {
+		Read([]byte) (int, error)
+	}
+
+	Writer interface {
+		Write([]byte) (int, error)
+	}
+
+	ReadWriter interface {
+		Reader
+		Writer
+	}
+
+	// Function types
+	HandlerFunc func(int, string) (bool, error)
+
+	// Channel types
+	ChanInt    chan int
+	ChanBuffer chan string
+
+	// Map types
+	MapIntString map[int]string
+	MapStringAny map[string]interface{}
+
+	// Slice and array types
+	SliceInt []int
+	Array5Int [5]int
+)
+
+// Constants
+const (
+	Pi         = 3.14159265359
+	MaxRetries = 3
+	StatusOK   = 200
+	StatusErr  = 500
+)
+
+// Variables
+var (
+	globalInt    int = 42
+	globalString string = "Hello, World!"
+	globalSlice  []int = []int{1, 2, 3, 4, 5}
+)
+
+// Functions
+func main() {
+	fmt.Println("=== Testing Go Syntax Features ===")
+
+	// Basic types and operations
+	testBasicTypes()
+
+	// Control structures
+	testControlStructures()
+
+	// Functions and closures
+	testFunctionsAndClosures()
+
+	// Structs and methods
+	testStructsAndMethods()
+
+	// Interfaces
+	testInterfaces()
+
+	// Channels and goroutines
+	testConcurrency()
+
+	// Error handling
+	testErrorHandling()
+
+	// Packages and imports
+	testPackages()
+
+	// Reflection and type assertions
+	testTypeAssertions()
+
+	fmt.Println("=== All tests completed successfully ===")
+}
+
+func testBasicTypes() {
+	fmt.Println("\n--- Testing Basic Types ---")
+
+	// Integers
+	var a int = 10
+	var b int = 20
+	c := a + b
+	fmt.Printf("Int addition: %d + %d = %d\n", a, b, c)
+
+	// Floats
+	var x float64 = 3.14
+	var y float64 = 2.71
+	z := x * y
+	fmt.Printf("Float multiplication: %.2f * %.2f = %.2f\n", x, y, z)
+
+	// Strings
+	s1 := "Hello"
+	s2 := "World"
+	s3 := s1 + " " + s2
+	fmt.Printf("String concatenation: %s\n", s3)
+
+	// Booleans
+	flag := true
+	if flag {
+		fmt.Println("Boolean flag is true")
+	}
+
+	// Complex numbers
+	comp1 := complex(3, 4)
+	comp2 := complex(1, 2)
+	comp3 := comp1 + comp2
+	fmt.Printf("Complex addition: %v + %v = %v\n", comp1, comp2, comp3)
+}
+
+func testControlStructures() {
+	fmt.Println("\n--- Testing Control Structures ---")
+
+	// If-else
+	x := 42
+	if x > 50 {
+		fmt.Println("x is greater than 50")
+	} else if x > 40 {
+		fmt.Println("x is greater than 40 but less than 50")
+	} else {
+		fmt.Println("x is less than or equal to 40")
+	}
+
+	// Switch
+	switch x {
+	case 40:
+		fmt.Println("x is 40")
+	case 41, 42, 43:
+		fmt.Println("x is in the 40s")
+	default:
+		fmt.Println("x is something else")
+	}
+
+	// Type switch
+	var val interface{} = 42
+	switch v := val.(type) {
+	case int:
+		fmt.Printf("val is an int: %d\n", v)
+	case string:
+		fmt.Printf("val is a string: %s\n", v)
+	default:
+		fmt.Printf("val is of type %T\n", v)
+	}
+
+	// For loops
+	fmt.Print("For loop: ")
+	for i := 0; i < 5; i++ {
+		fmt.Printf("%d ", i)
+	}
+	fmt.Println()
+
+	// For-each loop
+	fmt.Print("For-each loop: ")
+	slice := []int{10, 20, 30, 40, 50}
+	for _, v := range slice {
+		fmt.Printf("%d ", v)
+	}
+	fmt.Println()
+
+	// While-style loop
+	fmt.Print("While-style loop: ")
+	count := 0
+	for count < 3 {
+		fmt.Printf("%d ", count)
+		count++
+	}
+	fmt.Println()
+
+	// Break and continue
+	fmt.Print("Break/Continue: ")
+	for i := 0; i < 10; i++ {
+		if i == 7 {
+			break
+		}
+		if i%2 == 0 {
+			continue
+		}
+		fmt.Printf("%d ", i)
+	}
+	fmt.Println()
+}
+
+func testFunctionsAndClosures() {
+	fmt.Println("\n--- Testing Functions and Closures ---")
+
+	// Function with multiple return values
+	result, err := divide(10, 2)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	} else {
+		fmt.Printf("Division result: %.2f\n", result)
+	}
+
+	// Variadic function
+	sum := sumNumbers(1, 2, 3, 4, 5)
+	fmt.Printf("Sum of numbers: %d\n", sum)
+
+	// Closure
+	adder := makeAdder(10)
+	fmt.Printf("Adder(5): %d\n", adder(5))
+	fmt.Printf("Adder(20): %d\n", adder(20))
+
+	// Anonymous function
+	func() {
+		fmt.Println("Anonymous function called")
+	}()
+
+	// Function as parameter
+	applyOperation(5, 10, func(a, b int) int { return a * b })
+}
+
+func testStructsAndMethods() {
+	fmt.Println("\n--- Testing Structs and Methods ---")
+
+	// Struct initialization
+	person := Person{
+		Name: "John Doe",
+		Age:  30,
+	}
+
+	fmt.Printf("Person: %+v\n", person)
+
+	// Struct methods
+	person.Greet()
+	person.HaveBirthday()
+	fmt.Printf("After birthday: %+v\n", person)
+
+	// Pointer receiver
+	p := &person
+	p.Greet() // Can call method on pointer too
+
+	// Embedded struct
+	employee := Employee{
+		Person: Person{
+			Name: "Jane Smith",
+			Age:  25,
+		},
+		EmployeeID: "EMP001",
+		Salary:     50000,
+	}
+
+	employee.Greet() // Inherited method
+	employee.PrintEmployeeInfo()
+}
+
+func testInterfaces() {
+	fmt.Println("\n--- Testing Interfaces ---")
+
+	// Interface implementation
+	file := File{name: "test.txt"}
+	reader := &file
+
+	// Type assertion
+	if r, ok := interface{}(reader).(Reader); ok {
+		buf := make([]byte, 10)
+		n, err := r.Read(buf)
+		if err == nil {
+			fmt.Printf("Read %d bytes: %s\n", n, buf[:n])
+		}
+	}
+
+	// Multiple interface implementation
+	if _, ok := interface{}(reader).(ReadWriter); ok {
+		fmt.Printf("Type implements ReadWriter: %t\n", ok)
+	}
+
+	// Empty interface
+	var any interface{} = "Hello, World"
+	if s, ok := any.(string); ok {
+		fmt.Printf("String from empty interface: %s\n", s)
+	}
+}
+
+func testConcurrency() {
+	fmt.Println("\n--- Testing Concurrency ---")
+
+	// Goroutine
+	var wg sync.WaitGroup
+	wg.Add(3)
+
+	for i := 0; i < 3; i++ {
+		go func(id int) {
+			defer wg.Done()
+			fmt.Printf("Goroutine %d started\n", id)
+			time.Sleep(100 * time.Millisecond)
+			fmt.Printf("Goroutine %d completed\n", id)
+		}(i)
+	}
+
+	// Channels
+	ch := make(chan int, 5)
+
+	go func() {
+		for i := 1; i <= 5; i++ {
+			ch <- i
+			time.Sleep(50 * time.Millisecond)
+		}
+		close(ch)
+	}()
+
+	fmt.Print("Channel values: ")
+	for v := range ch {
+		fmt.Printf("%d ", v)
+	}
+	fmt.Println()
+
+	// Select statement
+	ch1 := make(chan string)
+	ch2 := make(chan string)
+
+	go func() {
+		ch1 <- "Message from ch1"
+	}()
+
+	go func() {
+		ch2 <- "Message from ch2"
+	}()
+
+	select {
+	case msg1 := <-ch1:
+		fmt.Printf("Received: %s\n", msg1)
+	case msg2 := <-ch2:
+		fmt.Printf("Received: %s\n", msg2)
+	case <-time.After(100 * time.Millisecond):
+		fmt.Println("Timeout")
+	}
+
+	// Context with cancellation
+	ctx, cancel := context.WithCancel(context.Background())
+	go func(ctx context.Context) {
+		for {
+			select {
+			case <-ctx.Done():
+				fmt.Println("Goroutine cancelled")
+				return
+			default:
+				fmt.Print(".")
+				time.Sleep(50 * time.Millisecond)
+			}
+		}
+	}(ctx)
+
+	time.Sleep(200 * time.Millisecond)
+	cancel()
+	fmt.Println()
+
+	wg.Wait()
+}
+
+func testErrorHandling() {
+	fmt.Println("\n--- Testing Error Handling ---")
+
+	// Error creation
+	err := fmt.Errorf("custom error: %d", 42)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	}
+
+	// Multiple error returns
+	_, err = divide(10, 0)
+	if err != nil {
+		fmt.Printf("Division error: %v\n", err)
+	}
+
+	// Panic and recover
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Printf("Recovered from panic: %v\n", r)
+			}
+		}()
+
+		// This will panic
+		panic("intentional panic for testing")
+	}()
+
+	// Error wrapping
+	baseErr := fmt.Errorf("base error")
+	wrappedErr := fmt.Errorf("wrapped error: %w", baseErr)
+	fmt.Printf("Wrapped error: %v\n", wrappedErr)
+}
+
+func testPackages() {
+	fmt.Println("\n--- Testing Packages ---")
+
+	// Using os package
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Printf("Error getting working directory: %v\n", err)
+	} else {
+		fmt.Printf("Current working directory: %s\n", cwd)
+	}
+
+	// Using runtime package
+	fmt.Printf("Go version: %s\n", runtime.Version())
+	fmt.Printf("Number of CPUs: %d\n", runtime.NumCPU())
+	fmt.Printf("GOROOT: %s\n", runtime.GOROOT())
+
+	// Using math package
+	fmt.Printf("Square root of 16: %.2f\n", math.Sqrt(16))
+	fmt.Printf("Value of Pi: %.2f\n", math.Pi)
+
+	// Using time package
+	now := time.Now()
+	fmt.Printf("Current time: %s\n", now.Format(time.RFC3339))
+
+	// Using log package
+	log.Println("This is a log message")
+}
+
+func testTypeAssertions() {
+	fmt.Println("\n--- Testing Type Assertions ---")
+
+	// Type assertion with interface
+	var val interface{} = "Hello, World!"
+
+	if str, ok := val.(string); ok {
+		fmt.Printf("Type assertion successful: %s (length: %d)\n", str, len(str))
+	} else {
+		fmt.Println("Type assertion failed")
+	}
+
+	// Type switch
+	testTypeSwitch(42)
+	testTypeSwitch("hello")
+	testTypeSwitch(3.14)
+	testTypeSwitch([]int{1, 2, 3})
+}
+
+func testTypeSwitch(val interface{}) {
+	switch v := val.(type) {
+	case int:
+		fmt.Printf("Type is int: %d (doubled: %d)\n", v, v*2)
+	case string:
+		fmt.Printf("Type is string: %s (length: %d)\n", v, len(v))
+	case float64:
+		fmt.Printf("Type is float64: %.2f (squared: %.2f)\n", v, v*v)
+	default:
+		fmt.Printf("Type is %T (value: %v)\n", v, v)
+	}
+}
+
+// Helper functions
+func divide(a, b float64) (float64, error) {
+	if b == 0 {
+		return 0, fmt.Errorf("division by zero")
+	}
+	return a / b, nil
+}
+
+func sumNumbers(numbers ...int) int {
+	sum := 0
+	for _, num := range numbers {
+		sum += num
+	}
+	return sum
+}
+
+func makeAdder(addend int) func(int) int {
+	return func(x int) int {
+		return x + addend
+	}
+}
+
+func applyOperation(a, b int, op func(int, int) int) {
+	result := op(a, b)
+	fmt.Printf("Operation result: %d\n", result)
+}
+
+// Struct definitions
+type Person struct {
+	Name string
+	Age  int
+}
+
+func (p Person) Greet() {
+	fmt.Printf("Hello, my name is %s and I'm %d years old\n", p.Name, p.Age)
+}
+
+func (p *Person) HaveBirthday() {
+	p.Age++
+	fmt.Printf("Happy birthday! Now I'm %d years old\n", p.Age)
+}
+
+type Employee struct {
+	Person
+	EmployeeID string
+	Salary     int
+}
+
+func (e Employee) PrintEmployeeInfo() {
+	fmt.Printf("Employee %s (ID: %s) earns $%d\n", e.Name, e.EmployeeID, e.Salary)
+}
+
+// Interface implementation
+type File struct {
+	name string
+	data []byte
+}
+
+func (f *File) Read(buf []byte) (int, error) {
+	if len(f.data) == 0 {
+		f.data = []byte("Hello, World!")
+	}
+	n := copy(buf, f.data)
+	return n, nil
+}
+
+func (f *File) Write(buf []byte) (int, error) {
+	f.data = append(f.data, buf...)
+	return len(buf), nil
+}

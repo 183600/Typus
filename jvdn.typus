@@ -1,0 +1,329 @@
+//! ownership: on
+//! constraints: on
+
+package main
+
+import (
+    "fmt"
+    "math"
+    "sync"
+)
+
+// 值参数化的类型（依赖类型）
+type Vector(n int) struct {
+    data []float64 | len(data) == n
+}
+
+type Matrix(m, n int) struct {
+    data [][]float64 | len(data) == m && forall i. len(data[i]) == n
+}
+
+// 精确类型约束
+type NonEmptySlice(T type) struct {
+    elements []T | len(elements) > 0
+}
+
+type PositiveInt int | value > 0
+
+type SafeDivide func(a, b int | b != 0) int
+
+type BoundedArray(low, high int) struct {
+    arr []int | forall i. arr[i] >= low && arr[i] <= high
+}
+
+// 接口定义
+type Shape interface {
+    Area() float64
+    Perimeter() float64
+}
+
+// 结构体实现接口
+type Circle struct {
+    radius float64 | radius > 0
+}
+
+func (c Circle) Area() float64 {
+    return math.Pi * c.radius * c.radius
+}
+
+func (c Circle) Perimeter() float64 {
+    return 2 * math.Pi * c.radius
+}
+
+// 泛型 - 在所有权模式下使用指针避免移动
+type Stack[T any] struct {
+    items []T
+}
+
+func (s *Stack[T]) Push(item T) {
+    s.items = append(s.items, item)
+}
+
+func (s *Stack[T]) Pop() (T, bool) {
+    var zero T
+    if len(s.items) == 0 {
+        return zero, false
+    }
+    idx := len(s.items) - 1
+    item := s.items[idx]
+    s.items = s.items[:idx]
+    return item, true
+}
+
+// 带约束的泛型函数
+func Sum[T interface{ ~int | ~float64 }](slice []T) T {
+    var sum T
+    for _, v := range slice {
+        sum += v
+    }
+    return sum
+}
+
+// 依赖类型函数
+func createVector(n int, value float64) Vector(n) {
+    elements := make([]float64, n)
+    for i := 0; i < n; i++ {
+        elements[i] = value
+    }
+    return Vector{data: elements}
+}
+
+func matrixMultiply(a Matrix(m, n), b Matrix(n, p)) Matrix(m, p) {
+    result := make([][]float64, m)
+    for i := 0; i < m; i++ {
+        result[i] = make([]float64, p)
+        for j := 0; j < p; j++ {
+            for k := 0; k < n; k++ {
+                result[i][j] += a.data[i][k] * b.data[k][j]
+            }
+        }
+    }
+    return Matrix{data: result}
+}
+
+// 所有权相关类型
+type UniqueString struct {
+    value string
+}
+
+func NewUniqueString(s string) UniqueString {
+    return UniqueString{value: s}
+}
+
+func (s *UniqueString) String() string {
+    return s.value
+}
+
+// 错误处理
+type Result[T any] struct {
+    value T
+    err   error
+}
+
+func safeDivide(a, b int | b != 0) Result[int] {
+    return Result[int]{value: a / b, err: nil}
+}
+
+// 闭包和高阶函数
+func makeCounter() func() int {
+    count := 0
+    return func() int {
+        count++
+        return count
+    }
+}
+
+func mapSlice[T, U any](slice []T, f func(T) U) []U {
+    result := make([]U, len(slice))
+    for i, v := range slice {
+        result[i] = f(v)
+    }
+    return result
+}
+
+// 并发相关
+type SafeCounter struct {
+    mu    sync.Mutex
+    value int
+}
+
+func (c *SafeCounter) Inc() {
+    c.mu.Lock()
+    defer c.mu.Unlock()
+    c.value++
+}
+
+func (c *SafeCounter) Value() int {
+    c.mu.Lock()
+    defer c.mu.Unlock()
+    return c.value
+}
+
+// 通道
+func producer(ch chan<- int) {
+    for i := 0; i < 10; i++ {
+        ch <- i
+    }
+    close(ch)
+}
+
+func consumer(ch <-chan int) {
+    for value := range ch {
+        fmt.Println("Received:", value)
+    }
+}
+
+func main() {
+    fmt.Println("=== Testing Typus Features ===\n")
+
+    // 测试基本 Go 特性 - 在非所有权块中
+    {//! ownership: off
+        fmt.Println("1. Basic Go features (ownership off):")
+        numbers := []int{1, 2, 3, 4, 5}
+        fmt.Printf("Sum of %v: %d\n", numbers, Sum(numbers))
+        
+        // 测试泛型
+        stack := Stack[string]{}
+        stack.Push("hello")
+        stack.Push("world")
+        if val, ok := stack.Pop(); ok {
+            fmt.Printf("Popped: %s\n", val)
+        }
+    }
+
+    // 测试依赖类型块
+    {//! dependent_types: on, ownership: off
+        fmt.Println("\n2. Dependent types block (ownership off):")
+        
+        // 创建固定大小的向量
+        v1 := createVector(3, 1.0)
+        v2 := Vector(3){data: []float64{2.0, 3.0, 4.0}}
+        fmt.Printf("Vector 1: %v\n", v1.data)
+        fmt.Printf("Vector 2: %v\n", v2.data)
+        
+        // 矩阵操作
+        m1 := Matrix(2, 3){data: [][]float64{{1, 2, 3}, {4, 5, 6}}}
+        m2 := Matrix(3, 2){data: [][]float64{{7, 8}, {9, 10}, {11, 12}}}
+        m3 := matrixMultiply(m1, m2)
+        fmt.Printf("Matrix multiplication result: %v\n", m3.data)
+        
+        // 精确类型
+        safeList := NonEmptySlice[int]{elements: []int{1, 2, 3}}
+        fmt.Printf("Non-empty slice: %v\n", safeList.elements)
+        
+        // 带约束的值
+        positiveRadius := PositiveInt(5)
+        circle := Circle{radius: float64(positiveRadius)}
+        fmt.Printf("Circle area: %.2f\n", circle.Area())
+        
+        // 安全除法
+        result := safeDivide(10, 2)
+        fmt.Printf("Safe division: %d\n", result.value)
+    }
+
+    // 测试所有权块
+    {//! ownership: on
+        fmt.Println("\n3. Ownership block:")
+        
+        s1 := NewUniqueString("owned string")
+        fmt.Printf("Original: %s\n", s1.String())
+        
+        // 所有权转移
+        s2 := s1
+        // s1 在这里不再有效（所有权已转移）
+        fmt.Printf("After transfer: %s\n", s2.String())
+    }
+
+    // 同时启用所有权和依赖类型
+    {//! ownership: on, constraints: on
+        fmt.Println("\n4. Combined ownership and dependent types block:")
+        
+        // 创建一个拥有所有权的受约束数组
+        bounded := BoundedArray(0, 100){
+            arr: []int{10, 20, 30, 40, 50},
+        }
+        
+        // 转移所有权
+        bounded2 := bounded
+        // bounded 在这里不再有效
+        fmt.Printf("After ownership transfer: %v\n", bounded2.arr)
+    }
+
+    // 测试并发特性 - 在非所有权块中
+    {//! ownership: off
+        fmt.Println("\n5. Concurrency features (ownership off):")
+        
+        // 安全计数器
+        counter := &SafeCounter{}
+        var wg sync.WaitGroup
+        
+        for i := 0; i < 5; i++ {
+            wg.Add(1)
+            go func() {
+                defer wg.Done()
+                counter.Inc()
+            }()
+        }
+        
+        wg.Wait()
+        fmt.Printf("Counter value: %d\n", counter.Value())
+        
+        // 通道通信
+        ch := make(chan int)
+        go producer(ch)
+        go consumer(ch)
+    }
+
+    // 测试高阶函数和闭包 - 在非所有权块中
+    {//! ownership: off
+        fmt.Println("\n6. Higher-order functions and closures (ownership off):")
+        
+        counter := makeCounter()
+        fmt.Printf("Count: %d\n", counter())
+        fmt.Printf("Count: %d\n", counter())
+        
+        strings := []string{"hello", "world", "typus"}
+        lengths := mapSlice(strings, func(s string) int { return len(s) })
+        fmt.Printf("String lengths: %v\n", lengths)
+    }
+
+    // 测试接口 - 在非所有权块中
+    {//! ownership: off
+        fmt.Println("\n7. Interface implementation (ownership off):")
+        
+        var shape Shape = Circle{radius: 5.0}
+        fmt.Printf("Shape area: %.2f\n", shape.Area())
+        fmt.Printf("Shape perimeter: %.2f\n", shape.Perimeter())
+    }
+
+    // 测试错误处理
+    {//! ownership: off
+        fmt.Println("\n8. Error handling (ownership off):")
+        
+        defer func() {
+            if r := recover(); r != nil {
+                fmt.Printf("Recovered from panic: %v\n", r)
+            }
+        }()
+        
+        // 这里可以触发一个 panic 来测试 recover
+        // panic("test panic")
+    }
+
+    // 嵌套的块级指令
+    fmt.Println("\n9. Nested block directives:")
+    {//! constraints: on, ownership: off
+        vec := Vector(5){data: []float64{1, 2, 3, 4, 5}}
+        
+        {//! ownership: on
+            // 在依赖类型块内的所有权块
+            owned := NewUniqueString("nested ownership")
+            fmt.Printf("Nested: %s\n", owned.String())
+            // owned 的所有权在块结束时释放
+        }
+        
+        fmt.Printf("Vector still accessible: %v\n", vec.data)
+    }
+
+    fmt.Println("\n=== All tests completed ===")
+}

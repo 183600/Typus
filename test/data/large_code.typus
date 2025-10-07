@@ -1,0 +1,46 @@
+package main
+
+import "fmt"
+
+type LargeStruct struct {
+    field1 int
+    field2 string
+    field3 bool
+    field4 float64
+    field5 []int
+    field6 map[string]int
+    field7 chan bool
+    field8 func() int
+}
+
+func (ls *LargeStruct) Method1() int {
+    return ls.field1
+}
+
+func (ls *LargeStruct) Method2() string {
+    return ls.field2
+}
+
+func complexFunction(a int, b string, c bool) (int, string, bool) {
+    if c {
+        return a + 1, b + "_modified", !c
+    }
+    return a, b, c
+}
+
+func main() {
+    var ls LargeStruct
+    ls.field1 = 100
+    ls.field2 = "test"
+    ls.field3 = true
+    ls.field4 = 3.14
+    ls.field5 = []int{1, 2, 3, 4, 5}
+    ls.field6 = make(map[string]int)
+    ls.field6["key"] = 42
+    ls.field7 = make(chan bool)
+    ls.field8 = func() int { return 42 }
+    
+    result1, result2, result3 := complexFunction(ls.field1, ls.field2, ls.field3)
+    fmt.Println(result1, result2, result3)
+    fmt.Println(ls.Method1(), ls.Method2())
+}

@@ -1,0 +1,17 @@
+//! ownership: on
+
+func test_use_after_move() {
+    data := "hello"
+    take_value(data)  // This moves data
+    println(data)     // This should be UseAfterMove error
+}
+
+func test_valid_usage() {
+    data := "hello"
+    println(data)     // This should be OK - no move happened
+    println(data)     // This should also be OK
+}
+
+func take_value(s string) {
+    println(s)        // Built-in function usage
+}

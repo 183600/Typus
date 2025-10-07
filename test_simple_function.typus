@@ -1,0 +1,11 @@
+//! ownership: on
+
+func take_value(s string) {
+    println(s)
+}
+
+func test_function_move() {
+    data := "hello"
+    take_value(data)
+    println(data)
+}

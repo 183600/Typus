@@ -1,0 +1,379 @@
+package main
+
+import (
+	"bufio"
+	"bytes"
+	"compress/gzip"
+	"container/list"
+	"container/ring"
+	"context"
+	"crypto/md5"
+	"crypto/sha1"
+	"crypto/sha256"
+	"database/sql"
+	"encoding/base64"
+	"encoding/binary"
+	"encoding/csv"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"hash/fnv"
+	"html"
+	"html/template"
+	"image"
+	"io"
+	"io/ioutil"
+	"log"
+	"math"
+	"math/big"
+	"math/bits"
+	"math/cmplx"
+	"math/rand"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"reflect"
+	"regexp"
+	"runtime"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"syscall"
+	"time"
+	"unicode"
+	"unicode/utf8"
+)
+
+// Test all standard library packages and their main features
+func testIOPackages() {
+	fmt.Println("=== Testing I/O Packages ===")
+
+	// Testing bufio
+	reader := bufio.NewReader(strings.NewReader("Hello, bufio!"))
+	line, _ := reader.ReadString('\n')
+	fmt.Printf("bufio: %s", line)
+
+	// Testing bytes
+	var buf bytes.Buffer
+	buf.WriteString("Hello, bytes!")
+	fmt.Printf("bytes: %s\n", buf.String())
+
+	// Testing compress/gzip
+	var gzipBuf bytes.Buffer
+	writer := gzip.NewWriter(&gzipBuf)
+	writer.Write([]byte("Hello, gzip!"))
+	writer.Close()
+	fmt.Printf("gzip: compressed %d bytes\n", gzipBuf.Len())
+
+	// Testing io
+	// io.Reader and io.Writer interfaces
+	strReader := strings.NewReader("Hello, io!")
+	data := make([]byte, 100)
+	n, _ := strReader.Read(data)
+	fmt.Printf("io: read %d bytes: %s\n", n, data[:n])
+
+	// Testing ioutil (deprecated but still used)
+	tmpFile, _ := ioutil.TempFile("", "test")
+	tmpFile.WriteString("Hello, ioutil!")
+	tmpFile.Close()
+	content, _ := ioutil.ReadFile(tmpFile.Name())
+	fmt.Printf("ioutil: %s\n", string(content))
+	os.Remove(tmpFile.Name())
+
+	// Testing os
+	cwd, _ := os.Getwd()
+	fmt.Printf("os: current directory: %s\n", cwd)
+	os.CreateTemp("", "os_test") // Testing os.CreateTemp
+}
+
+func testContainerPackages() {
+	fmt.Println("\n=== Testing Container Packages ===")
+
+	// Testing container/list
+	l := list.New()
+	l.PushBack("first")
+	l.PushBack("second")
+	l.PushBack("third")
+	for e := l.Front(); e != nil; e = e.Next() {
+		fmt.Printf("list: %s ", e.Value.(string))
+	}
+	fmt.Println()
+
+	// Testing container/ring
+	r := ring.New(3)
+	for i := 0; i < r.Len(); i++ {
+		r.Value = fmt.Sprintf("ring%d", i)
+		r = r.Next()
+	}
+	r.Do(func(p interface{}) {
+		fmt.Printf("ring: %s ", p.(string))
+	})
+	fmt.Println()
+}
+
+func testCryptoPackages() {
+	fmt.Println("\n=== Testing Crypto Packages ===")
+
+	// Testing crypto/md5
+	hasher := md5.New()
+	hasher.Write([]byte("Hello, md5!"))
+	md5Hash := hasher.Sum(nil)
+	fmt.Printf("md5: %x\n", md5Hash)
+
+	// Testing crypto/sha1
+	sha1Hasher := sha1.New()
+	sha1Hasher.Write([]byte("Hello, sha1!"))
+	sha1Hash := sha1Hasher.Sum(nil)
+	fmt.Printf("sha1: %x\n", sha1Hash)
+
+	// Testing crypto/sha256
+	sha256Hasher := sha256.New()
+	sha256Hasher.Write([]byte("Hello, sha256!"))
+	sha256Hash := sha256Hasher.Sum(nil)
+	fmt.Printf("sha256: %x\n", sha256Hash)
+}
+
+func testEncodingPackages() {
+	fmt.Println("\n=== Testing Encoding Packages ===")
+
+	// Testing encoding/base64
+	encoded := base64.StdEncoding.EncodeToString([]byte("Hello, base64!"))
+	decoded, _ := base64.StdEncoding.DecodeString(encoded)
+	fmt.Printf("base64: %s -> %s\n", encoded, string(decoded))
+
+	// Testing encoding/binary
+	var num int64 = 0x123456789ABCDEF0
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, num)
+	fmt.Printf("binary: wrote %d bytes\n", buf.Len())
+
+	// Testing encoding/csv
+	csvData := "name,age\nJohn,30\nJane,25\n"
+	csvReader := csv.NewReader(strings.NewReader(csvData))
+	records, _ := csvReader.ReadAll()
+	fmt.Printf("csv: read %d records\n", len(records))
+
+	// Testing encoding/hex
+	hexEncoded := hex.EncodeToString([]byte("Hello, hex!"))
+	hexDecoded, _ := hex.DecodeString(hexEncoded)
+	fmt.Printf("hex: %s -> %s\n", hexEncoded, string(hexDecoded))
+
+	// Testing encoding/json
+	type Person struct {
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+	}
+	person := Person{Name: "John", Age: 30}
+	jsonData, _ := json.Marshal(person)
+	fmt.Printf("json: %s\n", string(jsonData))
+
+	var decodedPerson Person
+	json.Unmarshal(jsonData, &decodedPerson)
+	fmt.Printf("json: decoded %+v\n", decodedPerson)
+}
+
+func testMathPackages() {
+	fmt.Println("\n=== Testing Math Packages ===")
+
+	// Testing math
+	fmt.Printf("math: Pi = %.15f, E = %.15f\n", math.Pi, math.E)
+	fmt.Printf("math: sqrt(16) = %.1f, pow(2, 10) = %.1f\n", math.Sqrt(16), math.Pow(2, 10))
+
+	// Testing math/big
+	bigInt := big.NewInt(12345678901234567890)
+	bigInt.Mul(bigInt, big.NewInt(2))
+	fmt.Printf("math/big: %s\n", bigInt.String())
+
+	// Testing math/bits
+	x := uint64(42)
+	fmt.Printf("math/bits: leading zeros: %d, trailing zeros: %d\n", bits.LeadingZeros64(x), bits.TrailingZeros64(x))
+
+	// Testing math/cmplx
+	complexNum := cmplx.Rect(1, math.Pi/4)
+	fmt.Printf("math/cmplx: magnitude = %.1f, phase = %.1f\n", cmplx.Abs(complexNum), cmplx.Phase(complexNum))
+
+	// Testing math/rand
+	seed := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(seed)
+	fmt.Printf("math/rand: random number = %d\n", r.Intn(100))
+
+	// Testing hash/fnv
+	hasher := fnv.New32a()
+	hasher.Write([]byte("Hello, fnv!"))
+	fmt.Printf("hash/fnv: %d\n", hasher.Sum32())
+}
+
+func testNetPackages() {
+	fmt.Println("\n=== Testing Net Packages ===")
+
+	// Testing net
+	// Note: Creating actual connections would require network setup
+	fmt.Printf("net: available interfaces count: %d\n", len([]net.Interface{})) // Placeholder
+
+	// Testing net/http
+	// Note: Making actual HTTP requests would require network setup
+	fmt.Printf("net/http: default client timeout: %v\n", http.DefaultClient.Timeout)
+
+	// Testing net/url
+	u, _ := url.Parse("https://example.com/path?query=value#fragment")
+	fmt.Printf("net/url: scheme=%s, host=%s, path=%s\n", u.Scheme, u.Host, u.Path)
+}
+
+func testSystemPackages() {
+	fmt.Println("\n=== Testing System Packages ===")
+
+	// Testing os
+	fmt.Printf("os: args count: %d\n", len(os.Args))
+	fmt.Printf("os: hostname: %s\n", os.Getenv("HOSTNAME"))
+
+	// Testing os/exec
+	cmd := exec.Command("echo", "Hello, exec!")
+	cmd.Stdout = new(bytes.Buffer)
+	cmd.Run()
+	fmt.Printf("os/exec: command executed\n")
+
+	// Testing path
+	joined := path.Join("dir", "subdir", "file.txt")
+	fmt.Printf("path: joined path: %s\n", joined)
+
+	// Testing path/filepath
+	absPath, _ := filepath.Abs("test.txt")
+	fmt.Printf("path/filepath: absolute path: %s\n", absPath)
+
+	// Testing runtime
+	fmt.Printf("runtime: GOOS=%s, GOARCH=%s\n", runtime.GOOS, runtime.GOARCH)
+	fmt.Printf("runtime: NumCPU=%d, NumGoroutine=%d\n", runtime.NumCPU(), runtime.NumGoroutine())
+
+	// Testing syscall
+	fmt.Printf("syscall: get PID: %d\n", syscall.Getpid())
+}
+
+func testTextPackages() {
+	fmt.Println("\n=== Testing Text Packages ===")
+
+	// Testing strings
+	fmt.Printf("strings: contains=%t, upper=%s, split=%v\n",
+		strings.Contains("Hello World", "Hello"),
+		strings.ToUpper("hello"),
+		strings.Split("a,b,c", ","))
+
+	// Testing regexp
+	re, _ := regexp.Compile(`\d+`)
+	matches := re.FindAllString("abc123def456", -1)
+	fmt.Printf("regexp: matches: %v\n", matches)
+
+	// Testing strconv
+	i, _ := strconv.Atoi("42")
+	f, _ := strconv.ParseFloat("3.14", 64)
+	b, _ := strconv.ParseBool("true")
+	fmt.Printf("strconv: int=%d, float=%.2f, bool=%t\n", i, f, b)
+
+	// Testing unicode
+	fmt.Printf("unicode: IsLetter('A')=%t, IsDigit('1')=%t\n",
+		unicode.IsLetter('A'), unicode.IsDigit('1'))
+
+	// Testing unicode/utf8
+	runeCount := utf8.RuneCountInString("Hello, 世界!")
+	fmt.Printf("unicode/utf8: rune count: %d\n", runeCount)
+}
+
+func testTemplatePackages() {
+	fmt.Println("\n=== Testing Template Packages ===")
+
+	// Testing html/template
+	tmpl := template.Must(template.New("test").Parse("Hello, {{.Name}}!"))
+	data := struct{ Name string }{Name: "World"}
+	var buf bytes.Buffer
+	tmpl.Execute(&buf, data)
+	fmt.Printf("html/template: %s\n", buf.String())
+
+	// Testing html
+	escaped := html.EscapeString("<script>alert('Hello')</script>")
+	fmt.Printf("html: escaped: %s\n", escaped)
+}
+
+func testUtilityPackages() {
+	fmt.Println("\n=== Testing Utility Packages ===")
+
+	// Testing context
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	fmt.Printf("context: deadline: %v\n", ctx.Deadline())
+
+	// Testing database/sql
+	db, _ := sql.Open("sqlite3", ":memory:")
+	defer db.Close()
+	fmt.Printf("database/sql: database opened\n")
+
+	// Testing errors
+	err := errors.New("custom error")
+	wrapped := fmt.Errorf("wrapped error: %w", err)
+	fmt.Printf("errors: custom=%v, wrapped=%v\n", err, wrapped)
+
+	// Testing log
+	log.SetPrefix("test: ")
+	log.Println("Hello, log!")
+
+	// Testing reflect
+	var x int = 42
+	val := reflect.ValueOf(&x).Elem()
+	fmt.Printf("reflect: value=%d, kind=%s\n", val.Int(), val.Kind())
+
+	// Testing sync
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		fmt.Println("sync: goroutine executed")
+	}()
+	wg.Wait()
+
+	// Testing sync/atomic
+	var counter int64
+	atomic.AddInt64(&counter, 1)
+	fmt.Printf("sync/atomic: counter=%d\n", counter)
+
+	// Testing sort
+	slice := []int{3, 1, 4, 1, 5, 9, 2, 6}
+	sort.Ints(slice)
+	fmt.Printf("sort: sorted slice: %v\n", slice)
+
+	// Testing time
+	now := time.Now()
+	fmt.Printf("time: now=%v, format=%s\n", now, now.Format("2006-01-02"))
+}
+
+func testImagePackage() {
+	fmt.Println("\n=== Testing Image Package ===")
+
+	// Testing image
+	img := image.NewRGBA(image.Rect(0, 0, 100, 100))
+	img.Set(10, 10, color.RGBA{255, 0, 0, 255})
+	bounds := img.Bounds()
+	fmt.Printf("image: bounds=%v, format=%s\n", bounds, img.ColorModel())
+}
+
+func main() {
+	fmt.Println("=== Comprehensive Standard Library Test ===")
+
+	testIOPackages()
+	testContainerPackages()
+	testCryptoPackages()
+	testEncodingPackages()
+	testMathPackages()
+	testNetPackages()
+	testSystemPackages()
+	testTextPackages()
+	testTemplatePackages()
+	testUtilityPackages()
+	testImagePackage()
+
+	fmt.Println("\n=== All standard library tests completed successfully ===")
+}

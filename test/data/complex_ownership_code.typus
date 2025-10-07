@@ -1,0 +1,9 @@
+//! ownership: on
+
+package main
+
+func main() {
+    var s1 = "hello"
+    var s2 = s1
+    println(s1)
+}

@@ -1,0 +1,720 @@
+//! dependent_types: on
+package main
+
+import (
+    "fmt"
+    "sort"
+    "time"
+)
+
+type DynamicArray struct {
+    elements []int
+    capacity int
+    growth_factor float64
+}
+
+type LinkedList struct {
+    head *ListNode
+    tail *ListNode
+    size int
+}
+
+type ListNode struct {
+    value int
+    next *ListNode
+    prev *ListNode
+}
+
+type Stack struct {
+    elements []int
+    top int
+}
+
+type Queue struct {
+    elements []int
+    front int
+    rear int
+    size int
+}
+
+type BinaryTree struct {
+    root *TreeNode
+    size int
+}
+
+type TreeNode struct {
+    value int
+    left *TreeNode
+    right *TreeNode
+    height int
+}
+
+type Heap struct {
+    elements []int
+    size int
+    heap_type int
+}
+
+func NewDynamicArray(initial_capacity int, growth_factor float64) *DynamicArray {
+    if initial_capacity <= 0 {
+        initial_capacity = 8
+    }
+    if growth_factor <= 1.0 {
+        growth_factor = 2.0
+    }
+    
+    return &DynamicArray{
+        elements: make([]int, 0, initial_capacity),
+        capacity: initial_capacity,
+        growth_factor: growth_factor,
+    }
+}
+
+func (da *DynamicArray) Add(element int) {
+    if len(da.elements) >= da.capacity {
+        da.resize()
+    }
+    da.elements = append(da.elements, element)
+}
+
+func (da *DynamicArray) resize() {
+    new_capacity := int(float64(da.capacity) * da.growth_factor)
+    new_elements := make([]int, len(da.elements), new_capacity)
+    copy(new_elements, da.elements)
+    da.elements = new_elements
+    da.capacity = new_capacity
+}
+
+func (da *DynamicArray) Get(index int) int {
+    if index < 0 || index >= len(da.elements) {
+        panic("Index out of bounds")
+    }
+    return da.elements[index]
+}
+
+func (da *DynamicArray) Set(index int, element int) {
+    if index < 0 || index >= len(da.elements) {
+        panic("Index out of bounds")
+    }
+    da.elements[index] = element
+}
+
+func (da *DynamicArray) Remove(index int) int {
+    if index < 0 || index >= len(da.elements) {
+        panic("Index out of bounds")
+    }
+    
+    element := da.elements[index]
+    da.elements = append(da.elements[:index], da.elements[index+1:]...)
+    return element
+}
+
+func (da *DynamicArray) Size() int {
+    return len(da.elements)
+}
+
+func (da *DynamicArray) Capacity() int {
+    return da.capacity
+}
+
+func NewLinkedList() *LinkedList {
+    return &LinkedList{
+        head: nil,
+        tail: nil,
+        size: 0,
+    }
+}
+
+func (ll *LinkedList) AddFirst(value int) {
+    newNode := &ListNode{value: value}
+    
+    if ll.head == nil {
+        ll.head = newNode
+        ll.tail = newNode
+    } else {
+        newNode.next = ll.head
+        ll.head.prev = newNode
+        ll.head = newNode
+    }
+    ll.size++
+}
+
+func (ll *LinkedList) AddLast(value int) {
+    newNode := &ListNode{value: value}
+    
+    if ll.tail == nil {
+        ll.head = newNode
+        ll.tail = newNode
+    } else {
+        ll.tail.next = newNode
+        newNode.prev = ll.tail
+        ll.tail = newNode
+    }
+    ll.size++
+}
+
+func (ll *LinkedList) RemoveFirst() int {
+    if ll.head == nil {
+        panic("List is empty")
+    }
+    
+    value := ll.head.value
+    ll.head = ll.head.next
+    if ll.head != nil {
+        ll.head.prev = nil
+    } else {
+        ll.tail = nil
+    }
+    ll.size--
+    return value
+}
+
+func (ll *LinkedList) RemoveLast() int {
+    if ll.tail == nil {
+        panic("List is empty")
+    }
+    
+    value := ll.tail.value
+    ll.tail = ll.tail.prev
+    if ll.tail != nil {
+        ll.tail.next = nil
+    } else {
+        ll.head = nil
+    }
+    ll.size--
+    return value
+}
+
+func (ll *LinkedList) Size() int {
+    return ll.size
+}
+
+func (ll *LinkedList) IsEmpty() bool {
+    return ll.size == 0
+}
+
+func (ll *LinkedList) ToSlice() []int {
+    result := make([]int, ll.size)
+    current := ll.head
+    for i := 0; i < ll.size; i++ {
+        result[i] = current.value
+        current = current.next
+    }
+    return result
+}
+
+func NewStack() *Stack {
+    return &Stack{
+        elements: make([]int, 0),
+        top: -1,
+    }
+}
+
+func (s *Stack) Push(element int) {
+    s.elements = append(s.elements, element)
+    s.top++
+}
+
+func (s *Stack) Pop() int {
+    if s.top < 0 {
+        panic("Stack is empty")
+    }
+    
+    element := s.elements[s.top]
+    s.elements = s.elements[:s.top]
+    s.top--
+    return element
+}
+
+func (s *Stack) Peek() int {
+    if s.top < 0 {
+        panic("Stack is empty")
+    }
+    return s.elements[s.top]
+}
+
+func (s *Stack) IsEmpty() bool {
+    return s.top < 0
+}
+
+func (s *Stack) Size() int {
+    return s.top + 1
+}
+
+func NewQueue(capacity int) *Queue {
+    return &Queue{
+        elements: make([]int, capacity),
+        front: 0,
+        rear: 0,
+        size: 0,
+    }
+}
+
+func (q *Queue) Enqueue(element int) {
+    if q.size >= len(q.elements) {
+        panic("Queue is full")
+    }
+    
+    q.elements[q.rear] = element
+    q.rear = (q.rear + 1) % len(q.elements)
+    q.size++
+}
+
+func (q *Queue) Dequeue() int {
+    if q.size == 0 {
+        panic("Queue is empty")
+    }
+    
+    element := q.elements[q.front]
+    q.front = (q.front + 1) % len(q.elements)
+    q.size--
+    return element
+}
+
+func (q *Queue) Front() int {
+    if q.size == 0 {
+        panic("Queue is empty")
+    }
+    return q.elements[q.front]
+}
+
+func (q *Queue) IsEmpty() bool {
+    return q.size == 0
+}
+
+func (q *Queue) Size() int {
+    return q.size
+}
+
+func NewBinaryTree() *BinaryTree {
+    return &BinaryTree{
+        root: nil,
+        size: 0,
+    }
+}
+
+func (bt *BinaryTree) Insert(value int) {
+    bt.root = bt.insertNode(bt.root, value)
+    bt.size++
+}
+
+func (bt *BinaryTree) insertNode(node *TreeNode, value int) *TreeNode {
+    if node == nil {
+        return &TreeNode{
+            value: value,
+            height: 1,
+        }
+    }
+    
+    if value < node.value {
+        node.left = bt.insertNode(node.left, value)
+    } else if value > node.value {
+        node.right = bt.insertNode(node.right, value)
+    }
+    
+    node.height = 1 + max(bt.getHeight(node.left), bt.getHeight(node.right))
+    return node
+}
+
+func (bt *BinaryTree) Search(value int) bool {
+    return bt.searchNode(bt.root, value) != nil
+}
+
+func (bt *BinaryTree) searchNode(node *TreeNode, value int) *TreeNode {
+    if node == nil {
+        return nil
+    }
+    
+    if value == node.value {
+        return node
+    } else if value < node.value {
+        return bt.searchNode(node.left, value)
+    } else {
+        return bt.searchNode(node.right, value)
+    }
+}
+
+func (bt *BinaryTree) getHeight(node *TreeNode) int {
+    if node == nil {
+        return 0
+    }
+    return node.height
+}
+
+func (bt *BinaryTree) InorderTraversal() []int {
+    result := make([]int, 0, bt.size)
+    bt.inorderHelper(bt.root, &result)
+    return result
+}
+
+func (bt *BinaryTree) inorderHelper(node *TreeNode, result *[]int) {
+    if node != nil {
+        bt.inorderHelper(node.left, result)
+        *result = append(*result, node.value)
+        bt.inorderHelper(node.right, result)
+    }
+}
+
+func (bt *BinaryTree) Size() int {
+    return bt.size
+}
+
+func max(a, b int) int {
+    if a > b {
+        return a
+    }
+    return b
+}
+
+func NewMinHeap() *Heap {
+    return &Heap{
+        elements: make([]int, 0),
+        size: 0,
+        heap_type: 0, // 0 for min heap
+    }
+}
+
+func NewMaxHeap() *Heap {
+    return &Heap{
+        elements: make([]int, 0),
+        size: 0,
+        heap_type: 1, // 1 for max heap
+    }
+}
+
+func (h *Heap) Insert(element int) {
+    h.elements = append(h.elements, element)
+    h.size++
+    h.heapifyUp(h.size - 1)
+}
+
+func (h *Heap) ExtractRoot() int {
+    if h.size == 0 {
+        panic("Heap is empty")
+    }
+    
+    root := h.elements[0]
+    h.elements[0] = h.elements[h.size-1]
+    h.elements = h.elements[:h.size-1]
+    h.size--
+    
+    if h.size > 0 {
+        h.heapifyDown(0)
+    }
+    
+    return root
+}
+
+func (h *Heap) heapifyUp(index int) {
+    if index == 0 {
+        return
+    }
+    
+    parent := (index - 1) / 2
+    if h.shouldSwap(h.elements[index], h.elements[parent]) {
+        h.elements[index], h.elements[parent] = h.elements[parent], h.elements[index]
+        h.heapifyUp(parent)
+    }
+}
+
+func (h *Heap) heapifyDown(index int) {
+    leftChild := 2*index + 1
+    rightChild := 2*index + 2
+    target := index
+    
+    if leftChild < h.size && h.shouldSwap(h.elements[leftChild], h.elements[target]) {
+        target = leftChild
+    }
+    
+    if rightChild < h.size && h.shouldSwap(h.elements[rightChild], h.elements[target]) {
+        target = rightChild
+    }
+    
+    if target != index {
+        h.elements[index], h.elements[target] = h.elements[target], h.elements[index]
+        h.heapifyDown(target)
+    }
+}
+
+func (h *Heap) shouldSwap(child, parent int) bool {
+    if h.heap_type == 0 { // min heap
+        return child < parent
+    } else { // max heap
+        return child > parent
+    }
+}
+
+func (h *Heap) Peek() int {
+    if h.size == 0 {
+        panic("Heap is empty")
+    }
+    return h.elements[0]
+}
+
+func (h *Heap) Size() int {
+    return h.size
+}
+
+func (h *Heap) IsEmpty() bool {
+    return h.size == 0
+}
+
+func QuickSort(arr []int, low, high int) {
+    if low < high {
+        pi := partition(arr, low, high)
+        QuickSort(arr, low, pi-1)
+        QuickSort(arr, pi+1, high)
+    }
+}
+
+func partition(arr []int, low, high int) int {
+    pivot := arr[high]
+    i := low - 1
+    
+    for j := low; j < high; j++ {
+        if arr[j] < pivot {
+            i++
+            arr[i], arr[j] = arr[j], arr[i]
+        }
+    }
+    
+    arr[i+1], arr[high] = arr[high], arr[i+1]
+    return i + 1
+}
+
+func MergeSort(arr []int) []int {
+    if len(arr) <= 1 {
+        return arr
+    }
+    
+    mid := len(arr) / 2
+    left := MergeSort(arr[:mid])
+    right := MergeSort(arr[mid:])
+    
+    return merge(left, right)
+}
+
+func merge(left, right []int) []int {
+    result := make([]int, 0, len(left)+len(right))
+    i, j := 0, 0
+    
+    for i < len(left) && j < len(right) {
+        if left[i] <= right[j] {
+            result = append(result, left[i])
+            i++
+        } else {
+            result = append(result, right[j])
+            j++
+        }
+    }
+    
+    result = append(result, left[i:]...)
+    result = append(result, right[j:]...)
+    
+    return result
+}
+
+func BinarySearch(arr []int, target int) int {
+    left, right := 0, len(arr)-1
+    
+    for left <= right {
+        mid := left + (right-left)/2
+        
+        if arr[mid] == target {
+            return mid
+        } else if arr[mid] < target {
+            left = mid + 1
+        } else {
+            right = mid - 1
+        }
+    }
+    
+    return -1
+}
+
+func testDynamicArray() {
+    fmt.Println("=== 测试动态数组 ===")
+    
+    da := NewDynamicArray(4, 2.0)
+    
+    for i := 0; i < 10; i++ {
+        da.Add(i * 10)
+        fmt.Printf("添加 %d, 大小: %d, 容量: %d\n", i*10, da.Size(), da.Capacity())
+    }
+    
+    fmt.Printf("获取索引3: %d\n", da.Get(3))
+    da.Set(3, 999)
+    fmt.Printf("修改后索引3: %d\n", da.Get(3))
+    
+    removed := da.Remove(3)
+    fmt.Printf("移除索引3: %d, 新大小: %d\n", removed, da.Size())
+}
+
+func testLinkedList() {
+    fmt.Println("\n=== 测试链表 ===")
+    
+    ll := NewLinkedList()
+    
+    ll.AddFirst(2)
+    ll.AddFirst(1)
+    ll.AddLast(3)
+    
+    fmt.Printf("链表大小: %d\n", ll.Size())
+    fmt.Printf("链表内容: %v\n", ll.ToSlice())
+    
+    first := ll.RemoveFirst()
+    last := ll.RemoveLast()
+    fmt.Printf("移除首尾元素: %d, %d\n", first, last)
+    fmt.Printf("剩余内容: %v\n", ll.ToSlice())
+}
+
+func testStack() {
+    fmt.Println("\n=== 测试栈 ===")
+    
+    stack := NewStack()
+    
+    for i := 1; i <= 5; i++ {
+        stack.Push(i)
+        fmt.Printf("入栈: %d, 大小: %d\n", i, stack.Size())
+    }
+    
+    fmt.Printf("栈顶元素: %d\n", stack.Peek())
+    
+    for !stack.IsEmpty() {
+        popped := stack.Pop()
+        fmt.Printf("出栈: %d, 大小: %d\n", popped, stack.Size())
+    }
+}
+
+func testQueue() {
+    fmt.Println("\n=== 测试队列 ===")
+    
+    queue := NewQueue(5)
+    
+    for i := 1; i <= 5; i++ {
+        queue.Enqueue(i * 10)
+        fmt.Printf("入队: %d, 大小: %d\n", i*10, queue.Size())
+    }
+    
+    fmt.Printf("队首元素: %d\n", queue.Front())
+    
+    for !queue.IsEmpty() {
+        dequeued := queue.Dequeue()
+        fmt.Printf("出队: %d, 大小: %d\n", dequeued, queue.Size())
+    }
+}
+
+func testBinaryTree() {
+    fmt.Println("\n=== 测试二叉搜索树 ===")
+    
+    tree := NewBinaryTree()
+    
+    values := []int{50, 30, 70, 20, 40, 60, 80}
+    for _, value := range values {
+        tree.Insert(value)
+        fmt.Printf("插入: %d, 大小: %d\n", value, tree.Size())
+    }
+    
+    fmt.Printf("中序遍历: %v\n", tree.InorderTraversal())
+    
+    search_values := []int{40, 25, 80, 90}
+    for _, value := range search_values {
+        found := tree.Search(value)
+        fmt.Printf("查找 %d: %t\n", value, found)
+    }
+}
+
+func testHeap() {
+    fmt.Println("\n=== 测试堆 ===")
+    
+    minHeap := NewMinHeap()
+    maxHeap := NewMaxHeap()
+    
+    values := []int{10, 5, 20, 1, 15, 30, 8}
+    
+    for _, value := range values {
+        minHeap.Insert(value)
+        maxHeap.Insert(value)
+    }
+    
+    fmt.Printf("最小堆大小: %d, 堆顶: %d\n", minHeap.Size(), minHeap.Peek())
+    fmt.Printf("最大堆大小: %d, 堆顶: %d\n", maxHeap.Size(), maxHeap.Peek())
+    
+    fmt.Print("最小堆提取顺序: ")
+    for !minHeap.IsEmpty() {
+        fmt.Printf("%d ", minHeap.ExtractRoot())
+    }
+    fmt.Println()
+    
+    fmt.Print("最大堆提取顺序: ")
+    for !maxHeap.IsEmpty() {
+        fmt.Printf("%d ", maxHeap.ExtractRoot())
+    }
+    fmt.Println()
+}
+
+func testSortingAlgorithms() {
+    fmt.Println("\n=== 测试排序算法 ===")
+    
+    original := []int{64, 34, 25, 12, 22, 11, 90, 88, 76, 50, 42}
+    
+    // 快速排序
+    quickSortArr := make([]int, len(original))
+    copy(quickSortArr, original)
+    fmt.Printf("快速排序前: %v\n", quickSortArr)
+    start := time.Now()
+    QuickSort(quickSortArr, 0, len(quickSortArr)-1)
+    quickSortTime := time.Since(start)
+    fmt.Printf("快速排序后: %v (耗时: %v)\n", quickSortArr, quickSortTime)
+    
+    // 归并排序
+    mergeSortArr := make([]int, len(original))
+    copy(mergeSortArr, original)
+    fmt.Printf("归并排序前: %v\n", mergeSortArr)
+    start = time.Now()
+    mergeSortArr = MergeSort(mergeSortArr)
+    mergeSortTime := time.Since(start)
+    fmt.Printf("归并排序后: %v (耗时: %v)\n", mergeSortArr, mergeSortTime)
+    
+    // Go标准库排序
+    stdSortArr := make([]int, len(original))
+    copy(stdSortArr, original)
+    fmt.Printf("标准库排序前: %v\n", stdSortArr)
+    start = time.Now()
+    sort.Ints(stdSortArr)
+    stdSortTime := time.Since(start)
+    fmt.Printf("标准库排序后: %v (耗时: %v)\n", stdSortArr, stdSortTime)
+}
+
+func testSearchAlgorithms() {
+    fmt.Println("\n=== 测试搜索算法 ===")
+    
+    arr := []int{1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25}
+    targets := []int{7, 13, 20, 25, 1}
+    
+    fmt.Printf("有序数组: %v\n", arr)
+    
+    for _, target := range targets {
+        index := BinarySearch(arr, target)
+        if index != -1 {
+            fmt.Printf("二分查找 %d: 找到，索引 %d\n", target, index)
+        } else {
+            fmt.Printf("二分查找 %d: 未找到\n", target)
+        }
+    }
+}
+
+func main() {
+    fmt.Println("=== 数据结构与算法测试 ===")
+    
+    testDynamicArray()
+    testLinkedList()
+    testStack()
+    testQueue()
+    testBinaryTree()
+    testHeap()
+    testSortingAlgorithms()
+    testSearchAlgorithms()
+    
+    fmt.Println("\n=== 所有数据结构与算法测试完成 ===")
+}

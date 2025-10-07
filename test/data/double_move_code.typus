@@ -1,0 +1,10 @@
+//! ownership: on
+
+package main
+
+func main() {
+    s1 := "hello"
+    s2 := s1
+    s3 := s1  // Double move
+    println(s2, s3)
+}

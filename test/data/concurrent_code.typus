@@ -1,0 +1,45 @@
+package main
+
+import (
+    "fmt"
+    "sync"
+    "time"
+)
+
+func worker(id int, wg *sync.WaitGroup, jobs <-chan int, results chan<- int) {
+    defer wg.Done()
+    
+    for j := range jobs {
+        fmt.Printf("worker %d processing job %d\n", id, j)
+        time.Sleep(time.Second)
+        results <- j * 2
+    }
+}
+
+func main() {
+    const numJobs = 5
+    jobs := make(chan int, numJobs)
+    results := make(chan int, numJobs)
+    
+    var wg sync.WaitGroup
+    wg.Add(3)
+    
+    // Start 3 workers
+    for w := 1; w <= 3; w++ {
+        go worker(w, &wg, jobs, results)
+    }
+    
+    // Send jobs
+    for j := 1; j <= numJobs; j++ {
+        jobs <- j
+    }
+    close(jobs)
+    
+    // Collect results
+    wg.Wait()
+    close(results)
+    
+    for result := range results {
+        fmt.Println(result)
+    }
+}

@@ -1,0 +1,11 @@
+//! ownership: on
+//! dependent_types: on
+
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("Hello
+World")
+}

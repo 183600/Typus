@@ -1,0 +1,69 @@
+package notification_service
+
+import (
+    "errors"
+)
+
+type NotificationService struct {
+    emailProvider string
+    smsProvider   string
+}
+
+func NewNotificationService(emailProvider string) *NotificationService {
+    return &NotificationService{
+        emailProvider: emailProvider,
+        smsProvider:   "default_sms_provider",
+    }
+}
+
+func (ns *NotificationService) SendEmail(to, subject, body string) error {
+    if to == "" || subject == "" || body == "" {
+        return errors.New("email fields required")
+    }
+
+    // Simulate sending email
+    return nil
+}
+
+func (ns *NotificationService) SendSMS(to, message string) error {
+    if to == "" || message == "" {
+        return errors.New("SMS fields required")
+    }
+
+    // Simulate sending SMS
+    return nil
+}
+
+func (ns *NotificationService) SendOrderConfirmation(email, orderID string) error {
+    subject := "Order Confirmation"
+    body := "Your order " + orderID + " has been confirmed."
+    return ns.SendEmail(email, subject, body)
+}
+
+func (ns *NotificationService) SendOrderUpdate(email, orderID, status string) error {
+    subject := "Order Update"
+    body := "Your order " + orderID + " status is now: " + status
+    return ns.SendEmail(email, subject, body)
+}
+
+func (ns *NotificationService) SendUserWelcome(email, username string) error {
+    subject := "Welcome!"
+    body := "Welcome to our service, " + username + "!"
+    return ns.SendEmail(email, subject, body)
+}
+
+// Test notification service ownership patterns
+func TransferNotificationService(service *NotificationService) *NotificationService {
+    return service
+}
+
+func CreateNotificationChain(service *NotificationService, emails []string, message string) error {
+    // Create a chain of notifications and move ownership
+    for _, email := range emails {
+        err := service.SendEmail(email, "Notification", message)
+        if err != nil {
+            return err
+        }
+    }
+    return nil
+}

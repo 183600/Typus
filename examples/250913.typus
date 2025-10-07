@@ -1,0 +1,297 @@
+//go:build demo
+// +build demo
+
+// 包声明与文档
+// Package main 是程序入口包。
+package main
+
+/*
+#include <stdio.h>
+static void hello() { puts("cgo says hello"); }
+*/
+import "C" // cgo
+
+import (
+	_ "embed"       // 空白导入，仅要副作用
+	"encoding/json" // 标准库
+	"errors"        // 错误处理
+	"fmt"
+	"math"
+	"os"
+	"reflect"
+	"runtime"
+	"sync"
+	"sync/atomic"
+	"testing" // 测试框架
+	"time"
+)
+
+//go:embed hello.txt
+var hello string // embed 文件到字符串
+
+// 常量组，支持 iota 枚举
+const (
+	_ = iota
+	Jan
+	Feb
+	Mar
+)
+
+// 编译期常量表达式
+const Pi = 3.14159265358979323846264338327950288419716939937510582097494459
+
+// 变量组
+var (
+	x, y     int
+	home     = os.Getenv("HOME")
+	start    = time.Now()
+	once     sync.Once
+	pool     = sync.Pool{New: func() interface{} { return new(int) }}
+)
+
+// 类型别名
+type MyInt = int
+
+// 新定义类型
+type Celsius float64
+
+// 结构体 + 标签 + 嵌入
+type Point struct {
+	X, Y float64 `json:"x,string"` // 结构体标签
+}
+
+type Vertex struct {
+	Point        // 匿名嵌入
+	Celsius      // 多重嵌入
+	name string
+	_    struct{} // 占位字段
+}
+
+// 接口：空接口与带方法的接口
+type Stringer interface {
+	String() string
+}
+
+type Rotator interface {
+	Rotate(float64)
+	Stringer // 接口嵌入
+}
+
+// 方法（值接收者）
+func (v Vertex) String() string { return fmt.Sprintf("Vertex{X:%.2f, Y:%.2f, Celsius:%.2f, name:%s}", v.Point.X, v.Point.Y, v.Celsius, v.name) }
+
+// 方法（指针接收者）
+func (p *Point) Rotate(angle float64) {
+	sin, cos := math.Sincos(angle)
+	p.X, p.Y = p.X*cos-p.Y*sin, p.X*sin+p.Y*cos
+}
+
+// 泛型：类型参数、约束、实例化
+type Number interface {
+	~int | ~float64 | ~float32
+}
+
+type Vec[T Number] []T
+
+func (v Vec[T]) Sum() (sum T) {
+	for _, x := range v {
+		sum += x
+	}
+	return
+}
+
+// 可变参数函数
+func SumInts(nums ...int) int {
+	sum := 0
+	for _, n := range nums {
+		sum += n
+	}
+	return sum
+}
+
+// 多返回值 + 命名返回值 + defer + 恢复
+func Divide(a, b float64) (result float64, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic: %v", r)
+		}
+	}()
+	if b == 0 {
+		panic("division by zero")
+	}
+	result = a / b
+	return
+}
+
+// 函数类型 + 匿名函数 + 闭包
+type Transformer func(int) int
+
+func Map(slice []int, fn Transformer) []int {
+	out := make([]int, len(slice))
+	for i, v := range slice {
+		out[i] = fn(v)
+	}
+	return out
+}
+
+// 通道 + select + 并发
+func Generator(nums ...int) <-chan int {
+	out := make(chan int)
+	go func() {
+		defer close(out)
+		for _, n := range nums {
+			select {
+			case out <- n:
+			case <-time.After(1 * time.Second):
+				return
+			}
+		}
+	}()
+	return out
+}
+
+// go 语句 + WaitGroup
+func ConcurrentSum(nums []int) int {
+	var wg sync.WaitGroup
+	ch := make(chan int, len(nums))
+	for _, n := range nums {
+		wg.Add(1)
+		go func(v int) {
+			defer wg.Done()
+			ch <- v * v
+		}(n)
+	}
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+	sum := 0
+	for v := range ch {
+		sum += v
+	}
+	return sum
+}
+
+// 原子操作
+func AtomicInc(addr *int64) {
+	atomic.AddInt64(addr, 1)
+}
+
+// 反射：运行时类型信息
+func Inspect(v interface{}) {
+	t := reflect.TypeOf(v)
+	fmt.Printf("type=%v kind=%v\n", t, t.Kind())
+	if t.Kind() == reflect.Struct {
+		for i := 0; i < t.NumField(); i++ {
+			f := t.Field(i)
+			fmt.Printf("  field[%d]: %s %s tag=%q\n", i, f.Name, f.Type, f.Tag)
+		}
+	}
+}
+
+// 错误处理：自定义错误类型
+type ParseError struct {
+	Func string
+	Key  string
+	Err  error
+}
+
+func (e *ParseError) Error() string {
+	return fmt.Sprintf("parse error in %s: key=%s: %v", e.Func, e.Key, e.Err)
+}
+func (e *ParseError) Unwrap() error { return e.Err }
+
+// init 函数：包初始化顺序
+func init() {
+	fmt.Println("init main: start")
+}
+
+func init() {
+	fmt.Println("init main: second")
+}
+
+// 内联汇编
+func AsmAdd(a, b int32) int32
+func asmAdd(a, b int32) int32
+
+//go:nosplit
+//go:noinline
+func main() {
+	// 调用 cgo
+	C.hello()
+
+	// 基本控制流
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "json":
+			v := Vertex{Point{1, 2}, 36.6, "origin", struct{}{}}
+			b, _ := json.Marshal(v)
+			fmt.Println(string(b))
+		case "gen":
+			for v := range Generator(1, 2, 3) {
+				fmt.Println("gen:", v)
+			}
+		}
+	}
+
+	// 延迟调用
+	defer fmt.Println("deferred: bye")
+
+	// 方法调用
+	var vt Vertex
+	vt.Rotate(math.Pi / 2)
+	fmt.Println("vt.String():", vt.String())
+
+	// 泛型
+	intVec := Vec[int]{1, 2, 3}
+	fmt.Println("Vec[int].Sum():", intVec.Sum())
+
+	// 接口转换与类型断言
+	var s Stringer = vt
+	if p, ok := s.(Rotator); ok {
+		p.Rotate(1.57)
+	}
+
+	// 反射
+	Inspect(vt)
+
+	// 错误包装
+	_, err := Divide(1, 0)
+	if err != nil {
+		var perr *ParseError
+		if !errors.As(err, &perr) {
+			fmt.Println("divide error:", err)
+		}
+	}
+
+	// 原子操作
+	var counter int64
+	AtomicInc(&counter)
+	fmt.Println("counter:", atomic.LoadInt64(&counter))
+
+	// 运行时调用
+	fmt.Println("NumCPU:", runtime.NumCPU())
+	fmt.Println("NumGoroutine:", runtime.NumGoroutine())
+
+	// 调用汇编 (commented out due to missing implementation)
+	// fmt.Println("asm 2+3=", asmAdd(2, 3))
+
+	// 测试子进程：go test 会跑
+	testing.Main(func(pat, str string) (bool, error) { return true, nil },
+		[]testing.InternalTest{
+			{Name: "Demo", F: func(t *testing.T) {
+				if SumInts(1, 2, 3) != 6 {
+					t.Fatal("fail")
+				}
+			}},
+		},
+		nil, nil)
+}
+
+// 汇编实现（伪代码，真正需要 .s 文件）
+// TEXT ·asmAdd(SB),4,$0-12
+//     MOVL a+0(FP), AX
+//     MOVL b+4(FP), BX
+//     ADDL BX, AX
+//     MOVL AX, ret+8(FP)
+//     RET

@@ -1,0 +1,1234 @@
+//! ownership: on
+//! dependent_types: on
+
+package main
+
+import (
+	"bufio"
+	"bytes"
+	"compress/gzip"
+	"context"
+	"crypto/md5"
+	"crypto/sha256"
+	"database/sql"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"hash/fnv"
+	"html/template"
+	"io"
+	"log"
+	"math"
+	"math/big"
+	"math/bits"
+	"math/rand"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"reflect"
+	"regexp"
+	"runtime"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"syscall"
+	"time"
+	"unicode"
+	"unicode/utf8"
+	"unsafe"
+)
+
+// 1. 基本数据类型和变量声明
+var (
+	// 布尔类型
+	boolVar1    bool   = true
+	boolVar2           = false
+	boolVar3    bool
+	
+	// 整数类型
+	intVar1     int     = 42
+	intVar2     int8    = 127
+	intVar3     int16   = 32767
+	intVar4     int32   = 2147483647
+	intVar5     int64   = 9223372036854775807
+	
+	// 无符号整数类型
+	uintVar1    uint    = 42
+	uintVar2    uint8   = 255
+	uintVar3    uint16  = 65535
+	uintVar4    uint32  = 4294967295
+	uintVar5    uint64  = 18446744073709551615
+	
+	// 浮点类型
+	float32Var  float32 = 3.14
+	float64Var  float64 = 3.141592653589793
+	
+	// 复数类型
+	complex64Var   complex64  = 1 + 2i
+	complex128Var  complex128 = 1 + 2i
+	
+	// 字符串类型
+	stringVar1  string = "Hello, World!"
+	stringVar2         = "Implicit type"
+	stringVar3  string
+	
+	// 字符类型
+	byteVar     byte = 'A'
+	runeVar     rune = '世'
+	
+	// 常量
+	const1      = 3.14159
+	const2      = "CONSTANT"
+	const3      = iota
+)
+
+// 2. 数组和切片
+var (
+	// 固定长度数组
+	array1      [5]int                    = [5]int{1, 2, 3, 4, 5}
+	array2      [3]string                 = [...]string{"a", "b", "c"}
+	array3      [10]float64               // 零值初始化
+	
+	// 切片
+	slice1      []int                     = []int{1, 2, 3, 4, 5}
+	slice2      []string                  = make([]string, 5)
+	slice3      []byte                    = make([]byte, 0, 100)
+	slice4      []interface{}             // 空接口切片
+)
+
+// 3. Map和结构体
+var (
+	// Map声明
+	map1        map[string]int            = map[string]int{"one": 1, "two": 2}
+	map2        map[int][]string          = make(map[int][]string)
+	map3        map[string]interface{}    // 空接口map
+	
+	// 结构体实例
+	person1     Person                    = Person{Name: "Alice", Age: 30}
+	person2     *Person                   = &Person{Name: "Bob", Age: 25}
+)
+
+// 4. 接口和类型定义
+type (
+	// 基本类型别名
+	ID          int64
+	Name        string
+	Price       float64
+	Status      bool
+	
+	// 自定义结构体
+	Person      struct {
+		Name        string
+		Age         int
+		Email       string
+		Address     *Address
+		Tags        []string
+		Metadata    map[string]interface{}
+		CreatedAt   time.Time
+		UpdatedAt   *time.Time
+	}
+	
+	Address     struct {
+		Street      string
+		City        string
+		State       string
+		ZipCode     string
+		Country     string
+		Coordinates *Coordinates
+	}
+	
+	Coordinates struct {
+		Latitude    float64
+		Longitude   float64
+	}
+	
+	// 接口定义
+	Writer      interface {
+		Write([]byte) (int, error)
+		Close() error
+	}
+	
+	Reader      interface {
+		Read([]byte) (int, error)
+		Close() error
+	}
+	
+	ReadWriter  interface {
+		Reader
+		Writer
+	}
+	
+	// 空接口
+	Any         interface{}
+	
+	// 函数类型
+	Handler     func(http.ResponseWriter, *http.Request)
+	Predicate   func(interface{}) bool
+	Mapper      func(interface{}) interface{}
+	
+	// 嵌套结构体
+	Company     struct {
+		Name        string
+		Employees   []Person
+		CEO         *Person
+		Founded     time.Time
+		Departments map[string][]Person
+	}
+)
+
+// 5. 方法和接收者
+func (p Person) String() string {
+	return fmt.Sprintf("Person{Name: %s, Age: %d, Email: %s}", p.Name, p.Age, p.Email)
+}
+
+func (p *Person) SetEmail(email string) error {
+	if !strings.Contains(email, "@") {
+		return errors.New("invalid email format")
+	}
+	p.Email = email
+	p.UpdatedAt = &[]time.Time{time.Now()}[0]
+	return nil
+}
+
+func (p Person) GetAge() int {
+	return p.Age
+}
+
+func (p *Person) Birthday() {
+	p.Age++
+	now := time.Now()
+	p.UpdatedAt = &now
+}
+
+func (c Company) EmployeeCount() int {
+	return len(c.Employees)
+}
+
+func (c *Company) AddEmployee(p Person) {
+	c.Employees = append(c.Employees, p)
+}
+
+// 6. 函数定义和参数
+func simpleFunction() {
+	fmt.Println("Simple function called")
+}
+
+func functionWithParams(a int, b string, c bool) {
+	fmt.Printf("Params: %d, %s, %t\n", a, b, c)
+}
+
+func functionWithReturn(a, b int) int {
+	return a + b
+}
+
+func functionWithMultipleReturn(a, b float64) (float64, error) {
+	if b == 0 {
+		return 0, errors.New("division by zero")
+	}
+	return a / b, nil
+}
+
+func functionWithNamedReturn(a, b int) (sum int, product int) {
+	sum = a + b
+	product = a * b
+	return // naked return
+}
+
+func functionWithVariadicParams(prefix string, numbers ...int) int {
+	total := 0
+	fmt.Printf("%s: ", prefix)
+	for i, num := range numbers {
+		if i > 0 {
+			fmt.Print(" + ")
+		}
+		fmt.Print(num)
+		total += num
+	}
+	fmt.Printf(" = %d\n", total)
+	return total
+}
+
+func functionWithSliceParam(slice []string) string {
+	return strings.Join(slice, ", ")
+}
+
+func functionWithMapParam(m map[string]int) []string {
+	var keys []string
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func functionWithInterfaceParam(i interface{}) string {
+	switch v := i.(type) {
+	case int:
+		return fmt.Sprintf("Integer: %d", v)
+	case string:
+		return fmt.Sprintf("String: %s", v)
+	case bool:
+		return fmt.Sprintf("Boolean: %t", v)
+	case Person:
+		return fmt.Sprintf("Person: %s", v.Name)
+	default:
+		return fmt.Sprintf("Unknown type: %T", v)
+	}
+}
+
+func functionWithFunctionParam(f func(int, int) int, a, b int) int {
+	return f(a, b)
+}
+
+func functionReturningFunction(multiplier int) func(int) int {
+	return func(x int) int {
+		return x * multiplier
+	}
+}
+
+func functionWithDefer() (result int) {
+	defer func() {
+		result++
+		fmt.Printf("Deferred function called, result: %d\n", result)
+	}()
+	return 5
+}
+
+func functionWithPanic() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("Recovered from panic: %v\n", r)
+		}
+	}()
+	
+	fmt.Println("About to panic...")
+	panic("This is a test panic")
+}
+
+// 7. 闭包和高阶函数
+func createCounter() func() int {
+	count := 0
+	return func() int {
+		count++
+		return count
+	}
+}
+
+func createAdder(base int) func(int) int {
+	return func(x int) int {
+		return base + x
+	}
+}
+
+func applyToSlice(slice []int, f func(int) int) []int {
+	result := make([]int, len(slice))
+	for i, v := range slice {
+		result[i] = f(v)
+	}
+	return result
+}
+
+func filterSlice(slice []int, predicate func(int) bool) []int {
+	var result []int
+	for _, v := range slice {
+		if predicate(v) {
+			result = append(result, v)
+		}
+	}
+	return result
+}
+
+func reduceSlice(slice []int, f func(int, int) int, initial int) int {
+	result := initial
+	for _, v := range slice {
+		result = f(result, v)
+	}
+	return result
+}
+
+// 8. 接口实现和方法集
+func interfaceExample() {
+	// 接口变量
+	var rw ReadWriter
+	
+	// 实现接口的结构体
+	buf := &bytes.Buffer{}
+	rw = buf
+	
+	// 使用接口
+	data := []byte("Hello, Interface!")
+	n, err := rw.Write(data)
+	if err != nil {
+		fmt.Printf("Write error: %v\n", err)
+		return
+	}
+	fmt.Printf("Wrote %d bytes\n", n)
+	
+	// 类型断言
+	if buffer, ok := rw.(*bytes.Buffer); ok {
+		fmt.Printf("Buffer length: %d\n", buffer.Len())
+	}
+	
+	// 空接口
+	var anything Any
+	anything = 42
+	fmt.Printf("Anything: %v (type: %T)\n", anything, anything)
+	
+	anything = "hello"
+	fmt.Printf("Anything: %v (type: %T)\n", anything, anything)
+	
+	anything = Person{Name: "Alice", Age: 30}
+	fmt.Printf("Anything: %v (type: %T)\n", anything, anything)
+}
+
+// 9. 并发编程
+func goroutineExample() {
+	fmt.Println("=== Goroutine Example ===")
+	
+	// 基本goroutine
+	done := make(chan bool)
+	go func() {
+		fmt.Println("Hello from goroutine!")
+		done <- true
+	}()
+	<-done
+	
+	// 多个goroutine
+	var wg sync.WaitGroup
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			fmt.Printf("Goroutine %d: Working...\n", id)
+			time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+			fmt.Printf("Goroutine %d: Done!\n", id)
+		}(i)
+	}
+	wg.Wait()
+	
+	// 通道通信
+	ch := make(chan string)
+	go func() {
+		ch <- "Message from goroutine"
+	}()
+	msg := <-ch
+	fmt.Printf("Received: %s\n", msg)
+	
+	// 缓冲通道
+	buffered := make(chan int, 3)
+	buffered <- 1
+	buffered <- 2
+	buffered <- 3
+	close(buffered)
+	
+	for val := range buffered {
+		fmt.Printf("Buffered value: %d\n", val)
+	}
+}
+
+func selectExample() {
+	fmt.Println("=== Select Example ===")
+	
+	ch1 := make(chan string)
+	ch2 := make(chan string)
+	
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		ch1 <- "Message from ch1"
+	}()
+	
+	go func() {
+		time.Sleep(150 * time.Millisecond)
+		ch2 <- "Message from ch2"
+	}()
+	
+	// 使用select
+	for i := 0; i < 2; i++ {
+		select {
+		case msg1 := <-ch1:
+			fmt.Printf("Received from ch1: %s\n", msg1)
+		case msg2 := <-ch2:
+			fmt.Printf("Received from ch2: %s\n", msg2)
+		case <-time.After(200 * time.Millisecond):
+			fmt.Println("Timeout!")
+		}
+	}
+}
+
+func mutexExample() {
+	fmt.Println("=== Mutex Example ===")
+	
+	counter := 0
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	
+	// 启动多个goroutine增加计数器
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 100; j++ {
+				mu.Lock()
+				counter++
+				mu.Unlock()
+			}
+		}()
+	}
+	
+	wg.Wait()
+	fmt.Printf("Final counter value: %d\n", counter)
+}
+
+func rwMutexExample() {
+	fmt.Println("=== RWMutex Example ===")
+	
+	var rw sync.RWMutex
+	data := make(map[string]int)
+	var wg sync.WaitGroup
+	
+	// 写操作
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 5; i++ {
+			rw.Lock()
+			key := fmt.Sprintf("key%d", i)
+			data[key] = i
+			fmt.Printf("Write: %s = %d\n", key, i)
+			rw.Unlock()
+			time.Sleep(50 * time.Millisecond)
+		}
+	}()
+	
+	// 读操作
+	for i := 0; i < 3; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < 5; j++ {
+				rw.RLock()
+				for k, v := range data {
+					fmt.Printf("Reader %d: %s = %d\n", id, k, v)
+				}
+				rw.RUnlock()
+				time.Sleep(30 * time.Millisecond)
+			}
+		}(i)
+	}
+	
+	wg.Wait()
+}
+
+// 10. 错误处理
+func errorHandlingExample() {
+	fmt.Println("=== Error Handling Example ===")
+	
+	// 基本错误处理
+	if err := simpleErrorFunction(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+	}
+	
+	// 自定义错误类型
+	if err := customErrorFunction(); err != nil {
+		if customErr, ok := err.(*CustomError); ok {
+			fmt.Printf("Custom error - Code: %d, Message: %s\n", customErr.Code, customErr.Message)
+		} else {
+			fmt.Printf("Error: %v\n", err)
+		}
+	}
+	
+	// 错误包装
+	if err := wrappedErrorFunction(); err != nil {
+		fmt.Printf("Wrapped error: %v\n", err)
+	}
+	
+	// panic和recover
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Printf("Recovered from panic: %v\n", r)
+			}
+		}()
+		
+		fmt.Println("About to panic...")
+		panic("This is a test panic")
+	}()
+	
+	fmt.Println("After panic recovery")
+}
+
+func simpleErrorFunction() error {
+	if rand.Float32() < 0.5 {
+		return errors.New("random error occurred")
+	}
+	return nil
+}
+
+type CustomError struct {
+	Code    int
+	Message string
+	Context map[string]string
+}
+
+func (e *CustomError) Error() string {
+	return fmt.Sprintf("CustomError[Code: %d, Message: %s]", e.Code, e.Message)
+}
+
+func customErrorFunction() error {
+	return &CustomError{
+		Code:    404,
+		Message: "Resource not found",
+		Context: map[string]string{
+			"resource": "user",
+			"id":       "123",
+		},
+	}
+}
+
+func wrappedErrorFunction() error {
+	if err := simpleErrorFunction(); err != nil {
+		return fmt.Errorf("wrapped error: %w", err)
+	}
+	return nil
+}
+
+// 11. 反射
+func reflectionExample() {
+	fmt.Println("=== Reflection Example ===")
+	
+	// 基本反射
+	var x int = 42
+	v := reflect.ValueOf(x)
+	t := reflect.TypeOf(x)
+	fmt.Printf("Value: %v, Type: %s, Kind: %s\n", v, t, t.Kind())
+	
+	// 结构体反射
+	p := Person{Name: "Bob", Age: 25}
+	pv := reflect.ValueOf(p)
+	pt := reflect.TypeOf(p)
+	
+	fmt.Printf("Struct type: %s\n", pt.Name())
+	for i := 0; i < pt.NumField(); i++ {
+		field := pt.Field(i)
+		value := pv.Field(i)
+		fmt.Printf("Field %d: %s = %v (type: %s)\n", i, field.Name, value, field.Type)
+	}
+	
+	// 方法反射
+	for i := 0; i < pt.NumMethod(); i++ {
+		method := pt.Method(i)
+		fmt.Printf("Method %d: %s\n", i, method.Name)
+	}
+	
+	// 修改值（通过指针）
+	xptr := &x
+	pvptr := reflect.ValueOf(xptr)
+	if pvptr.Elem().CanSet() {
+		pvptr.Elem().SetInt(100)
+		fmt.Printf("Modified value: %d\n", x)
+	}
+	
+	// 动态创建值
+	stringType := reflect.TypeOf("")
+	newString := reflect.New(stringType).Elem()
+	newString.SetString("Dynamically created string")
+	fmt.Printf("Dynamic string: %s\n", newString.String())
+}
+
+// 12. 泛型（Go 1.18+）
+func genericExamples() {
+	fmt.Println("=== Generic Examples ===")
+	
+	// 泛型函数
+	numbers := []int{1, 2, 3, 4, 5}
+	doubled := Map(numbers, func(x int) int { return x * 2 })
+	fmt.Printf("Doubled: %v\n", doubled)
+	
+	// 泛型过滤
+	evens := Filter(numbers, func(x int) bool { return x%2 == 0 })
+	fmt.Printf("Even numbers: %v\n", evens)
+	
+	// 泛型reduce
+	sum := Reduce(numbers, func(acc, x int) int { return acc + x }, 0)
+	fmt.Printf("Sum: %d\n", sum)
+	
+	// 泛型结构体
+	stack := &Stack[int]{}
+	stack.Push(1)
+	stack.Push(2)
+	stack.Push(3)
+	fmt.Printf("Stack pop: %d\n", stack.Pop())
+	fmt.Printf("Stack pop: %d\n", stack.Pop())
+	
+	// 泛型约束
+	addable := []int{10, 20, 30}
+	total := Sum(addable)
+	fmt.Printf("Total: %d\n", total)
+	
+	floats := []float64{1.1, 2.2, 3.3}
+	floatTotal := Sum(floats)
+	fmt.Printf("Float total: %.2f\n", floatTotal)
+}
+
+// 泛型函数定义
+func Map[T, U any](slice []T, f func(T) U) []U {
+	result := make([]U, len(slice))
+	for i, v := range slice {
+		result[i] = f(v)
+	}
+	return result
+}
+
+func Filter[T any](slice []T, predicate func(T) bool) []T {
+	var result []T
+	for _, v := range slice {
+		if predicate(v) {
+			result = append(result, v)
+		}
+	}
+	return result
+}
+
+func Reduce[T, U any](slice []T, f func(U, T) U, initial U) U {
+	result := initial
+	for _, v := range slice {
+		result = f(result, v)
+	}
+	return result
+}
+
+// 泛型结构体
+type Stack[T any] struct {
+	items []T
+}
+
+func (s *Stack[T]) Push(item T) {
+	s.items = append(s.items, item)
+}
+
+func (s *Stack[T]) Pop() T {
+	if len(s.items) == 0 {
+		var zero T
+		return zero
+	}
+	item := s.items[len(s.items)-1]
+	s.items = s.items[:len(s.items)-1]
+	return item
+}
+
+func (s *Stack[T]) IsEmpty() bool {
+	return len(s.items) == 0
+}
+
+func (s *Stack[T]) Size() int {
+	return len(s.items)
+}
+
+// 泛型约束
+type Number interface {
+	int | int64 | float64
+}
+
+func Sum[T Number](numbers []T) T {
+	var sum T
+	for _, n := range numbers {
+		sum += n
+	}
+	return sum
+}
+
+// 13. 标准库使用
+func standardLibraryExamples() {
+	fmt.Println("=== Standard Library Examples ===")
+	
+	// 字符串处理
+	text := "Hello, World! This is a test string."
+	fmt.Printf("Original: %s\n", text)
+	fmt.Printf("Upper: %s\n", strings.ToUpper(text))
+	fmt.Printf("Lower: %s\n", strings.ToLower(text))
+	fmt.Printf("Contains 'World': %t\n", strings.Contains(text, "World"))
+	fmt.Printf("Replace 'test' with 'sample': %s\n", strings.Replace(text, "test", "sample", 1))
+	
+	// 字符串分割和连接
+	words := strings.Fields(text)
+	fmt.Printf("Words: %v\n", words)
+	joined := strings.Join(words, "-")
+	fmt.Printf("Joined with '-': %s\n", joined)
+	
+	// 正则表达式
+	re := regexp.MustCompile(`\b\w{4}\b`)
+	matches := re.FindAllString(text, -1)
+	fmt.Printf("4-letter words: %v\n", matches)
+	
+	// JSON处理
+	person := Person{Name: "Alice", Age: 30, Email: "alice@example.com"}
+	jsonData, err := json.Marshal(person)
+	if err != nil {
+		fmt.Printf("JSON marshal error: %v\n", err)
+	} else {
+		fmt.Printf("JSON: %s\n", jsonData)
+	}
+	
+	// JSON解码
+	var decodedPerson Person
+	if err := json.Unmarshal(jsonData, &decodedPerson); err != nil {
+		fmt.Printf("JSON unmarshal error: %v\n", err)
+	} else {
+		fmt.Printf("Decoded person: %+v\n", decodedPerson)
+	}
+	
+	// 时间处理
+	now := time.Now()
+	fmt.Printf("Current time: %s\n", now.Format(time.RFC3339))
+	fmt.Printf("Unix timestamp: %d\n", now.Unix())
+	
+	// 格式化时间
+	formatted := now.Format("2006-01-02 15:04:05")
+	fmt.Printf("Formatted time: %s\n", formatted)
+	
+	// 解析时间
+	parsed, err := time.Parse("2006-01-02", "2023-12-25")
+	if err != nil {
+		fmt.Printf("Time parse error: %v\n", err)
+	} else {
+		fmt.Printf("Parsed time: %s\n", parsed.Format(time.RFC3339))
+	}
+	
+	// 数学函数
+	fmt.Printf("Pi: %.6f\n", math.Pi)
+	fmt.Printf("Sqrt(16): %.2f\n", math.Sqrt(16))
+	fmt.Printf("Sin(Pi/2): %.2f\n", math.Sin(math.Pi/2))
+	fmt.Printf("Max(5, 10): %.0f\n", math.Max(5, 10))
+	fmt.Printf("Min(5, 10): %.0f\n", math.Min(5, 10))
+	
+	// 随机数
+	rand.Seed(time.Now().UnixNano())
+	fmt.Printf("Random int: %d\n", rand.Intn(100))
+	fmt.Printf("Random float: %.2f\n", rand.Float64())
+	
+	// 排序
+	numbers := []int{5, 2, 8, 1, 9, 3}
+	fmt.Printf("Before sort: %v\n", numbers)
+	sort.Ints(numbers)
+	fmt.Printf("After sort: %v\n", numbers)
+	
+	// 自定义排序
+	people := []Person{
+		{Name: "Alice", Age: 30},
+		{Name: "Bob", Age: 25},
+		{Name: "Charlie", Age: 35},
+	}
+	
+	sort.Slice(people, func(i, j int) bool {
+		return people[i].Age < people[j].Age
+	})
+	fmt.Printf("People sorted by age: %v\n", people)
+	
+	// 文件路径
+	path := "/home/user/documents/file.txt"
+	fmt.Printf("Base: %s\n", filepath.Base(path))
+	fmt.Printf("Dir: %s\n", filepath.Dir(path))
+	fmt.Printf("Ext: %s\n", filepath.Ext(path))
+	fmt.Printf("IsAbs: %t\n", filepath.IsAbs(path))
+}
+
+// 14. 网络编程
+func networkExample() {
+	fmt.Println("=== Network Example ===")
+	
+	// URL解析
+	urlStr := "https://example.com:8080/path/to/resource?query=value&foo=bar#fragment"
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		fmt.Printf("URL parse error: %v\n", err)
+		return
+	}
+	
+	fmt.Printf("Scheme: %s\n", parsedURL.Scheme)
+	fmt.Printf("Host: %s\n", parsedURL.Host)
+	fmt.Printf("Path: %s\n", parsedURL.Path)
+	fmt.Printf("Query: %s\n", parsedURL.Query())
+	fmt.Printf("Fragment: %s\n", parsedURL.Fragment)
+	
+	// 主机名和IP
+	hostname, err := os.Hostname()
+	if err != nil {
+		fmt.Printf("Hostname error: %v\n", err)
+	} else {
+		fmt.Printf("Hostname: %s\n", hostname)
+	}
+	
+	// DNS查询
+	ips, err := net.LookupIP("google.com")
+	if err != nil {
+		fmt.Printf("DNS lookup error: %v\n", err)
+	} else {
+		fmt.Printf("Google IPs: %v\n", ips)
+	}
+}
+
+// 15. 文件I/O
+func fileIOExample() {
+	fmt.Println("=== File I/O Example ===")
+	
+	// 创建临时文件
+	tmpFile, err := os.CreateTemp("", "typus_test_*.txt")
+	if err != nil {
+		fmt.Printf("Create temp file error: %v\n", err)
+		return
+	}
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
+	
+	// 写入数据
+	data := []byte("Hello, Typus file I/O!")
+	if _, err := tmpFile.Write(data); err != nil {
+		fmt.Printf("Write error: %v\n", err)
+		return
+	}
+	
+	// 写入字符串
+	if _, err := tmpFile.WriteString("\nAdditional line"); err != nil {
+		fmt.Printf("Write string error: %v\n", err)
+		return
+	}
+	
+	// 刷新缓冲区
+	if err := tmpFile.Sync(); err != nil {
+		fmt.Printf("Sync error: %v\n", err)
+		return
+	}
+	
+	// 读取文件
+	content, err := os.ReadFile(tmpFile.Name())
+	if err != nil {
+		fmt.Printf("Read file error: %v\n", err)
+		return
+	}
+	
+	fmt.Printf("File content:\n%s\n", content)
+	
+	// 文件信息
+	info, err := os.Stat(tmpFile.Name())
+	if err != nil {
+		fmt.Printf("Stat error: %v\n", err)
+		return
+	}
+	
+	fmt.Printf("File size: %d bytes\n", info.Size())
+	fmt.Printf("File mode: %s\n", info.Mode())
+	fmt.Printf("Modified time: %s\n", info.ModTime())
+}
+
+// 16. 条件编译和构建标签
+func buildConstraintExample() {
+	fmt.Println("=== Build Constraint Example ===")
+	
+	// 运行时检测
+	fmt.Printf("Go version: %s\n", runtime.Version())
+	fmt.Printf("GOOS: %s\n", runtime.GOOS)
+	fmt.Printf("GOARCH: %s\n", runtime.GOARCH)
+	fmt.Printf("CPU cores: %d\n", runtime.NumCPU())
+	fmt.Printf("Goroutines: %d\n", runtime.NumGoroutine())
+	
+	// 内存统计
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	fmt.Printf("Allocated memory: %d KB\n", m.Alloc/1024)
+	fmt.Printf("Total allocations: %d KB\n", m.TotalAlloc/1024)
+	fmt.Printf("System memory: %d KB\n", m.Sys/1024)
+}
+
+// 17. 类型断言和类型切换
+func typeAssertionExample() {
+	fmt.Println("=== Type Assertion Example ===")
+	
+	// 空接口切片
+	var items []interface{}
+	items = append(items, 42)
+	items = append(items, "hello")
+	items = append(items, true)
+	items = append(items, 3.14)
+	items = append(items, Person{Name: "Alice", Age: 30})
+	
+	// 类型切换
+	for i, item := range items {
+		fmt.Printf("Item %d: ", i)
+		switch v := item.(type) {
+		case int:
+			fmt.Printf("Integer: %d\n", v)
+		case string:
+			fmt.Printf("String: %s\n", v)
+		case bool:
+			fmt.Printf("Boolean: %t\n", v)
+		case float64:
+			fmt.Printf("Float64: %.2f\n", v)
+		case Person:
+			fmt.Printf("Person: %s (age %d)\n", v.Name, v.Age)
+		default:
+			fmt.Printf("Unknown type: %T\n", v)
+		}
+	}
+	
+	// 类型断言
+	var x interface{} = "test string"
+	if str, ok := x.(string); ok {
+		fmt.Printf("String assertion successful: %s\n", str)
+	} else {
+		fmt.Println("String assertion failed")
+	}
+	
+	// 错误的类型断言（会panic，需要recover）
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Printf("Recovered from type assertion panic: %v\n", r)
+			}
+		}()
+		
+		// 这会导致panic
+		_ = x.(int)
+	}()
+}
+
+// 18. 内存管理和unsafe包
+func unsafeExample() {
+	fmt.Println("=== Unsafe Example ===")
+	
+	// 获取类型大小
+	var i int
+	var f float64
+	var s string
+	var p *int
+	
+	fmt.Printf("int size: %d bytes\n", unsafe.Sizeof(i))
+	fmt.Printf("float64 size: %d bytes\n", unsafe.Sizeof(f))
+	fmt.Printf("string size: %d bytes\n", unsafe.Sizeof(s))
+	fmt.Printf("pointer size: %d bytes\n", unsafe.Sizeof(p))
+	
+	// 对齐
+	fmt.Printf("int alignment: %d\n", unsafe.Alignof(i))
+	fmt.Printf("float64 alignment: %d\n", unsafe.Alignof(f))
+	
+	// 偏移
+	type Example struct {
+		a bool
+		b int64
+		c int32
+	}
+	
+	var ex Example
+	fmt.Printf("Offset of a: %d\n", unsafe.Offsetof(ex.a))
+	fmt.Printf("Offset of b: %d\n", unsafe.Offsetof(ex.b))
+	fmt.Printf("Offset of c: %d\n", unsafe.Offsetof(ex.c))
+	
+	// 指针转换（危险操作）
+	x := 42
+	ptr := unsafe.Pointer(&x)
+	intPtr := (*int)(ptr)
+	fmt.Printf("Value through unsafe pointer: %d\n", *intPtr)
+}
+
+// 19. 测试辅助函数
+func assertEqual(t interface{}, expected interface{}, message string) {
+	if !reflect.DeepEqual(t, expected) {
+		fmt.Printf("ASSERTION FAILED: %s\n", message)
+		fmt.Printf("Expected: %v (type: %T)\n", expected, expected)
+		fmt.Printf("Actual: %v (type: %T)\n", t, t)
+		panic("Assertion failed")
+	}
+}
+
+func assertNotNil(t interface{}, message string) {
+	if t == nil {
+		fmt.Printf("ASSERTION FAILED: %s - value is nil\n", message)
+		panic("Assertion failed")
+	}
+}
+
+func assertTrue(condition bool, message string) {
+	if !condition {
+		fmt.Printf("ASSERTION FAILED: %s - condition is false\n", message)
+		panic("Assertion failed")
+	}
+}
+
+// 20. 主函数和测试入口
+func main() {
+	fmt.Println("=== Comprehensive Go Syntax Test ===")
+	fmt.Printf("Go version: %s\n", runtime.Version())
+	fmt.Printf("OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
+	fmt.Println()
+	
+	// 运行所有测试
+	basicTypesExample()
+	arrayAndSliceExample()
+	mapExample()
+	structExample()
+	interfaceExample()
+	goroutineExample()
+	selectExample()
+	mutexExample()
+	rwMutexExample()
+	errorHandlingExample()
+	reflectionExample()
+	genericExamples()
+	standardLibraryExamples()
+	networkExample()
+	fileIOExample()
+	buildConstraintExample()
+	typeAssertionExample()
+	unsafeExample()
+	
+	// 测试函数调用
+	testFunctionCalls()
+	
+	fmt.Println("\n=== All tests completed successfully! ===")
+}
+
+// 辅助测试函数
+func basicTypesExample() {
+	fmt.Println("=== Basic Types Test ===")
+	
+	// 测试基本类型操作
+	assertTrue(boolVar1 == true, "boolVar1 should be true")
+	assertTrue(intVar1 == 42, "intVar1 should be 42")
+	assertTrue(stringVar1 == "Hello, World!", "stringVar1 should be 'Hello, World!'")
+	
+	// 类型转换
+	var x int = 42
+	var y float64 = float64(x)
+	assertTrue(y == 42.0, "Type conversion failed")
+	
+	fmt.Println("Basic types test passed!")
+}
+
+func arrayAndSliceExample() {
+	fmt.Println("=== Arrays and Slices Test ===")
+	
+	// 数组测试
+	assertTrue(len(array1) == 5, "array1 length should be 5")
+	assertTrue(array1[0] == 1, "array1[0] should be 1")
+	assertTrue(len(array2) == 3, "array2 length should be 3")
+	
+	// 切片测试
+	assertTrue(len(slice1) == 5, "slice1 length should be 5")
+	assertTrue(cap(slice3) == 100, "slice3 capacity should be 100")
+	
+	// 切片操作
+	newSlice := append(slice1, 6, 7, 8)
+	assertTrue(len(newSlice) == 8, "append should increase length")
+	
+	// 切片拷贝
+	copied := make([]int, len(slice1))
+	copy(copied, slice1)
+	assertTrue(reflect.DeepEqual(copied, slice1), "slice copy should be equal")
+	
+	fmt.Println("Arrays and slices test passed!")
+}
+
+func mapExample() {
+	fmt.Println("=== Map Test ===")
+	
+	// Map基本操作
+	assertTrue(len(map1) == 2, "map1 should have 2 elements")
+	assertTrue(map1["one"] == 1, "map1['one'] should be 1")
+	
+	// Map添加元素
+	map1["three"] = 3
+	assertTrue(len(map1) == 3, "map1 should have 3 elements after addition")
+	
+	// Map删除元素
+	delete(map1, "two")
+	assertTrue(len(map1) == 2, "map1 should have 2 elements after deletion")
+	
+	// Map查找
+	value, exists := map1["one"]
+	assertTrue(exists && value == 1, "key 'one' should exist with value 1")
+	
+	_, exists = map1["nonexistent"]
+	assertTrue(!exists, "nonexistent key should not exist")
+	
+	fmt.Println("Map test passed!")
+}
+
+func structExample() {
+	fmt.Println("=== Struct Test ===")
+	
+	// 结构体创建
+	p := Person{
+		Name:  "Test User",
+		Age:   25,
+		Email: "test@example.com",
+	}
+	
+	assertTrue(p.Name == "Test User", "Person name should be 'Test User'")
+	assertTrue(p.Age == 25, "Person age should be 25")
+	
+	// 方法测试
+	err := p.SetEmail("newemail@example.com")
+	assertTrue(err == nil, "SetEmail should succeed")
+	assertTrue(p.Email == "newemail@example.com", "Email should be updated")
+	
+	// 无效邮箱测试
+	err = p.SetEmail("invalid-email")
+	assertTrue(err != nil, "SetEmail should fail with invalid email")
+	
+	fmt.Println("Struct test passed!")
+}
+
+func testFunctionCalls() {
+	fmt.Println("=== Function Call Test ===")
+	
+	// 测试基本函数调用
+	result := functionWithReturn(5, 3)
+	assertTrue(result == 8, "functionWithReturn should return 8")
+	
+	// 测试多返回值
+	divResult, err := functionWithMultipleReturn(10, 2)
+	assertTrue(err == nil, "division should succeed")
+	assertTrue(divResult == 5.0, "division result should be 5")
+	
+	// 测试错误情况
+	_, err = functionWithMultipleReturn(10, 0)
+	assertTrue(err != nil, "division by zero should return error")
+	
+	// 测试变参函数
+	total := functionWithVariadicParams("Sum", 1, 2, 3, 4, 5)
+	assertTrue(total == 15, "variadic sum should be 15")
+	
+	// 测试高阶函数
+	multiplier := functionReturningFunction(3)
+	product := multiplier(4)
+	assertTrue(product == 12, "functionReturningFunction should work")
+	
+	// 测试闭包
+	counter := createCounter()
+	assertTrue(counter() == 1, "first counter call should return 1")
+	assertTrue(counter() == 2, "second counter call should return 2")
+	assertTrue(counter() == 3, "third counter call should return 3")
+	
+	fmt.Println("Function call test passed!")
+}
+
+// 包初始化函数
+func init() {
+	fmt.Println("Package initialized")
+	
+	// 初始化全局变量
+	map2[1] = []string{"item1", "item2"}
+	map2[2] = []string{"item3", "item4"}
+}
+
+// 多个init函数（按顺序执行）
+func init() {
+	fmt.Println("Second init function")
+}

@@ -1,0 +1,25 @@
+package main
+
+import (
+    "crypto/md5"
+    "encoding/base64"
+    "encoding/hex"
+    "fmt"
+)
+
+func main() {
+    // Test that crypto imports are only added when actually used
+    data := []byte("test data")
+    
+    // MD5 hash
+    hash := md5.Sum(data)
+    fmt.Printf("MD5: %x\n", hash)
+    
+    // Base64 encoding
+    encoded := base64.StdEncoding.EncodeToString(data)
+    fmt.Printf("Base64: %s\n", encoded)
+    
+    // Hex encoding
+    hexStr := hex.EncodeToString(data)
+    fmt.Printf("Hex: %s\n", hexStr)
+}

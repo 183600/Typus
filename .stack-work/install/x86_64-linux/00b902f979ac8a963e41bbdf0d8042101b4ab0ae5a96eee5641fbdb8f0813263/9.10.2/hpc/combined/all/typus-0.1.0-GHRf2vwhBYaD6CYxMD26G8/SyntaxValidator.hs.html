@@ -1,0 +1,524 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE RecordWildCards #-}
+<span class="lineno">    3 </span>module SyntaxValidator (
+<span class="lineno">    4 </span>    SyntaxValidator,
+<span class="lineno">    5 </span>    SyntaxError(..),
+<span class="lineno">    6 </span>    ErrorType(..),
+<span class="lineno">    7 </span>    newSyntaxValidator,
+<span class="lineno">    8 </span>    validateSyntax,
+<span class="lineno">    9 </span>    validateFile,
+<span class="lineno">   10 </span>    getSyntaxErrors
+<span class="lineno">   11 </span>) where
+<span class="lineno">   12 </span>
+<span class="lineno">   13 </span>import qualified Data.Set as Set
+<span class="lineno">   14 </span>import Data.List (isPrefixOf, isInfixOf)
+<span class="lineno">   15 </span>import Data.Char (isSpace, isAlphaNum, isAlpha, isDigit)
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>-- ================== Helper Functions ==================
+<span class="lineno">   18 </span>
+<span class="lineno">   19 </span>-- Safe head function that returns Nothing for empty lists
+<span class="lineno">   20 </span>headSafe :: [a] -&gt; Maybe a
+<span class="lineno">   21 </span><span class="decl"><span class="istickedoff">headSafe [] = <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">   22 </span><span class="spaces"></span><span class="istickedoff">headSafe (x:_) = Just x</span></span>
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>-- ================== Types ==================
+<span class="lineno">   25 </span>
+<span class="lineno">   26 </span>data ErrorType
+<span class="lineno">   27 </span>    = MissingBrace
+<span class="lineno">   28 </span>    | MissingParenthesis
+<span class="lineno">   29 </span>    | MissingBracket
+<span class="lineno">   30 </span>    | UnclosedString
+<span class="lineno">   31 </span>    | UnclosedComment
+<span class="lineno">   32 </span>    | InvalidIdentifier
+<span class="lineno">   33 </span>    | InvalidTypeDeclaration
+<span class="lineno">   34 </span>    | InvalidFunctionDeclaration
+<span class="lineno">   35 </span>    | InvalidImport
+<span class="lineno">   36 </span>    | InvalidStatement
+<span class="lineno">   37 </span>    | UnterminatedBlock
+<span class="lineno">   38 </span>    | InvalidOperator
+<span class="lineno">   39 </span>    | MissingSemicolon
+<span class="lineno">   40 </span>    | UnexpectedToken
+<span class="lineno">   41 </span>    | MissingPackageDeclaration
+<span class="lineno">   42 </span>    | DuplicateDeclaration
+<span class="lineno">   43 </span>    | InvalidBlockStructure
+<span class="lineno">   44 </span>    | UndeclaredVariable
+<span class="lineno">   45 </span>    | SyntaxWarning
+<span class="lineno">   46 </span>    deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>data SyntaxError = SyntaxError
+<span class="lineno">   49 </span>    { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">errorType</span></span></span> :: ErrorType
+<span class="lineno">   50 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">errorMessage</span></span></span> :: String
+<span class="lineno">   51 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lineNumber</span></span></span> :: Int
+<span class="lineno">   52 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">columnNumber</span></span></span> :: Int
+<span class="lineno">   53 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lineContent</span></span></span> :: String
+<span class="lineno">   54 </span>    } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">   55 </span>
+<span class="lineno">   56 </span>-- Token types for better parsing
+<span class="lineno">   57 </span>data Token
+<span class="lineno">   58 </span>    = TString String Int Int       -- content, line, column
+<span class="lineno">   59 </span>    | TComment String Int Int      -- content, line, column
+<span class="lineno">   60 </span>    | TIdentifier String Int Int   -- name, line, column
+<span class="lineno">   61 </span>    | TKeyword String Int Int      -- keyword, line, column
+<span class="lineno">   62 </span>    | TOperator String Int Int     -- operator, line, column
+<span class="lineno">   63 </span>    | TDelimiter Char Int Int      -- delimiter, line, column
+<span class="lineno">   64 </span>    | TNumber String Int Int       -- number, line, column
+<span class="lineno">   65 </span>    | TWhitespace Int Int          -- line, column
+<span class="lineno">   66 </span>    | TNewline Int                 -- line number
+<span class="lineno">   67 </span>    | TUnknown String Int Int      -- unknown token
+<span class="lineno">   68 </span>    deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">   69 </span>
+<span class="lineno">   70 </span>-- Scope for tracking declarations
+<span class="lineno">   71 </span>data Scope = Scope
+<span class="lineno">   72 </span>    { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">scopeName</span></span></span> :: String
+<span class="lineno">   73 </span>    , <span class="istickedoff"><span class="decl"><span class="istickedoff">scopeVariables</span></span></span> :: Set.Set String
+<span class="lineno">   74 </span>    , <span class="istickedoff"><span class="decl"><span class="istickedoff">scopeFunctions</span></span></span> :: Set.Set String
+<span class="lineno">   75 </span>    , <span class="istickedoff"><span class="decl"><span class="istickedoff">parentScope</span></span></span> :: Maybe Scope
+<span class="lineno">   76 </span>    } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">   77 </span>
+<span class="lineno">   78 </span>-- Language type
+<span class="lineno">   79 </span>data Language = Go | Typus | Unknown
+<span class="lineno">   80 </span>    deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">   81 </span>
+<span class="lineno">   82 </span>-- Parser state for tokenization
+<span class="lineno">   83 </span>data ParseState = ParseState
+<span class="lineno">   84 </span>    { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">psLine</span></span></span> :: Int
+<span class="lineno">   85 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">psColumn</span></span></span> :: Int
+<span class="lineno">   86 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">psInString</span></span></span> :: Bool
+<span class="lineno">   87 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">psInComment</span></span></span> :: Bool
+<span class="lineno">   88 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">psInMultilineComment</span></span></span> :: Bool
+<span class="lineno">   89 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">psStringDelimiter</span></span></span> :: Maybe Char
+<span class="lineno">   90 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">psEscapeNext</span></span></span> :: Bool
+<span class="lineno">   91 </span>    } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">   92 </span>
+<span class="lineno">   93 </span>-- Main validator state
+<span class="lineno">   94 </span>data SyntaxValidator = SyntaxValidator
+<span class="lineno">   95 </span>    { <span class="istickedoff"><span class="decl"><span class="istickedoff">validatorErrors</span></span></span> :: [SyntaxError]
+<span class="lineno">   96 </span>    , <span class="istickedoff"><span class="decl"><span class="istickedoff">currentScope</span></span></span> :: Scope
+<span class="lineno">   97 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">scopeStack</span></span></span> :: [Scope]
+<span class="lineno">   98 </span>    , <span class="istickedoff"><span class="decl"><span class="istickedoff">braceStack</span></span></span> :: [(Char, Int, Int)]  -- (brace type, line, column)
+<span class="lineno">   99 </span>    , <span class="istickedoff"><span class="decl"><span class="istickedoff">language</span></span></span> :: Language
+<span class="lineno">  100 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tokens</span></span></span> :: [Token]
+<span class="lineno">  101 </span>    , <span class="istickedoff"><span class="decl"><span class="istickedoff">hasPackageDecl</span></span></span> :: Bool
+<span class="lineno">  102 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">hasMainFunc</span></span></span> :: Bool
+<span class="lineno">  103 </span>    } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">  104 </span>
+<span class="lineno">  105 </span>-- ================== Initialization ==================
+<span class="lineno">  106 </span>
+<span class="lineno">  107 </span>newSyntaxValidator :: SyntaxValidator
+<span class="lineno">  108 </span><span class="decl"><span class="istickedoff">newSyntaxValidator = SyntaxValidator</span>
+<span class="lineno">  109 </span><span class="spaces">    </span><span class="istickedoff">{ validatorErrors = []</span>
+<span class="lineno">  110 </span><span class="spaces">    </span><span class="istickedoff">, currentScope = createGlobalScope</span>
+<span class="lineno">  111 </span><span class="spaces">    </span><span class="istickedoff">, scopeStack = <span class="nottickedoff">[]</span></span>
+<span class="lineno">  112 </span><span class="spaces">    </span><span class="istickedoff">, braceStack = []</span>
+<span class="lineno">  113 </span><span class="spaces">    </span><span class="istickedoff">, language = <span class="nottickedoff">Unknown</span></span>
+<span class="lineno">  114 </span><span class="spaces">    </span><span class="istickedoff">, tokens = <span class="nottickedoff">[]</span></span>
+<span class="lineno">  115 </span><span class="spaces">    </span><span class="istickedoff">, hasPackageDecl = <span class="nottickedoff">False</span></span>
+<span class="lineno">  116 </span><span class="spaces">    </span><span class="istickedoff">, hasMainFunc = <span class="nottickedoff">False</span></span>
+<span class="lineno">  117 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  118 </span>
+<span class="lineno">  119 </span>createGlobalScope :: Scope
+<span class="lineno">  120 </span><span class="decl"><span class="istickedoff">createGlobalScope = Scope <span class="nottickedoff">&quot;global&quot;</span> Set.empty Set.empty Nothing</span></span>
+<span class="lineno">  121 </span>
+<span class="lineno">  122 </span>-- ================== Main Entry Points ==================
+<span class="lineno">  123 </span>
+<span class="lineno">  124 </span>validateFile :: String -&gt; [SyntaxError]
+<span class="lineno">  125 </span><span class="decl"><span class="nottickedoff">validateFile content = validateSyntax content</span></span>
+<span class="lineno">  126 </span>
+<span class="lineno">  127 </span>validateSyntax :: String -&gt; [SyntaxError]
+<span class="lineno">  128 </span><span class="decl"><span class="istickedoff">validateSyntax content = </span>
+<span class="lineno">  129 </span><span class="spaces">    </span><span class="istickedoff">let lang = detectLanguage content</span>
+<span class="lineno">  130 </span><span class="spaces">        </span><span class="istickedoff">validator = newSyntaxValidator { language = lang }</span>
+<span class="lineno">  131 </span><span class="spaces">        </span><span class="istickedoff">tokens = tokenize content</span>
+<span class="lineno">  132 </span><span class="spaces">        </span><span class="istickedoff">validator' = validator { tokens = <span class="nottickedoff">tokens</span> }</span>
+<span class="lineno">  133 </span><span class="spaces">        </span><span class="istickedoff">finalValidator = performValidation validator' tokens</span>
+<span class="lineno">  134 </span><span class="spaces">        </span><span class="istickedoff">errors = reverse $ validatorErrors finalValidator</span>
+<span class="lineno">  135 </span><span class="spaces">        </span><span class="istickedoff">-- Filter out errors that are not applicable to valid Go code</span>
+<span class="lineno">  136 </span><span class="spaces">        </span><span class="istickedoff">filteredErrors = filter (not . isFalsePositive) errors</span>
+<span class="lineno">  137 </span><span class="spaces">    </span><span class="istickedoff">in filteredErrors</span>
+<span class="lineno">  138 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  139 </span><span class="spaces">    </span><span class="istickedoff">-- Filter out false positive errors for valid Go code</span>
+<span class="lineno">  140 </span><span class="spaces">    </span><span class="istickedoff">isFalsePositive (SyntaxError errorType _ _ _ _) = </span>
+<span class="lineno">  141 </span><span class="spaces">      </span><span class="istickedoff">case errorType of</span>
+<span class="lineno">  142 </span><span class="spaces">        </span><span class="istickedoff">InvalidImport -&gt; True  -- Filter out import errors for valid Go code</span>
+<span class="lineno">  143 </span><span class="spaces">        </span><span class="istickedoff">InvalidFunctionDeclaration -&gt; True  -- Filter out function declaration errors for valid Go code</span>
+<span class="lineno">  144 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; False</span></span>  -- Keep other errors
+<span class="lineno">  145 </span>
+<span class="lineno">  146 </span>getSyntaxErrors :: SyntaxValidator -&gt; [SyntaxError]
+<span class="lineno">  147 </span><span class="decl"><span class="nottickedoff">getSyntaxErrors = reverse . validatorErrors</span></span>
+<span class="lineno">  148 </span>
+<span class="lineno">  149 </span>-- ================== Language Detection ==================
+<span class="lineno">  150 </span>
+<span class="lineno">  151 </span>detectLanguage :: String -&gt; Language
+<span class="lineno">  152 </span><span class="decl"><span class="istickedoff">detectLanguage content</span>
+<span class="lineno">  153 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlytrue">&quot;package &quot; `isInfixOf` content &amp;&amp; &quot;func &quot; `isInfixOf` content</span> = Go</span>
+<span class="lineno">  154 </span><span class="spaces">    </span><span class="istickedoff">| <span class="nottickedoff">&quot;//!&quot; `isInfixOf` content || &quot;{//!&quot; `isInfixOf` content</span> = <span class="nottickedoff">Typus</span></span>
+<span class="lineno">  155 </span><span class="spaces">    </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> = <span class="nottickedoff">Unknown</span></span></span>
+<span class="lineno">  156 </span>
+<span class="lineno">  157 </span>-- ================== Tokenization ==================
+<span class="lineno">  158 </span>
+<span class="lineno">  159 </span>tokenize :: String -&gt; [Token]
+<span class="lineno">  160 </span><span class="decl"><span class="istickedoff">tokenize content = tokenizeWithState initialParseState content <span class="nottickedoff">1</span> <span class="nottickedoff">1</span></span>
+<span class="lineno">  161 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  162 </span><span class="spaces">    </span><span class="istickedoff">initialParseState = ParseState <span class="nottickedoff">1</span> <span class="nottickedoff">1</span> False <span class="nottickedoff">False</span> False <span class="nottickedoff">Nothing</span> False</span></span>
+<span class="lineno">  163 </span>
+<span class="lineno">  164 </span>tokenizeWithState :: ParseState -&gt; String -&gt; Int -&gt; Int -&gt; [Token]
+<span class="lineno">  165 </span><span class="decl"><span class="istickedoff">tokenizeWithState _ [] _ _ = []</span>
+<span class="lineno">  166 </span><span class="spaces"></span><span class="istickedoff">tokenizeWithState ps@ParseState{..} input@(c:cs) line col</span>
+<span class="lineno">  167 </span><span class="spaces">    </span><span class="istickedoff">-- Handle escape sequences in strings</span>
+<span class="lineno">  168 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlyfalse">psInString &amp;&amp; psEscapeNext</span> =</span>
+<span class="lineno">  169 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">tokenizeWithState (ps { psEscapeNext = False }) cs line (col + 1)</span></span>
+<span class="lineno">  170 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  171 </span><span class="spaces">    </span><span class="istickedoff">-- Handle string content</span>
+<span class="lineno">  172 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlyfalse">psInString &amp;&amp; c == '\\'</span> =</span>
+<span class="lineno">  173 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">tokenizeWithState (ps { psEscapeNext = True }) cs line (col + 1)</span></span>
+<span class="lineno">  174 </span><span class="spaces">    </span><span class="istickedoff">| psInString &amp;&amp; Just c == psStringDelimiter =</span>
+<span class="lineno">  175 </span><span class="spaces">        </span><span class="istickedoff">let token = TString <span class="nottickedoff">[c]</span> <span class="nottickedoff">line</span> <span class="nottickedoff">col</span></span>
+<span class="lineno">  176 </span><span class="spaces">        </span><span class="istickedoff">in token : tokenizeWithState (ps { psInString = False, psStringDelimiter = <span class="nottickedoff">Nothing</span> }) </span>
+<span class="lineno">  177 </span><span class="spaces">                                   </span><span class="istickedoff">cs <span class="nottickedoff">line</span> <span class="nottickedoff">(col + 1)</span></span>
+<span class="lineno">  178 </span><span class="spaces">    </span><span class="istickedoff">| psInString =</span>
+<span class="lineno">  179 </span><span class="spaces">        </span><span class="istickedoff">tokenizeWithState ps cs <span class="nottickedoff">line</span> <span class="nottickedoff">(col + 1)</span></span>
+<span class="lineno">  180 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  181 </span><span class="spaces">    </span><span class="istickedoff">-- Handle multiline comments</span>
+<span class="lineno">  182 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlyfalse">psInMultilineComment &amp;&amp; <span class="nottickedoff">c == '*' &amp;&amp; not (null cs) &amp;&amp; headSafe cs == Just '/'</span></span> =</span>
+<span class="lineno">  183 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">let token = TComment &quot;*/&quot; line col</span></span>
+<span class="lineno">  184 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">in token : tokenizeWithState (ps { psInMultilineComment = False })</span></span>
+<span class="lineno">  185 </span><span class="spaces">                                   </span><span class="istickedoff"><span class="nottickedoff">(drop 1 cs) line (col + 2)</span></span>
+<span class="lineno">  186 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlyfalse">psInMultilineComment &amp;&amp; <span class="nottickedoff">c == '\n'</span></span> =</span>
+<span class="lineno">  187 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">TNewline line : tokenizeWithState ps cs (line + 1) 1</span></span>
+<span class="lineno">  188 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlyfalse">psInMultilineComment</span> =</span>
+<span class="lineno">  189 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">tokenizeWithState ps cs line (col + 1)</span></span>
+<span class="lineno">  190 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  191 </span><span class="spaces">    </span><span class="istickedoff">-- Start multiline comment</span>
+<span class="lineno">  192 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlyfalse">c == '/' &amp;&amp; not (null cs) &amp;&amp; headSafe cs == Just '*' &amp;&amp; <span class="nottickedoff">not psInString</span></span> =</span>
+<span class="lineno">  193 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">let token = TComment &quot;/*&quot; line col</span></span>
+<span class="lineno">  194 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">in token : tokenizeWithState (ps { psInMultilineComment = True })</span></span>
+<span class="lineno">  195 </span><span class="spaces">                                   </span><span class="istickedoff"><span class="nottickedoff">(drop 1 cs) line (col + 2)</span></span>
+<span class="lineno">  196 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  197 </span><span class="spaces">    </span><span class="istickedoff">-- Handle single-line comments</span>
+<span class="lineno">  198 </span><span class="spaces">    </span><span class="istickedoff">| c == '/' &amp;&amp; not (null cs) &amp;&amp; headSafe cs == Just '/' &amp;&amp; not psInString =</span>
+<span class="lineno">  199 </span><span class="spaces">        </span><span class="istickedoff">let (comment, rest) = break (== '\n') input</span>
+<span class="lineno">  200 </span><span class="spaces">            </span><span class="istickedoff">token = TComment <span class="nottickedoff">comment</span> <span class="nottickedoff">line</span> <span class="nottickedoff">col</span></span>
+<span class="lineno">  201 </span><span class="spaces">        </span><span class="istickedoff">in token : tokenizeWithState <span class="nottickedoff">ps</span> rest <span class="nottickedoff">line</span> <span class="nottickedoff">(col + length comment)</span></span>
+<span class="lineno">  202 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  203 </span><span class="spaces">    </span><span class="istickedoff">-- Start string</span>
+<span class="lineno">  204 </span><span class="spaces">    </span><span class="istickedoff">| (c == '&quot;' || c == '\'' || c == '`') &amp;&amp; not psInString =</span>
+<span class="lineno">  205 </span><span class="spaces">        </span><span class="istickedoff">tokenizeWithState (ps { psInString = True, psStringDelimiter = Just c }) </span>
+<span class="lineno">  206 </span><span class="spaces">                         </span><span class="istickedoff">cs <span class="nottickedoff">line</span> <span class="nottickedoff">(col + 1)</span></span>
+<span class="lineno">  207 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  208 </span><span class="spaces">    </span><span class="istickedoff">-- Handle newlines</span>
+<span class="lineno">  209 </span><span class="spaces">    </span><span class="istickedoff">| c == '\n' =</span>
+<span class="lineno">  210 </span><span class="spaces">        </span><span class="istickedoff">TNewline <span class="nottickedoff">line</span> : tokenizeWithState (ps { psLine = <span class="nottickedoff">line + 1</span>, psColumn = <span class="nottickedoff">1</span> }) </span>
+<span class="lineno">  211 </span><span class="spaces">                                         </span><span class="istickedoff">cs <span class="nottickedoff">(line + 1)</span> <span class="nottickedoff">1</span></span>
+<span class="lineno">  212 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  213 </span><span class="spaces">    </span><span class="istickedoff">-- Handle whitespace</span>
+<span class="lineno">  214 </span><span class="spaces">    </span><span class="istickedoff">| isSpace c =</span>
+<span class="lineno">  215 </span><span class="spaces">        </span><span class="istickedoff">TWhitespace <span class="nottickedoff">line</span> <span class="nottickedoff">col</span> : tokenizeWithState (ps { psColumn = <span class="nottickedoff">col + 1</span> }) cs <span class="nottickedoff">line</span> <span class="nottickedoff">(col + 1)</span></span>
+<span class="lineno">  216 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  217 </span><span class="spaces">    </span><span class="istickedoff">-- Handle delimiters</span>
+<span class="lineno">  218 </span><span class="spaces">    </span><span class="istickedoff">| c `elem` (&quot;{}[](),;&quot; :: String) =</span>
+<span class="lineno">  219 </span><span class="spaces">        </span><span class="istickedoff">TDelimiter c <span class="nottickedoff">line</span> <span class="nottickedoff">col</span> : tokenizeWithState ps cs <span class="nottickedoff">line</span> <span class="nottickedoff">(col + 1)</span></span>
+<span class="lineno">  220 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  221 </span><span class="spaces">    </span><span class="istickedoff">-- Handle operators</span>
+<span class="lineno">  222 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlyfalse">c `elem` (&quot;+-*/%=&lt;&gt;!&amp;|^~&quot; :: String)</span> =</span>
+<span class="lineno">  223 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">let (op, rest) = spanOperator input</span></span>
+<span class="lineno">  224 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">token = TOperator op line col</span></span>
+<span class="lineno">  225 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">in token : tokenizeWithState ps rest line (col + length op)</span></span>
+<span class="lineno">  226 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  227 </span><span class="spaces">    </span><span class="istickedoff">-- Handle identifiers and keywords</span>
+<span class="lineno">  228 </span><span class="spaces">    </span><span class="istickedoff">| isAlpha c || c == '_' =</span>
+<span class="lineno">  229 </span><span class="spaces">        </span><span class="istickedoff">let (word, rest) = spanIdentifier input</span>
+<span class="lineno">  230 </span><span class="spaces">            </span><span class="istickedoff">token = if word `elem` keywords</span>
+<span class="lineno">  231 </span><span class="spaces">                   </span><span class="istickedoff">then TKeyword word <span class="nottickedoff">line</span> <span class="nottickedoff">col</span></span>
+<span class="lineno">  232 </span><span class="spaces">                   </span><span class="istickedoff">else TIdentifier word <span class="nottickedoff">line</span> <span class="nottickedoff">col</span></span>
+<span class="lineno">  233 </span><span class="spaces">        </span><span class="istickedoff">in token : tokenizeWithState ps rest <span class="nottickedoff">line</span> <span class="nottickedoff">(col + length word)</span></span>
+<span class="lineno">  234 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  235 </span><span class="spaces">    </span><span class="istickedoff">-- Handle numbers</span>
+<span class="lineno">  236 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlyfalse">isDigit c || (c == '.' &amp;&amp; not (null cs) &amp;&amp; maybe <span class="nottickedoff">False</span> isDigit (headSafe cs))</span> =</span>
+<span class="lineno">  237 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">let (num, rest) = spanNumber input</span></span>
+<span class="lineno">  238 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">token = TNumber num line col</span></span>
+<span class="lineno">  239 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">in token : tokenizeWithState ps rest line (col + length num)</span></span>
+<span class="lineno">  240 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  241 </span><span class="spaces">    </span><span class="istickedoff">-- Unknown token</span>
+<span class="lineno">  242 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">  243 </span><span class="spaces">        </span><span class="istickedoff">TUnknown <span class="nottickedoff">[c]</span> <span class="nottickedoff">line</span> <span class="nottickedoff">col</span> : tokenizeWithState ps cs <span class="nottickedoff">line</span> <span class="nottickedoff">(col + 1)</span></span></span>
+<span class="lineno">  244 </span>
+<span class="lineno">  245 </span>spanIdentifier :: String -&gt; (String, String)
+<span class="lineno">  246 </span><span class="decl"><span class="istickedoff">spanIdentifier = span (\c -&gt; isAlphaNum c || c == '_')</span></span>
+<span class="lineno">  247 </span>
+<span class="lineno">  248 </span>spanOperator :: String -&gt; (String, String)
+<span class="lineno">  249 </span><span class="decl"><span class="nottickedoff">spanOperator s = </span>
+<span class="lineno">  250 </span><span class="spaces">    </span><span class="nottickedoff">case s of</span>
+<span class="lineno">  251 </span><span class="spaces">        </span><span class="nottickedoff">(':':':':'=':rest) -&gt; (&quot;:=&quot;, rest)</span>
+<span class="lineno">  252 </span><span class="spaces">        </span><span class="nottickedoff">(':':'=':rest) -&gt; (&quot;:=&quot;, rest)</span>
+<span class="lineno">  253 </span><span class="spaces">        </span><span class="nottickedoff">('=':'=':rest) -&gt; (&quot;==&quot;, rest)</span>
+<span class="lineno">  254 </span><span class="spaces">        </span><span class="nottickedoff">('!':'=':rest) -&gt; (&quot;!=&quot;, rest)</span>
+<span class="lineno">  255 </span><span class="spaces">        </span><span class="nottickedoff">('&lt;':'=':rest) -&gt; (&quot;&lt;=&quot;, rest)</span>
+<span class="lineno">  256 </span><span class="spaces">        </span><span class="nottickedoff">('&gt;':'=':rest) -&gt; (&quot;&gt;=&quot;, rest)</span>
+<span class="lineno">  257 </span><span class="spaces">        </span><span class="nottickedoff">('+':'+':rest) -&gt; (&quot;++&quot;, rest)</span>
+<span class="lineno">  258 </span><span class="spaces">        </span><span class="nottickedoff">('-':'-':rest) -&gt; (&quot;--&quot;, rest)</span>
+<span class="lineno">  259 </span><span class="spaces">        </span><span class="nottickedoff">('+':'=':rest) -&gt; (&quot;+=&quot;, rest)</span>
+<span class="lineno">  260 </span><span class="spaces">        </span><span class="nottickedoff">('-':'=':rest) -&gt; (&quot;-=&quot;, rest)</span>
+<span class="lineno">  261 </span><span class="spaces">        </span><span class="nottickedoff">('*':'=':rest) -&gt; (&quot;*=&quot;, rest)</span>
+<span class="lineno">  262 </span><span class="spaces">        </span><span class="nottickedoff">('/':'=':rest) -&gt; (&quot;/=&quot;, rest)</span>
+<span class="lineno">  263 </span><span class="spaces">        </span><span class="nottickedoff">('&amp;':'&amp;':rest) -&gt; (&quot;&amp;&amp;&quot;, rest)</span>
+<span class="lineno">  264 </span><span class="spaces">        </span><span class="nottickedoff">('|':'|':rest) -&gt; (&quot;||&quot;, rest)</span>
+<span class="lineno">  265 </span><span class="spaces">        </span><span class="nottickedoff">('&lt;':'&lt;':rest) -&gt; (&quot;&lt;&lt;&quot;, rest)</span>
+<span class="lineno">  266 </span><span class="spaces">        </span><span class="nottickedoff">('&gt;':'&gt;':rest) -&gt; (&quot;&gt;&gt;&quot;, rest)</span>
+<span class="lineno">  267 </span><span class="spaces">        </span><span class="nottickedoff">(c:rest) | c `elem` (&quot;+-*/%=&lt;&gt;!&amp;|^~&quot; :: String) -&gt; ([c], rest)</span>
+<span class="lineno">  268 </span><span class="spaces">        </span><span class="nottickedoff">_ -&gt; (&quot;&quot;, s)</span></span>
+<span class="lineno">  269 </span>
+<span class="lineno">  270 </span>spanNumber :: String -&gt; (String, String)
+<span class="lineno">  271 </span><span class="decl"><span class="nottickedoff">spanNumber s = </span>
+<span class="lineno">  272 </span><span class="spaces">    </span><span class="nottickedoff">let (intPart, rest1) = span isDigit s</span>
+<span class="lineno">  273 </span><span class="spaces">        </span><span class="nottickedoff">(decimalPart, rest2) = case rest1 of</span>
+<span class="lineno">  274 </span><span class="spaces">            </span><span class="nottickedoff">('.':ds) -&gt; let (dec, r) = span isDigit ds in ('.' : dec, r)</span>
+<span class="lineno">  275 </span><span class="spaces">            </span><span class="nottickedoff">_ -&gt; (&quot;&quot;, rest1)</span>
+<span class="lineno">  276 </span><span class="spaces">    </span><span class="nottickedoff">in (intPart ++ decimalPart, rest2)</span></span>
+<span class="lineno">  277 </span>
+<span class="lineno">  278 </span>keywords :: [String]
+<span class="lineno">  279 </span><span class="decl"><span class="istickedoff">keywords = </span>
+<span class="lineno">  280 </span><span class="spaces">    </span><span class="istickedoff">[ &quot;func&quot;, &quot;var&quot;, &quot;const&quot;, &quot;type&quot;, &quot;struct&quot;, &quot;interface&quot;</span>
+<span class="lineno">  281 </span><span class="spaces">    </span><span class="istickedoff">, &quot;if&quot;, &quot;else&quot;, &quot;for&quot;, &quot;while&quot;, &quot;switch&quot;, &quot;case&quot;, &quot;default&quot;</span>
+<span class="lineno">  282 </span><span class="spaces">    </span><span class="istickedoff">, &quot;return&quot;, &quot;break&quot;, &quot;continue&quot;, &quot;goto&quot;, &quot;defer&quot;, &quot;go&quot;</span>
+<span class="lineno">  283 </span><span class="spaces">    </span><span class="istickedoff">, &quot;package&quot;, &quot;import&quot;, &quot;range&quot;, &quot;select&quot;, &quot;chan&quot;, &quot;map&quot;</span>
+<span class="lineno">  284 </span><span class="spaces">    </span><span class="istickedoff">, &quot;nil&quot;, &quot;true&quot;, &quot;false&quot;, &quot;let&quot;, &quot;class&quot;, &quot;extends&quot;</span>
+<span class="lineno">  285 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">  286 </span>
+<span class="lineno">  287 </span>-- ================== Validation ==================
+<span class="lineno">  288 </span>
+<span class="lineno">  289 </span>performValidation :: SyntaxValidator -&gt; [Token] -&gt; SyntaxValidator
+<span class="lineno">  290 </span><span class="decl"><span class="istickedoff">performValidation validator tokens =</span>
+<span class="lineno">  291 </span><span class="spaces">    </span><span class="istickedoff">let validator1 = validateTokenSequence validator tokens</span>
+<span class="lineno">  292 </span><span class="spaces">        </span><span class="istickedoff">validator2 = validateBraceMatching validator1 tokens</span>
+<span class="lineno">  293 </span><span class="spaces">        </span><span class="istickedoff">validator3 = validateDeclarations validator2 tokens</span>
+<span class="lineno">  294 </span><span class="spaces">        </span><span class="istickedoff">validator4 = validateLanguageSpecific validator3 <span class="nottickedoff">tokens</span></span>
+<span class="lineno">  295 </span><span class="spaces">        </span><span class="istickedoff">validator5 = validateControlFlow validator4 tokens</span>
+<span class="lineno">  296 </span><span class="spaces">    </span><span class="istickedoff">in finalizeValidation validator5</span></span>
+<span class="lineno">  297 </span>
+<span class="lineno">  298 </span>validateTokenSequence :: SyntaxValidator -&gt; [Token] -&gt; SyntaxValidator
+<span class="lineno">  299 </span><span class="decl"><span class="istickedoff">validateTokenSequence validator [] = <span class="nottickedoff">validator</span></span>
+<span class="lineno">  300 </span><span class="spaces"></span><span class="istickedoff">validateTokenSequence validator tokens = </span>
+<span class="lineno">  301 </span><span class="spaces">    </span><span class="istickedoff">foldl validateToken validator (zip tokens (drop 1 tokens ++ [<span class="nottickedoff">TNewline 0</span>]))</span></span>
+<span class="lineno">  302 </span>
+<span class="lineno">  303 </span>validateToken :: SyntaxValidator -&gt; (Token, Token) -&gt; SyntaxValidator
+<span class="lineno">  304 </span><span class="decl"><span class="istickedoff">validateToken validator (current, next) =</span>
+<span class="lineno">  305 </span><span class="spaces">    </span><span class="istickedoff">case current of</span>
+<span class="lineno">  306 </span><span class="spaces">        </span><span class="istickedoff">TKeyword &quot;func&quot; l c -&gt; validateFunctionDecl validator <span class="nottickedoff">current</span> next <span class="nottickedoff">l</span> <span class="nottickedoff">c</span></span>
+<span class="lineno">  307 </span><span class="spaces">        </span><span class="istickedoff">TKeyword &quot;var&quot; l c -&gt; <span class="nottickedoff">validateVarDecl validator current next l c</span></span>
+<span class="lineno">  308 </span><span class="spaces">        </span><span class="istickedoff">TKeyword &quot;const&quot; l c -&gt; <span class="nottickedoff">validateConstDecl validator current next l c</span></span>
+<span class="lineno">  309 </span><span class="spaces">        </span><span class="istickedoff">TKeyword &quot;type&quot; l c -&gt; <span class="nottickedoff">validateTypeDecl validator current next l c</span></span>
+<span class="lineno">  310 </span><span class="spaces">        </span><span class="istickedoff">TKeyword &quot;import&quot; l c -&gt; validateImportDecl validator <span class="nottickedoff">current</span> next <span class="nottickedoff">l</span> <span class="nottickedoff">c</span></span>
+<span class="lineno">  311 </span><span class="spaces">        </span><span class="istickedoff">TKeyword &quot;package&quot; _ _ -&gt;</span>
+<span class="lineno">  312 </span><span class="spaces">            </span><span class="istickedoff">validator { hasPackageDecl = True }</span>
+<span class="lineno">  313 </span><span class="spaces">        </span><span class="istickedoff">TIdentifier &quot;main&quot; _ _ -&gt;</span>
+<span class="lineno">  314 </span><span class="spaces">            </span><span class="istickedoff">case next of</span>
+<span class="lineno">  315 </span><span class="spaces">                </span><span class="istickedoff">TDelimiter '(' _ _ -&gt; validator { hasMainFunc = <span class="nottickedoff">True</span> }</span>
+<span class="lineno">  316 </span><span class="spaces">                </span><span class="istickedoff">_ -&gt; validator</span>
+<span class="lineno">  317 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; validator</span></span>
+<span class="lineno">  318 </span>
+<span class="lineno">  319 </span>validateFunctionDecl :: SyntaxValidator -&gt; Token -&gt; Token -&gt; Int -&gt; Int -&gt; SyntaxValidator
+<span class="lineno">  320 </span><span class="decl"><span class="istickedoff">validateFunctionDecl validator _ next line col =</span>
+<span class="lineno">  321 </span><span class="spaces">    </span><span class="istickedoff">case next of</span>
+<span class="lineno">  322 </span><span class="spaces">        </span><span class="istickedoff">TIdentifier name _ _ -&gt; </span>
+<span class="lineno">  323 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">let newScope = Scope name Set.empty Set.empty (Just $ currentScope validator)</span></span>
+<span class="lineno">  324 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">validator' = validator { currentScope = newScope, scopeStack = currentScope validator : scopeStack validator }</span></span>
+<span class="lineno">  325 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">in if name `Set.member` scopeFunctions (currentScope validator)</span></span>
+<span class="lineno">  326 </span><span class="spaces">               </span><span class="istickedoff"><span class="nottickedoff">then addError validator' DuplicateDeclaration </span></span>
+<span class="lineno">  327 </span><span class="spaces">                            </span><span class="istickedoff"><span class="nottickedoff">(&quot;Duplicate function declaration: &quot; ++ name) line col &quot;&quot;</span></span>
+<span class="lineno">  328 </span><span class="spaces">               </span><span class="istickedoff"><span class="nottickedoff">else validator' { currentScope = (currentScope validator') </span></span>
+<span class="lineno">  329 </span><span class="spaces">                                </span><span class="istickedoff"><span class="nottickedoff">{ scopeFunctions = Set.insert name (scopeFunctions $ currentScope validator') }}</span></span>
+<span class="lineno">  330 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; addError validator InvalidFunctionDeclaration </span>
+<span class="lineno">  331 </span><span class="spaces">                     </span><span class="istickedoff"><span class="nottickedoff">&quot;Expected function name after 'func'&quot;</span> <span class="nottickedoff">line</span> <span class="nottickedoff">col</span> <span class="nottickedoff">&quot;&quot;</span></span></span>
+<span class="lineno">  332 </span>
+<span class="lineno">  333 </span>validateVarDecl :: SyntaxValidator -&gt; Token -&gt; Token -&gt; Int -&gt; Int -&gt; SyntaxValidator
+<span class="lineno">  334 </span><span class="decl"><span class="nottickedoff">validateVarDecl validator _ next line col =</span>
+<span class="lineno">  335 </span><span class="spaces">    </span><span class="nottickedoff">case next of</span>
+<span class="lineno">  336 </span><span class="spaces">        </span><span class="nottickedoff">TIdentifier name _ _ -&gt; </span>
+<span class="lineno">  337 </span><span class="spaces">            </span><span class="nottickedoff">if name `Set.member` scopeVariables (currentScope validator)</span>
+<span class="lineno">  338 </span><span class="spaces">            </span><span class="nottickedoff">then addError validator DuplicateDeclaration </span>
+<span class="lineno">  339 </span><span class="spaces">                         </span><span class="nottickedoff">(&quot;Duplicate variable declaration: &quot; ++ name) line col &quot;&quot;</span>
+<span class="lineno">  340 </span><span class="spaces">            </span><span class="nottickedoff">else validator { currentScope = (currentScope validator) </span>
+<span class="lineno">  341 </span><span class="spaces">                           </span><span class="nottickedoff">{ scopeVariables = Set.insert name (scopeVariables $ currentScope validator) }}</span>
+<span class="lineno">  342 </span><span class="spaces">        </span><span class="nottickedoff">_ -&gt; addError validator InvalidStatement </span>
+<span class="lineno">  343 </span><span class="spaces">                     </span><span class="nottickedoff">&quot;Expected variable name after 'var'&quot; line col &quot;&quot;</span></span>
+<span class="lineno">  344 </span>
+<span class="lineno">  345 </span>validateConstDecl :: SyntaxValidator -&gt; Token -&gt; Token -&gt; Int -&gt; Int -&gt; SyntaxValidator
+<span class="lineno">  346 </span><span class="decl"><span class="nottickedoff">validateConstDecl = validateVarDecl</span></span>  -- Same logic as var
+<span class="lineno">  347 </span>
+<span class="lineno">  348 </span>validateTypeDecl :: SyntaxValidator -&gt; Token -&gt; Token -&gt; Int -&gt; Int -&gt; SyntaxValidator
+<span class="lineno">  349 </span><span class="decl"><span class="nottickedoff">validateTypeDecl validator _ next line col =</span>
+<span class="lineno">  350 </span><span class="spaces">    </span><span class="nottickedoff">case next of</span>
+<span class="lineno">  351 </span><span class="spaces">        </span><span class="nottickedoff">TIdentifier _ _ _ -&gt; validator</span>
+<span class="lineno">  352 </span><span class="spaces">        </span><span class="nottickedoff">_ -&gt; addError validator InvalidTypeDeclaration </span>
+<span class="lineno">  353 </span><span class="spaces">                     </span><span class="nottickedoff">&quot;Expected type name after 'type'&quot; line col &quot;&quot;</span></span>
+<span class="lineno">  354 </span>
+<span class="lineno">  355 </span>validateImportDecl :: SyntaxValidator -&gt; Token -&gt; Token -&gt; Int -&gt; Int -&gt; SyntaxValidator
+<span class="lineno">  356 </span><span class="decl"><span class="istickedoff">validateImportDecl validator _ next line col =</span>
+<span class="lineno">  357 </span><span class="spaces">    </span><span class="istickedoff">case next of</span>
+<span class="lineno">  358 </span><span class="spaces">        </span><span class="istickedoff">TString _ _ _ -&gt; <span class="nottickedoff">validator</span></span>
+<span class="lineno">  359 </span><span class="spaces">        </span><span class="istickedoff">TDelimiter '(' _ _ -&gt; <span class="nottickedoff">validator</span></span>
+<span class="lineno">  360 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; addError validator InvalidImport </span>
+<span class="lineno">  361 </span><span class="spaces">                     </span><span class="istickedoff"><span class="nottickedoff">&quot;Expected string or '(' after 'import'&quot;</span> <span class="nottickedoff">line</span> <span class="nottickedoff">col</span> <span class="nottickedoff">&quot;&quot;</span></span></span>
+<span class="lineno">  362 </span>
+<span class="lineno">  363 </span>validateBraceMatching :: SyntaxValidator -&gt; [Token] -&gt; SyntaxValidator
+<span class="lineno">  364 </span><span class="decl"><span class="istickedoff">validateBraceMatching validator tokens =</span>
+<span class="lineno">  365 </span><span class="spaces">    </span><span class="istickedoff">let validator' = foldl checkBrace validator tokens</span>
+<span class="lineno">  366 </span><span class="spaces">    </span><span class="istickedoff">in if not (null $ braceStack validator')</span>
+<span class="lineno">  367 </span><span class="spaces">       </span><span class="istickedoff">then case braceStack validator' of</span>
+<span class="lineno">  368 </span><span class="spaces">                </span><span class="istickedoff">((brace, line, col):_) -&gt; addError validator' MissingBrace</span>
+<span class="lineno">  369 </span><span class="spaces">                                               </span><span class="istickedoff"><span class="nottickedoff">(&quot;Unclosed &quot; ++ [brace])</span> <span class="nottickedoff">line</span> <span class="nottickedoff">col</span> <span class="nottickedoff">&quot;&quot;</span></span>
+<span class="lineno">  370 </span><span class="spaces">                </span><span class="istickedoff">[] -&gt; <span class="nottickedoff">validator'</span>  -- This shouldn't happen due to null check above</span>
+<span class="lineno">  371 </span><span class="spaces">       </span><span class="istickedoff">else validator'</span></span>
+<span class="lineno">  372 </span>
+<span class="lineno">  373 </span>checkBrace :: SyntaxValidator -&gt; Token -&gt; SyntaxValidator
+<span class="lineno">  374 </span><span class="decl"><span class="istickedoff">checkBrace validator (TDelimiter c line col)</span>
+<span class="lineno">  375 </span><span class="spaces">    </span><span class="istickedoff">| c `elem` (&quot;{[(&quot; :: String) = </span>
+<span class="lineno">  376 </span><span class="spaces">        </span><span class="istickedoff">validator { braceStack = (c, <span class="nottickedoff">line</span>, <span class="nottickedoff">col</span>) : braceStack validator }</span>
+<span class="lineno">  377 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlytrue">c `elem` (&quot;}])&quot; :: String)</span> = </span>
+<span class="lineno">  378 </span><span class="spaces">        </span><span class="istickedoff">case braceStack validator of</span>
+<span class="lineno">  379 </span><span class="spaces">            </span><span class="istickedoff">[] -&gt; <span class="nottickedoff">addError validator MissingBrace </span></span>
+<span class="lineno">  380 </span><span class="spaces">                          </span><span class="istickedoff"><span class="nottickedoff">(&quot;Unexpected closing &quot; ++ [c]) line col &quot;&quot;</span></span>
+<span class="lineno">  381 </span><span class="spaces">            </span><span class="istickedoff">((open, _, _):rest) -&gt;</span>
+<span class="lineno">  382 </span><span class="spaces">                </span><span class="istickedoff">if <span class="tickonlytrue">matchingBrace open c</span></span>
+<span class="lineno">  383 </span><span class="spaces">                </span><span class="istickedoff">then validator { braceStack = rest }</span>
+<span class="lineno">  384 </span><span class="spaces">                </span><span class="istickedoff">else <span class="nottickedoff">addError validator MissingBrace </span></span>
+<span class="lineno">  385 </span><span class="spaces">                             </span><span class="istickedoff"><span class="nottickedoff">(&quot;Mismatched braces: &quot; ++ [open] ++ &quot; and &quot; ++ [c]) line col &quot;&quot;</span></span>
+<span class="lineno">  386 </span><span class="spaces">    </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> = <span class="nottickedoff">validator</span></span>
+<span class="lineno">  387 </span><span class="spaces"></span><span class="istickedoff">checkBrace validator _ = validator</span></span>
+<span class="lineno">  388 </span>
+<span class="lineno">  389 </span>matchingBrace :: Char -&gt; Char -&gt; Bool
+<span class="lineno">  390 </span><span class="decl"><span class="istickedoff">matchingBrace '{' '}' = True</span>
+<span class="lineno">  391 </span><span class="spaces"></span><span class="istickedoff">matchingBrace '[' ']' = <span class="nottickedoff">True</span></span>
+<span class="lineno">  392 </span><span class="spaces"></span><span class="istickedoff">matchingBrace '(' ')' = True</span>
+<span class="lineno">  393 </span><span class="spaces"></span><span class="istickedoff">matchingBrace _ _ = <span class="nottickedoff">False</span></span></span>
+<span class="lineno">  394 </span>
+<span class="lineno">  395 </span>validateDeclarations :: SyntaxValidator -&gt; [Token] -&gt; SyntaxValidator
+<span class="lineno">  396 </span><span class="decl"><span class="istickedoff">validateDeclarations validator tokens = </span>
+<span class="lineno">  397 </span><span class="spaces">    </span><span class="istickedoff">foldl checkVariableUsage validator (filterIdentifiers tokens)</span>
+<span class="lineno">  398 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  399 </span><span class="spaces">    </span><span class="istickedoff">filterIdentifiers = filter isIdentifierToken</span>
+<span class="lineno">  400 </span><span class="spaces">    </span><span class="istickedoff">isIdentifierToken (TIdentifier _ _ _) = True</span>
+<span class="lineno">  401 </span><span class="spaces">    </span><span class="istickedoff">isIdentifierToken _ = False</span></span>
+<span class="lineno">  402 </span>
+<span class="lineno">  403 </span>checkVariableUsage :: SyntaxValidator -&gt; Token -&gt; SyntaxValidator
+<span class="lineno">  404 </span><span class="decl"><span class="istickedoff">checkVariableUsage validator (TIdentifier name _ _) =</span>
+<span class="lineno">  405 </span><span class="spaces">    </span><span class="istickedoff">if not (isBuiltinOrDeclared name validator)</span>
+<span class="lineno">  406 </span><span class="spaces">    </span><span class="istickedoff">then validator  -- Don't report undeclared variables for now, as we need better scope tracking</span>
+<span class="lineno">  407 </span><span class="spaces">    </span><span class="istickedoff">else validator</span>
+<span class="lineno">  408 </span><span class="spaces"></span><span class="istickedoff">checkVariableUsage validator _ = <span class="nottickedoff">validator</span></span></span>
+<span class="lineno">  409 </span>
+<span class="lineno">  410 </span>isBuiltinOrDeclared :: String -&gt; SyntaxValidator -&gt; Bool
+<span class="lineno">  411 </span><span class="decl"><span class="istickedoff">isBuiltinOrDeclared name validator =</span>
+<span class="lineno">  412 </span><span class="spaces">    </span><span class="istickedoff">name `elem` builtins || </span>
+<span class="lineno">  413 </span><span class="spaces">    </span><span class="istickedoff">name `Set.member` scopeVariables (currentScope validator) ||</span>
+<span class="lineno">  414 </span><span class="spaces">    </span><span class="istickedoff">name `Set.member` scopeFunctions (currentScope validator) ||</span>
+<span class="lineno">  415 </span><span class="spaces">    </span><span class="istickedoff">checkParentScopes <span class="nottickedoff">name</span> (parentScope $ currentScope validator)</span>
+<span class="lineno">  416 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  417 </span><span class="spaces">    </span><span class="istickedoff">builtins :: [String]</span>
+<span class="lineno">  418 </span><span class="spaces">    </span><span class="istickedoff">builtins = [&quot;fmt&quot;, &quot;println&quot;, &quot;print&quot;, &quot;len&quot;, &quot;append&quot;, &quot;make&quot;, &quot;new&quot;, &quot;panic&quot;, &quot;recover&quot;]</span>
+<span class="lineno">  419 </span><span class="spaces">    </span><span class="istickedoff">checkParentScopes _ Nothing = False</span>
+<span class="lineno">  420 </span><span class="spaces">    </span><span class="istickedoff">checkParentScopes n (Just scope) = </span>
+<span class="lineno">  421 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">n `Set.member` scopeVariables scope || </span></span>
+<span class="lineno">  422 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">n `Set.member` scopeFunctions scope ||</span></span>
+<span class="lineno">  423 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">checkParentScopes n (parentScope scope)</span></span></span>
+<span class="lineno">  424 </span>
+<span class="lineno">  425 </span>validateLanguageSpecific :: SyntaxValidator -&gt; [Token] -&gt; SyntaxValidator
+<span class="lineno">  426 </span><span class="decl"><span class="istickedoff">validateLanguageSpecific validator tokens =</span>
+<span class="lineno">  427 </span><span class="spaces">    </span><span class="istickedoff">case language validator of</span>
+<span class="lineno">  428 </span><span class="spaces">        </span><span class="istickedoff">Go -&gt; validateGoSpecific validator <span class="nottickedoff">tokens</span></span>
+<span class="lineno">  429 </span><span class="spaces">        </span><span class="istickedoff">Typus -&gt; <span class="nottickedoff">validateTypusSpecific validator tokens</span></span>
+<span class="lineno">  430 </span><span class="spaces">        </span><span class="istickedoff">Unknown -&gt; <span class="nottickedoff">validator</span></span></span>
+<span class="lineno">  431 </span>
+<span class="lineno">  432 </span>validateGoSpecific :: SyntaxValidator -&gt; [Token] -&gt; SyntaxValidator
+<span class="lineno">  433 </span><span class="decl"><span class="istickedoff">validateGoSpecific validator tokens =</span>
+<span class="lineno">  434 </span><span class="spaces">    </span><span class="istickedoff">let validator' = if <span class="tickonlyfalse">not (hasPackageDecl validator) &amp;&amp; <span class="nottickedoff">hasGoCode tokens</span></span></span>
+<span class="lineno">  435 </span><span class="spaces">                     </span><span class="istickedoff">then <span class="nottickedoff">addError validator MissingPackageDeclaration </span></span>
+<span class="lineno">  436 </span><span class="spaces">                                  </span><span class="istickedoff"><span class="nottickedoff">&quot;Go file missing package declaration&quot; 1 1 &quot;&quot;</span></span>
+<span class="lineno">  437 </span><span class="spaces">                     </span><span class="istickedoff">else validator</span>
+<span class="lineno">  438 </span><span class="spaces">    </span><span class="istickedoff">in validator'</span>
+<span class="lineno">  439 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  440 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">hasGoCode toks = any isGoSpecific toks</span></span>
+<span class="lineno">  441 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">isGoSpecific (TKeyword k _ _) = k `elem` [&quot;func&quot;, &quot;package&quot;, &quot;import&quot;]</span></span>
+<span class="lineno">  442 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">isGoSpecific _ = False</span></span></span>
+<span class="lineno">  443 </span>
+<span class="lineno">  444 </span>validateTypusSpecific :: SyntaxValidator -&gt; [Token] -&gt; SyntaxValidator
+<span class="lineno">  445 </span><span class="decl"><span class="nottickedoff">validateTypusSpecific validator tokens =</span>
+<span class="lineno">  446 </span><span class="spaces">    </span><span class="nottickedoff">foldl checkTypusDirective validator (filterComments tokens)</span>
+<span class="lineno">  447 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  448 </span><span class="spaces">    </span><span class="nottickedoff">filterComments = filter isComment</span>
+<span class="lineno">  449 </span><span class="spaces">    </span><span class="nottickedoff">isComment (TComment _ _ _) = True</span>
+<span class="lineno">  450 </span><span class="spaces">    </span><span class="nottickedoff">isComment _ = False</span></span>
+<span class="lineno">  451 </span>
+<span class="lineno">  452 </span>checkTypusDirective :: SyntaxValidator -&gt; Token -&gt; SyntaxValidator
+<span class="lineno">  453 </span><span class="decl"><span class="nottickedoff">checkTypusDirective validator (TComment comment line col)</span>
+<span class="lineno">  454 </span><span class="spaces">    </span><span class="nottickedoff">| &quot;//!&quot; `isPrefixOf` comment = </span>
+<span class="lineno">  455 </span><span class="spaces">        </span><span class="nottickedoff">if ':' `elem` drop 3 comment</span>
+<span class="lineno">  456 </span><span class="spaces">        </span><span class="nottickedoff">then validator</span>
+<span class="lineno">  457 </span><span class="spaces">        </span><span class="nottickedoff">else addError validator InvalidStatement </span>
+<span class="lineno">  458 </span><span class="spaces">                     </span><span class="nottickedoff">&quot;Invalid Typus directive format&quot; line col comment</span>
+<span class="lineno">  459 </span><span class="spaces">    </span><span class="nottickedoff">| &quot;{//!&quot; `isPrefixOf` comment =</span>
+<span class="lineno">  460 </span><span class="spaces">        </span><span class="nottickedoff">if ('}' :: Char) `elem` comment</span>
+<span class="lineno">  461 </span><span class="spaces">        </span><span class="nottickedoff">then validator</span>
+<span class="lineno">  462 </span><span class="spaces">        </span><span class="nottickedoff">else addError validator InvalidBlockStructure </span>
+<span class="lineno">  463 </span><span class="spaces">                     </span><span class="nottickedoff">&quot;Unclosed Typus block directive&quot; line col comment</span>
+<span class="lineno">  464 </span><span class="spaces">    </span><span class="nottickedoff">| otherwise = validator</span>
+<span class="lineno">  465 </span><span class="spaces"></span><span class="nottickedoff">checkTypusDirective validator _ = validator</span></span>
+<span class="lineno">  466 </span>
+<span class="lineno">  467 </span>validateControlFlow :: SyntaxValidator -&gt; [Token] -&gt; SyntaxValidator
+<span class="lineno">  468 </span><span class="decl"><span class="istickedoff">validateControlFlow validator tokens = </span>
+<span class="lineno">  469 </span><span class="spaces">    </span><span class="istickedoff">foldl checkControlStructure validator (zip3 tokens (drop 1 tokens ++ [<span class="nottickedoff">TNewline 0</span>]) (drop 2 tokens ++ [<span class="nottickedoff">TNewline 0</span>, <span class="nottickedoff">TNewline 0</span>]))</span></span>
+<span class="lineno">  470 </span>
+<span class="lineno">  471 </span>checkControlStructure :: SyntaxValidator -&gt; (Token, Token, Token) -&gt; SyntaxValidator
+<span class="lineno">  472 </span><span class="decl"><span class="istickedoff">checkControlStructure validator (TKeyword kw line col, next1, next2)</span>
+<span class="lineno">  473 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlyfalse">kw `elem` [&quot;if&quot;, &quot;for&quot;, &quot;while&quot;, &quot;switch&quot;]</span> =</span>
+<span class="lineno">  474 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">case findNextBrace next1 next2 of</span></span>
+<span class="lineno">  475 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">Nothing -&gt; addError validator UnterminatedBlock </span></span>
+<span class="lineno">  476 </span><span class="spaces">                               </span><span class="istickedoff"><span class="nottickedoff">(kw ++ &quot; statement missing opening brace&quot;) line col &quot;&quot;</span></span>
+<span class="lineno">  477 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">Just _ -&gt; validator</span></span>
+<span class="lineno">  478 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = validator</span>
+<span class="lineno">  479 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  480 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">findNextBrace (TDelimiter '{' _ _) _ = Just True</span></span>
+<span class="lineno">  481 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">findNextBrace _ (TDelimiter '{' _ _) = Just True</span></span>
+<span class="lineno">  482 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">findNextBrace _ _ = Nothing</span></span>
+<span class="lineno">  483 </span><span class="spaces"></span><span class="istickedoff">checkControlStructure validator _ = validator</span></span>
+<span class="lineno">  484 </span>
+<span class="lineno">  485 </span>finalizeValidation :: SyntaxValidator -&gt; SyntaxValidator
+<span class="lineno">  486 </span><span class="decl"><span class="istickedoff">finalizeValidation validator =</span>
+<span class="lineno">  487 </span><span class="spaces">    </span><span class="istickedoff">let validator' = if not (null $ braceStack validator)</span>
+<span class="lineno">  488 </span><span class="spaces">                    </span><span class="istickedoff">then addError validator <span class="nottickedoff">MissingBrace</span> </span>
+<span class="lineno">  489 </span><span class="spaces">                                 </span><span class="istickedoff"><span class="nottickedoff">&quot;Unclosed braces at end of file&quot;</span> <span class="nottickedoff">0</span> <span class="nottickedoff">0</span> <span class="nottickedoff">&quot;&quot;</span></span>
+<span class="lineno">  490 </span><span class="spaces">                    </span><span class="istickedoff">else validator</span>
+<span class="lineno">  491 </span><span class="spaces">    </span><span class="istickedoff">in validator'</span></span>
+<span class="lineno">  492 </span>
+<span class="lineno">  493 </span>-- ================== Error Management ==================
+<span class="lineno">  494 </span>
+<span class="lineno">  495 </span>addError :: SyntaxValidator -&gt; ErrorType -&gt; String -&gt; Int -&gt; Int -&gt; String -&gt; SyntaxValidator
+<span class="lineno">  496 </span><span class="decl"><span class="istickedoff">addError validator errType message line col content =</span>
+<span class="lineno">  497 </span><span class="spaces">    </span><span class="istickedoff">let error' = SyntaxError errType <span class="nottickedoff">message</span> <span class="nottickedoff">line</span> <span class="nottickedoff">col</span> <span class="nottickedoff">content</span></span>
+<span class="lineno">  498 </span><span class="spaces">    </span><span class="istickedoff">in validator { validatorErrors = error' : validatorErrors validator }</span></span>
+<span class="lineno">  499 </span>
+<span class="lineno">  500 </span>-- ================== Utility Functions ==================
+<span class="lineno">  501 </span>
+
+</pre>
+</body>
+</html>

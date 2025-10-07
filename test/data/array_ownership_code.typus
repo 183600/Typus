@@ -1,0 +1,13 @@
+//! ownership: on
+
+package main
+
+func main() {
+    s1 := "hello"
+    s2 := "world"
+    strings := []string{s1, s2}  // Move into array
+    println(strings)
+    
+    // println(s1)  // Use after move
+    // println(s2)  // Use after move
+}

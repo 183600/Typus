@@ -1,0 +1,320 @@
+//! ownership: on
+package main
+
+import (
+    "fmt"
+    "sync"
+    "time"
+    "unsafe"
+)
+
+type Owned struct {
+    value *int
+    owner_id int
+}
+
+type Shared struct {
+    value *int
+    ref_count *int
+    mutex *sync.RWMutex
+}
+
+type Unique struct {
+    value *int
+    moved bool
+}
+
+type MemoryManager struct {
+    allocations map[uintptr]AllocationInfo
+    owner_counter int
+    mutex sync.RWMutex
+    total_allocated int64
+    total_freed int64
+}
+
+type AllocationInfo struct {
+    size int
+    owner_id int
+    allocated_at time.Time
+    freed_at *time.Time
+}
+
+var GlobalMemoryManager = &MemoryManager{
+    allocations: make(map[uintptr]AllocationInfo),
+    owner_counter: 0,
+}
+
+func NewOwned(value int) Owned {
+    GlobalMemoryManager.mutex.Lock()
+    defer GlobalMemoryManager.mutex.Unlock()
+    
+    GlobalMemoryManager.owner_counter++
+    owner_id := GlobalMemoryManager.owner_counter
+    
+    ptr := &value
+    addr := uintptr(unsafe.Pointer(ptr))
+    
+    GlobalMemoryManager.allocations[addr] = AllocationInfo{
+        size: int(unsafe.Sizeof(value)),
+        owner_id: owner_id,
+        allocated_at: time.Now(),
+    }
+    
+    GlobalMemoryManager.total_allocated += int64(unsafe.Sizeof(value))
+    
+    return Owned{value: ptr, owner_id: owner_id}
+}
+
+func (o Owned) Get() int {
+    if o.value == nil {
+        panic("Cannot get value from nil owned reference")
+    }
+    return *o.value
+}
+
+func (o Owned) Set(value int) {
+    if o.value == nil {
+        panic("Cannot set value on nil owned reference")
+    }
+    *o.value = value
+}
+
+func (o Owned) Clone() Owned {
+    if o.value == nil {
+        panic("Cannot clone from nil pointer")
+    }
+    
+    newValue := *o.value
+    return NewOwned(newValue)
+}
+
+func (o Owned) Drop() {
+    GlobalMemoryManager.mutex.Lock()
+    defer GlobalMemoryManager.mutex.Unlock()
+    
+    if o.value != nil {
+        addr := uintptr(unsafe.Pointer(o.value))
+        if info, exists := GlobalMemoryManager.allocations[addr]; exists {
+            now := time.Now()
+            info.freed_at = &now
+            GlobalMemoryManager.allocations[addr] = info
+            GlobalMemoryManager.total_freed += int64(info.size)
+        }
+        o.value = nil
+    }
+}
+
+func NewShared(value int) Shared {
+    ptr := &value
+    ref_count := new(int)
+    *ref_count = 1
+    mutex := &sync.RWMutex{}
+    
+    return Shared{
+        value: ptr,
+        ref_count: ref_count,
+        mutex: mutex,
+    }
+}
+
+func (s Shared) Clone() Shared {
+    s.mutex.Lock()
+    defer s.mutex.Unlock()
+    
+    *s.ref_count++
+    return Shared{
+        value: s.value,
+        ref_count: s.ref_count,
+        mutex: s.mutex,
+    }
+}
+
+func (s Shared) Get() int {
+    s.mutex.RLock()
+    defer s.mutex.RUnlock()
+    
+    if s.value == nil {
+        panic("Cannot get value from nil shared reference")
+    }
+    return *s.value
+}
+
+func (s Shared) Set(value int) {
+    s.mutex.Lock()
+    defer s.mutex.Unlock()
+    
+    if s.value == nil {
+        panic("Cannot set value on nil shared reference")
+    }
+    *s.value = value
+}
+
+func (s Shared) Drop() {
+    s.mutex.Lock()
+    defer s.mutex.Unlock()
+    
+    if s.ref_count != nil {
+        *s.ref_count--
+        if *s.ref_count <= 0 {
+            s.value = nil
+        }
+    }
+}
+
+func (s Shared) RefCount() int {
+    s.mutex.RLock()
+    defer s.mutex.RUnlock()
+    
+    if s.ref_count == nil {
+        return 0
+    }
+    return *s.ref_count
+}
+
+func NewUnique(value int) Unique {
+    ptr := &value
+    return Unique{
+        value: ptr,
+        moved: false,
+    }
+}
+
+func (u Unique) Move() Unique {
+    if u.moved {
+        panic("Cannot move from already moved unique reference")
+    }
+    
+    newUnique := Unique{
+        value: u.value,
+        moved: false,
+    }
+    
+    u.moved = true
+    u.value = nil
+    
+    return newUnique
+}
+
+func (u Unique) Get() int {
+    if u.moved || u.value == nil {
+        panic("Cannot get value from moved or nil unique reference")
+    }
+    return *u.value
+}
+
+func (u Unique) Set(value int) {
+    if u.moved || u.value == nil {
+        panic("Cannot set value on moved or nil unique reference")
+    }
+    *u.value = value
+}
+
+func (u Unique) Drop() {
+    if !u.moved && u.value != nil {
+        u.value = nil
+    }
+    u.moved = true
+}
+
+func (mm *MemoryManager) GetStats() (totalAllocated int64, totalFreed int64, activeAllocations int) {
+    mm.mutex.RLock()
+    defer mm.mutex.RUnlock()
+    
+    activeAllocations = 0
+    for _, info := range mm.allocations {
+        if info.freed_at == nil {
+            activeAllocations++
+        }
+    }
+    
+    return mm.total_allocated, mm.total_freed, activeAllocations
+}
+
+func testOwnership() {
+    fmt.Println("=== 测试所有权系统 ===")
+    
+    // 创建所有权对象
+    owned := NewOwned(42)
+    fmt.Printf("创建所有权对象: %d\n", owned.Get())
+    
+    // 修改值
+    owned.Set(84)
+    fmt.Printf("修改后的值: %d\n", owned.Get())
+    
+    // 克隆对象
+    owned2 := owned.Clone()
+    fmt.Printf("克隆对象: %d\n", owned2.Get())
+    
+    // 清理
+    owned.Drop()
+    owned2.Drop()
+}
+
+func testSharedOwnership() {
+    fmt.Println("\n=== 测试共享所有权 ===")
+    
+    shared1 := NewShared(100)
+    fmt.Printf("共享对象1: %d, 引用计数: %d\n", shared1.Get(), shared1.RefCount())
+    
+    shared2 := shared1.Clone()
+    fmt.Printf("共享对象2: %d, 引用计数: %d\n", shared2.Get(), shared2.RefCount())
+    
+    shared1.Set(200)
+    fmt.Printf("修改后 - 共享对象1: %d\n", shared1.Get())
+    fmt.Printf("修改后 - 共享对象2: %d\n", shared2.Get())
+    
+    shared1.Drop()
+    fmt.Printf("释放shared1后，shared2引用计数: %d\n", shared2.RefCount())
+    
+    shared2.Drop()
+}
+
+func testUniqueOwnership() {
+    fmt.Println("\n=== 测试唯一所有权 ===")
+    
+    unique1 := NewUnique(300)
+    fmt.Printf("唯一对象1: %d\n", unique1.Get())
+    
+    unique2 := unique1.Move()
+    fmt.Printf("移动后的唯一对象2: %d\n", unique2.Get())
+    
+    // unique1 现在已经失效，不能再使用
+    // fmt.Printf("unique1: %d\n", unique1.Get()) // 这会触发panic
+    
+    unique2.Drop()
+}
+
+func testMemoryStats() {
+    fmt.Println("\n=== 测试内存统计 ===")
+    
+    // 创建一些对象
+    var objects []Owned
+    for i := 0; i < 10; i++ {
+        obj := NewOwned(i * 10)
+        objects = append(objects, obj)
+    }
+    
+    totalAlloc, totalFree, activeAlloc := GlobalMemoryManager.GetStats()
+    fmt.Printf("内存统计 - 总分配: %d, 总释放: %d, 活跃分配: %d\n",
+        totalAlloc, totalFree, activeAlloc)
+    
+    // 释放一些对象
+    for i := 0; i < 5; i++ {
+        objects[i].Drop()
+    }
+    
+    totalAlloc, totalFree, activeAlloc = GlobalMemoryManager.GetStats()
+    fmt.Printf("释放后 - 总分配: %d, 总释放: %d, 活跃分配: %d\n",
+        totalAlloc, totalFree, activeAlloc)
+}
+
+func main() {
+    fmt.Println("=== 内存管理和所有权系统测试 ===")
+    
+    testOwnership()
+    testSharedOwnership()
+    testUniqueOwnership()
+    testMemoryStats()
+    
+    fmt.Println("\n=== 所有测试完成 ===")
+}

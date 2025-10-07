@@ -1,0 +1,80 @@
+package repositories
+
+import (
+    "dependency_injection/services"
+    "errors"
+)
+
+type UserRepository struct {
+    databaseURL string
+    users       map[string]*services.User
+}
+
+func NewUserRepository(dbURL string) *UserRepository {
+    return &UserRepository{
+        databaseURL: dbURL,
+        users:       make(map[string]*services.User),
+    }
+}
+
+func (ur *UserRepository) Save(user *services.User) error {
+    if user.ID == "" {
+        return errors.New("user ID required")
+    }
+
+    ur.users[user.ID] = user
+    return nil
+}
+
+func (ur *UserRepository) FindByID(id string) (*services.User, error) {
+    user, exists := ur.users[id]
+    if !exists {
+        return nil, errors.New("user not found")
+    }
+
+    return user, nil
+}
+
+func (ur *UserRepository) Update(user *services.User) error {
+    if _, exists := ur.users[user.ID]; !exists {
+        return errors.New("user not found")
+    }
+
+    ur.users[user.ID] = user
+    return nil
+}
+
+func (ur *UserRepository) Delete(id string) error {
+    if _, exists := ur.users[id]; !exists {
+        return errors.New("user not found")
+    }
+
+    delete(ur.users, id)
+    return nil
+}
+
+func (ur *UserRepository) FindAll() []*services.User {
+    users := make([]*services.User, 0, len(ur.users))
+    for _, user := range ur.users {
+        users = append(users, user)
+    }
+    return users
+}
+
+// Test repository ownership patterns
+func CloneRepository(repo *UserRepository) *UserRepository {
+    // Create a new repository with same configuration
+    newRepo := NewUserRepository(repo.databaseURL)
+
+    // Copy all users
+    for id, user := range repo.users {
+        newUser := &services.User{
+            ID:    user.ID,
+            Name:  user.Name,
+            Email: user.Email,
+        }
+        newRepo.users[id] = newUser
+    }
+
+    return newRepo
+}

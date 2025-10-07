@@ -1,0 +1,392 @@
+package main
+
+import (
+    "fmt"
+    "sync"
+    "time"
+    "runtime"
+)
+
+// ===== 简化的内存管理结构 =====
+type MemoryStats struct {
+    TotalAlloc int64
+    TotalFree  int64
+    ActiveAlloc int
+}
+
+var globalStats = &MemoryStats{}
+var statsMutex sync.RWMutex
+
+// ===== 所有权模拟 =====
+type OwnedInt struct {
+    value int
+    id    int
+}
+
+type SharedString struct {
+    value    string
+    refCount int
+    mutex    sync.RWMutex
+}
+
+type UniqueFloat struct {
+    value float64
+    moved bool
+}
+
+// ===== 内存管理函数 =====
+func NewOwnedInt(value int) *OwnedInt {
+    statsMutex.Lock()
+    globalStats.TotalAlloc += 8
+    globalStats.ActiveAlloc++
+    statsMutex.Unlock()
+    
+    return &OwnedInt{
+        value: value,
+        id:    int(time.Now().UnixNano() % 1000000),
+    }
+}
+
+func (o *OwnedInt) Get() int {
+    return o.value
+}
+
+func (o *OwnedInt) Set(value int) {
+    o.value = value
+}
+
+func (o *OwnedInt) Clone() *OwnedInt {
+    return NewOwnedInt(o.value)
+}
+
+func (o *OwnedInt) Drop() {
+    statsMutex.Lock()
+    globalStats.TotalFree += 8
+    globalStats.ActiveAlloc--
+    statsMutex.Unlock()
+}
+
+func NewSharedString(value string) *SharedString {
+    return &SharedString{
+        value:    value,
+        refCount: 1,
+    }
+}
+
+func (s *SharedString) Clone() *SharedString {
+    s.mutex.Lock()
+    defer s.mutex.Unlock()
+    s.refCount++
+    return &SharedString{
+        value:    s.value,
+        refCount: s.refCount,
+    }
+}
+
+func (s *SharedString) Get() string {
+    s.mutex.RLock()
+    defer s.mutex.RUnlock()
+    return s.value
+}
+
+func (s *SharedString) Set(value string) {
+    s.mutex.Lock()
+    defer s.mutex.Unlock()
+    s.value = value
+}
+
+func (s *SharedString) RefCount() int {
+    s.mutex.RLock()
+    defer s.mutex.RUnlock()
+    return s.refCount
+}
+
+func (s *SharedString) Drop() {
+    s.mutex.Lock()
+    defer s.mutex.Unlock()
+    s.refCount--
+}
+
+func NewUniqueFloat(value float64) *UniqueFloat {
+    return &UniqueFloat{
+        value: value,
+        moved: false,
+    }
+}
+
+func (u *UniqueFloat) Move() *UniqueFloat {
+    if u.moved {
+        panic("Cannot move from already moved unique reference")
+    }
+    
+    newUnique := &UniqueFloat{
+        value: u.value,
+        moved: false,
+    }
+    
+    u.moved = true
+    return newUnique
+}
+
+func (u *UniqueFloat) Get() float64 {
+    if u.moved {
+        panic("Cannot get value from moved unique reference")
+    }
+    return u.value
+}
+
+func (u *UniqueFloat) Set(value float64) {
+    if u.moved {
+        panic("Cannot set value on moved unique reference")
+    }
+    u.value = value
+}
+
+// ===== 内存池模拟 =====
+type MemoryPool struct {
+    items     []interface{}
+    allocated []bool
+    capacity  int
+    mutex     sync.Mutex
+}
+
+func NewMemoryPool(capacity int) *MemoryPool {
+    return &MemoryPool{
+        items:     make([]interface{}, capacity),
+        allocated: make([]bool, capacity),
+        capacity:  capacity,
+    }
+}
+
+func (mp *MemoryPool) Allocate() int {
+    mp.mutex.Lock()
+    defer mp.mutex.Unlock()
+    
+    for i := 0; i < mp.capacity; i++ {
+        if !mp.allocated[i] {
+            mp.allocated[i] = true
+            return i
+        }
+    }
+    
+    panic("Memory pool exhausted")
+}
+
+func (mp *MemoryPool) Free(index int) {
+    mp.mutex.Lock()
+    defer mp.mutex.Unlock()
+    
+    if index >= 0 && index < mp.capacity && mp.allocated[index] {
+        mp.allocated[index] = false
+        mp.items[index] = nil
+    }
+}
+
+func (mp *MemoryPool) Stats() (allocated int, free int) {
+    mp.mutex.Lock()
+    defer mp.mutex.Unlock()
+    
+    allocated = 0
+    for i := 0; i < mp.capacity; i++ {
+        if mp.allocated[i] {
+            allocated++
+        }
+    }
+    
+    free = mp.capacity - allocated
+    return
+}
+
+// ===== 生命周期管理 =====
+type Lifetime struct {
+    id        int
+    startTime time.Time
+    endTime   *time.Time
+    active    bool
+}
+
+type LifetimeManager struct {
+    lifetimes map[int]*Lifetime
+    counter   int
+    mutex     sync.RWMutex
+}
+
+var GlobalLifetimeManager = &LifetimeManager{
+    lifetimes: make(map[int]*Lifetime),
+    counter:   0,
+}
+
+func (lm *LifetimeManager) NewLifetime() *Lifetime {
+    lm.mutex.Lock()
+    defer lm.mutex.Unlock()
+    
+    lm.counter++
+    lifetime := &Lifetime{
+        id:        lm.counter,
+        startTime: time.Now(),
+        active:    true,
+    }
+    
+    lm.lifetimes[lm.counter] = lifetime
+    return lifetime
+}
+
+func (lm *LifetimeManager) EndLifetime(id int) {
+    lm.mutex.Lock()
+    defer lm.mutex.Unlock()
+    
+    if lifetime, exists := lm.lifetimes[id]; exists {
+        if lifetime.active {
+            now := time.Now()
+            lifetime.endTime = &now
+            lifetime.active = false
+        }
+    }
+}
+
+func (lm *LifetimeManager) IsActive(id int) bool {
+    lm.mutex.RLock()
+    defer lm.mutex.RUnlock()
+    
+    if lifetime, exists := lm.lifetimes[id]; exists {
+        return lifetime.active
+    }
+    return false
+}
+
+// ===== GC统计 =====
+func GetGCStats() MemoryStats {
+    var ms runtime.MemStats
+    runtime.ReadMemStats(&ms)
+    
+    statsMutex.RLock()
+    defer statsMutex.RUnlock()
+    
+    return MemoryStats{
+        TotalAlloc:  int64(ms.TotalAlloc),
+        TotalFree:   int64(ms.TotalAlloc - ms.Alloc),
+        ActiveAlloc: globalStats.ActiveAlloc,
+    }
+}
+
+func ForceGC() {
+    runtime.GC()
+    runtime.GC()
+}
+
+// ===== 测试函数 =====
+func testOwnership() {
+    fmt.Println("=== 测试所有权系统 ===")
+    
+    owned := NewOwnedInt(42)
+    fmt.Printf("创建所有权对象: %d\n", owned.Get())
+    
+    owned.Set(84)
+    fmt.Printf("修改后的值: %d\n", owned.Get())
+    
+    cloned := owned.Clone()
+    fmt.Printf("克隆对象: %d\n", cloned.Get())
+    
+    owned.Drop()
+    cloned.Drop()
+}
+
+func testSharedOwnership() {
+    fmt.Println("\n=== 测试共享所有权 ===")
+    
+    shared1 := NewSharedString("Hello")
+    fmt.Printf("共享对象1: %s, 引用计数: %d\n", shared1.Get(), shared1.RefCount())
+    
+    shared2 := shared1.Clone()
+    fmt.Printf("共享对象2: %s, 引用计数: %d\n", shared2.Get(), shared2.RefCount())
+    
+    shared1.Set("World")
+    fmt.Printf("修改后 - 共享对象1: %s\n", shared1.Get())
+    fmt.Printf("修改后 - 共享对象2: %s\n", shared2.Get())
+    
+    shared1.Drop()
+    fmt.Printf("释放shared1后，shared2引用计数: %d\n", shared2.RefCount())
+    
+    shared2.Drop()
+}
+
+func testUniqueOwnership() {
+    fmt.Println("\n=== 测试唯一所有权 ===")
+    
+    unique1 := NewUniqueFloat(300.0)
+    fmt.Printf("唯一对象1: %.1f\n", unique1.Get())
+    
+    unique2 := unique1.Move()
+    fmt.Printf("移动后的唯一对象2: %.1f\n", unique2.Get())
+}
+
+func testMemoryPool() {
+    fmt.Println("\n=== 测试内存池 ===")
+    
+    pool := NewMemoryPool(10)
+    
+    var indices []int
+    for i := 0; i < 5; i++ {
+        idx := pool.Allocate()
+        indices = append(indices, idx)
+    }
+    
+    allocated, free := pool.Stats()
+    fmt.Printf("内存池状态: 已分配=%d, 空闲=%d\n", allocated, free)
+    
+    for i := 0; i < 3; i++ {
+        pool.Free(indices[i])
+    }
+    
+    allocated, free = pool.Stats()
+    fmt.Printf("释放后内存池状态: 已分配=%d, 空闲=%d\n", allocated, free)
+}
+
+func testLifetimeManagement() {
+    fmt.Println("\n=== 测试生命周期管理 ===")
+    
+    lifetime := GlobalLifetimeManager.NewLifetime()
+    fmt.Printf("创建生命周期: ID=%d, 活跃=%t\n", lifetime.id, lifetime.active)
+    
+    time.Sleep(100 * time.Millisecond)
+    
+    GlobalLifetimeManager.EndLifetime(lifetime.id)
+    fmt.Printf("结束生命周期: ID=%d, 活跃=%t\n", lifetime.id, GlobalLifetimeManager.IsActive(lifetime.id))
+    
+    if lifetime.endTime != nil {
+        duration := lifetime.endTime.Sub(lifetime.startTime)
+        fmt.Printf("生命周期持续时间: %v\n", duration)
+    }
+}
+
+func testGCStats() {
+    fmt.Println("\n=== 测试垃圾回收统计 ===")
+    
+    stats := GetGCStats()
+    fmt.Printf("GC统计 - 总分配: %d, 总释放: %d, 活跃分配: %d\n",
+        stats.TotalAlloc, stats.TotalFree, stats.ActiveAlloc)
+    
+    // 创建一些对象触发GC
+    for i := 0; i < 1000; i++ {
+        _ = make([]byte, 1024)
+    }
+    
+    ForceGC()
+    
+    newStats := GetGCStats()
+    fmt.Printf("GC后统计 - 总分配: %d, 总释放: %d, 活跃分配: %d\n",
+        newStats.TotalAlloc, newStats.TotalFree, newStats.ActiveAlloc)
+}
+
+func main() {
+    fmt.Println("=== 内存管理和所有权系统测试 ===")
+    
+    testOwnership()
+    testSharedOwnership()
+    testUniqueOwnership()
+    testMemoryPool()
+    testLifetimeManagement()
+    testGCStats()
+    
+    fmt.Println("\n=== 所有测试完成 ===")
+}

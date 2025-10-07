@@ -1,0 +1,50 @@
+//! ownership: on
+//! dependent_types: on
+
+package main
+
+import (
+	"fmt"
+	"io"
+	"math"
+	"os"
+	"runtime"
+	"sync"
+	"time"
+)
+
+// 基本类型
+var (
+	boolVar       bool = true
+	intVar        int  = 42
+	int8Var       int8 = 8
+	int16Var      int16 = 16
+	int32Var      int32 = 32
+	int64Var      int64 = 64
+	uintVar       uint = 42
+	uint8Var      uint8 = 8
+	uint16Var     uint16 = 16
+	uint32Var     uint32 = 32
+	uint64Var     uint64 = 64
+	float32Var    float32 = 3.14
+	float64Var    float64 = 3.14159265359
+	complex64Var  complex64 = 1 + 2i
+	complex128Var complex128 = 1 + 2i
+	stringVar     string = "Hello, Typus!"
+	byteVar       byte = 'a'
+	runeVar       rune = '世'
+)
+
+// 数组和切片
+var (
+	array1    [5]int = [5]int{1, 2, 3, 4, 5}
+	array2    = [...]string{"a", "b", "c"}
+	slice1    []int = []int{1, 2, 3, 4, 5}
+	slice2    = make([]float64, 10)
+	slice3    = make([]byte, 0, 20)
+)
+
+// Map
+var (
+	map1 = map[string]int{
+		"apple":  1,

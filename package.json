@@ -1,0 +1,68 @@
+{
+  "name": "typus-compiler",
+  "version": "0.1.0",
+  "description": "Typus compiler with dependent types and ownership analysis",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run test:production",
+    "test:unit": "cabal test --test-show-details=always --test-option=--skip=performance --test-option=--skip=integration",
+    "test:integration": "cabal test --test-show-details=always --test-option=--skip=unit --test-option=--skip=performance",
+    "test:e2e": "./scripts/e2e-test.sh",
+    "test:performance": "cabal test --test-show-details=always --test-option=--test-option=performance",
+    "test:coverage": "npm run test:coverage:setup && npm run test:coverage:run && ./scripts/coverage-report.sh",
+    "test:coverage:setup": "cabal configure --enable-coverage && cabal build",
+    "test:coverage:run": "cabal test --test-show-details=always",
+    "test:coverage:report": "./scripts/coverage-report.sh",
+    "test:production": "./scripts/production-test.sh",
+    "test:quick": "cabal test --test-show-details=always --test-option=--skip=performance",
+    "test:full": "npm run test:coverage && npm run test:performance && npm run test:integration",
+    "pretest": "cabal clean && cabal update",
+    "posttest": "echo '=== Test Summary ===' && npm run test:coverage:report",
+    "build": "cabal build --enable-tests --enable-benchmarks",
+    "clean": "cabal clean",
+    "lint": "cabal check",
+    "format": "cabal format",
+    "security-check": "npm run test && npm run test:performance && npm run test:production",
+    "ci": "npm run test:coverage && npm run test:production",
+    "verify-production": "npm run security-check && npm run test:full"
+  },
+  "keywords": [
+    "compiler",
+    "dependent-types",
+    "ownership-analysis",
+    "haskell",
+    "typus"
+  ],
+  "author": "Typus Development Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://gitee.com/qwe12345678/typus.git"
+  },
+  "bugs": {
+    "url": "https://gitee.com/qwe12345678/typus/issues"
+  },
+  "homepage": "https://gitee.com/qwe12345678/typus#readme",
+  "engines": {
+    "node": ">=14.0.0",
+    "haskell": ">=9.6.0"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^17.0.0",
+    "@commitlint/config-conventional": "^17.0.0",
+    "husky": "^8.0.0",
+    "lint-staged": "^13.0.0"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
+  "lint-staged": {
+    "*.hs": [
+      "cabal format",
+      "git add"
+    ]
+  }
+}

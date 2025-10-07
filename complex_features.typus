@@ -1,0 +1,59 @@
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+// Test complex Go features
+type ComplexStruct struct {
+	*sync.Mutex
+	Data map[string]interface{}
+	Chan chan int
+}
+
+func complexFunction() (chan string, func() error) {
+	ch := make(chan string, 1)
+	cleanup := func() error {
+		close(ch)
+		return nil
+	}
+	return ch, cleanup
+}
+
+func main() {
+	fmt.Println("=== Complex Go Features Test ===")
+	
+	// Struct with embedded pointer
+	cs := &ComplexStruct{
+		Mutex: &sync.Mutex{},
+		Data:  make(map[string]interface{}),
+		Chan:  make(chan int, 2),
+	}
+	
+	cs.Lock()
+	cs.Data["key"] = "value"
+	cs.Unlock()
+	
+	// Function returning channel and function
+	ch, cleanup := complexFunction()
+	
+	select {
+	case ch <- "test":
+		fmt.Println("Sent to channel")
+	default:
+		fmt.Println("Channel full")
+	}
+	
+	if err := cleanup(); err != nil {
+		fmt.Printf("Cleanup error: %v\n", err)
+	}
+	
+	// Complex type assertions
+	var x interface{} = map[string]int{"a": 1, "b": 2}
+	if m, ok := x.(map[string]int); ok {
+		fmt.Printf("Map assertion successful: %v\n", m)
+	}
+	
+	fmt.Println("=== Complex Test Completed ===")
+}

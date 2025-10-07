@@ -1,0 +1,190 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>module ConversionTest (runConversionTests) where
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>import System.Directory (doesDirectoryExist, doesFileExist, listDirectory, removeDirectoryRecursive)
+<span class="lineno">    4 </span>import System.FilePath ((&lt;/&gt;), takeFileName, takeExtension, dropExtension, (&lt;.&gt;))
+<span class="lineno">    5 </span>import System.Process (readProcessWithExitCode)
+<span class="lineno">    6 </span>import System.Exit (ExitCode(..))
+<span class="lineno">    7 </span>import System.IO (hPutStrLn, stderr)
+<span class="lineno">    8 </span>import qualified System.IO as IO
+<span class="lineno">    9 </span>import Control.Monad (when, forM_, forM)
+<span class="lineno">   10 </span>import Data.List (isSuffixOf, isInfixOf)
+<span class="lineno">   11 </span>import Text.Printf (printf)
+<span class="lineno">   12 </span>
+<span class="lineno">   13 </span>-- Main test function
+<span class="lineno">   14 </span>runConversionTests :: IO ()
+<span class="lineno">   15 </span><span class="decl"><span class="istickedoff">runConversionTests = do</span>
+<span class="lineno">   16 </span><span class="spaces">    </span><span class="istickedoff">putStrLn &quot;=== Typus Conversion and Execution Test ===&quot;</span>
+<span class="lineno">   17 </span><span class="spaces">    </span><span class="istickedoff">putStrLn &quot;&quot;</span>
+<span class="lineno">   18 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   19 </span><span class="spaces">    </span><span class="istickedoff">-- Test configuration</span>
+<span class="lineno">   20 </span><span class="spaces">    </span><span class="istickedoff">let inputDir = &quot;examples/go250923&quot;</span>
+<span class="lineno">   21 </span><span class="spaces">    </span><span class="istickedoff">let outputDir = &quot;examples/go250923output&quot;</span>
+<span class="lineno">   22 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   23 </span><span class="spaces">    </span><span class="istickedoff">-- Check if input directory exists</span>
+<span class="lineno">   24 </span><span class="spaces">    </span><span class="istickedoff">inputExists &lt;- doesDirectoryExist inputDir</span>
+<span class="lineno">   25 </span><span class="spaces">    </span><span class="istickedoff">when (not inputExists) $ <span class="nottickedoff">do</span></span>
+<span class="lineno">   26 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">hPutStrLn IO.stderr $ &quot;ERROR: Input directory &quot; ++ inputDir ++ &quot; does not exist&quot;</span></span>
+<span class="lineno">   27 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">fail &quot;Input directory not found&quot;</span></span>
+<span class="lineno">   28 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   29 </span><span class="spaces">    </span><span class="istickedoff">-- Step 1: Test typus convert command</span>
+<span class="lineno">   30 </span><span class="spaces">    </span><span class="istickedoff">putStrLn &quot;Step 1: Testing typus convert command...&quot;</span>
+<span class="lineno">   31 </span><span class="spaces">    </span><span class="istickedoff">convertSuccess &lt;- testTypusConvert inputDir outputDir</span>
+<span class="lineno">   32 </span><span class="spaces">    </span><span class="istickedoff">when (not convertSuccess) $ <span class="nottickedoff">do</span></span>
+<span class="lineno">   33 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">hPutStrLn IO.stderr &quot;ERROR: typus convert command failed&quot;</span></span>
+<span class="lineno">   34 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">fail &quot;typus convert failed&quot;</span></span>
+<span class="lineno">   35 </span><span class="spaces">    </span><span class="istickedoff">putStrLn &quot;✓ typus convert command completed successfully&quot;</span>
+<span class="lineno">   36 </span><span class="spaces">    </span><span class="istickedoff">putStrLn &quot;&quot;</span>
+<span class="lineno">   37 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   38 </span><span class="spaces">    </span><span class="istickedoff">-- Step 2: Get list of typus files</span>
+<span class="lineno">   39 </span><span class="spaces">    </span><span class="istickedoff">putStrLn &quot;Step 2: Getting list of typus files...&quot;</span>
+<span class="lineno">   40 </span><span class="spaces">    </span><span class="istickedoff">typusFiles &lt;- getTypusFiles inputDir</span>
+<span class="lineno">   41 </span><span class="spaces">    </span><span class="istickedoff">printf &quot;Found %d typus files\n&quot; (length typusFiles)</span>
+<span class="lineno">   42 </span><span class="spaces">    </span><span class="istickedoff">putStrLn &quot;&quot;</span>
+<span class="lineno">   43 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   44 </span><span class="spaces">    </span><span class="istickedoff">-- Step 3: Test running original typus files (expected to fail)</span>
+<span class="lineno">   45 </span><span class="spaces">    </span><span class="istickedoff">putStrLn &quot;Step 3: Testing original typus files (expected to fail)...&quot;</span>
+<span class="lineno">   46 </span><span class="spaces">    </span><span class="istickedoff">testOriginalFiles typusFiles</span>
+<span class="lineno">   47 </span><span class="spaces">    </span><span class="istickedoff">putStrLn &quot;&quot;</span>
+<span class="lineno">   48 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   49 </span><span class="spaces">    </span><span class="istickedoff">-- Step 4: Test running converted Go files</span>
+<span class="lineno">   50 </span><span class="spaces">    </span><span class="istickedoff">putStrLn &quot;Step 4: Testing converted Go files...&quot;</span>
+<span class="lineno">   51 </span><span class="spaces">    </span><span class="istickedoff">testResults &lt;- testConvertedFiles outputDir typusFiles</span>
+<span class="lineno">   52 </span><span class="spaces">    </span><span class="istickedoff">putStrLn &quot;&quot;</span>
+<span class="lineno">   53 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   54 </span><span class="spaces">    </span><span class="istickedoff">-- Step 5: Summary</span>
+<span class="lineno">   55 </span><span class="spaces">    </span><span class="istickedoff">putStrLn &quot;=== Test Summary ===&quot;</span>
+<span class="lineno">   56 </span><span class="spaces">    </span><span class="istickedoff">putStrLn $ &quot;Total typus files: &quot; ++ show (length typusFiles)</span>
+<span class="lineno">   57 </span><span class="spaces">    </span><span class="istickedoff">putStrLn $ &quot;Go files that run without error: &quot; ++ show (length $ filter id testResults)</span>
+<span class="lineno">   58 </span><span class="spaces">    </span><span class="istickedoff">let successCount = length $ filter id testResults</span>
+<span class="lineno">   59 </span><span class="spaces">    </span><span class="istickedoff">if <span class="tickonlytrue">successCount == length typusFiles</span></span>
+<span class="lineno">   60 </span><span class="spaces">        </span><span class="istickedoff">then putStrLn &quot;✓ All tests passed!&quot;</span>
+<span class="lineno">   61 </span><span class="spaces">        </span><span class="istickedoff">else <span class="nottickedoff">do</span></span>
+<span class="lineno">   62 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">putStrLn &quot;✗ Some tests failed!&quot;</span></span>
+<span class="lineno">   63 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">printf &quot;Successful: %d/%d\n&quot; successCount (length typusFiles)</span></span></span>
+<span class="lineno">   64 </span>
+<span class="lineno">   65 </span>-- Test that typus convert command
+<span class="lineno">   66 </span>testTypusConvert :: FilePath -&gt; FilePath -&gt; IO Bool
+<span class="lineno">   67 </span><span class="decl"><span class="istickedoff">testTypusConvert inputDir outputDir = do</span>
+<span class="lineno">   68 </span><span class="spaces">    </span><span class="istickedoff">-- Clean up previous output</span>
+<span class="lineno">   69 </span><span class="spaces">    </span><span class="istickedoff">outputExists &lt;- doesDirectoryExist outputDir</span>
+<span class="lineno">   70 </span><span class="spaces">    </span><span class="istickedoff">when outputExists $ removeDirectoryRecursive outputDir</span>
+<span class="lineno">   71 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   72 </span><span class="spaces">    </span><span class="istickedoff">-- Run typus convert command</span>
+<span class="lineno">   73 </span><span class="spaces">    </span><span class="istickedoff">putStrLn $ &quot;Running: stack exec -- typus convert &quot; ++ inputDir ++ &quot; -o &quot; ++ outputDir</span>
+<span class="lineno">   74 </span><span class="spaces">    </span><span class="istickedoff">(exitCode, stdout, stdErr) &lt;- readProcessWithExitCode &quot;stack&quot; [&quot;exec&quot;, &quot;--&quot;, &quot;typus&quot;, &quot;convert&quot;, inputDir, &quot;-o&quot;, outputDir] &quot;&quot;</span>
+<span class="lineno">   75 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   76 </span><span class="spaces">    </span><span class="istickedoff">case exitCode of</span>
+<span class="lineno">   77 </span><span class="spaces">        </span><span class="istickedoff">ExitSuccess -&gt; do</span>
+<span class="lineno">   78 </span><span class="spaces">            </span><span class="istickedoff">putStrLn $ &quot;Conversion completed successfully&quot;</span>
+<span class="lineno">   79 </span><span class="spaces">            </span><span class="istickedoff">putStrLn $ &quot;Output: &quot; ++ take 200 stdout</span>
+<span class="lineno">   80 </span><span class="spaces">            </span><span class="istickedoff">return True</span>
+<span class="lineno">   81 </span><span class="spaces">        </span><span class="istickedoff">ExitFailure code -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">   82 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">hPutStrLn IO.stderr $ &quot;typus convert failed with exit code &quot; ++ show code</span></span>
+<span class="lineno">   83 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">hPutStrLn IO.stderr $ &quot;STDOUT: &quot; ++ take 500 stdout</span></span>
+<span class="lineno">   84 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">hPutStrLn IO.stderr $ &quot;STDERR: &quot; ++ take 500 stdErr</span></span>
+<span class="lineno">   85 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">return False</span></span></span>
+<span class="lineno">   86 </span>
+<span class="lineno">   87 </span>-- Get list of typus files in directory
+<span class="lineno">   88 </span>getTypusFiles :: FilePath -&gt; IO [FilePath]
+<span class="lineno">   89 </span><span class="decl"><span class="istickedoff">getTypusFiles dir = do</span>
+<span class="lineno">   90 </span><span class="spaces">    </span><span class="istickedoff">allFiles &lt;- listDirectory dir</span>
+<span class="lineno">   91 </span><span class="spaces">    </span><span class="istickedoff">let typusFiles = filter (isSuffixOf &quot;.typus&quot;) allFiles</span>
+<span class="lineno">   92 </span><span class="spaces">    </span><span class="istickedoff">return $ map (dir &lt;/&gt;) typusFiles</span></span>
+<span class="lineno">   93 </span>
+<span class="lineno">   94 </span>-- Test running original typus files (expected to fail)
+<span class="lineno">   95 </span>testOriginalFiles :: [FilePath] -&gt; IO ()
+<span class="lineno">   96 </span><span class="decl"><span class="istickedoff">testOriginalFiles files = do</span>
+<span class="lineno">   97 </span><span class="spaces">    </span><span class="istickedoff">forM_ files $ \file -&gt; do</span>
+<span class="lineno">   98 </span><span class="spaces">        </span><span class="istickedoff">putStrLn $ &quot;Testing original file: &quot; ++ takeFileName file</span>
+<span class="lineno">   99 </span><span class="spaces">        </span><span class="istickedoff">(exitCode, _, _) &lt;- readProcessWithExitCode &quot;go&quot; [&quot;run&quot;, file] &quot;&quot;</span>
+<span class="lineno">  100 </span><span class="spaces">        </span><span class="istickedoff">case exitCode of</span>
+<span class="lineno">  101 </span><span class="spaces">            </span><span class="istickedoff">ExitSuccess -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  102 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">putStrLn $ &quot;  ⚠ Unexpected success (typus file ran directly)&quot;</span></span>
+<span class="lineno">  103 </span><span class="spaces">            </span><span class="istickedoff">ExitFailure _ -&gt; do</span>
+<span class="lineno">  104 </span><span class="spaces">                </span><span class="istickedoff">putStrLn $ &quot;  ✓ Expected failure (Go cannot run .typus files directly)&quot;</span></span>
+<span class="lineno">  105 </span>
+<span class="lineno">  106 </span>-- Test running converted Go files
+<span class="lineno">  107 </span>testConvertedFiles :: FilePath -&gt; [FilePath] -&gt; IO [Bool]
+<span class="lineno">  108 </span><span class="decl"><span class="istickedoff">testConvertedFiles outputDir typusFiles = do</span>
+<span class="lineno">  109 </span><span class="spaces">    </span><span class="istickedoff">outputExists &lt;- doesDirectoryExist outputDir</span>
+<span class="lineno">  110 </span><span class="spaces">    </span><span class="istickedoff">if <span class="tickonlyfalse">not outputExists</span></span>
+<span class="lineno">  111 </span><span class="spaces">        </span><span class="istickedoff">then <span class="nottickedoff">do</span></span>
+<span class="lineno">  112 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">hPutStrLn IO.stderr $ &quot;ERROR: Output directory &quot; ++ outputDir ++ &quot; does not exist&quot;</span></span>
+<span class="lineno">  113 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">return []</span></span>
+<span class="lineno">  114 </span><span class="spaces">        </span><span class="istickedoff">else do</span>
+<span class="lineno">  115 </span><span class="spaces">            </span><span class="istickedoff">results &lt;- forM typusFiles $ \typusFile -&gt; do</span>
+<span class="lineno">  116 </span><span class="spaces">                </span><span class="istickedoff">let baseName = takeFileName typusFile</span>
+<span class="lineno">  117 </span><span class="spaces">                </span><span class="istickedoff">let goFile = outputDir &lt;/&gt; dropExtension baseName &lt;.&gt; &quot;go&quot;</span>
+<span class="lineno">  118 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  119 </span><span class="spaces">                </span><span class="istickedoff">goExists &lt;- doesFileExist goFile</span>
+<span class="lineno">  120 </span><span class="spaces">                </span><span class="istickedoff">if <span class="tickonlyfalse">not goExists</span></span>
+<span class="lineno">  121 </span><span class="spaces">                    </span><span class="istickedoff">then <span class="nottickedoff">do</span></span>
+<span class="lineno">  122 </span><span class="spaces">                        </span><span class="istickedoff"><span class="nottickedoff">hPutStrLn IO.stderr $ &quot;ERROR: Go file not found: &quot; ++ goFile</span></span>
+<span class="lineno">  123 </span><span class="spaces">                        </span><span class="istickedoff"><span class="nottickedoff">return False</span></span>
+<span class="lineno">  124 </span><span class="spaces">                    </span><span class="istickedoff">else do</span>
+<span class="lineno">  125 </span><span class="spaces">                        </span><span class="istickedoff">putStrLn $ &quot;Testing Go file: &quot; ++ takeFileName goFile</span>
+<span class="lineno">  126 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  127 </span><span class="spaces">                        </span><span class="istickedoff">-- Try to run Go file with timeout</span>
+<span class="lineno">  128 </span><span class="spaces">                        </span><span class="istickedoff">(exitCode, stdout, stdErr) &lt;- readProcessWithExitCode &quot;timeout&quot; [&quot;10s&quot;, &quot;go&quot;, &quot;run&quot;, goFile] &quot;&quot;</span>
+<span class="lineno">  129 </span><span class="spaces">                        </span><span class="istickedoff">let actualExitCode = if <span class="tickonlyfalse">exitCode == ExitFailure <span class="nottickedoff">124</span></span></span>
+<span class="lineno">  130 </span><span class="spaces">                                            </span><span class="istickedoff">then <span class="nottickedoff">ExitFailure 1</span>  -- Timeout</span>
+<span class="lineno">  131 </span><span class="spaces">                                            </span><span class="istickedoff">else exitCode</span>
+<span class="lineno">  132 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  133 </span><span class="spaces">                        </span><span class="istickedoff">case actualExitCode of</span>
+<span class="lineno">  134 </span><span class="spaces">                            </span><span class="istickedoff">ExitSuccess -&gt; do</span>
+<span class="lineno">  135 </span><span class="spaces">                                </span><span class="istickedoff">putStrLn $ &quot;  ✓ Go file executed successfully&quot;</span>
+<span class="lineno">  136 </span><span class="spaces">                                </span><span class="istickedoff">when (not $ null stdout) $ do</span>
+<span class="lineno">  137 </span><span class="spaces">                                    </span><span class="istickedoff">putStrLn $ &quot;    Output: &quot; ++ take 200 stdout</span>
+<span class="lineno">  138 </span><span class="spaces">                                    </span><span class="istickedoff">-- Check for expected output patterns</span>
+<span class="lineno">  139 </span><span class="spaces">                                    </span><span class="istickedoff">checkExpectedOutput baseName stdout</span>
+<span class="lineno">  140 </span><span class="spaces">                                </span><span class="istickedoff">return True</span>
+<span class="lineno">  141 </span><span class="spaces">                            </span><span class="istickedoff">ExitFailure _ -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  142 </span><span class="spaces">                                </span><span class="istickedoff"><span class="nottickedoff">putStrLn $ &quot;  ✗ Go file execution failed&quot;</span></span>
+<span class="lineno">  143 </span><span class="spaces">                                </span><span class="istickedoff"><span class="nottickedoff">when (not $ null stdErr) $</span></span>
+<span class="lineno">  144 </span><span class="spaces">                                    </span><span class="istickedoff"><span class="nottickedoff">putStrLn $ &quot;    Error: &quot; ++ take 200 stdErr</span></span>
+<span class="lineno">  145 </span><span class="spaces">                                </span><span class="istickedoff"><span class="nottickedoff">return False</span></span>
+<span class="lineno">  146 </span><span class="spaces">            </span><span class="istickedoff">return results</span></span>
+<span class="lineno">  147 </span>
+<span class="lineno">  148 </span>-- Check if the output matches expected patterns for known files
+<span class="lineno">  149 </span>checkExpectedOutput :: FilePath -&gt; String -&gt; IO ()
+<span class="lineno">  150 </span><span class="decl"><span class="istickedoff">checkExpectedOutput filename output</span>
+<span class="lineno">  151 </span><span class="spaces">    </span><span class="istickedoff">| &quot;hello&quot; `isInfixOf` filename =</span>
+<span class="lineno">  152 </span><span class="spaces">        </span><span class="istickedoff">if <span class="tickonlytrue">&quot;Hello&quot; `isInfixOf` output</span></span>
+<span class="lineno">  153 </span><span class="spaces">            </span><span class="istickedoff">then putStrLn $ &quot;    ✓ Expected 'Hello' in output&quot;</span>
+<span class="lineno">  154 </span><span class="spaces">            </span><span class="istickedoff">else <span class="nottickedoff">putStrLn $ &quot;    ⚠ Expected 'Hello' in output&quot;</span></span>
+<span class="lineno">  155 </span><span class="spaces">    </span><span class="istickedoff">| &quot;calculator&quot; `isInfixOf` filename =</span>
+<span class="lineno">  156 </span><span class="spaces">        </span><span class="istickedoff">if <span class="tickonlytrue">&quot;10 + 20 = 30&quot; `isInfixOf` output</span></span>
+<span class="lineno">  157 </span><span class="spaces">            </span><span class="istickedoff">then putStrLn $ &quot;    ✓ Expected calculator result in output&quot;</span>
+<span class="lineno">  158 </span><span class="spaces">            </span><span class="istickedoff">else <span class="nottickedoff">putStrLn $ &quot;    ⚠ Expected calculator result in output&quot;</span></span>
+<span class="lineno">  159 </span><span class="spaces">    </span><span class="istickedoff">| &quot;algorithms&quot; `isInfixOf` filename =</span>
+<span class="lineno">  160 </span><span class="spaces">        </span><span class="istickedoff">if <span class="tickonlytrue">(&quot;Original array:&quot; `isInfixOf` output &amp;&amp; &quot;Sorted array:&quot; `isInfixOf` output)</span></span>
+<span class="lineno">  161 </span><span class="spaces">            </span><span class="istickedoff">then putStrLn $ &quot;    ✓ Expected algorithm output patterns found&quot;</span>
+<span class="lineno">  162 </span><span class="spaces">            </span><span class="istickedoff">else <span class="nottickedoff">putStrLn $ &quot;    ⚠ Expected algorithm output patterns not found&quot;</span></span>
+<span class="lineno">  163 </span><span class="spaces">    </span><span class="istickedoff">| &quot;data_structures&quot; `isInfixOf` filename =</span>
+<span class="lineno">  164 </span><span class="spaces">        </span><span class="istickedoff">if <span class="tickonlytrue">&quot;Linked List contents:&quot; `isInfixOf` output</span></span>
+<span class="lineno">  165 </span><span class="spaces">            </span><span class="istickedoff">then putStrLn $ &quot;    ✓ Expected data structures output found&quot;</span>
+<span class="lineno">  166 </span><span class="spaces">            </span><span class="istickedoff">else <span class="nottickedoff">putStrLn $ &quot;    ⚠ Expected data structures output not found&quot;</span></span>
+<span class="lineno">  167 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = putStrLn $ &quot;    (No specific output pattern to check for this file)&quot;</span></span>
+
+</pre>
+</body>
+</html>

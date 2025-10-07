@@ -1,0 +1,963 @@
+//! dependent_types: on
+//! ownership: on
+package main
+
+import (
+	"bufio"
+	"context"
+	"crypto/md5"
+	"crypto/sha256"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"math"
+	"net/http"
+	"os"
+	"reflect"
+	"regexp"
+	"runtime"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+// Constants
+const (
+	Pi       = 3.14159
+	MaxInt   = int(^uint(0) >> 1)
+	MinInt   = -MaxInt - 1
+	StatusOK = 200
+)
+
+// iota constants
+const (
+	Sunday = iota
+	Monday
+	Tuesday
+	Wednesday
+	Thursday
+	Friday
+	Saturday
+)
+
+// Global variables
+var (
+	globalVar   = "global"
+	globalInt   = 42
+	globalSlice = []int{1, 2, 3, 4, 5}
+	globalMap   = map[string]int{"one": 1, "two": 2}
+)
+
+// Type definitions
+type (
+	// Basic types
+	MyInt     int
+	MyFloat   float64
+	// MyString  string  // Removed - declared as struct later
+	MyBool    bool
+	MyRune    rune
+	MyByte    byte
+	MyUint    uint
+	MyUintptr uintptr
+
+	// Complex types
+	StructType struct {
+		Field1 int
+		Field2 string
+		Field3 *InnerStruct
+	}
+
+	InnerStruct struct {
+		InnerField float64
+	}
+
+	// Interface types
+	Reader interface {
+		Read([]byte) (int, error)
+	}
+
+	Writer interface {
+		Write([]byte) (int, error)
+	}
+
+	ReadWriter interface {
+		Reader
+		Writer
+	}
+
+	// Function types
+	HandlerFunc func(int, string) (bool, error)
+	MathFunc    func(int, int) int
+
+	// Channel types
+	ChanInt    chan int
+	ChanBuffer chan string
+
+	// Map types
+	MapIntString map[int]string
+	MapStringAny map[string]interface{}
+
+	// Slice and array types
+	SliceInt   []int
+	Array5Int  [5]int
+	IntSlice   []int
+	StringSlice []string
+
+	// Pointer types
+	IntPtr *int
+
+	// Struct with tags
+	User struct {
+		Username string `json:"username" db:"user_name"`
+		Password string `json:"-" db:"password"`
+		Email    string `json:"email,omitempty"`
+	}
+
+	// Generic struct (Go 1.18+)
+	Container[T any] struct {
+		Value T
+		Next  *Container[T]
+	}
+
+	// Generic interface
+	Comparator[T any] interface {
+		Compare(a, b T) int
+	}
+
+	// Shape interface
+	Shape interface {
+		Area() float64
+		Perimeter() float64
+	}
+)
+
+// Person struct
+type Person struct {
+	Name    string
+	Age     int
+	Email   string
+	private string
+}
+
+// Embedded struct
+type Employee struct {
+	Person
+	ID       int
+	Position string
+	Salary   float64
+}
+
+// Shape implementations
+type Rectangle struct {
+	Width  float64
+	Height float64
+}
+
+func (r Rectangle) Area() float64 {
+	return r.Width * r.Height
+}
+
+func (r Rectangle) Perimeter() float64 {
+	return 2 * (r.Width + r.Height)
+}
+
+type Circle struct {
+	Radius float64
+}
+
+func (c Circle) Area() float64 {
+	return math.Pi * c.Radius * c.Radius
+}
+
+func (c Circle) Perimeter() float64 {
+	return 2 * math.Pi * c.Radius
+}
+
+// Method definitions
+func (p Person) String() string {
+	return fmt.Sprintf("Person{Name: %s, Age: %d}", p.Name, p.Age)
+}
+
+func (p *Person) SetAge(age int) {
+	p.Age = age
+}
+
+func (p Person) GetPrivate() string {
+	return p.private
+}
+
+// Generic functions
+func Max[T comparable](a, b T) T {
+	// For simplicity, we'll use reflection to compare
+	// In a real implementation, you'd want more specific type handling
+	aVal := reflect.ValueOf(a)
+	bVal := reflect.ValueOf(b)
+
+	switch aVal.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if aVal.Int() > bVal.Int() {
+			return a
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		if aVal.Uint() > bVal.Uint() {
+			return a
+		}
+	case reflect.Float32, reflect.Float64:
+		if aVal.Float() > bVal.Float() {
+			return a
+		}
+	case reflect.String:
+		if aVal.String() > bVal.String() {
+			return a
+		}
+	}
+	return b
+}
+
+func Filter[T any](slice []T, predicate func(T) bool) []T {
+	var result []T
+	for _, item := range slice {
+		if predicate(item) {
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+func Map[T, U any](slice []T, transform func(T) U) []U {
+	result := make([]U, len(slice))
+	for i, item := range slice {
+		result[i] = transform(item)
+	}
+	return result
+}
+
+// Function with multiple return values
+func divide(a, b float64) (float64, error) {
+	if b == 0 {
+		return 0, errors.New("division by zero")
+	}
+	return a / b, nil
+}
+
+// Function with named return values
+func calculateStats(numbers []int) (min, max, sum int) {
+	if len(numbers) == 0 {
+		return 0, 0, 0
+	}
+	
+	min = numbers[0]
+	max = numbers[0]
+	
+	for _, num := range numbers {
+		if num < min {
+			min = num
+		}
+		if num > max {
+			max = num
+		}
+		sum += num
+	}
+	
+	return
+}
+
+// Function with variadic parameters
+func sum(numbers ...int) int {
+	total := 0
+	for _, num := range numbers {
+		total += num
+	}
+	return total
+}
+
+// Function with defer
+func processFile(filename string) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
+	}
+	
+	return scanner.Err()
+}
+
+// Function with panic and recover
+func safeFunction() (result string) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = fmt.Sprintf("Recovered from panic: %v", r)
+		}
+	}()
+	
+	// This would normally cause a panic
+	// panic("something went wrong")
+	
+	return "function completed normally"
+}
+
+// Goroutine function
+func worker(id int, jobs <-chan int, results chan<- string) {
+	for job := range jobs {
+		time.Sleep(time.Millisecond * 100) // Simulate work
+		results <- fmt.Sprintf("Worker %d processed job %d", id, job)
+	}
+}
+
+// Channel operations
+func channelExample() {
+	// Unbuffered channel
+	ch1 := make(chan int)
+	
+	// Buffered channel
+	ch2 := make(chan string, 3)
+	
+	// Channel with select
+	go func() {
+		time.Sleep(time.Second)
+		ch1 <- 42
+	}()
+	
+	go func() {
+		ch2 <- "hello"
+		ch2 <- "world"
+		close(ch2)
+	}()
+	
+	select {
+	case val := <-ch1:
+		fmt.Printf("Received from ch1: %d\n", val)
+	case val, ok := <-ch2:
+		if ok {
+			fmt.Printf("Received from ch2: %s\n", val)
+		}
+	case <-time.After(2 * time.Second):
+		fmt.Println("Timeout!")
+	}
+}
+
+// Type assertion and switch
+func typeAssertionExample(i interface{}) {
+	switch v := i.(type) {
+	case int:
+		fmt.Printf("Integer: %d\n", v)
+	case string:
+		fmt.Printf("String: %s\n", v)
+	case bool:
+		fmt.Printf("Boolean: %v\n", v)
+	case Person:
+		fmt.Printf("Person: %v\n", v)
+	default:
+		fmt.Printf("Unknown type: %T\n", v)
+	}
+}
+
+// Reflection example
+func reflectionExample(v interface{}) {
+	t := reflect.TypeOf(v)
+	fmt.Printf("Type: %v\n", t)
+	
+	if t.Kind() == reflect.Struct {
+		for i := 0; i < t.NumField(); i++ {
+			field := t.Field(i)
+			fmt.Printf("Field %d: %s %v %v\n", i, field.Name, field.Type, field.Tag)
+		}
+	}
+}
+
+// Error handling with custom error type
+type ValidationError struct {
+	Field   string
+	Message string
+}
+
+func (e ValidationError) Error() string {
+	return fmt.Sprintf("validation error in field '%s': %s", e.Field, e.Message)
+}
+
+func validateAge(age int) error {
+	if age < 0 {
+		return ValidationError{Field: "age", Message: "cannot be negative"}
+	}
+	if age > 150 {
+		return ValidationError{Field: "age", Message: "must be realistic"}
+	}
+	return nil
+}
+
+// Mutex and sync example
+type Counter struct {
+	mu    sync.Mutex
+	value int
+}
+
+func (c *Counter) Increment() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.value++
+}
+
+func (c *Counter) Value() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.value
+}
+
+// WaitGroup example
+func waitGroupExample() {
+	var wg sync.WaitGroup
+	
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			fmt.Printf("Goroutine %d completed\n", id)
+		}(i)
+	}
+	
+	wg.Wait()
+	fmt.Println("All goroutines completed")
+}
+
+// Once example
+var once sync.Once
+var sharedResource string
+
+func initializeResource() {
+	once.Do(func() {
+		sharedResource = "initialized"
+		fmt.Println("Resource initialized")
+	})
+}
+
+// HTTP server example
+func httpServerExample() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "Hello, World!")
+	})
+	
+	http.HandleFunc("/json", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"message": "Hello, JSON!"})
+	})
+	
+	fmt.Println("Server starting on :8080")
+	// http.ListenAndServe(":8080", nil) // Commented out to prevent actual server start
+}
+
+// JSON marshaling/unmarshaling
+type Config struct {
+	Name    string   `json:"name"`
+	Version string   `json:"version"`
+	Tags    []string `json:"tags,omitempty"`
+	Debug   bool     `json:"debug"`
+}
+
+func jsonExample() {
+	config := Config{
+		Name:    "MyApp",
+		Version: "1.0.0",
+		Tags:    []string{"web", "api"},
+		Debug:   false,
+	}
+	
+	// Marshal to JSON
+	data, err := json.Marshal(config)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("JSON: %s\n", data)
+	
+	// Unmarshal from JSON
+	var decoded Config
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Decoded: %+v\n", decoded)
+}
+
+// File operations
+func fileOperationsExample() {
+	// Write to file
+	content := []byte("Hello, file system!")
+	if err := os.WriteFile("test.txt", content, 0644); err != nil {
+		log.Printf("Error writing file: %v", err)
+		return
+	}
+	
+	// Read from file
+	data, err := os.ReadFile("test.txt")
+	if err != nil {
+		log.Printf("Error reading file: %v", err)
+		return
+	}
+	fmt.Printf("File content: %s\n", data)
+	
+	// Clean up
+	os.Remove("test.txt")
+}
+
+// Regular expressions
+func regexExample() {
+	pattern := `\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b`
+	re := regexp.MustCompile(pattern)
+	
+	text := "Contact us at support@example.com or sales@company.org"
+	matches := re.FindAllString(text, -1)
+	
+	fmt.Printf("Found email addresses: %v\n", matches)
+}
+
+// Sorting example
+func sortingExample() {
+	numbers := []int{3, 1, 4, 1, 5, 9, 2, 6}
+	stringsSlice := []string{"banana", "apple", "cherry", "date"}
+	
+	// Sort integers
+	sort.Ints(numbers)
+	fmt.Printf("Sorted numbers: %v\n", numbers)
+	
+	// Sort strings
+	sort.Strings(stringsSlice)
+	fmt.Printf("Sorted strings: %v\n", stringsSlice)
+	
+	// Custom sorting
+	type PersonByAge []Person
+	people := []Person{
+		{Name: "Alice", Age: 30},
+		{Name: "Bob", Age: 25},
+		{Name: "Charlie", Age: 35},
+	}
+	
+	sort.Slice(people, func(i, j int) bool {
+		return people[i].Age < people[j].Age
+	})
+	
+	fmt.Printf("People sorted by age: %v\n", people)
+}
+
+// Context usage
+func contextExample() {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	
+	select {
+	case <-time.After(1 * time.Second):
+		fmt.Println("Operation completed")
+	case <-ctx.Done():
+		fmt.Printf("Operation cancelled: %v\n", ctx.Err())
+	}
+}
+
+// String manipulation
+func stringManipulationExample() {
+	text := "  Hello, World!  "
+	
+	// Trim whitespace
+	trimmed := strings.TrimSpace(text)
+	fmt.Printf("Trimmed: '%s'\n", trimmed)
+	
+	// Split and join
+	words := strings.Fields(trimmed)
+	fmt.Printf("Words: %v\n", words)
+	
+	joined := strings.Join(words, "-")
+	fmt.Printf("Joined: %s\n", joined)
+	
+	// Replace
+	replaced := strings.ReplaceAll(trimmed, "World", "Go")
+	fmt.Printf("Replaced: %s\n", replaced)
+	
+	// Contains
+	contains := strings.Contains(trimmed, "Hello")
+	fmt.Printf("Contains 'Hello': %v\n", contains)
+}
+
+// Number conversion
+func numberConversionExample() {
+	// String to int
+	num, err := strconv.Atoi("42")
+	if err != nil {
+		log.Printf("Error converting string to int: %v", err)
+	} else {
+		fmt.Printf("Converted string to int: %d\n", num)
+	}
+	
+	// Int to string
+	str := strconv.Itoa(123)
+	fmt.Printf("Converted int to string: %s\n", str)
+	
+	// Parse float
+	f, err := strconv.ParseFloat("3.14", 64)
+	if err != nil {
+		log.Printf("Error parsing float: %v", err)
+	} else {
+		fmt.Printf("Parsed float: %f\n", f)
+	}
+}
+
+// Hash functions
+func hashExample() {
+	data := []byte("Hello, World!")
+	
+	// MD5 hash
+	md5Hash := md5.Sum(data)
+	fmt.Printf("MD5: %x\n", md5Hash)
+	
+	// SHA256 hash
+	sha256Hash := sha256.Sum256(data)
+	fmt.Printf("SHA256: %x\n", sha256Hash)
+}
+
+// Helper functions
+func makeAdder(addend int) func(int) int {
+	return func(x int) int {
+		return x + addend
+	}
+}
+
+func applyOperation(a, b int, op func(int, int) int) {
+	result := op(a, b)
+	fmt.Printf("Operation result: %d\n", result)
+}
+
+// File interface implementation
+type File struct {
+	name string
+	data []byte
+}
+
+func (f *File) Read(buf []byte) (int, error) {
+	if len(f.data) == 0 {
+		f.data = []byte("Hello, World!")
+	}
+	n := copy(buf, f.data)
+	return n, nil
+}
+
+func (f *File) Write(buf []byte) (int, error) {
+	f.data = append(f.data, buf...)
+	return len(buf), nil
+}
+
+// Typus-specific features
+
+// Dependent Types - Matrix type
+type Matrix struct {
+    rows, cols int
+    data       [][]float64
+}
+
+func NewMatrix(m, n int, fillValue float64) Matrix {
+    matData := make([][]float64, m)
+    for i := 0; i < m; i++ {
+        matData[i] = make([]float64, n)
+        for j := 0; j < n; j++ {
+            matData[i][j] = fillValue + float64(i*n+j)
+        }
+    }
+    return Matrix{rows: m, cols: n, data: matData}
+}
+
+// Dependent Types - NonEmptySlice
+type NonEmptySlice struct {
+    elements []int
+}
+
+func getFirst(s NonEmptySlice) int {
+    return s.elements[0] // 安全的，因为len(elements) > 0
+}
+
+// Dependent Types - SafeDivide
+type SafeDivide func(a, b int) int
+
+func actualDivide(a, b int) int {
+    if b == 0 {
+        panic("SafeDivide: 除数不能为零")
+    }
+    return a / b
+}
+
+// Ownership - MyString type
+type MyString struct {
+    data string
+}
+
+func NewMyString(s string) MyString {
+    return MyString{data: s}
+}
+
+// Complex struct with embedded pointer
+type ComplexStruct struct {
+	*sync.Mutex
+	Data map[string]interface{}
+	Chan chan int
+}
+
+func complexFunction() (chan string, func() error) {
+	ch := make(chan string, 1)
+	cleanup := func() error {
+		close(ch)
+		return nil
+	}
+	return ch, cleanup
+}
+
+// Main function that calls all examples
+func main() {
+	fmt.Println("=== Comprehensive Go and Typus Syntax Test ===")
+	
+	// Basic operations
+	fmt.Println("\n--- Basic Operations ---")
+	result, err := divide(10, 2)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	} else {
+		fmt.Printf("10 / 2 = %f\n", result)
+	}
+	
+	min, max, total := calculateStats([]int{1, 5, 3, 9, 2})
+	fmt.Printf("Stats - Min: %d, Max: %d, Sum: %d\n", min, max, total)
+	
+	fmt.Printf("Sum of 1,2,3,4,5 = %d\n", sum(1, 2, 3, 4, 5))
+	
+	// Struct and methods
+	fmt.Println("\n--- Structs and Methods ---")
+	person := Person{Name: "Alice", Age: 30, Email: "alice@example.com", private: "secret"}
+	fmt.Printf("Person: %v\n", person)
+	person.SetAge(31)
+	fmt.Printf("Updated age: %d\n", person.Age)
+	
+	// Interfaces
+	fmt.Println("\n--- Interfaces ---")
+	shapes := []Shape{
+		Rectangle{Width: 5, Height: 3},
+		Circle{Radius: 2},
+	}
+	
+	for _, shape := range shapes {
+		fmt.Printf("Shape: Area=%.2f, Perimeter=%.2f\n", shape.Area(), shape.Perimeter())
+	}
+	
+	// Embedded struct
+	fmt.Println("\n--- Embedded Struct ---")
+	employee := Employee{
+		Person:   Person{Name: "Bob", Age: 35, Email: "bob@company.com"},
+		ID:       1001,
+		Position: "Software Engineer",
+		Salary:   75000.00,
+	}
+	fmt.Printf("Employee: %+v\n", employee)
+	fmt.Printf("Employee name: %s\n", employee.Name) // Access embedded field
+	
+	// Generics (simplified)
+	fmt.Println("\n--- Generics ---")
+	numbers := []int{1, 2, 3, 4, 5}
+	evenNumbers := Filter(numbers, func(n int) bool { return n%2 == 0 })
+	fmt.Printf("Even numbers: %v\n", evenNumbers)
+	
+	squared := Map(numbers, func(n int) int { return n * n })
+	fmt.Printf("Squared numbers: %v\n", squared)
+	
+	// Type assertion
+	fmt.Println("\n--- Type Assertion ---")
+	typeAssertionExample(42)
+	typeAssertionExample("hello")
+	typeAssertionExample(true)
+	typeAssertionExample(person)
+	
+	// Reflection
+	fmt.Println("\n--- Reflection ---")
+	reflectionExample(person)
+	
+	// Error handling
+	fmt.Println("\n--- Error Handling ---")
+	if err := validateAge(25); err != nil {
+		fmt.Printf("Validation error: %v\n", err)
+	} else {
+		fmt.Println("Age validation passed")
+	}
+	
+	if err := validateAge(-5); err != nil {
+		fmt.Printf("Validation error: %v\n", err)
+	}
+	
+	// Concurrency
+	fmt.Println("\n--- Concurrency ---")
+	channelExample()
+	
+	// Counter with mutex
+	fmt.Println("\n--- Mutex Example ---")
+	counter := &Counter{}
+	var wg sync.WaitGroup
+	
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			counter.Increment()
+		}()
+	}
+	
+	wg.Wait()
+	fmt.Printf("Final counter value: %d\n", counter.Value())
+	
+	// WaitGroup example
+	fmt.Println("\n--- WaitGroup Example ---")
+	waitGroupExample()
+	
+	// Once example
+	fmt.Println("\n--- Once Example ---")
+	initializeResource()
+	initializeResource() // This won't run again
+	
+	// JSON example
+	fmt.Println("\n--- JSON Example ---")
+	jsonExample()
+	
+	// File operations
+	fmt.Println("\n--- File Operations ---")
+	fileOperationsExample()
+	
+	// Regular expressions
+	fmt.Println("\n--- Regular Expressions ---")
+	regexExample()
+	
+	// Sorting
+	fmt.Println("\n--- Sorting ---")
+	sortingExample()
+	
+	// Context
+	fmt.Println("\n--- Context ---")
+	contextExample()
+	
+	// String manipulation
+	fmt.Println("\n--- String Manipulation ---")
+	stringManipulationExample()
+	
+	// Number conversion
+	fmt.Println("\n--- Number Conversion ---")
+	numberConversionExample()
+	
+	// Hash functions
+	fmt.Println("\n--- Hash Functions ---")
+	hashExample()
+	
+	// Safe function with panic recovery
+	fmt.Println("\n--- Panic Recovery ---")
+	safeResult := safeFunction()
+	fmt.Printf("Safe function result: %s\n", safeResult)
+	
+	// Runtime information
+	fmt.Println("\n--- Runtime Information ---")
+	fmt.Printf("Go version: %s\n", runtime.Version())
+	fmt.Printf("Number of CPUs: %d\n", runtime.NumCPU())
+	fmt.Printf("Number of goroutines: %d\n", runtime.NumGoroutine())
+	
+	// Typus-specific features
+	fmt.Println("\n--- Typus Dependent Types ---")
+	matrixA := NewMatrix(2, 3, 1.0)
+	fmt.Printf("Matrix A (%dx%d):\n", matrixA.rows, matrixA.cols)
+	for i, row := range matrixA.data {
+		fmt.Printf("Row %d: %v\n", i, row)
+	}
+	
+	matrixB := NewMatrix(3, 2, 5.0)
+	fmt.Printf("\nMatrix B (%dx%d):\n", matrixB.rows, matrixB.cols)
+	for i, row := range matrixB.data {
+		fmt.Printf("Row %d: %v\n", i, row)
+	}
+	
+	fmt.Println("\n--- Typus NonEmptySlice ---")
+	var validSlice NonEmptySlice
+	validSlice.elements = []int{10, 20, 30} // 假设这样赋值后类型检查通过
+	fmt.Println("First element of validSlice:", getFirst(validSlice))
+	
+	fmt.Println("\n--- Typus SafeDivide ---")
+	var safeDiv SafeDivide
+	safeDiv = actualDivide // 将 actualDivide 赋值给 SafeDivide 类型的变量
+	
+	result1 := safeDiv(10, 2)
+	fmt.Println("10 / 2 =", result1)
+	
+	// 演示运行时检查
+	fmt.Println("尝试除以零...")
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("捕获到panic:", r)
+		}
+	}()
+	
+	// 这会触发panic，被上面的recover捕获
+	safeDiv(5, 0)
+	
+	fmt.Println("\n--- Typus Ownership ---")
+	// 常规 Go 代码
+	x := 10
+	fmt.Println("Regular x:", x)
+	
+	// 启用所有权的块 (commented out for Go compatibility)
+	// {//! ownership: on
+	//	s1 := NewMyString("block-owned string")
+	//	s2 := s1 // 所有权转移
+	//	fmt.Println("Owned s2 in block:", s2.data)
+	//	// fmt.Println(s1.data) // 应该报错
+	// }
+	// s2 在这里已失效（如果块作用域也影响所有权生命周期）
+	
+	fmt.Println("\n--- Complex Go Features ---")
+	// Struct with embedded pointer
+	cs := &ComplexStruct{
+		Mutex: &sync.Mutex{},
+		Data:  make(map[string]interface{}),
+		Chan:  make(chan int, 2),
+	}
+	
+	cs.Lock()
+	cs.Data["key"] = "value"
+	cs.Unlock()
+	
+	// Function returning channel and function
+	ch, cleanup := complexFunction()
+	
+	select {
+	case ch <- "test":
+		fmt.Println("Sent to channel")
+	default:
+		fmt.Println("Channel full")
+	}
+	
+	if err := cleanup(); err != nil {
+		fmt.Printf("Cleanup error: %v\n", err)
+	}
+	
+	// Complex type assertions
+	var val interface{} = map[string]int{"a": 1, "b": 2}
+	if m, ok := val.(map[string]int); ok {
+		fmt.Printf("Map assertion successful: %v\n", m)
+	}
+	
+	// Closures and higher-order functions
+	fmt.Println("\n--- Closures and Higher-Order Functions ---")
+	adder := makeAdder(10)
+	fmt.Printf("Adder(5): %d\n", adder(5))
+	fmt.Printf("Adder(20): %d\n", adder(20))
+	
+	// Function as parameter
+	applyOperation(5, 10, func(a, b int) int { return a * b })
+	
+	// Anonymous function
+	func() {
+		fmt.Println("Anonymous function called")
+	}()
+	
+	fmt.Println("\n=== Test Completed Successfully ===")
+}

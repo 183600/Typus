@@ -1,0 +1,25 @@
+//! ownership: on
+
+func test_valid_borrow() {
+    data := "hello"
+    ref := &data     // Valid immutable borrow
+    println(*ref)    // OK to use borrowed value
+    println(data)    // OK to use original after borrow
+}
+
+func test_valid_move() {
+    data := "hello"
+    take_value(data)  // Move is OK
+    // data is no longer usable, but that's expected
+}
+
+func test_valid_mut_borrow() {
+    data := "hello"
+    ref := &mut data  // Valid mutable borrow
+    *ref = "modified" // OK to modify through mutable borrow
+    // Can't use data until borrow ends
+}
+
+func take_value(s string) {
+    println(s)
+}

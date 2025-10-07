@@ -1,0 +1,33 @@
+package main
+
+import "fmt"
+
+func main() {
+    // Edge case: very long string
+    longString := "This is a very long string that might cause issues with the compiler if not handled properly. It contains multiple lines and special characters: \n \t \" ' \\ \0 \x41 \u03A9"
+    
+    // Edge case: very long identifier
+    veryLongIdentifierNameThatMightCauseIssuesInSomeCompilersOrParsersDueToLengthRestrictions := 42
+    
+    // Edge case: nested expressions
+    result := (((1 + 2) * (3 - 4)) / ((5 + 6) * (7 - 8)))
+    
+    // Edge case: unicode escape sequences
+    unicodeStr := "\u03A9 \u03B1 \u03B2 \u03B3 \u03B4"
+    
+    // Edge case: empty struct
+    type EmptyStruct struct {}
+    var empty EmptyStruct
+    
+    // Edge case: recursive type definition
+    type Node struct {
+        value int
+        next  *Node
+    }
+    
+    fmt.Println(longString)
+    fmt.Println(veryLongIdentifierNameThatMightCauseIssuesInSomeCompilersOrParsersDueToLengthRestrictions)
+    fmt.Println(result)
+    fmt.Println(unicodeStr)
+    fmt.Println(empty)
+}

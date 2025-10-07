@@ -1,0 +1,8 @@
+//! ownership: on
+//! dependent_types: on
+
+package main
+
+func main() {
+    fmt.Println("Testing directives")
+}

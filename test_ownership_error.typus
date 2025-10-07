@@ -1,0 +1,29 @@
+//! ownership: on
+
+func test_use_after_move() {
+    data := "hello"
+    take_value(data)  // This moves data
+    println(data)     // This should be UseAfterMove error
+}
+
+func test_double_move() {
+    data := "hello" 
+    take_value(data)  // First move
+    take_value(data)  // Second move - should be DoubleMove error
+}
+
+func test_borrow_while_moved() {
+    data := "hello"
+    take_value(data)  // Move data
+    ref := &data      // Try to borrow moved value - should be BorrowWhileMoved error
+}
+
+func test_mut_borrow_while_borrowed() {
+    data := "hello"
+    ref1 := &data     // Immutable borrow
+    ref2 := &mut data // Mutable borrow while borrowed - should be MutBorrowWhileBorrowed error
+}
+
+func take_value(s string) {
+    println(s)
+}

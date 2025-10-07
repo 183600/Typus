@@ -1,0 +1,1292 @@
+//! ownership: on
+//! dependent_types: on
+
+package main
+
+import (
+	"bufio"
+	"bytes"
+	"compress/gzip"
+	"context"
+	"crypto/md5"
+	"crypto/sha256"
+	"database/sql"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"hash/fnv"
+	"html"
+	"io"
+	"io/ioutil"
+	"log"
+	"math"
+	"math/big"
+	"math/bits"
+	"math/cmplx"
+	"math/rand"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"reflect"
+	"regexp"
+	"runtime"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"syscall"
+	"testing"
+	"text/template"
+	"time"
+	"unicode"
+	"unicode/utf8"
+	"unsafe"
+)
+
+// 1. 基本数据类型和常量
+const (
+	Pi          = 3.141592653589793
+	E           = 2.718281828459045
+	MaxInt      = 9223372036854775807
+	MinInt      = -9223372036854775808
+	MaxUint     = 18446744073709551615
+	MaxFloat64  = 1.7976931348623157e+308
+	SmallestNonzeroFloat64 = 4.9406564584124654e-324
+)
+
+const (
+	StatusOK       = 200
+	StatusCreated  = 201
+	StatusNotFound = 404
+)
+
+const (
+	Monday = iota
+	Tuesday
+	Wednesday
+	Thursday
+	Friday
+	Saturday
+	Sunday
+)
+
+const (
+	_  = iota
+	KB = 1 << (10 * iota)
+	MB
+	GB
+	TB
+	PB
+	EB
+)
+
+// 2. 变量声明和初始化
+var (
+	// 布尔类型
+	boolVar       bool   = true
+	boolPtr       *bool  = &boolVar
+	boolSlice     []bool = []bool{true, false, true}
+	boolArray     [3]bool = [3]bool{true, false, true}
+	
+	// 整数类型
+	intVar        int     = 42
+	int8Var       int8    = 127
+	int16Var      int16   = 32767
+	int32Var      int32   = 2147483647
+	int64Var      int64   = 9223372036854775807
+	uintVar       uint    = 42
+	uint8Var      uint8   = 255
+	uint16Var     uint16  = 65535
+	uint32Var     uint32  = 4294967295
+	uint64Var     uint64  = 18446744073709551615
+	uintptrVar    uintptr = 0x7fff5fbff7a8
+	
+	// 浮点类型
+	float32Var    float32 = 3.14159
+	float64Var    float64 = 3.141592653589793
+	
+	// 复数类型
+	complex64Var  complex64  = 1 + 2i
+	complex128Var complex128 = 1 + 2i
+	
+	// 字符串类型
+	stringVar     string = "Hello, World!"
+	runeVar       rune   = '世'
+	byteVar       byte   = 'A'
+	
+	// 指针类型
+	intPtr        *int     = &intVar
+	stringPtr     *string  = &stringVar
+	float64Ptr    *float64 = &float64Var
+)
+
+// 3. 复合数据类型
+var (
+	// 数组
+	intArray      [5]int    = [5]int{1, 2, 3, 4, 5}
+	stringArray   [3]string = [3]string{"apple", "banana", "orange"}
+	boolArray2    [2]bool   = [...]bool{true, false}
+	multiArray    [2][3]int = [2][3]int{{1, 2, 3}, {4, 5, 6}}
+	
+	// 切片
+	intSlice      []int     = []int{1, 2, 3, 4, 5}
+	stringSlice   []string  = []string{"hello", "world"}
+	boolSlice2    []bool    = make([]bool, 5)
+	floatSlice    []float64 = make([]float64, 10, 20)
+	emptySlice    []int     = []int{}
+	nilSlice      []int     = nil
+	
+	// 映射
+	stringIntMap  map[string]int = map[string]int{"one": 1, "two": 2, "three": 3}
+	intStringMap  map[int]string = make(map[int]string)
+	stringMap     map[string]string = make(map[string]string, 10)
+	nilMap        map[string]int = nil
+)
+
+// 4. 结构体和接口
+type BasicStruct struct {
+	Name    string
+	Age     int
+	Email   string
+	Active  bool
+}
+
+type ComplexStruct struct {
+	ID          int64
+	Title       string
+	Description string
+	Tags        []string
+	Metadata    map[string]interface{}
+	CreatedAt   time.Time
+	UpdatedAt   *time.Time
+	Owner       *BasicStruct
+	Settings    struct {
+		Theme    string
+		Language string
+		Notifications bool
+	}
+}
+
+type EmbeddedStruct struct {
+	BasicStruct
+	Department string
+	Salary     float64
+	Manager    *EmbeddedStruct
+}
+
+type Interface interface {
+	Method1() string
+	Method2(int) error
+	Method3(string, int) (bool, error)
+}
+
+type EmptyInterface interface{}
+
+type Reader interface {
+	Read(p []byte) (n int, err error)
+}
+
+type Writer interface {
+	Write(p []byte) (n int, err error)
+}
+
+type ReadWriter interface {
+	Reader
+	Writer
+}
+
+type Closer interface {
+	Close() error
+}
+
+type ReadWriteCloser interface {
+	Reader
+	Writer
+	Closer
+}
+
+// 5. 自定义类型和类型别名
+type (
+	UserID       int64
+	ProductID    uint64
+	OrderStatus  string
+	Price        float64
+	Quantity     int
+	Percentage   float64
+	Score        int32
+	Rating       float32
+	Hash         [32]byte
+	IPAddress    net.IP
+	JSONData     json.RawMessage
+	Base64String string
+	HexString    string
+)
+
+type StringSlice []string
+type IntMap      map[int]int
+type StringSet   map[string]bool
+
+// 6. 函数定义
+// 简单函数
+func add(a, b int) int {
+	return a + b
+}
+
+func subtract(a, b float64) float64 {
+	return a - b
+}
+
+func multiply(x, y int64) int64 {
+	return x * y
+}
+
+func divide(a, b float64) (float64, error) {
+	if b == 0 {
+		return 0, errors.New("division by zero")
+	}
+	return a / b, nil
+}
+
+// 多返回值函数
+func swap(a, b string) (string, string) {
+	return b, a
+}
+
+func splitName(fullName string) (first, last string) {
+	parts := strings.Split(fullName, " ")
+	if len(parts) >= 2 {
+		first = parts[0]
+		last = parts[len(parts)-1]
+	} else {
+		first = fullName
+	}
+	return
+}
+
+func getCoordinates() (x, y, z float64) {
+	return 1.0, 2.0, 3.0
+}
+
+func getUserInfo() (name string, age int, email string, err error) {
+	name = "John Doe"
+	age = 30
+	email = "john@example.com"
+	return
+}
+
+// 可变参数函数
+func sum(numbers ...int) int {
+	total := 0
+	for _, num := range numbers {
+		total += num
+	}
+	return total
+}
+
+func concat(separator string, parts ...string) string {
+	return strings.Join(parts, separator)
+}
+
+func printValues(values ...interface{}) {
+	for i, v := range values {
+		fmt.Printf("Value %d: %v (type: %T)\n", i, v, v)
+	}
+}
+
+func calculateStats(numbers ...float64) (min, max, avg float64) {
+	if len(numbers) == 0 {
+		return 0, 0, 0
+	}
+	
+	min = numbers[0]
+	max = numbers[0]
+	total := 0.0
+	
+	for _, num := range numbers {
+		if num < min {
+			min = num
+		}
+		if num > max {
+			max = num
+		}
+		total += num
+	}
+	
+	avg = total / float64(len(numbers))
+	return
+}
+
+// 高阶函数
+func applyOperation(a, b int, op func(int, int) int) int {
+	return op(a, b)
+}
+
+func createMultiplier(factor int) func(int) int {
+	return func(x int) int {
+		return x * factor
+	}
+}
+
+func filterSlice(slice []int, predicate func(int) bool) []int {
+	result := make([]int, 0)
+	for _, item := range slice {
+		if predicate(item) {
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+func mapSlice(slice []int, transform func(int) int) []int {
+	result := make([]int, len(slice))
+	for i, item := range slice {
+		result[i] = transform(item)
+	}
+	return result
+}
+
+// 递归函数
+func factorial(n int) int {
+	if n <= 1 {
+		return 1
+	}
+	return n * factorial(n-1)
+}
+
+func fibonacci(n int) int {
+	if n <= 1 {
+		return n
+	}
+	return fibonacci(n-1) + fibonacci(n-2)
+}
+
+func power(base, exponent int) int {
+	if exponent == 0 {
+		return 1
+	}
+	return base * power(base, exponent-1)
+}
+
+// 7. 方法定义
+type Calculator struct {
+	value float64
+}
+
+func (c Calculator) Add(x float64) float64 {
+	return c.value + x
+}
+
+func (c *Calculator) AddTo(x float64) {
+	c.value += x
+}
+
+func (c Calculator) Multiply(x float64) float64 {
+	return c.value * x
+}
+
+func (c *Calculator) Reset() {
+	c.value = 0
+}
+
+func (c Calculator) Value() float64 {
+	return c.value
+}
+
+type Counter struct {
+	count int
+	mu    sync.Mutex
+}
+
+func (c *Counter) Increment() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.count++
+}
+
+func (c *Counter) Decrement() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.count--
+}
+
+func (c *Counter) Value() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.count
+}
+
+func (c *Counter) Reset() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.count = 0
+}
+
+type StringProcessor struct {
+	prefix string
+	suffix string
+}
+
+func (sp StringProcessor) Process(input string) string {
+	return sp.prefix + input + sp.suffix
+}
+
+func (sp *StringProcessor) SetPrefix(prefix string) {
+	sp.prefix = prefix
+}
+
+func (sp *StringProcessor) SetSuffix(suffix string) {
+	sp.suffix = suffix
+}
+
+// 8. 接口实现
+type FileProcessor struct {
+	filename string
+}
+
+func (fp FileProcessor) Read() ([]byte, error) {
+	return ioutil.ReadFile(fp.filename)
+}
+
+func (fp FileProcessor) Write(data []byte) (int, error) {
+	return len(data), ioutil.WriteFile(fp.filename, data, 0644)
+}
+
+func (fp FileProcessor) Close() error {
+	return nil
+}
+
+type MemoryBuffer struct {
+	buffer bytes.Buffer
+}
+
+func (mb *MemoryBuffer) Read(p []byte) (int, error) {
+	return mb.buffer.Read(p)
+}
+
+func (mb *MemoryBuffer) Write(p []byte) (int, error) {
+	return mb.buffer.Write(p)
+}
+
+func (mb *MemoryBuffer) Close() error {
+	mb.buffer.Reset()
+	return nil
+}
+
+// 9. 错误处理
+type ValidationError struct {
+	Field   string
+	Message string
+	Code    int
+}
+
+func (e ValidationError) Error() string {
+	return fmt.Sprintf("validation error: %s - %s (code: %d)", e.Field, e.Message, e.Code)
+}
+
+type NotFoundError struct {
+	Resource string
+	ID       interface{}
+}
+
+func (e NotFoundError) Error() string {
+	return fmt.Sprintf("%s not found: %v", e.Resource, e.ID)
+}
+
+type InternalError struct {
+	Cause error
+	Context string
+}
+
+func (e InternalError) Error() string {
+	return fmt.Sprintf("internal error: %s - %v", e.Context, e.Cause)
+}
+
+func (e InternalError) Unwrap() error {
+	return e.Cause
+}
+
+// 自定义错误类型
+var (
+	ErrInvalidInput = errors.New("invalid input")
+	ErrNotFound     = errors.New("not found")
+	ErrUnauthorized = errors.New("unauthorized")
+	ErrInternal     = errors.New("internal error")
+)
+
+// 10. 并发编程
+// 通道操作
+func channelExample() {
+	// 无缓冲通道
+	unbuffered := make(chan int)
+	
+	// 有缓冲通道
+	buffered := make(chan string, 5)
+	
+	// 双向通道
+	bidirectional := make(chan interface{}, 10)
+	_ = bidirectional  // Use the variable to avoid unused error
+	
+	// 单向通道
+	var sendOnly chan<- int
+	var receiveOnly <-chan string
+	_ = sendOnly    // Use the variables to avoid unused error
+	_ = receiveOnly
+	
+	// 关闭通道
+	close(buffered)
+	
+	// 通道作为函数参数
+	func(ch chan<- int, value int) {
+		ch <- value
+	}(unbuffered, 42)
+	
+	// 从通道接收
+	select {
+	case msg := <-unbuffered:
+		fmt.Printf("Received: %v\n", msg)
+	case <-time.After(100 * time.Millisecond):
+		fmt.Println("Timeout")
+	}
+}
+
+// Select语句
+func selectExample() {
+	ch1 := make(chan string)
+	ch2 := make(chan int)
+	ch3 := make(chan bool)
+	
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		ch1 <- "hello"
+	}()
+	
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		ch2 <- 42
+	}()
+	
+	go func() {
+		time.Sleep(150 * time.Millisecond)
+		ch3 <- true
+	}()
+	
+	// 多路复用
+	for i := 0; i < 3; i++ {
+		select {
+		case msg1 := <-ch1:
+			fmt.Printf("Received from ch1: %s\n", msg1)
+		case msg2 := <-ch2:
+			fmt.Printf("Received from ch2: %d\n", msg2)
+		case msg3 := <-ch3:
+			fmt.Printf("Received from ch3: %t\n", msg3)
+		case <-time.After(200 * time.Millisecond):
+			fmt.Println("Timeout in select")
+		default:
+			fmt.Println("No channels ready")
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+}
+
+// 互斥锁
+type SafeMap struct {
+	mu    sync.RWMutex
+	data  map[string]interface{}
+}
+
+func NewSafeMap() *SafeMap {
+	return &SafeMap{
+		data: make(map[string]interface{}),
+	}
+}
+
+func (sm *SafeMap) Set(key string, value interface{}) {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	sm.data[key] = value
+}
+
+func (sm *SafeMap) Get(key string) (interface{}, bool) {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	value, exists := sm.data[key]
+	return value, exists
+}
+
+func (sm *SafeMap) Delete(key string) {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	delete(sm.data, key)
+}
+
+func (sm *SafeMap) Len() int {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	return len(sm.data)
+}
+
+func (sm *SafeMap) Keys() []string {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	keys := make([]string, 0, len(sm.data))
+	for key := range sm.data {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+// 读写锁
+type SharedResource struct {
+	mu      sync.RWMutex
+	data    []string
+	readers int
+}
+
+func (sr *SharedResource) Write(value string) {
+	sr.mu.Lock()
+	defer sr.mu.Unlock()
+	sr.data = append(sr.data, value)
+}
+
+func (sr *SharedResource) Read(index int) (string, bool) {
+	sr.mu.RLock()
+	defer sr.mu.RUnlock()
+	if index >= 0 && index < len(sr.data) {
+		return sr.data[index], true
+	}
+	return "", false
+}
+
+func (sr *SharedResource) ReadAll() []string {
+	sr.mu.RLock()
+	defer sr.mu.RUnlock()
+	result := make([]string, len(sr.data))
+	copy(result, sr.data)
+	return result
+}
+
+// 条件变量
+type TaskQueue struct {
+	mu       sync.Mutex
+	cond     *sync.Cond
+	tasks    []func()
+	shutdown bool
+}
+
+func NewTaskQueue() *TaskQueue {
+	tq := &TaskQueue{
+		tasks: make([]func(), 0),
+	}
+	tq.cond = sync.NewCond(&tq.mu)
+	return tq
+}
+
+func (tq *TaskQueue) AddTask(task func()) {
+	tq.mu.Lock()
+	defer tq.mu.Unlock()
+	if tq.shutdown {
+		return
+	}
+	tq.tasks = append(tq.tasks, task)
+	tq.cond.Signal()
+}
+
+func (tq *TaskQueue) GetTask() (func(), bool) {
+	tq.mu.Lock()
+	defer tq.mu.Unlock()
+	
+	for len(tq.tasks) == 0 && !tq.shutdown {
+		tq.cond.Wait()
+	}
+	
+	if tq.shutdown {
+		return nil, false
+	}
+	
+	task := tq.tasks[0]
+	tq.tasks = tq.tasks[1:]
+	return task, true
+}
+
+func (tq *TaskQueue) Shutdown() {
+	tq.mu.Lock()
+	defer tq.mu.Unlock()
+	tq.shutdown = true
+	tq.cond.Broadcast()
+}
+
+// 原子操作
+func atomicExample() {
+	var counter int64
+	var flag int32
+	var pointer unsafe.Pointer
+	
+	// 原子加法
+	atomic.AddInt64(&counter, 1)
+	atomic.AddInt64(&counter, -1)
+	
+	// 原子比较并交换
+	old := atomic.LoadInt64(&counter)
+	atomic.CompareAndSwapInt64(&counter, old, 42)
+	
+	// 原子加载和存储
+	value := atomic.LoadInt64(&counter)
+	atomic.StoreInt64(&counter, value+1)
+	
+	// 原子交换
+	atomic.SwapInt32(&flag, 1)
+	
+	// 原子指针操作
+	data := "hello"
+	atomic.StorePointer(&pointer, unsafe.Pointer(&data))
+	loaded := (*string)(atomic.LoadPointer(&pointer))
+	fmt.Printf("Loaded: %s\n", *loaded)
+}
+
+// 11. 反射和类型系统
+func reflectionExample() {
+	// 基本类型反射
+	var x int = 42
+	rx := reflect.ValueOf(x)
+	fmt.Printf("Type: %s, Value: %v\n", rx.Type(), rx.Int())
+	
+	// 结构体反射
+	type Person struct {
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+	}
+	
+	p := Person{Name: "Alice", Age: 30}
+	rv := reflect.ValueOf(p)
+	rt := reflect.TypeOf(p)
+	
+	fmt.Printf("Struct type: %s\n", rt.Name())
+	for i := 0; i < rt.NumField(); i++ {
+		field := rt.Field(i)
+		value := rv.Field(i)
+		fmt.Printf("Field %s: %v (tag: %s)\n", field.Name, value, field.Tag)
+	}
+	
+	// 方法反射
+	for i := 0; i < rt.NumMethod(); i++ {
+		method := rt.Method(i)
+		fmt.Printf("Method %s\n", method.Name)
+	}
+	
+	// 动态调用
+	addFunc := func(a, b int) int { return a + b }
+	rf := reflect.ValueOf(addFunc)
+	args := []reflect.Value{reflect.ValueOf(10), reflect.ValueOf(20)}
+	result := rf.Call(args)
+	fmt.Printf("Dynamic call result: %v\n", result[0].Int())
+}
+
+// 12. 泛型（Go 1.18+）
+// 泛型函数 - 使用Ordered约束来支持比较操作
+func Max[T Ordered](a, b T) T {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func Min[T Ordered](a, b T) T {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func Contains[T comparable](slice []T, item T) bool {
+	for _, v := range slice {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}
+
+func IndexOf[T comparable](slice []T, item T) int {
+	for i, v := range slice {
+		if v == item {
+			return i
+		}
+	}
+	return -1
+}
+
+func FilterGeneric[T any](slice []T, predicate func(T) bool) []T {
+	result := make([]T, 0)
+	for _, item := range slice {
+		if predicate(item) {
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+func MapGeneric[T, U any](slice []T, transform func(T) U) []U {
+	result := make([]U, len(slice))
+	for i, item := range slice {
+		result[i] = transform(item)
+	}
+	return result
+}
+
+func ReduceGeneric[T, U any](slice []T, initial U, reducer func(U, T) U) U {
+	result := initial
+	for _, item := range slice {
+		result = reducer(result, item)
+	}
+	return result
+}
+
+// 泛型结构体
+type Container[T any] struct {
+	items []T
+}
+
+func NewContainer[T any]() *Container[T] {
+	return &Container[T]{
+		items: make([]T, 0),
+	}
+}
+
+func (c *Container[T]) Add(item T) {
+	c.items = append(c.items, item)
+}
+
+func (c *Container[T]) Get(index int) (T, bool) {
+	var zero T
+	if index < 0 || index >= len(c.items) {
+		return zero, false
+	}
+	return c.items[index], true
+}
+
+func (c *Container[T]) Size() int {
+	return len(c.items)
+}
+
+func (c *Container[T]) Items() []T {
+	result := make([]T, len(c.items))
+	copy(result, c.items)
+	return result
+}
+
+// 泛型接口
+type Repository[T any] interface {
+	Save(item T) error
+	Find(id interface{}) (T, error)
+	FindAll() ([]T, error)
+	Delete(id interface{}) error
+}
+
+type InMemoryRepository[T any] struct {
+	data map[interface{}]T
+	mu   sync.RWMutex
+}
+
+func NewInMemoryRepository[T any]() *InMemoryRepository[T] {
+	return &InMemoryRepository[T]{
+		data: make(map[interface{}]T),
+	}
+}
+
+func (r *InMemoryRepository[T]) Save(id interface{}, item T) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.data[id] = item
+	return nil
+}
+
+func (r *InMemoryRepository[T]) Find(id interface{}) (T, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	item, exists := r.data[id]
+	if !exists {
+		var zero T
+		return zero, errors.New("not found")
+	}
+	return item, nil
+}
+
+func (r *InMemoryRepository[T]) FindAll() ([]T, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	items := make([]T, 0, len(r.data))
+	for _, item := range r.data {
+		items = append(items, item)
+	}
+	return items, nil
+}
+
+func (r *InMemoryRepository[T]) Delete(id interface{}) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.data, id)
+	return nil
+}
+
+// 类型约束
+type Number interface {
+	int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64 | float32 | float64
+}
+
+func SumNumbers[T Number](numbers []T) T {
+	var sum T
+	for _, num := range numbers {
+		sum += num
+	}
+	return sum
+}
+
+func AverageNumbers[T Number](numbers []T) float64 {
+	if len(numbers) == 0 {
+		return 0
+	}
+	var sum T
+	for _, num := range numbers {
+		sum += num
+	}
+	return float64(sum) / float64(len(numbers))
+}
+
+type Ordered interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~float32 | ~float64 | ~string
+}
+
+func SortSlice[T Ordered](slice []T) {
+	sort.Slice(slice, func(i, j int) bool {
+		return slice[i] < slice[j]
+	})
+}
+
+// 13. 包管理和初始化
+func init() {
+	fmt.Println("Package initialized")
+	// 初始化全局变量
+	intStringMap[1] = "one"
+	intStringMap[2] = "two"
+	intStringMap[3] = "three"
+}
+
+var packageVariable = initializePackage()
+
+func initializePackage() string {
+	fmt.Println("Initializing package variable")
+	return "package ready"
+}
+
+// 14. 测试和基准测试
+func TestAddition(t *testing.T) {
+	result := add(2, 3)
+	if result != 5 {
+		t.Errorf("Expected 5, got %d", result)
+	}
+}
+
+func TestDivision(t *testing.T) {
+	result, err := divide(10, 2)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if result != 5.0 {
+		t.Errorf("Expected 5.0, got %f", result)
+	}
+}
+
+func BenchmarkAddition(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		add(i, i+1)
+	}
+}
+
+func BenchmarkDivision(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		divide(float64(i), 2.0)
+	}
+}
+
+// 15. 条件编译和构建约束
+// +build linux
+
+func linuxSpecificFunction() {
+	fmt.Println("This function is only available on Linux")
+}
+
+// 16. 内存管理和性能优化
+func memoryOptimization() {
+	// 对象池
+	var bufferPool = sync.Pool{
+		New: func() interface{} {
+			return make([]byte, 1024)
+		},
+	}
+	
+	// 使用对象池
+	buffer := bufferPool.Get().([]byte)
+	defer bufferPool.Put(buffer)
+	
+	// 使用缓冲区
+	copy(buffer, []byte("Hello, World!"))
+	fmt.Printf("Buffer content: %s\n", string(buffer[:13]))
+}
+
+// 17. 网络编程
+func networkExample() {
+	// URL解析
+	u, _ := url.Parse("https://example.com/path?query=value")
+	fmt.Printf("Scheme: %s, Host: %s, Path: %s\n", u.Scheme, u.Host, u.Path)
+	
+	// 简单的HTTP服务器
+	go func() {
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintf(w, "Hello, World!")
+		})
+		http.ListenAndServe(":8080", nil)
+	}()
+	
+	// 网络地址解析
+	ip := net.ParseIP("192.168.1.1")
+	fmt.Printf("IP: %s\n", ip.String())
+}
+
+// 18. 文件系统操作
+func filesystemExample() {
+	// 创建临时文件
+	tempFile, err := ioutil.TempFile("", "typus_test_*.txt")
+	if err != nil {
+		fmt.Printf("Error creating temp file: %v\n", err)
+		return
+	}
+	defer os.Remove(tempFile.Name())
+	defer tempFile.Close()
+	
+	// 写入数据
+	_, err = tempFile.WriteString("Hello, Typus!")
+	if err != nil {
+		fmt.Printf("Error writing to temp file: %v\n", err)
+		return
+	}
+	
+	// 读取数据
+	content, err := ioutil.ReadFile(tempFile.Name())
+	if err != nil {
+		fmt.Printf("Error reading temp file: %v\n", err)
+		return
+	}
+	
+	fmt.Printf("File content: %s\n", string(content))
+	
+	// 文件路径操作
+	path := filepath.Join("/tmp", "test", "file.txt")
+	dir := filepath.Dir(path)
+	base := filepath.Base(path)
+	ext := filepath.Ext(path)
+	
+	fmt.Printf("Path: %s, Dir: %s, Base: %s, Ext: %s\n", path, dir, base, ext)
+}
+
+// 19. 加密和哈希
+func cryptoExample() {
+	// MD5哈希
+	data := []byte("Hello, World!")
+	hash := md5.Sum(data)
+	fmt.Printf("MD5: %x\n", hash)
+	
+	// SHA256哈希
+	hash256 := sha256.Sum256(data)
+	fmt.Printf("SHA256: %x\n", hash256)
+	
+	// Base64编码
+	encoded := base64.StdEncoding.EncodeToString(data)
+	fmt.Printf("Base64: %s\n", encoded)
+	
+	decoded, _ := base64.StdEncoding.DecodeString(encoded)
+	fmt.Printf("Decoded: %s\n", string(decoded))
+	
+	// Hex编码
+	hexEncoded := hex.EncodeToString(data)
+	fmt.Printf("Hex: %s\n", hexEncoded)
+}
+
+// 20. 正则表达式
+func regexExample() {
+	// 邮箱验证
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	fmt.Printf("Valid email: %t\n", emailRegex.MatchString("test@example.com"))
+	
+	// 提取数字
+	numberRegex := regexp.MustCompile(`\d+`)
+	numbers := numberRegex.FindAllString("abc123def456ghi789", -1)
+	fmt.Printf("Numbers found: %v\n", numbers)
+	
+	// 替换文本
+	replaceRegex := regexp.MustCompile(`\bfoo\b`)
+	result := replaceRegex.ReplaceAllString("foo bar foo baz", "qux")
+	fmt.Printf("Replaced: %s\n", result)
+}
+
+// 21. 时间和日期
+func timeExample() {
+	// 当前时间
+	now := time.Now()
+	fmt.Printf("Current time: %s\n", now.Format(time.RFC3339))
+	
+	// 时间格式化
+	formatted := now.Format("2006-01-02 15:04:05")
+	fmt.Printf("Formatted: %s\n", formatted)
+	
+	// 时间计算
+	future := now.Add(24 * time.Hour)
+	fmt.Printf("Tomorrow: %s\n", future.Format("2006-01-02"))
+	
+	// 时间间隔
+	duration := future.Sub(now)
+	fmt.Printf("Duration: %s\n", duration)
+	
+	// 睡眠
+	start := time.Now()
+	time.Sleep(100 * time.Millisecond)
+	elapsed := time.Since(start)
+	fmt.Printf("Slept for: %s\n", elapsed)
+	
+	// 定时器
+	timer := time.NewTimer(1 * time.Second)
+	<-timer.C
+	fmt.Println("Timer expired")
+	
+	// 打点器
+	ticker := time.NewTicker(500 * time.Millisecond)
+	go func() {
+		for t := range ticker.C {
+			fmt.Printf("Tick at %s\n", t.Format("15:04:05"))
+		}
+	}()
+	time.Sleep(2 * time.Second)
+	ticker.Stop()
+}
+
+// 22. 上下文管理
+func contextExample() {
+	// 创建上下文
+	ctx := context.Background()
+	
+	// 带超时的上下文
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	
+	// 使用上下文
+	select {
+	case <-ctx.Done():
+		fmt.Printf("Context cancelled: %v\n", ctx.Err())
+	case <-time.After(1 * time.Second):
+		fmt.Println("Operation completed")
+	}
+	
+	// 带值的上下文
+	ctx = context.WithValue(ctx, "user_id", "12345")
+	ctx = context.WithValue(ctx, "request_id", "abc-def-ghi")
+	
+	if userID, ok := ctx.Value("user_id").(string); ok {
+		fmt.Printf("User ID: %s\n", userID)
+	}
+}
+
+// 23. 系统调用和底层操作
+func syscallExample() {
+	// 获取系统信息
+	var uname syscall.Utsname
+	err := syscall.Uname(&uname)
+	if err == nil {
+		// 注意：这里需要适当的字符串转换
+		fmt.Println("System call successful")
+	}
+	
+	// 环境变量
+	os.Setenv("TEST_VAR", "test_value")
+	value := os.Getenv("TEST_VAR")
+	fmt.Printf("Environment variable: %s\n", value)
+}
+
+// 主函数 - 测试所有功能
+func main() {
+	fmt.Println("=== Comprehensive Go Syntax Test ===")
+	
+	fmt.Println("\n1. Basic Types and Variables:")
+	fmt.Printf("bool: %t, int: %d, float64: %.2f, string: %s\n", boolVar, intVar, float64Var, stringVar)
+	
+	fmt.Println("\n2. Arrays and Slices:")
+	fmt.Printf("Array: %v, Slice: %v\n", intArray, intSlice)
+	
+	fmt.Println("\n3. Maps:")
+	fmt.Printf("Map: %v\n", stringIntMap)
+	
+	fmt.Println("\n4. Functions:")
+	fmt.Printf("add(5, 3) = %d\n", add(5, 3))
+	fmt.Printf("sum(1, 2, 3, 4, 5) = %d\n", sum(1, 2, 3, 4, 5))
+	
+	fmt.Println("\n5. Methods and Structs:")
+	calc := Calculator{value: 10}
+	fmt.Printf("Calculator value: %.2f\n", calc.Value())
+	calc.AddTo(5)
+	fmt.Printf("After adding 5: %.2f\n", calc.Value())
+	
+	fmt.Println("\n6. Interfaces:")
+	buffer := &MemoryBuffer{}
+	buffer.Write([]byte("Hello, Interface!"))
+	data := make([]byte, 20)
+	n, _ := buffer.Read(data)
+	fmt.Printf("Read %d bytes: %s\n", n, string(data[:n]))
+	
+	fmt.Println("\n7. Concurrency:")
+	selectExample()
+	atomicExample()
+	
+	fmt.Println("\n8. Generics:")
+	numbers := []int{3, 1, 4, 1, 5, 9, 2, 6}
+	even := FilterGeneric(numbers, func(n int) bool { return n%2 == 0 })
+	fmt.Printf("Even numbers: %v\n", even)
+	
+	squared := MapGeneric(numbers, func(n int) int { return n * n })
+	fmt.Printf("Squared numbers: %v\n", squared)
+	
+	fmt.Println("\n9. Reflection:")
+	reflectionExample()
+	
+	fmt.Println("\n10. Error Handling:")
+	if err := riskyOperation(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+	}
+	
+	fmt.Println("\n11. File System:")
+	filesystemExample()
+	
+	fmt.Println("\n12. Time and Date:")
+	timeExample()
+	
+	fmt.Println("\n13. Cryptography:")
+	cryptoExample()
+	
+	fmt.Println("\n14. Regular Expressions:")
+	regexExample()
+	
+	fmt.Println("\n15. Context Management:")
+	contextExample()
+	
+	fmt.Println("\n16. Network Programming:")
+	networkExample()
+	
+	fmt.Println("\n17. Memory Optimization:")
+	memoryOptimization()
+	
+	fmt.Println("\n=== All tests completed successfully! ===")
+}

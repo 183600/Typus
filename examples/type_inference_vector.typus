@@ -1,0 +1,28 @@
+//! dependent_types: on
+package main
+
+import "fmt"
+
+// Vector 类型 - 在当前实现中简化为普通Go结构体
+type Vector struct {
+    length   int
+    elements []float64
+}
+
+func createVector(n int, value float64) Vector {
+    elements := make([]float64, n)
+    for i := 0; i < n; i++ {
+        elements[i] = value
+    }
+    // 返回Vector实例，长度信息包含在结构体中
+    return Vector{length: n, elements: elements}
+}
+
+func main() {
+    v1 := createVector(3, 1.5) // v1 的类型推导为 Vector
+    fmt.Printf("Vector v1 (length %d): %v\n", v1.length, v1.elements)
+
+    v2_len := 5
+    v2 := createVector(v2_len, 0.5) // v2 的类型推导为 Vector  
+    fmt.Printf("Vector v2 (length %d): %v\n", v2.length, v2.elements)
+}

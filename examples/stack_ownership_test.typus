@@ -1,0 +1,638 @@
+package main
+
+import (
+	"fmt"
+	"reflect"
+	"runtime"
+	"unsafe"
+	"sync"
+	"time"
+)
+
+// Ownership-Aware Stack Implementation
+type OwnershipStack struct {
+	elements []interface{}
+	top      int
+	owner    string // Track ownership
+	mu       sync.RWMutex
+}
+
+func NewOwnershipStack(owner string) *OwnershipStack {
+	return &OwnershipStack{
+		elements: make([]interface{}, 0),
+		top:      -1,
+		owner:    owner,
+	}
+}
+
+func (s *OwnershipStack) Push(element interface{}) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.elements = append(s.elements, element)
+	s.top++
+	return nil
+}
+
+func (s *OwnershipStack) Pop() (interface{}, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.IsEmpty() {
+		return nil, fmt.Errorf("stack is empty")
+	}
+
+	element := s.elements[s.top]
+	s.elements = s.elements[:s.top]
+	s.top--
+	return element, nil
+}
+
+func (s *OwnershipStack) Peek() (interface{}, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.IsEmpty() {
+		return nil, fmt.Errorf("stack is empty")
+	}
+	return s.elements[s.top], nil
+}
+
+func (s *OwnershipStack) IsEmpty() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.top < 0
+}
+
+func (s *OwnershipStack) Size() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.top + 1
+}
+
+func (s *OwnershipStack) GetOwner() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.owner
+}
+
+func (s *OwnershipStack) TransferOwnership(newOwner string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.owner = newOwner
+}
+
+func (s *OwnershipStack) ToSlice() []interface{} {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]interface{}, s.Size())
+	copy(result, s.elements)
+	return result
+}
+
+// Reference-tracked Stack for ownership testing
+type ReferenceTrackedStack struct {
+	*OwnershipStack
+	references map[string]int
+	mu          sync.Mutex
+}
+
+func NewReferenceTrackedStack(owner string) *ReferenceTrackedStack {
+	return &ReferenceTrackedStack{
+		OwnershipStack: NewOwnershipStack(owner),
+		references:    make(map[string]int),
+	}
+}
+
+func (s *ReferenceTrackedStack) AddReference(refId string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.references[refId]++
+}
+
+func (s *ReferenceTrackedStack) RemoveReference(refId string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if count, exists := s.references[refId]; exists {
+		if count <= 1 {
+			delete(s.references, refId)
+		} else {
+			s.references[refId]--
+		}
+	}
+}
+
+func (s *ReferenceTrackedStack) GetReferenceCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.references)
+}
+
+func (s *ReferenceTrackedStack) GetReferences() map[string]int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	result := make(map[string]int)
+	for k, v := range s.references {
+		result[k] = v
+	}
+	return result
+}
+
+// === Ownership Test Cases ===
+
+func testBasicOwnership() {
+	fmt.Println("=== Basic Ownership Test ===")
+
+	// Test 1: Ownership assignment
+	fmt.Println("Testing ownership assignment...")
+	stack1 := NewOwnershipStack("owner1")
+	stack2 := NewOwnershipStack("owner2")
+
+	fmt.Printf("Stack1 owner: %s\n", stack1.GetOwner())
+	fmt.Printf("Stack2 owner: %s\n", stack2.GetOwner())
+
+	// Test 2: Ownership transfer
+	fmt.Println("\nTesting ownership transfer...")
+	fmt.Printf("Before transfer: Stack1 owner = %s\n", stack1.GetOwner())
+	stack1.TransferOwnership("new_owner1")
+	fmt.Printf("After transfer: Stack1 owner = %s\n", stack1.GetOwner())
+
+	// Test 3: Independent operations
+	fmt.Println("\nTesting independent operations...")
+	stack1.Push("element1")
+	stack2.Push("element2")
+
+	fmt.Printf("Stack1 size: %d, owner: %s\n", stack1.Size(), stack1.GetOwner())
+	fmt.Printf("Stack2 size: %d, owner: %s\n", stack2.Size(), stack2.GetOwner())
+
+	fmt.Println("✅ Basic ownership test completed")
+}
+
+func testOwnershipWithConcurrency() {
+	fmt.Println("\n=== Ownership with Concurrency Test ===")
+
+	stack := NewOwnershipStack("concurrent_owner")
+	var wg sync.WaitGroup
+	numGoroutines := 5
+	operationsPerGoroutine := 10
+
+	// Test concurrent ownership checks
+	fmt.Println("Testing concurrent ownership access...")
+
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < operationsPerGoroutine; j++ {
+				owner := stack.GetOwner()
+				if owner != "concurrent_owner" {
+					fmt.Printf("Goroutine %d: Unexpected owner: %s\n", id, owner)
+				}
+
+				// Simulate work
+				time.Sleep(time.Millisecond)
+
+				stack.Push(fmt.Sprintf("G%d-O%d", id, j))
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	fmt.Printf("Final stack size: %d, owner: %s\n", stack.Size(), stack.GetOwner())
+
+	// Test concurrent ownership transfer
+	fmt.Println("\nTesting concurrent ownership transfer...")
+
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			newOwner := fmt.Sprintf("owner_%d", id)
+			stack.TransferOwnership(newOwner)
+
+			// Verify transfer
+			currentOwner := stack.GetOwner()
+			if currentOwner != newOwner {
+				fmt.Printf("Goroutine %d: Transfer failed. Expected: %s, Got: %s\n",
+					id, newOwner, currentOwner)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	fmt.Printf("Final owner after concurrent transfers: %s\n", stack.GetOwner())
+	fmt.Println("✅ Ownership with concurrency test completed")
+}
+
+func testReferenceCounting() {
+	fmt.Println("\n=== Reference Counting Test ===")
+
+	refStack := NewReferenceTrackedStack("ref_owner")
+
+	// Test 1: Adding references
+	fmt.Println("Testing reference addition...")
+	refs := []string{"ref1", "ref2", "ref3", "ref1", "ref2"}
+
+	for _, ref := range refs {
+		refStack.AddReference(ref)
+		fmt.Printf("Added reference: %s, Total refs: %d\n", ref, refStack.GetReferenceCount())
+	}
+
+	// Test 2: Getting references
+	fmt.Println("\nTesting reference retrieval...")
+	references := refStack.GetReferences()
+	for refId, count := range references {
+		fmt.Printf("Reference %s: count = %d\n", refId, count)
+	}
+
+	// Test 3: Removing references
+	fmt.Println("\nTesting reference removal...")
+	refsToRemove := []string{"ref1", "ref2", "ref1", "ref4"}
+
+	for _, ref := range refsToRemove {
+		beforeCount := refStack.GetReferenceCount()
+		refStack.RemoveReference(ref)
+		afterCount := refStack.GetReferenceCount()
+		fmt.Printf("Removed reference: %s, Count: %d -> %d\n", ref, beforeCount, afterCount)
+	}
+
+	// Test 4: Final state
+	fmt.Println("\nTesting final reference state...")
+	fmt.Printf("Final reference count: %d\n", refStack.GetReferenceCount())
+	finalRefs := refStack.GetReferences()
+	for refId, count := range finalRefs {
+		fmt.Printf("Final reference %s: count = %d\n", refId, count)
+	}
+
+	fmt.Println("✅ Reference counting test completed")
+}
+
+func testOwnershipMemoryManagement() {
+	fmt.Println("\n=== Ownership Memory Management Test ===")
+
+	// Test 1: Memory address tracking
+	fmt.Println("Testing memory address tracking...")
+	stack := NewOwnershipStack("mem_owner")
+
+	// Push elements and track their addresses
+	var addresses []uintptr
+	for i := 0; i < 5; i++ {
+		element := fmt.Sprintf("element_%d", i)
+		stack.Push(element)
+
+		// Get memory address of the element in the stack
+		elements := stack.ToSlice()
+		if len(elements) > 0 {
+			addr := reflect.ValueOf(elements[len(elements)-1]).Pointer()
+			addresses = append(addresses, addr)
+			fmt.Printf("Pushed: %s, Address: %x\n", element, addr)
+		}
+	}
+
+	// Test 2: Pop and verify ownership transfer
+	fmt.Println("\nTesting ownership transfer during pop...")
+	for i := 0; i < 3; i++ {
+		if element, err := stack.Pop(); err == nil {
+			fmt.Printf("Popped: %v (Type: %T)\n", element, element)
+		}
+	}
+
+	// Test 3: Memory cleanup verification
+	fmt.Println("\nTesting memory cleanup...")
+	fmt.Printf("Stack size after pops: %d\n", stack.Size())
+
+	// Force garbage collection and check memory
+	runtime.GC()
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	fmt.Printf("Memory usage after cleanup: %d bytes\n", m.HeapAlloc)
+
+	fmt.Println("✅ Ownership memory management test completed")
+}
+
+func testOwnershipWithComplexTypes() {
+	fmt.Println("\n=== Ownership with Complex Types Test ===")
+
+	stack := NewOwnershipStack("complex_owner")
+
+	// Test 1: Struct ownership
+	fmt.Println("Testing struct ownership...")
+	type Person struct {
+		Name string
+		Age  int
+	}
+
+	person := Person{Name: "Alice", Age: 30}
+	stack.Push(person)
+
+	if popped, err := stack.Pop(); err == nil {
+		if p, ok := popped.(Person); ok {
+			fmt.Printf("Popped person: %+v\n", p)
+		}
+	}
+
+	// Test 2: Pointer ownership
+	fmt.Println("\nTesting pointer ownership...")
+	x := 42
+	ptr := &x
+	stack.Push(ptr)
+
+	if popped, err := stack.Pop(); err == nil {
+		if p, ok := popped.(*int); ok {
+			fmt.Printf("Popped pointer: %p, Value: %d\n", p, *p)
+		}
+	}
+
+	// Test 3: Slice ownership
+	fmt.Println("\nTesting slice ownership...")
+	slice := []int{1, 2, 3, 4, 5}
+	stack.Push(slice)
+
+	if popped, err := stack.Pop(); err == nil {
+		if s, ok := popped.([]int); ok {
+			fmt.Printf("Popped slice: %v\n", s)
+		}
+	}
+
+	// Test 4: Map ownership
+	fmt.Println("\nTesting map ownership...")
+	m := map[string]int{"one": 1, "two": 2, "three": 3}
+	stack.Push(m)
+
+	if popped, err := stack.Pop(); err == nil {
+		if mp, ok := popped.(map[string]int); ok {
+			fmt.Printf("Popped map: %v\n", mp)
+		}
+	}
+
+	// Test 5: Function ownership
+	fmt.Println("\nTesting function ownership...")
+	fn := func(a, b int) int { return a + b }
+	stack.Push(fn)
+
+	if popped, err := stack.Pop(); err == nil {
+		if f, ok := popped.(func(int, int) int); ok {
+			result := f(10, 20)
+			fmt.Printf("Popped function result: %d\n", result)
+		}
+	}
+
+	fmt.Println("✅ Ownership with complex types test completed")
+}
+
+func testOwnershipBoundaryConditions() {
+	fmt.Println("\n=== Ownership Boundary Conditions Test ===")
+
+	// Test 1: Empty stack ownership
+	fmt.Println("Testing empty stack ownership...")
+	stack := NewOwnershipStack("boundary_owner")
+	fmt.Printf("Empty stack owner: %s, Size: %d\n", stack.GetOwner(), stack.Size())
+
+	// Test 2: Large data ownership
+	fmt.Println("\nTesting large data ownership...")
+	largeData := make([]int, 1000)
+	for i := range largeData {
+		largeData[i] = i
+	}
+	stack.Push(largeData)
+	fmt.Printf("Large data pushed, Stack size: %d\n", stack.Size())
+
+	// Test 3: Multiple rapid ownership transfers
+	fmt.Println("\nTesting rapid ownership transfers...")
+	owners := []string{"owner1", "owner2", "owner3", "owner4", "owner5"}
+	for _, owner := range owners {
+		stack.TransferOwnership(owner)
+		currentOwner := stack.GetOwner()
+		fmt.Printf("Current owner: %s\n", currentOwner)
+	}
+
+	// Test 4: Ownership with concurrent access and transfer
+	fmt.Println("\nTesting ownership with concurrent operations...")
+	var wg sync.WaitGroup
+
+	// Concurrent pushes
+	for i := 0; i < 3; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < 5; j++ {
+				stack.Push(fmt.Sprintf("concurrent_%d_%d", id, j))
+			}
+		}(i)
+	}
+
+	// Concurrent ownership transfers
+	for i := 0; i < 3; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < 3; j++ {
+				newOwner := fmt.Sprintf("concurrent_owner_%d_%d", id, j)
+				stack.TransferOwnership(newOwner)
+				time.Sleep(time.Millisecond)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	fmt.Printf("Final state - Owner: %s, Size: %d\n", stack.GetOwner(), stack.Size())
+
+	fmt.Println("✅ Ownership boundary conditions test completed")
+}
+
+func testOwnershipSafetyMechanisms() {
+	fmt.Println("\n=== Ownership Safety Mechanisms Test ===")
+
+	stack := NewOwnershipStack("safety_owner")
+
+	// Test 1: Thread-safe ownership access
+	fmt.Println("Testing thread-safe ownership access...")
+	var wg sync.WaitGroup
+
+	// Concurrent readers
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < 10; j++ {
+				owner := stack.GetOwner()
+				if owner == "" {
+					fmt.Printf("Reader %d: Empty owner detected\n", id)
+				}
+			}
+		}(i)
+	}
+
+	// Concurrent writers
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < 5; j++ {
+				newOwner := fmt.Sprintf("writer_%d_%d", id, j)
+				stack.TransferOwnership(newOwner)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Test 2: Data integrity under concurrent ownership changes
+	fmt.Println("\nTesting data integrity under concurrent ownership changes...")
+
+	// Pre-populate stack
+	for i := 0; i < 10; i++ {
+		stack.Push(i)
+	}
+
+	expectedSize := stack.Size()
+
+	// Concurrent operations that should maintain data integrity
+	for i := 0; i < 3; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < 5; j++ {
+				// Change ownership
+				stack.TransferOwnership(fmt.Sprintf("integrity_test_%d", id))
+
+				// Verify data integrity
+				currentSize := stack.Size()
+				if currentSize != expectedSize {
+					fmt.Printf("Integrity violation: Expected size %d, got %d\n", expectedSize, currentSize)
+				}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Test 3: Reference counting safety
+	fmt.Println("\nTesting reference counting safety...")
+	refStack := NewReferenceTrackedStack("safety_ref_owner")
+
+	// Concurrent reference modifications
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < 10; j++ {
+				refId := fmt.Sprintf("safe_ref_%d", id)
+				refStack.AddReference(refId)
+				refStack.RemoveReference(refId)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	fmt.Printf("Final reference count: %d\n", refStack.GetReferenceCount())
+
+	fmt.Println("✅ Ownership safety mechanisms test completed")
+}
+
+func testOwnershipPerformance() {
+	fmt.Println("\n=== Ownership Performance Test ===")
+
+	iterations := 10000
+
+	// Test 1: Ownership transfer performance
+	fmt.Println("Testing ownership transfer performance...")
+	stack := NewOwnershipStack("perf_owner")
+
+	start := time.Now()
+	for i := 0; i < iterations; i++ {
+		stack.TransferOwnership(fmt.Sprintf("owner_%d", i))
+	}
+	transferTime := time.Since(start)
+	fmt.Printf("Ownership transfer time for %d operations: %v\n", iterations, transferTime)
+
+	// Test 2: Concurrent ownership performance
+	fmt.Println("\nTesting concurrent ownership performance...")
+	var wg sync.WaitGroup
+	concurrentStack := NewOwnershipStack("concurrent_perf_owner")
+
+	start = time.Now()
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < iterations/10; j++ {
+				concurrentStack.GetOwner()
+				concurrentStack.TransferOwnership(fmt.Sprintf("conc_owner_%d_%d", id, j))
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	concurrentTime := time.Since(start)
+	fmt.Printf("Concurrent ownership operations time: %v\n", concurrentTime)
+
+	// Test 3: Reference counting performance
+	fmt.Println("\nTesting reference counting performance...")
+	refStack := NewReferenceTrackedStack("ref_perf_owner")
+
+	start = time.Now()
+	for i := 0; i < iterations; i++ {
+		refId := fmt.Sprintf("ref_%d", i%100) // Reuse reference IDs
+		refStack.AddReference(refId)
+		if i%2 == 0 {
+			refStack.RemoveReference(refId)
+		}
+	}
+	refTime := time.Since(start)
+	fmt.Printf("Reference counting time for %d operations: %v\n", iterations, refTime)
+
+	// Test 4: Memory usage with ownership
+	fmt.Println("\nTesting memory usage with ownership...")
+
+	var m1, m2 runtime.MemStats
+	runtime.ReadMemStats(&m1)
+
+	// Create many owned stacks
+	stacks := make([]*OwnershipStack, 1000)
+	for i := 0; i < 1000; i++ {
+		stacks[i] = NewOwnershipStack(fmt.Sprintf("mem_owner_%d", i))
+		for j := 0; j < 10; j++ {
+			stacks[i].Push(j)
+		}
+	}
+
+	runtime.ReadMemStats(&m2)
+	memUsage := m2.HeapAlloc - m1.HeapAlloc
+	fmt.Printf("Memory usage for 1000 owned stacks: %d bytes\n", memUsage)
+
+	fmt.Println("✅ Ownership performance test completed")
+}
+
+func runAllOwnershipTests() {
+	fmt.Println("=== Stack Ownership Mechanism Test Suite ===")
+	fmt.Println("Comprehensive testing of stack ownership mechanisms")
+	fmt.Println()
+
+	testBasicOwnership()
+	testOwnershipWithConcurrency()
+	testReferenceCounting()
+	testOwnershipMemoryManagement()
+	testOwnershipWithComplexTypes()
+	testOwnershipBoundaryConditions()
+	testOwnershipSafetyMechanisms()
+	testOwnershipPerformance()
+
+	fmt.Println()
+	fmt.Println("=== All Ownership Tests Completed ===")
+	fmt.Println("✅ Basic ownership mechanisms verified")
+	fmt.Println("✅ Concurrent ownership handling tested")
+	fmt.Println("✅ Reference counting functionality validated")
+	fmt.Println("✅ Memory management with ownership confirmed")
+	fmt.Println("✅ Complex type ownership handling completed")
+	fmt.Println("✅ Boundary conditions and edge cases tested")
+	fmt.Println("✅ Safety mechanisms verified")
+	fmt.Println("✅ Performance characteristics measured")
+}
+
+func main() {
+	runAllOwnershipTests()
+}

@@ -1,0 +1,62 @@
+//! ownership: on
+//! dependent_types: on
+
+package main
+
+import "fmt"
+
+// 依赖类型定义 - 简化为普通Go结构体，保留语义
+type NonEmptySlice struct {
+    elementType string
+    elements    []int
+}
+
+type Vector struct {
+    length int
+    data   []float64
+}
+
+// 所有权示例辅助
+type MyString struct {
+    val string
+}
+
+func NewString(s string) MyString {
+    return MyString{val: s}
+}
+
+func main() {
+    fmt.Println("Hello, Typus from combined_features!")
+
+    // 常规代码，使用依赖类型
+    mySlice := NonEmptySlice{elementType: "int", elements: []int{1, 2, 3}}
+    fmt.Println("My non-empty slice:", mySlice.elements)
+
+    // 显式所有权块
+    {//! ownership: on
+        // Ownership-enabled block
+        s := NewString("hello")
+        t := s // Ownership transferred (在实际实现中)
+        fmt.Println("String t (owned):", t.val)
+        // 在完整的所有权实现中，这里s将不可用
+    }
+
+    // 显式依赖类型块
+    {//! dependent_types: on
+        // Dependent types block
+        v_data := []float64{1.0, 2.0, 3.0}
+        v := Vector{length: 3, data: v_data}
+        fmt.Println("Vector v:", v.data)
+    }
+
+    // 同时启用所有权和依赖类型的块
+    {//! ownership: on, dependent_types: on
+        strData := NewString("owned and typed block string")
+        strHolder := strData // 所有权转移
+        fmt.Println("Combined block string:", strHolder.val)
+
+        vecData := []float64{7.0, 8.0}
+        anotherVec := Vector{length: 2, data: vecData}
+        fmt.Println("Another vector:", anotherVec.data)
+    }
+}

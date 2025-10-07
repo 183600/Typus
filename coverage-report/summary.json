@@ -1,0 +1,11 @@
+{
+  "generated_at": "2025-09-13T16:19:49+08:00",
+  "total_coverage": "0%",
+  "quality_grade": "unknown",
+  "production_ready": false,
+  "recommendations": [
+    "增加单元测试以提高覆盖率",
+    "定期运行覆盖率检查",
+    "对关键模块进行重点测试覆盖"
+  ]
+}

@@ -1,0 +1,108 @@
+package user_service
+
+import (
+    "errors"
+    "time"
+)
+
+type User struct {
+    ID        string
+    Username  string
+    Email     string
+    CreatedAt time.Time
+    Active    bool
+}
+
+type UserService struct {
+    users map[string]*User
+}
+
+func NewUserService() *UserService {
+    return &UserService{
+        users: make(map[string]*User),
+    }
+}
+
+func (us *UserService) CreateUser(username, email string) (*User, error) {
+    if username == "" || email == "" {
+        return nil, errors.New("username and email required")
+    }
+
+    // Check if user already exists
+    for _, user := range us.users {
+        if user.Username == username {
+            return nil, errors.New("username already exists")
+        }
+        if user.Email == email {
+            return nil, errors.New("email already exists")
+        }
+    }
+
+    user := &User{
+        ID:        generateUserID(),
+        Username:  username,
+        Email:     email,
+        CreatedAt: time.Now(),
+        Active:    true,
+    }
+
+    us.users[user.ID] = user
+    return user, nil
+}
+
+func (us *UserService) GetUser(id string) (*User, error) {
+    user, exists := us.users[id]
+    if !exists {
+        return nil, errors.New("user not found")
+    }
+    return user, nil
+}
+
+func (us *UserService) UpdateUser(user *User) error {
+    if _, exists := us.users[user.ID]; !exists {
+        return errors.New("user not found")
+    }
+    us.users[user.ID] = user
+    return nil
+}
+
+func (us *UserService) DeactivateUser(id string) error {
+    user, err := us.GetUser(id)
+    if err != nil {
+        return err
+    }
+    user.Active = false
+    return us.UpdateUser(user)
+}
+
+func (us *UserService) GetAllUsers() []*User {
+    users := make([]*User, 0, len(us.users))
+    for _, user := range us.users {
+        users = append(users, user)
+    }
+    return users
+}
+
+// Test service ownership patterns
+func TransferUserService(service *UserService) *UserService {
+    return service
+}
+
+func CloneUserService(service *UserService) *UserService {
+    newUserSrv := NewUserService()
+    for id, user := range service.users {
+        userCopy := &User{
+            ID:        user.ID,
+            Username:  user.Username,
+            Email:     user.Email,
+            CreatedAt: user.CreatedAt,
+            Active:    user.Active,
+        }
+        newUserSrv.users[id] = userCopy
+    }
+    return newUserSrv
+}
+
+func generateUserID() string {
+    return "user_" + "12345"
+}

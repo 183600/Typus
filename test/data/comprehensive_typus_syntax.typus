@@ -1,0 +1,339 @@
+//! ownership: on
+//! dependent_types: on
+//! constraints: on
+
+package main
+
+import (
+	"fmt"
+	"sync"
+	"unsafe"
+)
+
+// Test file-level directives
+//! directives: ownership=on, dependent_types=on, constraints=on
+
+// Test dependent types with constraints
+type PositiveInt where T > 0 int
+type NonEmptySlice<T> where len(T) > 0 []T
+type SafeString where len(T) > 0 && T != "" string
+
+// Test ownership types with dependent constraints
+type Owned<T> where T != nil struct {
+	value *T
+	owner_id int
+	moved bool
+}
+
+type Shared<T> where T != nil struct {
+	value *T
+	ref_count *int
+	mutex *sync.RWMutex
+}
+
+type Unique<T> where T != nil struct {
+	value *T
+	moved bool
+}
+
+// Test block-level directives
+//! directives: ownership=on, dependent_types=on
+func testDependentTypes() {
+	// Test positive integer constraint
+	var positive PositiveInt = 42
+	fmt.Printf("Positive integer: %d\n", positive)
+
+	// Test non-empty slice constraint
+	var nonEmpty NonEmptySlice<int> = []int{1, 2, 3}
+	fmt.Printf("Non-empty slice: %v\n", nonEmpty)
+
+	// Test safe string constraint
+	var safeString SafeString = "Hello, World!"
+	fmt.Printf("Safe string: %s\n", safeString)
+}
+
+//! directives: ownership=on
+func testOwnershipTypes() {
+	// Test Owned type
+	var ownedInt Owned<int> = Owned<int>{
+		value: &42,
+		owner_id: 1,
+		moved: false,
+	}
+	fmt.Printf("Owned integer: %d\n", *ownedInt.value)
+
+	// Test Shared type
+	var sharedString Shared<string> = Shared<string>{
+		value: new(string),
+		ref_count: new(int),
+		mutex: &sync.RWMutex{},
+	}
+	*sharedString.value = "Shared string"
+	*sharedString.ref_count = 1
+	fmt.Printf("Shared string: %s, ref count: %d\n", *sharedString.value, *sharedString.ref_count)
+
+	// Test Unique type
+	var uniqueBool Unique<bool> = Unique<bool>{
+		value: new(bool),
+		moved: false,
+	}
+	*uniqueBool.value = true
+	fmt.Printf("Unique bool: %t\n", *uniqueBool.value)
+}
+
+// Test complex dependent types
+type Matrix<M, N> where M > 0 && N > 0 struct {
+	data [M][N]float64
+	rows M
+	cols N
+}
+
+type SafeArray<T, Size> where Size > 0 && T != nil struct {
+	data [Size]T
+	length Size
+}
+
+//! directives: dependent_types=on, constraints=on
+func testComplexDependentTypes() {
+	// Test Matrix type
+	var matrix Matrix<3, 4> = Matrix<3, 4>{
+		data: [3][4]float64{
+			{1.0, 2.0, 3.0, 4.0},
+			{5.0, 6.0, 7.0, 8.0},
+			{9.0, 10.0, 11.0, 12.0},
+		},
+		rows: 3,
+		cols: 4,
+	}
+	fmt.Printf("Matrix dimensions: %dx%d\n", matrix.rows, matrix.cols)
+
+	// Test SafeArray type
+	var safeArray SafeArray<int, 5> = SafeArray<int, 5>{
+		data: [5]int{1, 2, 3, 4, 5},
+		length: 5,
+	}
+	fmt.Printf("Safe array length: %d\n", safeArray.length)
+}
+
+// Test ownership operations with dependent types
+func (o *Owned<T>) Move() Owned<T> {
+	if o.moved {
+		panic("Cannot move from already moved owned reference")
+	}
+
+	*o.moved = true
+	return Owned<T>{
+		value: o.value,
+		owner_id: o.owner_id,
+		moved: false,
+	}
+}
+
+func (s *Shared<T>) Clone() Shared<T> {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	*s.ref_count++
+	return Shared<T>{
+		value: s.value,
+		ref_count: s.ref_count,
+		mutex: s.mutex,
+	}
+}
+
+func (u *Unique<T>) Move() Unique<T> {
+	if u.moved {
+		panic("Cannot move from already moved unique reference")
+	}
+
+	u.moved = true
+	return Unique<T>{
+		value: u.value,
+		moved: false,
+	}
+}
+
+//! directives: ownership=on
+func testOwnershipOperations() {
+	// Test owned value movement
+	owned := Owned<int>{value: &42, owner_id: 1, moved: false}
+	movedOwned := owned.Move()
+	fmt.Printf("Moved owned value: %d\n", *movedOwned.value)
+
+	// Test shared value cloning
+	shared := Shared<string>{value: new(string), ref_count: new(int), mutex: &sync.RWMutex{}}
+	*shared.value = "Original"
+	*shared.ref_count = 1
+	clonedShared := shared.Clone()
+	fmt.Printf("Cloned shared value: %s, ref count: %d\n", *clonedShared.value, *clonedShared.ref_count)
+
+	// Test unique value movement
+	unique := Unique<bool>{value: new(bool), moved: false}
+	*unique.value = true
+	movedUnique := unique.Move()
+	fmt.Printf("Moved unique value: %t\n", *movedUnique.value)
+}
+
+// Test dependent type constraints with runtime validation
+type BoundedInt<Min, Max> where Min < Max && T >= Min && T <= Max int
+
+func NewBoundedInt<Min, Max>(value int) BoundedInt<Min, Max> {
+	if value < Min || value > Max {
+		panic(fmt.Sprintf("Value %d is out of bounds [%d, %d]", value, Min, Max))
+	}
+	return BoundedInt<Min, Max>(value)
+}
+
+//! directives: dependent_types=on, constraints=on
+func testBoundedIntegers() {
+	// Test bounded integer
+	var bounded BoundedInt<0, 100> = NewBoundedInt<0, 100>(42)
+	fmt.Printf("Bounded integer: %d\n", bounded)
+
+	// This should panic at runtime if uncommented:
+	// var invalidBounded BoundedInt<0, 100> = NewBoundedInt<0, 100>(150)
+}
+
+// Test ownership transfer with dependent types
+func transferOwnership<T>(o Owned<T>) Owned<T> {
+	fmt.Printf("Transferring ownership of value at %p\n", o.value)
+	return o
+}
+
+//! directives: ownership=on
+func testOwnershipTransfer() {
+	owned := Owned<int>{value: &42, owner_id: 1, moved: false}
+	transferred := transferOwnership(owned)
+	fmt.Printf("Transferred owned value: %d\n", *transferred.value)
+
+	// original owned should not be usable anymore
+	// fmt.Printf("Original owned value: %d\n", *owned.value) // This should be invalid
+}
+
+// Test constrained generic types
+type Container<T> where T != nil struct {
+	value T
+	valid bool
+}
+
+func NewContainer<T>(value T) Container<T> {
+	return Container<T]{
+		value: value,
+		valid: true,
+	}
+}
+
+//! directives: dependent_types=on
+func testGenericContainers() {
+	// Test container with int
+	intContainer := NewContainer(42)
+	fmt.Printf("Int container: %d, valid: %t\n", intContainer.value, intContainer.valid)
+
+	// Test container with string
+	stringContainer := NewContainer("Hello")
+	fmt.Printf("String container: %s, valid: %t\n", stringContainer.value, stringContainer.valid)
+
+	// Test container with slice
+	sliceContainer := NewContainer([]int{1, 2, 3})
+	fmt.Printf("Slice container: %v, valid: %t\n", sliceContainer.value, sliceContainer.valid)
+}
+
+// Test mixed directives in nested blocks
+//! directives: ownership=off
+func testNestedDirectives() {
+	fmt.Println("Ownership disabled at function level")
+
+	//! directives: ownership=on
+	{
+		fmt.Println("Ownership enabled in nested block")
+		// Ownership checks should apply here
+		var owned Owned<int> = Owned<int>{value: &42, owner_id: 1, moved: false}
+		fmt.Printf("Owned value in nested block: %d\n", *owned.value)
+	}
+
+	//! directives: dependent_types=on
+	{
+		fmt.Println("Dependent types enabled in nested block")
+		// Dependent type checks should apply here
+		var positive PositiveInt = 42
+		fmt.Printf("Positive integer in nested block: %d\n", positive)
+	}
+}
+
+// Test complex ownership patterns
+func testComplexOwnership() {
+	// Create multiple owned values
+	owned1 := Owned<int>{value: &1, owner_id: 1, moved: false}
+	owned2 := Owned<int>{value: &2, owner_id: 2, moved: false}
+	owned3 := Owned<int>{value: &3, owner_id: 3, moved: false}
+
+	// Create shared values
+	shared1 := Shared<string>{value: new(string), ref_count: new(int), mutex: &sync.RWMutex{}}
+	*shared1.value = "Shared1"
+	*shared1.ref_count = 1
+
+	shared2 := Shared<string>{value: new(string), ref_count: new(int), mutex: &sync.RWMutex{}}
+	*shared2.value = "Shared2"
+	*shared2.ref_count = 1
+
+	fmt.Printf("Owned values: %d, %d, %d\n", *owned1.value, *owned2.value, *owned3.value)
+	fmt.Printf("Shared values: %s, %s\n", *shared1.value, *shared2.value)
+
+	// Test ownership movement patterns
+	movedOwned1 := owned1.Move()
+	fmt.Printf("Moved owned1: %d\n", *movedOwned1.value)
+
+	// Test shared cloning patterns
+	clonedShared1 := shared1.Clone()
+	clonedShared2 := shared1.Clone()
+	fmt.Printf("Shared ref counts: original=%d, clone1=%d, clone2=%d\n",
+		*shared1.ref_count, *clonedShared1.ref_count, *clonedShared2.ref_count)
+}
+
+// Test dependent type validation at compile time and runtime
+type EvenInt where T % 2 == 0 int
+type OddInt where T % 2 == 1 int
+
+func validateEvenInt(value int) EvenInt {
+	if value%2 != 0 {
+		panic(fmt.Sprintf("%d is not an even integer", value))
+	}
+	return EvenInt(value)
+}
+
+func validateOddInt(value int) OddInt {
+	if value%2 != 1 {
+		panic(fmt.Sprintf("%d is not an odd integer", value))
+	}
+	return OddInt(value)
+}
+
+//! directives: dependent_types=on, constraints=on
+func testValidatedTypes() {
+	even := validateEvenInt(42)
+	odd := validateOddInt(43)
+
+	fmt.Printf("Even integer: %d\n", even)
+	fmt.Printf("Odd integer: %d\n", odd)
+
+	// These should panic if uncommented:
+	// invalidEven := validateEvenInt(43)
+	// invalidOdd := validateOddInt(42)
+}
+
+func main() {
+	fmt.Println("=== Comprehensive Typus Syntax Test ===")
+
+	testDependentTypes()
+	testOwnershipTypes()
+	testComplexDependentTypes()
+	testOwnershipOperations()
+	testBoundedIntegers()
+	testOwnershipTransfer()
+	testGenericContainers()
+	testNestedDirectives()
+	testComplexOwnership()
+	testValidatedTypes()
+
+	fmt.Println("=== All Typus-specific syntax tests completed successfully ===")
+}

@@ -1,0 +1,11 @@
+//! ownership: on
+
+package main
+
+func main() {
+    s1 := "hello"
+    for i := 0; i < 3; i++ {
+        s2 := s1  // Move in loop - should be error
+        println(s2)
+    }
+}

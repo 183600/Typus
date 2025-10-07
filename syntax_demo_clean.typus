@@ -1,0 +1,668 @@
+package main
+
+import (
+	"container/list"
+	"context"
+	"fmt"
+	"io"
+	"log"
+	"math"
+	"os"
+	"reflect"
+	"runtime"
+	"sync"
+	"time"
+)
+
+// 基本类型和变量声明
+var (
+	intVar       int           = 42
+	floatVar     float64       = 3.14159
+	boolVar      bool          = true
+	stringVar    string        = "Hello, World!"
+	byteVar      byte          = 255
+	runeVar      rune          = '中'
+	int8Var      int8          = 127
+	int16Var     int16         = 32767
+	int32Var     int32         = 2147483647
+	int64Var     int64         = 9223372036854775807
+	uintVar      uint          = 42
+	uint8Var     uint8         = 255
+	uint16Var    uint16        = 65535
+	uint32Var    uint32        = 4294967295
+	uint64Var    uint64        = 18446744073709551615
+	float32Var   float32       = 3.14
+	complex64Var complex64     = 1 + 2i
+	complex128Var complex128   = 1 + 2i
+	ptrVar       *int          = &intVar
+	funcVar      func()        = func() { fmt.Println("Function variable") }
+)
+
+// 常量声明
+const (
+	Pi      = 3.14159
+	MaxInt  = 1<<31 - 1
+	MinInt  = -1 << 31
+	MaxUint = 1<<32 - 1
+)
+
+// 枚举类型使用iota
+const (
+	_           = iota
+	KB = 1 << (10 * iota)
+	MB
+	GB
+	TB
+)
+
+// 结构体定义
+type Person struct {
+	Name    string
+	Age     int
+	Address *Address
+}
+
+type Address struct {
+	Street string
+	City   string
+}
+
+// 接口定义
+type Speaker interface {
+	Speak() string
+}
+
+type Walker interface {
+	Walk() string
+}
+
+type Composite interface {
+	Speaker
+	Walker
+}
+
+// 嵌入式接口
+type AdvancedSpeaker interface {
+	Speaker
+	AdvancedSpeak() string
+}
+
+// 结构体方法
+func (p Person) Speak() string {
+	return fmt.Sprintf("My name is %s and I'm %d years old", p.Name, p.Age)
+}
+
+func (p Person) Walk() string {
+	return fmt.Sprintf("%s is walking", p.Name)
+}
+
+func (p Person) AdvancedSpeak() string {
+	return fmt.Sprintf("Advanced: %s", p.Speak())
+}
+
+// 指针接收器方法
+func (p *Person) SetAge(age int) {
+	p.Age = age
+}
+
+// 泛型函数
+func GenericFunc[T any](value T) T {
+	return value
+}
+
+func GenericSliceFunc[T comparable](slice []T, value T) bool {
+	for _, v := range slice {
+		if v == value {
+			return true
+		}
+	}
+	return false
+}
+
+// 泛型类型
+type Stack[T any] struct {
+	items []T
+}
+
+func (s *Stack[T]) Push(item T) {
+	s.items = append(s.items, item)
+}
+
+func (s *Stack[T]) Pop() (T, bool) {
+	if len(s.items) == 0 {
+		var zero T
+		return zero, false
+	}
+	item := s.items[len(s.items)-1]
+	s.items = s.items[:len(s.items)-1]
+	return item, true
+}
+
+// 错误类型定义
+type CustomError struct {
+	Code    int
+	Message string
+}
+
+func (e CustomError) Error() string {
+	return fmt.Sprintf("Error %d: %s", e.Code, e.Message)
+}
+
+// 函数类型
+type MathFunc func(int, int) int
+
+// 闭包和高阶函数
+func getAdder() func(int) int {
+	sum := 0
+	return func(x int) int {
+		sum += x
+		return sum
+	}
+}
+
+// 可变参数函数
+func sum(nums ...int) int {
+	total := 0
+	for _, num := range nums {
+		total += num
+	}
+	return total
+}
+
+// 多返回值函数
+func divide(a, b int) (int, error) {
+	if b == 0 {
+		return 0, fmt.Errorf("division by zero")
+	}
+	return a / b, nil
+}
+
+// 命名返回值
+func split(sum int) (x, y int) {
+	x = sum * 4 / 9
+	y = sum - x
+	return
+}
+
+// defer、panic和recover演示
+func deferDemo() {
+	defer fmt.Println("Deferred 1")
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered from:", r)
+		}
+	}()
+
+	defer fmt.Println("Deferred 2")
+	panic("Something went wrong!")
+}
+
+// 通道演示
+func channelDemo() {
+	ch := make(chan int)
+	go func() {
+		ch <- 42
+	}()
+	value := <-ch
+	fmt.Println("Channel value:", value)
+
+	// 缓冲通道
+	buffered := make(chan int, 3)
+	buffered <- 1
+	buffered <- 2
+	buffered <- 3
+	close(buffered)
+
+	for v := range buffered {
+		fmt.Println("Buffered channel:", v)
+	}
+}
+
+// select语句演示
+func selectDemo() {
+	ch1 := make(chan string)
+	ch2 := make(chan string)
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		ch1 <- "from ch1"
+		close(ch1)
+	}()
+
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		ch2 <- "from ch2"
+		close(ch2)
+	}()
+
+	for i := 0; i < 2; i++ {
+		select {
+		case msg1, ok := <-ch1:
+			if ok {
+				fmt.Println("Received:", msg1)
+			}
+		case msg2, ok := <-ch2:
+			if ok {
+				fmt.Println("Received:", msg2)
+			}
+		case <-time.After(150 * time.Millisecond):
+			fmt.Println("Timeout")
+		}
+	}
+}
+
+// 互斥锁和并发演示
+type Counter struct {
+	mu    sync.Mutex
+	count int
+}
+
+func (c *Counter) Increment() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.count++
+}
+
+func (c *Counter) Value() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.count
+}
+
+func concurrentDemo() {
+	var wg sync.WaitGroup
+	counter := Counter{}
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			counter.Increment()
+		}()
+	}
+
+	wg.Wait()
+	fmt.Println("Counter value:", counter.Value())
+}
+
+// 反射演示
+func reflectionDemo() {
+	var x float64 = 3.4
+	v := reflect.ValueOf(x)
+	fmt.Println("Type:", v.Type())
+	fmt.Println("Kind:", v.Kind())
+	fmt.Println("Value:", v.Float())
+
+	// 修改值
+	p := reflect.ValueOf(&x)
+	fmt.Println("Type of p:", p.Type())
+	if p.Elem().CanSet() {
+		p.Elem().SetFloat(7.1)
+		fmt.Println("x is now:", x)
+	}
+}
+
+// 上下文演示
+func contextDemo() {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	select {
+	case <-time.After(200 * time.Millisecond):
+		fmt.Println("Operation completed")
+	case <-ctx.Done():
+		fmt.Println("Context cancelled:", ctx.Err())
+	}
+}
+
+// 类型断言
+func typeAssertionDemo() {
+	var i interface{} = "hello"
+
+	s, ok := i.(string)
+	if ok {
+		fmt.Println("i is a string:", s)
+	}
+
+	// 类型开关
+	switch v := i.(type) {
+	case string:
+		fmt.Println("String:", v)
+	case int:
+		fmt.Println("Integer:", v)
+	default:
+		fmt.Println("Unknown type")
+	}
+}
+
+// 数组、切片、映射演示
+func collectionDemo() {
+	// 数组
+	var arr [5]int = [5]int{1, 2, 3, 4, 5}
+	fmt.Println("Array:", arr)
+
+	// 切片
+	slice := []int{1, 2, 3, 4, 5}
+	slice = append(slice, 6, 7, 8)
+	fmt.Println("Slice:", slice)
+
+	// 子切片
+	subSlice := slice[1:4]
+	fmt.Println("Sub-slice:", subSlice)
+
+	// 映射
+	m := make(map[string]int)
+	m["one"] = 1
+	m["two"] = 2
+	m["three"] = 3
+
+	if val, ok := m["two"]; ok {
+		fmt.Println("Map value:", val)
+	}
+
+	// 删除映射元素
+	delete(m, "two")
+	fmt.Println("Map after deletion:", m)
+}
+
+// 方法集演示
+type MyInt int
+
+func (m MyInt) Double() MyInt {
+	return m * 2
+}
+
+func (m *MyInt) Square() {
+	*m = *m * *m
+}
+
+// 条件语句
+func conditionalDemo() {
+	x := 10
+
+	if x > 5 {
+		fmt.Println("x is greater than 5")
+	} else if x < 5 {
+		fmt.Println("x is less than 5")
+	} else {
+		fmt.Println("x is equal to 5")
+	}
+
+	// if with initialization
+	if y := 20; y > 15 {
+		fmt.Println("y is greater than 15")
+	}
+}
+
+// 循环语句
+func loopDemo() {
+	// for循环
+	for i := 0; i < 5; i++ {
+		fmt.Println("For loop:", i)
+	}
+
+	// while风格的for循环
+	j := 0
+	for j < 3 {
+		fmt.Println("While-style for:", j)
+		j++
+	}
+
+	// 无限循环
+	k := 0
+	for {
+		fmt.Println("Infinite loop:", k)
+		k++
+		if k >= 2 {
+			break
+		}
+	}
+
+	// for-range循环
+	slice := []string{"a", "b", "c"}
+	for index, value := range slice {
+		fmt.Println("Range:", index, value)
+	}
+
+	// for-range映射
+	m := map[string]int{"a": 1, "b": 2}
+	for key, value := range m {
+		fmt.Println("Map range:", key, value)
+	}
+
+	// for-range字符串
+	str := "hello"
+	for index, runeValue := range str {
+		fmt.Println("String range:", index, runeValue)
+	}
+}
+
+// switch语句
+func switchDemo() {
+	x := 2
+
+	switch x {
+	case 1:
+		fmt.Println("x is 1")
+	case 2:
+		fmt.Println("x is 2")
+	case 3, 4:
+		fmt.Println("x is 3 or 4")
+	default:
+		fmt.Println("x is something else")
+	}
+
+	// switch without expression
+	switch {
+	case x > 3:
+		fmt.Println("x > 3")
+	case x > 1:
+		fmt.Println("x > 1")
+	default:
+		fmt.Println("x <= 1")
+	}
+
+	// 类型switch
+	var i interface{} = "hello"
+	switch v := i.(type) {
+	case string:
+		fmt.Println("String:", v)
+	case int:
+		fmt.Println("Integer:", v)
+	default:
+		fmt.Println("Unknown type")
+	}
+}
+
+// 标签和goto
+func labelDemo() {
+	i := 0
+loop:
+	if i < 3 {
+		fmt.Println("Label demo:", i)
+		i++
+		goto loop
+	}
+}
+
+// 初始化函数
+func init() {
+	fmt.Println("Package initializing...")
+}
+
+// main函数
+func main() {
+	fmt.Println("=== Go Syntax Comprehensive Demo ===")
+
+	// 基本类型和变量
+	fmt.Println("=== Basic Types ===")
+	fmt.Printf("int: %d, float: %f, bool: %t, string: %s\n", intVar, floatVar, boolVar, stringVar)
+	fmt.Printf("byte: %d, rune: %c\n", byteVar, runeVar)
+
+	// 常量
+	fmt.Println("=== Constants ===")
+	fmt.Printf("Pi: %f, MaxInt: %d\n", Pi, MaxInt)
+	fmt.Printf("KB: %d, MB: %d, GB: %d\n", KB, MB, GB)
+
+	// 结构体
+	fmt.Println("=== Structs ===")
+	addr := Address{"123 Main St", "New York"}
+	person := Person{"Alice", 30, &addr}
+	fmt.Printf("Person: %+v\n", person)
+
+	// 接口
+	fmt.Println("=== Interfaces ===")
+	var speaker Speaker = person
+	fmt.Println(speaker.Speak())
+
+	// 泛型
+	fmt.Println("=== Generics ===")
+	fmt.Println("Generic func:", GenericFunc(42))
+	fmt.Println("Generic contains:", GenericSliceFunc([]int{1, 2, 3}, 2))
+
+	// 泛型类型
+	fmt.Println("=== Generic Types ===")
+	stack := Stack[int]{}
+	stack.Push(1)
+	stack.Push(2)
+	if val, ok := stack.Pop(); ok {
+		fmt.Println("Popped:", val)
+	}
+
+	// 错误处理
+	fmt.Println("=== Error Handling ===")
+	if result, err := divide(10, 2); err == nil {
+		fmt.Println("Division result:", result)
+	}
+
+	if _, err := divide(10, 0); err != nil {
+		fmt.Println("Error:", err)
+	}
+
+	// 命名返回值
+	fmt.Println("=== Named Returns ===")
+	a, b := split(17)
+	fmt.Printf("Split: %d, %d\n", a, b)
+
+	// defer、panic、recover
+	fmt.Println("=== Defer, Panic, Recover ===")
+	deferDemo()
+
+	// 通道
+	fmt.Println("=== Channels ===")
+	channelDemo()
+
+	// select
+	fmt.Println("=== Select ===")
+	selectDemo()
+
+	// 并发
+	fmt.Println("=== Concurrency ===")
+	concurrentDemo()
+
+	// 反射
+	fmt.Println("=== Reflection ===")
+	reflectionDemo()
+
+	// 上下文
+	fmt.Println("=== Context ===")
+	contextDemo()
+
+	// 类型断言
+	fmt.Println("=== Type Assertion ===")
+	typeAssertionDemo()
+
+	// 集合
+	fmt.Println("=== Collections ===")
+	collectionDemo()
+
+	// 方法集
+	fmt.Println("=== Method Sets ===")
+	myInt := MyInt(5)
+	fmt.Println("Double:", myInt.Double())
+	myInt.Square()
+	fmt.Println("Square:", myInt)
+
+	// 条件语句
+	fmt.Println("=== Conditionals ===")
+	conditionalDemo()
+
+	// 循环
+	fmt.Println("=== Loops ===")
+	loopDemo()
+
+	// switch
+	fmt.Println("=== Switch ===")
+	switchDemo()
+
+	// 标签
+	fmt.Println("=== Labels ===")
+	labelDemo()
+
+	// 闭包
+	fmt.Println("=== Closures ===")
+	adder := getAdder()
+	fmt.Println("Adder 1:", adder(1))
+	fmt.Println("Adder 2:", adder(2))
+
+	// 可变参数
+	fmt.Println("=== Variadic Functions ===")
+	fmt.Println("Sum:", sum(1, 2, 3, 4, 5))
+
+	// 数学函数
+	fmt.Println("=== Math Functions ===")
+	fmt.Println("Sqrt:", math.Sqrt(16))
+	fmt.Println("Sin:", math.Sin(math.Pi/2))
+
+	// 文件I/O
+	fmt.Println("=== File I/O ===")
+	file, err := os.Create("test.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	_, err = io.WriteString(file, "Hello, File!")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// 运行时信息
+	fmt.Println("=== Runtime Info ===")
+	fmt.Println("Go version:", runtime.Version())
+	fmt.Println("Num goroutines:", runtime.NumGoroutine())
+	fmt.Println("Num CPU:", runtime.NumCPU())
+
+	// 列表容器
+	fmt.Println("=== Container List ===")
+	l := list.New()
+	l.PushBack(1)
+	l.PushBack(2)
+	l.PushBack(3)
+
+	for e := l.Front(); e != nil; e = e.Next() {
+		fmt.Println("List element:", e.Value)
+	}
+
+	// 自定义错误
+	fmt.Println("=== Custom Error ===")
+	customErr := CustomError{500, "Internal Server Error"}
+	fmt.Println("Custom error:", customErr)
+
+	// 函数变量
+	fmt.Println("=== Function Variables ===")
+	var mathFunc MathFunc = func(a, b int) int {
+		return a + b
+	}
+	fmt.Println("Math func:", mathFunc(10, 20))
+
+	// 空接口
+	fmt.Println("=== Empty Interface ===")
+	var empty interface{} = 42
+	fmt.Printf("Empty interface value: %v, type: %T\n", empty, empty)
+
+	empty = "hello"
+	fmt.Printf("Empty interface value: %v, type: %T\n", empty, empty)
+
+	fmt.Println("=== Demo Completed ===")
+}

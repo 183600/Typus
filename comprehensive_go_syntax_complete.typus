@@ -1,0 +1,1752 @@
+//! ownership: on
+//! constraints: on
+
+package main
+
+import (
+	"bufio"
+	"bytes"
+	"compress/gzip"
+	"container/list"
+	"container/ring"
+	"context"
+	"crypto/md5"
+	"crypto/sha1"
+	"database/sql"
+	"encoding/base64"
+	"encoding/binary"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"hash/fnv"
+	"html"
+	"html/template"
+	"io"
+	"io/ioutil"
+	"log"
+	"math"
+	"math/big"
+	"math/bits"
+	"math/cmplx"
+	"math/rand"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"reflect"
+	"regexp"
+	"runtime"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+	"unicode"
+	"unicode/utf8"
+)
+
+// Constants and variables
+const (
+	Pi       = 3.14159265358979323846
+	MaxInt   = int(^uint(0) >> 1)
+	MinInt   = -MaxInt - 1
+	MaxFloat = 1.797693134862315708145274237317043567981e+308
+	MinFloat = 4.940656458412465441765687928682213723651e-324
+)
+
+var (
+	globalVar    = "global"
+	globalInt    = 42
+	globalFloat  = 3.14
+	globalBool   = true
+	globalSlice  = []int{1, 2, 3, 4, 5}
+	globalMap    = map[string]int{"one": 1, "two": 2, "three": 3}
+	globalChan   = make(chan int, 10)
+	globalMutex  sync.Mutex
+	globalRWMutex sync.RWMutex
+)
+
+// Type definitions
+type (
+	BasicInt     int
+	BasicFloat   float64
+	BasicString  string
+	BasicBool    bool
+	BasicByte    byte
+	BasicRune    rune
+	BasicComplex complex128
+)
+
+type (
+	// Structs
+	SimpleStruct struct {
+		Name  string
+		Age   int
+		Email string
+	}
+
+	EmbeddedStruct struct {
+		SimpleStruct
+		Department string
+		Salary     float64
+	}
+
+	ComplexStruct struct {
+		ID          int64
+		Tags        []string
+		Metadata    map[string]interface{}
+		CreatedAt   time.Time
+		UpdatedAt   *time.Time
+		IsActive    bool
+		Score       float64
+		Data        []byte
+		Parent      *ComplexStruct
+		Children    []*ComplexStruct
+		Mutex       sync.Mutex
+		Once        sync.Once
+		WaitGroup   sync.WaitGroup
+		Context     context.Context
+		Cancel      context.CancelFunc
+		Channel     chan string
+		Buffer      *bytes.Buffer
+		Reader      io.Reader
+		Writer      io.Writer
+		Closer      io.Closer
+		Logger      *log.Logger
+		Template    *template.Template
+		DB          *sql.DB
+		Rows        *sql.Rows
+		Stmt        *sql.Stmt
+		Tx          *sql.Tx
+		Result      sql.Result
+		HTTPClient  *http.Client
+		HTTPRequest *http.Request
+		HTTPResponse *http.Response
+		URL         *url.URL
+		Regexp      *regexp.Regexp
+		Time        time.Time
+		Duration    time.Duration
+		Ticker      *time.Ticker
+		Timer       *time.Timer
+		Rand        *rand.Rand
+		BigInt      *big.Int
+		BigFloat    *big.Float
+		BigRat      *big.Rat
+		Hash        hash.Hash
+		MD5         hash.Hash
+		SHA1        hash.Hash
+		JSONEncoder *json.Encoder
+		JSONDecoder *json.Decoder
+		List        *list.List
+		Ring        *ring.Ring
+		AtomicInt32 int32
+		AtomicInt64 int64
+		AtomicUint32 uint32
+		AtomicUint64 uint64
+		AtomicPointer unsafe.Pointer
+	}
+)
+
+// Interfaces
+type (
+	Reader interface {
+		Read(p []byte) (n int, err error)
+	}
+
+	Writer interface {
+		Write(p []byte) (n int, err error)
+	}
+
+	ReadWriter interface {
+		Reader
+		Writer
+	}
+
+	Closer interface {
+		Close() error
+	}
+
+	ReadWriteCloser interface {
+		Reader
+		Writer
+		Closer
+	}
+
+	Stringer interface {
+		String() string
+	}
+
+	Error interface {
+		Error() string
+	}
+
+	Comparable interface {
+		Compare(other interface{}) int
+	}
+
+	Validator interface {
+		Validate() error
+	}
+
+	Processor interface {
+		Process(data interface{}) (interface{}, error)
+	}
+)
+
+// Function types
+type (
+	SimpleFunc      func() error
+	IntFunc         func(int) int
+	StringFunc      func(string) string
+	InterfaceFunc   func(interface{}) interface{}
+	VariadicFunc    func(...interface{}) error
+	MultipleRetFunc func(int, string) (bool, error)
+	NamedRetFunc    func(x, y int) (sum int, err error)
+	ClosureFunc     func() func() error
+	RecursiveFunc   func(int) int
+	GenericFunc     func(interface{}) interface{}
+	ChannelFunc     func(chan int) chan string
+	PanicFunc       func() (interface{}, error)
+	DeferFunc       func() error
+	GoFunc          func() error
+)
+
+// Custom error types
+type (
+	ValidationError struct {
+		Field   string
+		Message string
+		Code    int
+	}
+
+	BusinessError struct {
+		Operation string
+		Reason    string
+		Context   map[string]interface{}
+	}
+
+	SystemError struct {
+		Component string
+		Error     error
+		Timestamp time.Time
+	}
+)
+
+func (e *ValidationError) Error() string {
+	return fmt.Sprintf("validation error in field '%s': %s (code: %d)", e.Field, e.Message, e.Code)
+}
+
+func (e *BusinessError) Error() string {
+	return fmt.Sprintf("business error in operation '%s': %s", e.Operation, e.Reason)
+}
+
+func (e *SystemError) Error() string {
+	return fmt.Sprintf("system error in component '%s': %v", e.Component, e.Error)
+}
+
+// Generic functions and types
+func GenericFunction[T any](input T) T {
+	return input
+}
+
+func GenericSliceFunction[T any](slice []T) []T {
+	result := make([]T, len(slice))
+	copy(result, slice)
+	return result
+}
+
+func GenericMapFunction[K comparable, V any](m map[K]V) map[K]V {
+	result := make(map[K]V)
+	for k, v := range m {
+		result[k] = v
+	}
+	return result
+}
+
+// Channel operations
+func ChannelOperations() {
+	// Buffered channels
+	bufferedChan := make(chan int, 100)
+	
+	// Unbuffered channels
+	unbufferedChan := make(chan string)
+	
+	// Channel with struct
+	structChan := make(chan SimpleStruct, 10)
+	
+	// Channel with interface
+	interfaceChan := make(chan interface{}, 5)
+	
+	// Channel directions
+	sendOnly := make(chan<- int)
+	receiveOnly := make(<-chan string)
+	
+	// Select statement
+	select {
+	case msg1 := <-unbufferedChan:
+		fmt.Println("Received:", msg1)
+	case bufferedChan <- 42:
+		fmt.Println("Sent to buffered channel")
+	case <-time.After(1 * time.Second):
+		fmt.Println("Timeout")
+	default:
+		fmt.Println("Default case")
+	}
+	
+	// Close channel
+	close(bufferedChan)
+	
+	// Range over channel
+	go func() {
+		for i := 0; i < 10; i++ {
+			bufferedChan <- i
+		}
+		close(bufferedChan)
+	}()
+	
+	for value := range bufferedChan {
+		fmt.Println("Value:", value)
+	}
+}
+
+// Goroutines and sync
+func GoroutineOperations() {
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var counter int
+	
+	// Simple goroutine
+	go func() {
+		fmt.Println("Simple goroutine")
+	}()
+	
+	// Goroutine with parameters
+	go func(name string, count int) {
+		for i := 0; i < count; i++ {
+			fmt.Printf("%s: %d\n", name, i)
+		}
+	}("Worker", 5)
+	
+	// WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			mu.Lock()
+			counter++
+			mu.Unlock()
+			fmt.Printf("Worker %d completed\n", id)
+		}(i)
+	}
+	wg.Wait()
+	
+	// Once
+	var once sync.Once
+	for i := 0; i < 5; i++ {
+		go func(id int) {
+			once.Do(func() {
+				fmt.Println("This will only print once")
+			})
+		}(i)
+	}
+	
+	// Mutex and RWMutex
+	var rwMutex sync.RWMutex
+	sharedData := make(map[string]int)
+	
+	// Writers
+	for i := 0; i < 3; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			rwMutex.Lock()
+			sharedData[fmt.Sprintf("key%d", id)] = id
+			rwMutex.Unlock()
+		}(i)
+	}
+	
+	// Readers
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			rwMutex.RLock()
+			for k, v := range sharedData {
+				fmt.Printf("Reader %d: %s = %d\n", id, k, v)
+			}
+			rwMutex.RUnlock()
+		}(i)
+	}
+	
+	wg.Wait()
+	
+	// Atomic operations
+	var atomicInt int64
+	atomic.StoreInt64(&atomicInt, 100)
+	atomic.AddInt64(&atomicInt, 50)
+	value := atomic.LoadInt64(&atomicInt)
+	fmt.Printf("Atomic value: %d\n", value)
+	
+	// Compare and swap
+	swapped := atomic.CompareAndSwapInt64(&atomicInt, 150, 200)
+	fmt.Printf("CAS successful: %v\n", swapped)
+	
+	// Channels for goroutine communication
+	done := make(chan bool)
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		done <- true
+	}()
+	<-done
+}
+
+// Reflection
+func ReflectionOperations() {
+	type Person struct {
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+	}
+	
+	p := Person{Name: "Alice", Age: 30}
+	
+	// Type reflection
+	v := reflect.ValueOf(p)
+	t := reflect.TypeOf(p)
+	
+	fmt.Printf("Type: %s\n", t.Name())
+	fmt.Printf("Kind: %s\n", t.Kind())
+	fmt.Printf("NumFields: %d\n", t.NumField())
+	
+	// Field reflection
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		value := v.Field(i)
+		fmt.Printf("Field %d: %s = %v, Tag: %s\n", i, field.Name, value, field.Tag)
+	}
+	
+	// Method reflection
+	fmt.Printf("NumMethods: %d\n", t.NumMethod())
+	
+	// Value manipulation
+	v2 := reflect.New(t).Elem()
+	v2.FieldByName("Name").SetString("Bob")
+	v2.FieldByName("Age").SetInt(25)
+	
+	// Interface reflection
+	var x interface{} = 42
+	rx := reflect.ValueOf(x)
+	fmt.Printf("Interface value: %v, Kind: %s\n", rx, rx.Kind())
+	
+	// Function reflection
+	funcValue := reflect.ValueOf(func(a, b int) int { return a + b })
+	if funcValue.Kind() == reflect.Func {
+		results := funcValue.Call([]reflect.Value{reflect.ValueOf(10), reflect.ValueOf(20)})
+		fmt.Printf("Function result: %v\n", results[0].Int())
+	}
+	
+	// Slice reflection
+	slice := []int{1, 2, 3, 4, 5}
+	sliceValue := reflect.ValueOf(slice)
+	fmt.Printf("Slice length: %d, capacity: %d\n", sliceValue.Len(), sliceValue.Cap())
+	
+	// Map reflection
+	m := map[string]int{"a": 1, "b": 2}
+	mapValue := reflect.ValueOf(m)
+	fmt.Printf("Map length: %d\n", mapValue.Len())
+	
+	keys := mapValue.MapKeys()
+	for _, key := range keys {
+		value := mapValue.MapIndex(key)
+		fmt.Printf("Map[%v] = %v\n", key, value)
+	}
+}
+
+// JSON operations
+func JSONOperations() {
+	type User struct {
+		ID       int      `json:"id"`
+		Name     string   `json:"name"`
+		Email    string   `json:"email"`
+		Tags     []string `json:"tags,omitempty"`
+		Active   bool     `json:"active"`
+		Created  time.Time `json:"created"`
+		Settings map[string]interface{} `json:"settings,omitempty"`
+	}
+	
+	// Marshal
+	user := User{
+		ID:      1,
+		Name:    "John Doe",
+		Email:   "john@example.com",
+		Tags:    []string{"admin", "user"},
+		Active:  true,
+		Created: time.Now(),
+		Settings: map[string]interface{}{
+			"theme": "dark",
+			"notifications": true,
+			"language": "en",
+		},
+	}
+	
+	jsonData, err := json.Marshal(user)
+	if err != nil {
+		log.Printf("JSON marshal error: %v", err)
+		return
+	}
+	fmt.Printf("JSON: %s\n", jsonData)
+	
+	// Unmarshal
+	var decodedUser User
+	err = json.Unmarshal(jsonData, &decodedUser)
+	if err != nil {
+		log.Printf("JSON unmarshal error: %v", err)
+		return
+	}
+	fmt.Printf("Decoded user: %+v\n", decodedUser)
+	
+	// Pretty print
+	prettyJSON, err := json.MarshalIndent(user, "", "  ")
+	if err != nil {
+		log.Printf("JSON marshal indent error: %v", err)
+		return
+	}
+	fmt.Printf("Pretty JSON:\n%s\n", prettyJSON)
+	
+	// Streaming JSON
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	err = encoder.Encode(user)
+	if err != nil {
+		log.Printf("JSON encode error: %v", err)
+		return
+	}
+	
+	decoder := json.NewDecoder(&buf)
+	var streamedUser User
+	err = decoder.Decode(&streamedUser)
+	if err != nil {
+		log.Printf("JSON decode error: %v", err)
+		return
+	}
+	fmt.Printf("Streamed user: %+v\n", streamedUser)
+	
+	// Custom JSON marshaling
+	type CustomTime struct {
+		time.Time
+	}
+	
+	func (ct CustomTime) MarshalJSON() ([]byte, error) {
+		return json.Marshal(ct.Format("2006-01-02 15:04:05"))
+	}
+	
+	func (ct *CustomTime) UnmarshalJSON(data []byte) error {
+		var timeStr string
+		if err := json.Unmarshal(data, &timeStr); err != nil {
+			return err
+		}
+		t, err := time.Parse("2006-01-02 15:04:05", timeStr)
+		if err != nil {
+			return err
+		}
+		ct.Time = t
+		return nil
+	}
+	
+	type CustomUser struct {
+		ID        int        `json:"id"`
+		Name      string     `json:"name"`
+		CreatedAt CustomTime `json:"created_at"`
+	}
+	
+	customUser := CustomUser{
+		ID:        2,
+		Name:      "Jane Doe",
+		CreatedAt: CustomTime{time.Now()},
+	}
+	
+	customJSON, err := json.Marshal(customUser)
+	if err != nil {
+		log.Printf("Custom JSON marshal error: %v", err)
+		return
+	}
+	fmt.Printf("Custom JSON: %s\n", customJSON)
+}
+
+// Regular expressions
+func RegexpOperations() {
+	// Basic regex
+	pattern := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		log.Printf("Regex compile error: %v", err)
+		return
+	}
+	
+	// Test email
+	email := "user@example.com"
+	if re.MatchString(email) {
+		fmt.Printf("Valid email: %s\n", email)
+	} else {
+		fmt.Printf("Invalid email: %s\n", email)
+	}
+	
+	// Find and replace
+	text := "The quick brown fox jumps over the lazy dog"
+	re2 := regexp.MustCompile(`(?i)the`)
+	result := re2.ReplaceAllString(text, "a")
+	fmt.Printf("Replaced text: %s\n", result)
+	
+	// Find all matches
+	re3 := regexp.MustCompile(`\b\w{4}\b`)
+	matches := re3.FindAllString(text, -1)
+	fmt.Printf("4-letter words: %v\n", matches)
+	
+	// Find submatches
+	re4 := regexp.MustCompile(`(\w+)\s+(\w+)`)
+	submatches := re4.FindStringSubmatch("John Doe")
+	fmt.Printf("Submatches: %v\n", submatches)
+	
+	// Replace with function
+	re5 := regexp.MustCompile(`\b(\w+)\b`)
+	result2 := re5.ReplaceAllStringFunc(text, func(match string) string {
+		return strings.ToUpper(match)
+	})
+	fmt.Printf("Uppercase text: %s\n", result2)
+	
+	// Split with regex
+	re6 := regexp.MustCompile(`\s+`)
+	words := re6.Split(text, -1)
+	fmt.Printf("Words: %v\n", words)
+}
+
+// File I/O operations
+func FileIOOperations() {
+	// Create temporary file
+	tmpFile, err := ioutil.TempFile("", "typus_test_*.txt")
+	if err != nil {
+		log.Printf("Create temp file error: %v", err)
+		return
+	}
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
+	
+	// Write to file
+	content := "Hello, Typus!\nThis is a test file.\nLine 3\n"
+	_, err = tmpFile.WriteString(content)
+	if err != nil {
+		log.Printf("Write to file error: %v", err)
+		return
+	}
+	
+	// Read entire file
+	data, err := ioutil.ReadFile(tmpFile.Name())
+	if err != nil {
+		log.Printf("Read file error: %v", err)
+		return
+	}
+	fmt.Printf("File content: %s\n", data)
+	
+	// Read file line by line
+	file, err := os.Open(tmpFile.Name())
+	if err != nil {
+		log.Printf("Open file error: %v", err)
+		return
+	}
+	defer file.Close()
+	
+	scanner := bufio.NewScanner(file)
+	lineNum := 1
+	for scanner.Scan() {
+		fmt.Printf("Line %d: %s\n", lineNum, scanner.Text())
+		lineNum++
+	}
+	
+	if err := scanner.Err(); err != nil {
+		log.Printf("Scan file error: %v", err)
+		return
+	}
+	
+	// File info
+	info, err := os.Stat(tmpFile.Name())
+	if err != nil {
+		log.Printf("File stat error: %v", err)
+		return
+	}
+	fmt.Printf("File size: %d bytes\n", info.Size())
+	fmt.Printf("File mode: %v\n", info.Mode())
+	fmt.Printf("File mod time: %v\n", info.ModTime())
+	
+	// Copy file
+	copyFile, err := ioutil.TempFile("", "typus_copy_*.txt")
+	if err != nil {
+		log.Printf("Create copy file error: %v", err)
+		return
+	}
+	defer os.Remove(copyFile.Name())
+	defer copyFile.Close()
+	
+	sourceFile, err := os.Open(tmpFile.Name())
+	if err != nil {
+		log.Printf("Open source file error: %v", err)
+		return
+	}
+	defer sourceFile.Close()
+	
+	_, err = io.Copy(copyFile, sourceFile)
+	if err != nil {
+		log.Printf("Copy file error: %v", err)
+		return
+	}
+	
+	fmt.Printf("File copied successfully\n")
+}
+
+// Network operations
+func NetworkOperations() {
+	// URL parsing
+	urlStr := "https://example.com:8080/path/to/resource?param1=value1&param2=value2#fragment"
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		log.Printf("URL parse error: %v", err)
+		return
+	}
+	
+	fmt.Printf("Scheme: %s\n", parsedURL.Scheme)
+	fmt.Printf("Host: %s\n", parsedURL.Host)
+	fmt.Printf("Path: %s\n", parsedURL.Path)
+	fmt.Printf("Query: %s\n", parsedURL.RawQuery)
+	fmt.Printf("Fragment: %s\n", parsedURL.Fragment)
+	
+	// Query parameters
+	queryParams := parsedURL.Query()
+	fmt.Printf("Query params: %v\n", queryParams)
+	
+	// Build URL
+	newURL := &url.URL{
+		Scheme:   "https",
+		Host:     "api.example.com",
+		Path:     "/v1/users",
+		RawQuery: "page=1&limit=10",
+	}
+	fmt.Printf("Built URL: %s\n", newURL.String())
+	
+	// HTTP client
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	
+	// Create request
+	req, err := http.NewRequest("GET", "https://httpbin.org/get", nil)
+	if err != nil {
+		log.Printf("Create request error: %v", err)
+		return
+	}
+	
+	req.Header.Set("User-Agent", "Typus-Test/1.0")
+	req.Header.Set("Accept", "application/json")
+	
+	// Make request (commented out to avoid actual network call)
+	/*
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("HTTP request error: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+	
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Read response error: %v", err)
+		return
+	}
+	
+	fmt.Printf("Response status: %s\n", resp.Status)
+	fmt.Printf("Response body: %s\n", body)
+	*/
+	
+	// TCP listener (commented out to avoid binding)
+	/*
+	listener, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		log.Printf("TCP listen error: %v", err)
+		return
+	}
+	defer listener.Close()
+	
+	fmt.Printf("Listening on %s\n", listener.Addr())
+	*/
+}
+
+// Sorting operations
+func SortingOperations() {
+	// Sort integers
+	numbers := []int{5, 2, 8, 1, 9, 3}
+	sort.Ints(numbers)
+	fmt.Printf("Sorted numbers: %v\n", numbers)
+	
+	// Sort strings
+	words := []string{"banana", "apple", "cherry", "date", "elderberry"}
+	sort.Strings(words)
+	fmt.Printf("Sorted words: %v\n", words)
+	
+	// Sort floats
+	floats := []float64{3.14, 2.71, 1.41, 1.73, 2.23}
+	sort.Float64s(floats)
+	fmt.Printf("Sorted floats: %v\n", floats)
+	
+	// Custom sorting
+	type Person struct {
+		Name string
+		Age  int
+	}
+	
+	people := []Person{
+		{"Alice", 30},
+		{"Bob", 25},
+		{"Charlie", 35},
+		{"David", 28},
+	}
+	
+	// Sort by age
+	sort.Slice(people, func(i, j int) bool {
+		return people[i].Age < people[j].Age
+	})
+	fmt.Printf("People sorted by age: %+v\n", people)
+	
+	// Sort by name
+	sort.Slice(people, func(i, j int) bool {
+		return people[i].Name < people[j].Name
+	})
+	fmt.Printf("People sorted by name: %+v\n", people)
+	
+	// Stable sort
+	sort.SliceStable(people, func(i, j int) bool {
+		return people[i].Age < people[j].Age
+	})
+	
+	// Reverse sort
+	sort.Slice(people, func(i, j int) bool {
+		return people[i].Age > people[j].Age
+	})
+	fmt.Printf("People sorted by age (desc): %+v\n", people)
+	
+	// Check if sorted
+	isSorted := sort.IntsAreSorted([]int{1, 2, 3, 4, 5})
+	fmt.Printf("Is sorted: %v\n", isSorted)
+	
+	// Search
+	sortedNumbers := []int{1, 3, 5, 7, 9, 11, 13, 15}
+	index := sort.SearchInts(sortedNumbers, 9)
+	fmt.Printf("Index of 9: %d\n", index)
+}
+
+// String operations
+func StringOperations() {
+	// String manipulation
+	text := "  Hello, World!  "
+	
+	// Trim
+	trimmed := strings.TrimSpace(text)
+	fmt.Printf("Trimmed: '%s'\n", trimmed)
+	
+	// Case conversion
+	upper := strings.ToUpper(trimmed)
+	lower := strings.ToLower(trimmed)
+	fmt.Printf("Upper: '%s'\n", upper)
+	fmt.Printf("Lower: '%s'\n", lower)
+	
+	// Contains
+	contains := strings.Contains(trimmed, "World")
+	fmt.Printf("Contains 'World': %v\n", contains)
+	
+	// Replace
+	replaced := strings.ReplaceAll(trimmed, "World", "Typus")
+	fmt.Printf("Replaced: '%s'\n", replaced)
+	
+	// Split
+	csv := "apple,banana,cherry,date"
+	parts := strings.Split(csv, ",")
+	fmt.Printf("Split: %v\n", parts)
+	
+	// Join
+	joined := strings.Join(parts, " | ")
+	fmt.Printf("Joined: '%s'\n", joined)
+	
+	// Fields
+	multiSpace := "apple   banana    cherry"
+	fields := strings.Fields(multiSpace)
+	fmt.Printf("Fields: %v\n", fields)
+	
+	// HasPrefix/HasSuffix
+	hasPrefix := strings.HasPrefix(trimmed, "Hello")
+	hasSuffix := strings.HasSuffix(trimmed, "World!")
+	fmt.Printf("HasPrefix 'Hello': %v\n", hasPrefix)
+	fmt.Printf("HasSuffix 'World!': %v\n", hasSuffix)
+	
+	// Index
+	index := strings.Index(trimmed, "World")
+	fmt.Printf("Index of 'World': %d\n", index)
+	
+	// Count
+	count := strings.Count(trimmed, "l")
+	fmt.Printf("Count of 'l': %d\n", count)
+	
+	// Repeat
+	repeated := strings.Repeat("Go ", 3)
+	fmt.Printf("Repeated: '%s'\n", repeated)
+	
+	// Builder
+	var builder strings.Builder
+	builder.WriteString("Hello")
+	builder.WriteString(", ")
+	builder.WriteString("World")
+	builder.WriteString("!")
+	built := builder.String()
+	fmt.Printf("Built string: '%s'\n", built)
+	
+	// String conversion
+	num := 42
+	str := strconv.Itoa(num)
+	fmt.Printf("String conversion: %s\n", str)
+	
+	// Parse int
+	parsed, err := strconv.Atoi("123")
+	if err != nil {
+		log.Printf("Parse int error: %v", err)
+		return
+	}
+	fmt.Printf("Parsed int: %d\n", parsed)
+	
+	// Parse float
+	float, err := strconv.ParseFloat("3.14159", 64)
+	if err != nil {
+		log.Printf("Parse float error: %v", err)
+		return
+	}
+	fmt.Printf("Parsed float: %f\n", float)
+	
+	// Format float
+	formatted := strconv.FormatFloat(3.14159, 'f', 2, 64)
+	fmt.Printf("Formatted float: %s\n", formatted)
+}
+
+// Time operations
+func TimeOperations() {
+	// Current time
+	now := time.Now()
+	fmt.Printf("Current time: %v\n", now)
+	fmt.Printf("Unix timestamp: %d\n", now.Unix())
+	fmt.Printf("Unix nano: %d\n", now.UnixNano())
+	
+	// Time formatting
+	formatted := now.Format("2006-01-02 15:04:05")
+	fmt.Printf("Formatted time: %s\n", formatted)
+	
+	// Parse time
+	parsedTime, err := time.Parse("2006-01-02 15:04:05", "2023-12-25 10:30:00")
+	if err != nil {
+		log.Printf("Parse time error: %v", err)
+		return
+	}
+	fmt.Printf("Parsed time: %v\n", parsedTime)
+	
+	// Time arithmetic
+	tomorrow := now.Add(24 * time.Hour)
+	yesterday := now.Add(-24 * time.Hour)
+	nextWeek := now.Add(7 * 24 * time.Hour)
+	
+	fmt.Printf("Tomorrow: %v\n", tomorrow)
+	fmt.Printf("Yesterday: %v\n", yesterday)
+	fmt.Printf("Next week: %v\n", nextWeek)
+	
+	// Duration
+	duration := 2*time.Hour + 30*time.Minute + 45*time.Second
+	fmt.Printf("Duration: %v\n", duration)
+	fmt.Printf("Duration in seconds: %f\n", duration.Seconds())
+	fmt.Printf("Duration in minutes: %f\n", duration.Minutes())
+	
+	// Sleep
+	fmt.Println("Sleeping for 100ms...")
+	time.Sleep(100 * time.Millisecond)
+	fmt.Println("Woke up!")
+	
+	// Timer
+	timer := time.NewTimer(200 * time.Millisecond)
+	<-timer.C
+	fmt.Println("Timer expired")
+	
+	// Ticker
+	ticker := time.NewTicker(100 * time.Millisecond)
+	go func() {
+		for i := 0; i < 3; i++ {
+			<-ticker.C
+			fmt.Printf("Tick %d\n", i+1)
+		}
+		ticker.Stop()
+	}()
+	
+	// Give ticker goroutine time to complete
+	time.Sleep(400 * time.Millisecond)
+	
+	// Time comparison
+	if now.Before(tomorrow) {
+		fmt.Println("Now is before tomorrow")
+	}
+	
+	if tomorrow.After(now) {
+		fmt.Println("Tomorrow is after now")
+	}
+	
+	// Time zones
+	loc, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		log.Printf("Load location error: %v", err)
+		return
+	}
+	
+	nyTime := now.In(loc)
+	fmt.Printf("New York time: %v\n", nyTime)
+	
+	// UTC
+	utcTime := now.UTC()
+	fmt.Printf("UTC time: %v\n", utcTime)
+}
+
+// Error handling
+func ErrorHandling() {
+	// Error creation
+	err1 := errors.New("simple error")
+	err2 := fmt.Errorf("formatted error: %d", 42)
+	err3 := &ValidationError{Field: "email", Message: "invalid format", Code: 1001}
+	
+	fmt.Printf("Error 1: %v\n", err1)
+	fmt.Printf("Error 2: %v\n", err2)
+	fmt.Printf("Error 3: %v\n", err3)
+	
+	// Error wrapping
+	wrappedErr := fmt.Errorf("wrapped error: %w", err1)
+	fmt.Printf("Wrapped error: %v\n", wrappedErr)
+	
+	// Error unwrapping
+	var unwrapped error
+	if errors.As(wrappedErr, &unwrapped) {
+		fmt.Printf("Unwrapped error: %v\n", unwrapped)
+	}
+	
+	// Error checking
+	if errors.Is(wrappedErr, err1) {
+		fmt.Println("Wrapped error contains err1")
+	}
+	
+	// Panic and recover
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Printf("Recovered from panic: %v\n", r)
+			}
+		}()
+		
+		panic("intentional panic")
+	}()
+	
+	// Multiple error handling
+	var errs []error
+	errs = append(errs, err1)
+	errs = append(errs, err2)
+	errs = append(errs, err3)
+	
+	for i, err := range errs {
+		fmt.Printf("Error %d: %v\n", i, err)
+	}
+}
+
+// Math operations
+func MathOperations() {
+	// Basic math
+	fmt.Printf("Pi: %f\n", math.Pi)
+	fmt.Printf("E: %f\n", math.E)
+	fmt.Printf("Sqrt(16): %f\n", math.Sqrt(16))
+	fmt.Printf("Pow(2, 8): %f\n", math.Pow(2, 8))
+	fmt.Printf("Abs(-42): %f\n", math.Abs(-42))
+	fmt.Printf("Floor(3.7): %f\n", math.Floor(3.7))
+	fmt.Printf("Ceil(3.2): %f\n", math.Ceil(3.2))
+	fmt.Printf("Round(3.5): %f\n", math.Round(3.5))
+	
+	// Trigonometry
+	fmt.Printf("Sin(Pi/2): %f\n", math.Sin(math.Pi/2))
+	fmt.Printf("Cos(0): %f\n", math.Cos(0))
+	fmt.Printf("Tan(Pi/4): %f\n", math.Tan(math.Pi/4))
+	
+	// Logarithms
+	fmt.Printf("Log(e): %f\n", math.Log(math.E))
+	fmt.Printf("Log10(100): %f\n", math.Log10(100))
+	fmt.Printf("Log2(8): %f\n", math.Log2(8))
+	
+	// Max/Min
+	fmt.Printf("Max(5, 10): %f\n", math.Max(5, 10))
+	fmt.Printf("Min(5, 10): %f\n", math.Min(5, 10))
+	
+	// Modulo
+	fmt.Printf("Mod(10, 3): %f\n", math.Mod(10, 3))
+	
+	// Random numbers
+	source := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(source)
+	
+	fmt.Printf("Random int: %d\n", r.Intn(100))
+	fmt.Printf("Random float: %f\n", r.Float64())
+	
+	// Big numbers
+	bigInt1 := big.NewInt(1234567890123456789)
+	bigInt2 := big.NewInt(9876543210987654321)
+	
+	bigSum := new(big.Int).Add(bigInt1, bigInt2)
+	fmt.Printf("BigInt sum: %s\n", bigSum.String())
+	
+	bigProduct := new(big.Int).Mul(bigInt1, bigInt2)
+	fmt.Printf("BigInt product: %s\n", bigProduct.String())
+	
+	// Complex numbers
+	c1 := complex(3, 4)
+	c2 := complex(1, 2)
+	
+	fmt.Printf("Complex 1: %v\n", c1)
+	fmt.Printf("Complex 2: %v\n", c2)
+	fmt.Printf("Sum: %v\n", c1+c2)
+	fmt.Printf("Product: %v\n", c1*c2)
+	fmt.Printf("Magnitude: %f\n", cmplx.Abs(c1))
+	fmt.Printf("Phase: %f\n", cmplx.Phase(c1))
+}
+
+// Unicode operations
+func UnicodeOperations() {
+	// String to runes
+	text := "Hello, 世界! 👋"
+	runes := []rune(text)
+	fmt.Printf("Text: %s\n", text)
+	fmt.Printf("Runes: %v\n", runes)
+	fmt.Printf("Length in runes: %d\n", len(runes))
+	
+	// UTF-8 validation
+	isValid := utf8.ValidString(text)
+	fmt.Printf("Valid UTF-8: %v\n", isValid)
+	
+	// Rune properties
+	for i, r := range runes {
+		fmt.Printf("Rune %d: '%c' (U+%04X)\n", i, r, r)
+		fmt.Printf("  IsLetter: %v\n", unicode.IsLetter(r))
+		fmt.Printf("  IsDigit: %v\n", unicode.IsDigit(r))
+		fmt.Printf("  IsSpace: %v\n", unicode.IsSpace(r))
+		fmt.Printf("  IsUpper: %v\n", unicode.IsUpper(r))
+		fmt.Printf("  IsLower: %v\n", unicode.IsLower(r))
+	}
+	
+	// Case conversion with unicode
+	mixed := "Hello WÖRLD"
+	upper := strings.ToUpper(mixed)
+	lower := strings.ToLower(mixed)
+	fmt.Printf("Original: %s\n", mixed)
+	fmt.Printf("Upper: %s\n", upper)
+	fmt.Printf("Lower: %s\n", lower)
+	
+	// Special categories
+	special := "© ® ™ € ¥ £"
+	for _, r := range special {
+		fmt.Printf("Rune '%c': IsSymbol=%v, IsPunct=%v, IsMark=%v\n", 
+			r, unicode.IsSymbol(r), unicode.IsPunct(r), unicode.IsMark(r))
+	}
+}
+
+// Hash operations
+func HashOperations() {
+	// MD5 hash
+	data := []byte("Hello, Typus!")
+	md5Hash := md5.Sum(data)
+	fmt.Printf("MD5: %x\n", md5Hash)
+	
+	// SHA1 hash
+	sha1Hash := sha1.Sum(data)
+	fmt.Printf("SHA1: %x\n", sha1Hash)
+	
+	// FNV hash
+	hasher := fnv.New32a()
+	hasher.Write(data)
+	fmt.Printf("FNV32a: %x\n", hasher.Sum32())
+	
+	// Streaming hash
+	fileContent := []byte("This is a larger piece of content that we want to hash.")
+	streamingHasher := md5.New()
+	streamingHasher.Write(fileContent[:20])
+	streamingHasher.Write(fileContent[20:])
+	streamingHash := streamingHasher.Sum(nil)
+	fmt.Printf("Streaming MD5: %x\n", streamingHash)
+	
+	// Hex encoding
+	hexString := hex.EncodeToString(md5Hash[:])
+	fmt.Printf("Hex encoded MD5: %s\n", hexString)
+	
+	// Base64 encoding
+	base64String := base64.StdEncoding.EncodeToString(data)
+	fmt.Printf("Base64 encoded: %s\n", base64String)
+	
+	decoded, err := base64.StdEncoding.DecodeString(base64String)
+	if err != nil {
+		log.Printf("Base64 decode error: %v", err)
+		return
+	}
+	fmt.Printf("Base64 decoded: %s\n", decoded)
+}
+
+// Binary operations
+func BinaryOperations() {
+	// Binary encoding
+	var buf bytes.Buffer
+	encoder := binary.NewEncoder(&buf)
+	
+	data := struct {
+		ID   uint32
+		Name [20]byte
+		Age  uint8
+	}{
+		ID:   12345,
+		Name: [20]byte{'J', 'o', 'h', 'n'},
+		Age:  30,
+	}
+	
+	err := encoder.Encode(data)
+	if err != nil {
+		log.Printf("Binary encode error: %v", err)
+		return
+	}
+	
+	fmt.Printf("Binary encoded length: %d bytes\n", buf.Len())
+	
+	// Binary decoding
+	decoder := binary.NewDecoder(&buf)
+	var decodedData struct {
+		ID   uint32
+		Name [20]byte
+		Age  uint8
+	}
+	
+	err = decoder.Decode(&decodedData)
+	if err != nil {
+		log.Printf("Binary decode error: %v", err)
+		return
+	}
+	
+	fmt.Printf("Decoded ID: %d\n", decodedData.ID)
+	fmt.Printf("Decoded Name: %s\n", bytes.TrimRight(decodedData.Name[:], "\x00"))
+	fmt.Printf("Decoded Age: %d\n", decodedData.Age)
+	
+	// Bit operations
+	var x uint32 = 0b10101010
+	var y uint32 = 0b01010101
+	
+	fmt.Printf("x: %08b\n", x)
+	fmt.Printf("y: %08b\n", y)
+	fmt.Printf("x AND y: %08b\n", x&y)
+	fmt.Printf("x OR y: %08b\n", x|y)
+	fmt.Printf("x XOR y: %08b\n", x^y)
+	fmt.Printf("NOT x: %08b\n", ^x)
+	fmt.Printf("x << 2: %08b\n", x<<2)
+	fmt.Printf("x >> 2: %08b\n", x>>2)
+	
+	// Bit manipulation
+	fmt.Printf("Population count of x: %d\n", bits.OnesCount32(x))
+	fmt.Printf("Leading zeros in x: %d\n", bits.LeadingZeros32(x))
+	fmt.Printf("Trailing zeros in x: %d\n", bits.TrailingZeros32(x))
+}
+
+// Container operations
+func ContainerOperations() {
+	// List operations
+	linkedList := list.New()
+	
+	// Push elements
+	for i := 1; i <= 5; i++ {
+		linkedList.PushBack(i)
+	}
+	
+	// Insert in middle
+	element := linkedList.Front().Next()
+	linkedList.InsertAfter(99, element)
+	
+	// Iterate
+	fmt.Print("List elements: ")
+	for e := linkedList.Front(); e != nil; e = e.Next() {
+		fmt.Printf("%v ", e.Value)
+	}
+	fmt.Println()
+	
+	// Remove element
+	linkedList.Remove(element.Next())
+	
+	// Ring operations
+	ring := ring.New(5)
+	for i := 0; i < ring.Len(); i++ {
+		ring.Value = i + 1
+		ring = ring.Next()
+	}
+	
+	// Iterate ring
+	fmt.Print("Ring elements: ")
+	ring.Do(func(x interface{}) {
+		fmt.Printf("%v ", x)
+	})
+	fmt.Println()
+}
+
+// Context operations
+func ContextOperations() {
+	// Background context
+	ctx := context.Background()
+	
+	// With timeout
+	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	
+	// With deadline
+	deadline := time.Now().Add(3 * time.Second)
+	deadlineCtx, cancel2 := context.WithDeadline(ctx, deadline)
+	defer cancel2()
+	
+	// With value
+	valueCtx := context.WithValue(ctx, "user_id", "12345")
+	valueCtx = context.WithValue(valueCtx, "request_id", "abc-def-ghi")
+	
+	// Extract values
+	if userID, ok := valueCtx.Value("user_id").(string); ok {
+		fmt.Printf("User ID: %s\n", userID)
+	}
+	
+	if requestID, ok := valueCtx.Value("request_id").(string); ok {
+		fmt.Printf("Request ID: %s\n", requestID)
+	}
+	
+	// Context cancellation
+	cancelCtx, cancel3 := context.WithCancel(ctx)
+	
+	go func() {
+		time.Sleep(1 * time.Second)
+		cancel3()
+	}()
+	
+	select {
+	case <-cancelCtx.Done():
+		fmt.Printf("Context cancelled: %v\n", cancelCtx.Err())
+	case <-time.After(2 * time.Second):
+		fmt.Println("Timeout reached")
+	}
+	
+	// Context with timeout in HTTP request (simulated)
+	simulateHTTPRequest := func(ctx context.Context) error {
+		select {
+		case <-time.After(1 * time.Second):
+			return nil // Request completed
+		case <-ctx.Done():
+			return ctx.Err() // Timeout or cancellation
+		}
+	}
+	
+	err := simulateHTTPRequest(timeoutCtx)
+	if err != nil {
+		fmt.Printf("Request failed: %v\n", err)
+	} else {
+		fmt.Println("Request completed successfully")
+	}
+}
+
+// Database operations (simulated)
+func DatabaseOperations() {
+	// This is a simulation since we don't have a real database connection
+	
+	// Simulate database connection
+	db := &sql.DB{} // In real code, this would be sql.Open(...)
+	
+	// Simulate prepared statement
+	stmt := &sql.Stmt{} // In real code: db.Prepare("SELECT * FROM users WHERE id = ?")
+	
+	// Simulate query
+	rows := &sql.Rows{} // In real code: stmt.Query(123)
+	
+	// Simulate transaction
+	tx := &sql.Tx{} // In real code: db.Begin()
+	
+	// Simulate result
+	result := &sqlResult{lastInsertId: 456, rowsAffected: 1}
+	
+	fmt.Printf("Simulated database operations completed\n")
+	fmt.Printf("Last insert ID: %d\n", result.lastInsertId)
+	fmt.Printf("Rows affected: %d\n", result.rowsAffected)
+	
+	// Avoid unused variable warnings
+	_ = db
+	_ = stmt
+	_ = rows
+	_ = tx
+}
+
+type sqlResult struct {
+	lastInsertId int64
+	rowsAffected int64
+}
+
+func (r *sqlResult) LastInsertId() (int64, error) {
+	return r.lastInsertId, nil
+}
+
+func (r *sqlResult) RowsAffected() (int64, error) {
+	return r.rowsAffected, nil
+}
+
+// Compression operations
+func CompressionOperations() {
+	// Gzip compression
+	originalData := []byte("This is some text data that we want to compress using gzip. It should compress quite well since there's a lot of repetition in the text.")
+	
+	var compressedBuf bytes.Buffer
+	gzipWriter := gzip.NewWriter(&compressedBuf)
+	
+	_, err := gzipWriter.Write(originalData)
+	if err != nil {
+		log.Printf("Gzip write error: %v", err)
+		return
+	}
+	
+	err = gzipWriter.Close()
+	if err != nil {
+		log.Printf("Gzip close error: %v", err)
+		return
+	}
+	
+	compressedData := compressedBuf.Bytes()
+	fmt.Printf("Original size: %d bytes\n", len(originalData))
+	fmt.Printf("Compressed size: %d bytes\n", len(compressedData))
+	fmt.Printf("Compression ratio: %.2f%%\n", float64(len(compressedData))/float64(len(originalData))*100)
+	
+	// Gzip decompression
+	gzipReader, err := gzip.NewReader(&compressedBuf)
+	if err != nil {
+		log.Printf("Gzip reader error: %v", err)
+		return
+	}
+	defer gzipReader.Close()
+	
+	decompressedData, err := ioutil.ReadAll(gzipReader)
+	if err != nil {
+		log.Printf("Gzip read error: %v", err)
+		return
+	}
+	
+	fmt.Printf("Decompressed data: %s\n", decompressedData)
+	
+	// Verify decompression
+	if string(decompressedData) == string(originalData) {
+		fmt.Println("Decompression successful - data matches original")
+	} else {
+		fmt.Println("Decompression failed - data doesn't match")
+	}
+}
+
+// HTML operations
+func HTMLOperations() {
+	// HTML escaping
+	htmlString := `<script>alert("XSS")</script><div>Hello & Welcome!</div>`
+	escaped := html.EscapeString(htmlString)
+	fmt.Printf("Original HTML: %s\n", htmlString)
+	fmt.Printf("Escaped HTML: %s\n", escaped)
+	
+	// HTML unescaping
+	unescaped := html.UnescapeString(escaped)
+	fmt.Printf("Unescaped HTML: %s\n", unescaped)
+	
+	// Template operations
+	tmplText := `
+	<!DOCTYPE html>
+	<html>
+	<head>
+		<title>{{.Title}}</title>
+	</head>
+	<body>
+		<h1>{{.Header}}</h1>
+		<ul>
+		{{range .Items}}
+			<li>{{.}}</li>
+		{{end}}
+		</ul>
+	</body>
+	</html>
+	`
+	
+	tmpl, err := template.New("webpage").Parse(tmplText)
+	if err != nil {
+		log.Printf("Template parse error: %v", err)
+		return
+	}
+	
+	data := struct {
+		Title  string
+		Header string
+		Items  []string
+	}{
+		Title:  "Typus Test Page",
+		Header: "Welcome to Typus",
+		Items:  []string{"Feature 1", "Feature 2", "Feature 3"},
+	}
+	
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, data)
+	if err != nil {
+		log.Printf("Template execute error: %v", err)
+		return
+	}
+	
+	fmt.Printf("Generated HTML:\n%s\n", buf.String())
+}
+
+// Runtime operations
+func RuntimeOperations() {
+	// Goroutine information
+	numGoroutines := runtime.NumGoroutine()
+	fmt.Printf("Number of goroutines: %d\n", numGoroutines)
+	
+	// CPU information
+	numCPU := runtime.NumCPU()
+	fmt.Printf("Number of CPUs: %d\n", numCPU)
+	
+	// Memory information
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	fmt.Printf("Allocated memory: %d bytes\n", m.Alloc)
+	fmt.Printf("Total allocated memory: %d bytes\n", m.TotalAlloc)
+	fmt.Printf("System memory: %d bytes\n", m.Sys)
+	fmt.Printf("Number of GC cycles: %d\n", m.NumGC)
+	
+	// GC information
+	gcPercent := debug.SetGCPercent(100)
+	fmt.Printf("GC percentage: %d\n", gcPercent)
+	
+	// Force GC
+	runtime.GC()
+	fmt.Println("Forced garbage collection")
+	
+	// Goroutine ID (using a hack)
+	goroutineID := func() int {
+		var buf [64]byte
+		n := runtime.Stack(buf[:], false)
+		idField := strings.Fields(strings.TrimPrefix(string(buf[:n]), "goroutine "))[0]
+		id, _ := strconv.Atoi(idField)
+		return id
+	}()
+	fmt.Printf("Current goroutine ID: %d\n", goroutineID)
+	
+	// Version information
+	fmt.Printf("Go version: %s\n", runtime.Version())
+	fmt.Printf("Go OS: %s\n", runtime.GOOS)
+	fmt.Printf("Go arch: %s\n", runtime.GOARCH)
+}
+
+// Advanced control flow
+func AdvancedControlFlow() {
+	// Switch with multiple conditions
+	value := 42
+	switch {
+	case value < 0:
+		fmt.Println("Negative")
+	case value == 0:
+		fmt.Println("Zero")
+	case value > 0 && value < 100:
+		fmt.Println("Positive and less than 100")
+	case value >= 100:
+		fmt.Println("100 or greater")
+	}
+	
+	// Switch with type assertion
+	var x interface{} = "hello"
+	switch v := x.(type) {
+	case string:
+		fmt.Printf("String: %s\n", v)
+	case int:
+		fmt.Printf("Integer: %d\n", v)
+	case bool:
+		fmt.Printf("Boolean: %v\n", v)
+	default:
+		fmt.Printf("Unknown type: %T\n", v)
+	}
+	
+	// Labeled break and continue
+	outerLoop:
+	for i := 0; i < 3; i++ {
+		for j := 0; j < 3; j++ {
+			if i == 1 && j == 1 {
+				break outerLoop // Break out of both loops
+			}
+			fmt.Printf("(%d, %d) ", i, j)
+		}
+	}
+	fmt.Println()
+	
+	// Goto (used sparingly)
+	counter := 0
+increment:
+	counter++
+	if counter < 5 {
+		goto increment
+	}
+	fmt.Printf("Counter reached: %d\n", counter)
+	
+	// Defer with parameters
+	func() {
+		value := 42
+		defer func(v int) {
+			fmt.Printf("Deferred function called with value: %d\n", v)
+		}(value)
+		value = 100 // This won't affect the deferred function
+		fmt.Printf("Value changed to: %d\n", value)
+	}()
+	
+	// Multiple defers (LIFO order)
+	func() {
+		defer fmt.Println("First defer")
+		defer fmt.Println("Second defer")
+		defer fmt.Println("Third defer")
+		fmt.Println("Function body")
+	}()
+	
+	// Defer with return
+	deferredReturn := func() (result int) {
+		defer func() {
+			result++ // This affects the return value
+		}()
+		return 42 // Will actually return 43
+	}
+	
+	result := deferredReturn()
+	fmt.Printf("Deferred return result: %d\n", result)
+}
+
+// Memory operations
+func MemoryOperations() {
+	// Memory allocation
+	slice := make([]int, 1000)
+	fmt.Printf("Slice capacity: %d\n", cap(slice))
+	
+	// Memory copying
+	source := []byte("Hello, World!")
+	destination := make([]byte, len(source))
+	copy(destination, source)
+	fmt.Printf("Copied: %s\n", destination)
+	
+	// Memory alignment
+	type AlignedStruct struct {
+		a int8
+		b int64
+		c int32
+	}
+	
+	var aligned AlignedStruct
+	fmt.Printf("Struct size: %d bytes\n", unsafe.Sizeof(aligned))
+	fmt.Printf("Field a offset: %d\n", unsafe.Offsetof(aligned.a))
+	fmt.Printf("Field b offset: %d\n", unsafe.Offsetof(aligned.b))
+	fmt.Printf("Field c offset: %d\n", unsafe.Offsetof(aligned.c))
+	
+	// Pointer arithmetic (using unsafe)
+	numbers := []int{1, 2, 3, 4, 5}
+	ptr := unsafe.Pointer(&numbers[0])
+	nextPtr := unsafe.Pointer(uintptr(ptr) + unsafe.Sizeof(numbers[0]))
+	nextValue := *(*int)(nextPtr)
+	fmt.Printf("Next value via pointer arithmetic: %d\n", nextValue)
+	
+	// Memory statistics
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	fmt.Printf("Heap objects: %d\n", m.HeapObjects)
+	fmt.Printf("Heap idle: %d bytes\n", m.HeapIdle)
+	fmt.Printf("Heap in use: %d bytes\n", m.HeapInuse)
+	
+	// GC target
+	debug.SetGCPercent(50)
+	fmt.Println("Set GC target to 50%")
+}
+
+// Main function that calls all test functions
+func main() {
+	fmt.Println("=== Comprehensive Go Syntax Test ===")
+	
+	fmt.Println("\n--- Channel Operations ---")
+	ChannelOperations()
+	
+	fmt.Println("\n--- Goroutine Operations ---")
+	GoroutineOperations()
+	
+	fmt.Println("\n--- Reflection Operations ---")
+	ReflectionOperations()
+	
+	fmt.Println("\n--- JSON Operations ---")
+	JSONOperations()
+	
+	fmt.Println("\n--- Regexp Operations ---")
+	RegexpOperations()
+	
+	fmt.Println("\n--- File I/O Operations ---")
+	FileIOOperations()
+	
+	fmt.Println("\n--- Network Operations ---")
+	NetworkOperations()
+	
+	fmt.Println("\n--- Sorting Operations ---")
+	SortingOperations()
+	
+	fmt.Println("\n--- String Operations ---")
+	StringOperations()
+	
+	fmt.Println("\n--- Time Operations ---")
+	TimeOperations()
+	
+	fmt.Println("\n--- Error Handling ---")
+	ErrorHandling()
+	
+	fmt.Println("\n--- Math Operations ---")
+	MathOperations()
+	
+	fmt.Println("\n--- Unicode Operations ---")
+	UnicodeOperations()
+	
+	fmt.Println("\n--- Hash Operations ---")
+	HashOperations()
+	
+	fmt.Println("\n--- Binary Operations ---")
+	BinaryOperations()
+	
+	fmt.Println("\n--- Container Operations ---")
+	ContainerOperations()
+	
+	fmt.Println("\n--- Context Operations ---")
+	ContextOperations()
+	
+	fmt.Println("\n--- Database Operations ---")
+	DatabaseOperations()
+	
+	fmt.Println("\n--- Compression Operations ---")
+	CompressionOperations()
+	
+	fmt.Println("\n--- HTML Operations ---")
+	HTMLOperations()
+	
+	fmt.Println("\n--- Runtime Operations ---")
+	RuntimeOperations()
+	
+	fmt.Println("\n--- Advanced Control Flow ---")
+	AdvancedControlFlow()
+	
+	fmt.Println("\n--- Memory Operations ---")
+	MemoryOperations()
+	
+	fmt.Println("\n=== Test Completed Successfully ===")
+}

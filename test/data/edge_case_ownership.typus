@@ -1,0 +1,21 @@
+//! ownership: on
+
+package main
+
+func main() {
+    // Edge case: self-assignment
+    s1 := "hello"
+    s1 := s1  // Self-move - should this be an error?
+    println(s1)
+    
+    // Edge case: chain assignment
+    s2 := "world"
+    s3 := "test"
+    s4 := s2 := s3  // Chain move
+    println(s4)
+    
+    // Edge case: function call in assignment
+    s5 := func() string { return "dynamic" }()
+    s6 := s5  // Move from function result
+    println(s6)
+}

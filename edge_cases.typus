@@ -1,0 +1,90 @@
+package main
+
+import (
+	"fmt"
+	"go/parser"
+	"go/token"
+)
+
+// Test edge cases that might cause parser issues
+func main() {
+	fmt.Println("=== Edge Cases Test ===")
+	
+	// Complex string literals with backticks
+	query := `
+		SELECT * FROM users 
+		WHERE id = ? 
+		AND status = 'active'
+	`
+	fmt.Printf("Multi-line string: %s\n", query)
+	
+	// String with escape sequences
+	escaped := "Line 1\nLine 2\tTabbed\r\n"
+	fmt.Printf("Escaped string length: %d\n", len(escaped))
+	
+	// Complex slice operations
+	numbers := []int{1, 2, 3, 4, 5}
+	subset := numbers[1:3]
+	fmt.Printf("Slice subset: %v\n", subset)
+	
+	// Map with complex key types
+	type Key struct {
+		X, Y int
+	}
+	complexMap := make(map[Key]string)
+	complexMap[Key{1, 2}] = "point1"
+	complexMap[Key{3, 4}] = "point2"
+	fmt.Printf("Complex map: %v\n", complexMap)
+	
+	// Interface with multiple methods
+	type MultiMethod interface {
+		Method1() string
+		Method2(int) error
+		Method3(x, y float64) (float64, bool)
+	}
+	
+	// Function type with multiple parameters
+	type ComplexFunc func(a, b int, s string, f float64, opts ...interface{}) (string, error)
+	
+	// Channel operations with select
+	ch1 := make(chan int, 1)
+	ch2 := make(chan string, 1)
+	
+	go func() {
+		ch1 <- 42
+	}()
+	
+	select {
+	case val := <-ch1:
+		fmt.Printf("Received from ch1: %d\n", val)
+	case val := <-ch2:
+		fmt.Printf("Received from ch2: %s\n", val)
+	default:
+		fmt.Println("No data available")
+	}
+	
+	// Go AST parsing (complex import)
+	src := `package main
+func hello() { println("hello") }`
+	
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, "", src, parser.ParseComments)
+	if err != nil {
+		fmt.Printf("Parse error: %v\n", err)
+	} else {
+		fmt.Printf("AST parsed successfully: %s\n", node.Name.Name)
+	}
+	
+	// Complex boolean expressions
+	a, b, c := true, false, true
+	complexBool := (a && b) || (!c && a) || (b != c)
+	fmt.Printf("Complex boolean: %v\n", complexBool)
+	
+	// Pointer arithmetic (not really, but pointer usage)
+	x := 100
+	ptr := &x
+	*ptr = 200
+	fmt.Printf("Pointer value: %d\n", *ptr)
+	
+	fmt.Println("=== Edge Cases Test Completed ===")
+}

@@ -1,0 +1,20 @@
+package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("=== 依赖类型测试 ===")
+    
+    // Create a vector with length 3
+    vec := make([]float64, 3)
+    vec[0] = 1.0
+    vec[1] = 2.0
+    vec[2] = 3.0
+    
+    fmt.Printf("Vector length: %d\n", len(vec))
+    fmt.Printf("Vector[0]: %.1f\n", vec[0])
+    fmt.Printf("Vector[1]: %.1f\n", vec[1])
+    fmt.Printf("Vector[2]: %.1f\n", vec[2])
+    
+    fmt.Println("依赖类型测试完成")
+}

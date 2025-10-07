@@ -1,0 +1,11 @@
+//! ownership: on
+
+package main
+
+func main() {
+    s1 := "hello"
+    println(s1)  // No move, just use
+    
+    s2 := "world"
+    println(s2)  // No move, just use
+}

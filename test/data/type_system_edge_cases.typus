@@ -1,0 +1,105 @@
+//! dependent_types: on
+//! ownership: on
+
+// Edge cases for type system
+
+// Very deep nesting
+type Level1<T>
+type Level2<T> 
+type Level3<T>
+var deepNest: Level1<Level2<Level3<int>>>
+
+// Recursive types
+type Tree<T> where left: Tree<T>, right: Tree<T>
+
+// Self-referential constraints
+type SelfRef where value > value
+
+// Empty constraints
+type EmptyConstraint where
+
+// Many type parameters
+type ManyParams<A, B, C, D, E, F, G, H>
+
+// Complex generic nesting
+type Nested<T, U, V> where T == List<U>, U == Maybe<V>
+
+// Function with many parameters
+func manyParams(a: int, b: string, c: bool, d: float64, e: []int, f: map[string]int): void
+
+// Higher-order functions
+func apply(f: func(func(T): U): V, g: func(T): U, x: T): V
+
+// Constraints on type parameters
+type Constrained<T> where T > 0, T < 100
+
+// Mixed constraints
+type Mixed<T, N> where T == int, N > 0, N < 1000
+
+// Unicode identifiers (if supported)
+type 类型<参数>
+func 函数(x: int): int {
+    return x
+}
+
+// Very long type names
+type VeryLongTypeNameThatExceedsNormalExpectationsForIdentifierLength
+
+// Empty function body
+func empty() {
+}
+
+// Nested scopes
+func outer() {
+    {
+        {
+            {
+                x := 42
+            }
+        }
+    }
+}
+
+// Complex ownership patterns
+func complexOwnership() {
+    a := []int{1}
+    {
+        b := a
+        {
+            c := &b
+            fmt.Println(*c)
+        }
+    }
+}
+
+// Shadowing with same name
+func shadowing() {
+    x := 1
+    {
+        x := 2
+        {
+            x := 3
+            fmt.Println(x)
+        }
+    }
+}
+
+// Type inference edge cases
+func inferComplex() {
+    var x  // Should infer type
+    x = 42
+    
+    y := func() int {
+        return 10
+    }
+}
+
+// Boundary values
+type MinValue where x == -2147483648
+type MaxValue where x == 2147483647
+
+// Zero-sized types
+type ZeroSized where size == 0
+
+// Conditional types (if supported)
+type Conditional<T> where if T == int then result == int else result == string

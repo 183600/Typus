@@ -1,0 +1,100 @@
+=== Comprehensive Go Syntax Test ===
+
+--- Basic Operations ---
+10 / 2 = 5.000000
+Stats - Min: 1, Max: 9, Sum: 20
+Sum of 1,2,3,4,5 = 15
+
+--- Structs and Methods ---
+Person: Person{Name: Alice, Age: 30}
+Updated age: 31
+
+--- Interfaces ---
+Shape: Area=15.00, Perimeter=16.00
+Shape: Area=12.57, Perimeter=12.57
+
+--- Embedded Struct ---
+Employee: Person{Name: Bob, Age: 35}
+Employee name: Bob
+
+--- Generics ---
+Even numbers: [2 4]
+Squared numbers: [1 4 9 16 25]
+
+--- Type Assertion ---
+Integer: 42
+String: hello
+Boolean: true
+Person: Person{Name: Alice, Age: 31}
+
+--- Reflection ---
+Type: main.Person
+Field 0: Name string 
+Field 1: Age int 
+Field 2: Email string 
+Field 3: private string 
+
+--- Error Handling ---
+Age validation passed
+Validation error: validation error in field 'age': cannot be negative
+
+--- Concurrency ---
+Received from ch2: hello
+
+--- Mutex Example ---
+Final counter value: 10
+
+--- WaitGroup Example ---
+Goroutine 4 completed
+Goroutine 0 completed
+Goroutine 1 completed
+Goroutine 2 completed
+Goroutine 3 completed
+All goroutines completed
+
+--- Once Example ---
+Resource initialized
+
+--- JSON Example ---
+JSON: {"name":"MyApp","version":"1.0.0","tags":["web","api"],"debug":false}
+Decoded: {Name:MyApp Version:1.0.0 Tags:[web api] Debug:false}
+
+--- File Operations ---
+File content: Hello, file system!
+
+--- Regular Expressions ---
+Found email addresses: [support@example.com sales@company.org]
+
+--- Sorting ---
+Sorted numbers: [1 1 2 3 4 5 6 9]
+Sorted strings: [apple banana cherry date]
+People sorted by age: [Person{Name: Bob, Age: 25} Person{Name: Alice, Age: 30} Person{Name: Charlie, Age: 35}]
+
+--- Context ---
+Operation completed
+
+--- String Manipulation ---
+Trimmed: 'Hello, World!'
+Words: [Hello, World!]
+Joined: Hello,-World!
+Replaced: Hello, Go!
+Contains 'Hello': true
+
+--- Number Conversion ---
+Converted string to int: 42
+Converted int to string: 123
+Parsed float: 3.140000
+
+--- Hash Functions ---
+MD5: 65a8e27d8879283831b664bd8b7f0ad4
+SHA256: dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f
+
+--- Panic Recovery ---
+Safe function result: function completed normally
+
+--- Runtime Information ---
+Go version: go1.24.6
+Number of CPUs: 8
+Number of goroutines: 2
+
+=== Test Completed Successfully ===

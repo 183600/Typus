@@ -1,0 +1,6 @@
+//! ownership: on
+//! dependent_types: on
+
+func test() {
+fmt.Printf("hello")
+}

@@ -1,0 +1,60 @@
+//! dependent_types: on
+//! ownership: on
+
+// Basic type definitions
+type SimpleType
+type GenericType<T>
+type ParametricType<T, U>
+
+// Dependent types with constraints
+type PositiveInt where value > 0
+type BoundedInt where value >= 0, value < 100
+type NonEmptyList<T> where length > 0
+
+// Function declarations with types
+func identity(x: T): T
+
+func add(x: int, y: int): int {
+    return x + y
+}
+
+func head(list: NonEmptyList<T>): T
+
+// Generic functions
+func map(f: func(T): U, list: List<T>): List<U>
+
+func filter(pred: func(T): bool, list: List<T>): List<T>
+
+// Functions with dependent types
+func divide(x: int, y: int where y != 0): float64 {
+    return float64(x) / float64(y)
+}
+
+func createArray(n: int where n > 0): []int {
+    return make([]int, n)
+}
+
+// Ownership examples
+func consume(data []int) {
+    fmt.Println(data)
+}
+
+func borrow(data *[]int) {
+    fmt.Println(*data)
+}
+
+// Complex types
+type Matrix<T, M, N> where M > 0, N > 0
+
+func multiply(a: Matrix<int, M, N>, b: Matrix<int, N, P>): Matrix<int, M, P>
+
+// Main function
+func main() {
+    x := 42
+    y := add(x, 10)
+    fmt.Println(y)
+    
+    data := []int{1, 2, 3}
+    borrow(&data)
+    fmt.Println(data)
+}

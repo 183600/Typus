@@ -1,0 +1,395 @@
+//! ownership: on
+//! dependent_types: on
+//! constraints: on
+
+package main
+
+import (
+	"fmt"
+	"sync"
+	"time"
+	"unsafe"
+)
+
+// Test advanced ownership patterns with lifetimes
+type LifetimeObject<T> struct {
+	data *T
+	created time.Time
+	lifetime time.Duration
+	moved bool
+}
+
+type ScopedResource<T> struct {
+	resource *T
+	cleanup func()
+	moved bool
+}
+
+// Test ownership with closures and goroutines
+type ThreadSafeOwned<T> struct {
+	data *T
+	mutex sync.Mutex
+	owner int
+	moved bool
+}
+
+func NewThreadSafeOwned<T>(data T) ThreadSafeOwned<T> {
+	return ThreadSafeOwned<T]{
+		data: &data,
+		mutex: sync.Mutex{},
+		owner: 1,
+		moved: false,
+	}
+}
+
+func (tso *ThreadSafeOwned<T>) Move() ThreadSafeOwned<T> {
+	tso.mutex.Lock()
+	defer tso.mutex.Unlock()
+
+	if tso.moved {
+		panic("Cannot move from moved thread-safe owned reference")
+	}
+
+	tso.moved = true
+	return ThreadSafeOwned<T]{
+		data: tso.data,
+		mutex: tso.mutex,
+		owner: tso.owner + 1,
+		moved: false,
+	}
+}
+
+func (tso *ThreadSafeOwned<T>) WithAccess(fn func(T) T) ThreadSafeOwned<T> {
+	tso.mutex.Lock()
+	defer tso.mutex.Unlock()
+
+	if tso.moved {
+		panic("Cannot access moved thread-safe owned reference")
+	}
+
+	newData := fn(*tso.data)
+	return ThreadSafeOwned<T]{
+		data: &newData,
+		mutex: tso.mutex,
+		owner: tso.owner,
+		moved: false,
+	}
+}
+
+// Test ownership with channels
+type ChannelOwned<T> struct {
+	data chan T
+	sent bool
+}
+
+func NewChannelOwned<T>(data T) ChannelOwned<T> {
+	ch := make(chan T, 1)
+	ch <- data
+	return ChannelOwned<T]{
+		data: ch,
+		sent: false,
+	}
+}
+
+func (co *ChannelOwned<T>) SendTo(dest chan T) {
+	if co.sent {
+		panic("Channel owned data already sent")
+	}
+	data := <-co.data
+	dest <- data
+	co.sent = true
+}
+
+// Test ownership with dependent types and lifetimes
+type OwnedWithLifetime<T, Lifetime> where Lifetime > time.Duration(0) struct {
+	data *T
+	valid_until time.Time
+	moved bool
+}
+
+func NewOwnedWithLifetime<T>(data T, lifetime time.Duration) OwnedWithLifetime<T, lifetime> {
+	return OwnedWithLifetime<T, lifetime]{
+		data: &data,
+		valid_until: time.Now().Add(lifetime),
+		moved: false,
+	}
+}
+
+func (owl *OwnedWithLifetime<T, Lifetime>) Get() (T, error) {
+	if owl.moved {
+		return *new(T), fmt.Errorf("owned reference moved")
+	}
+	if time.Now().After(owl.valid_until) {
+		return *new(T), fmt.Errorf("owned reference expired")
+	}
+	return *owl.data, nil
+}
+
+func (owl *OwnedWithLifetime<T, Lifetime>) Extend(newLifetime time.Duration) OwnedWithLifetime<T, newLifetime> {
+	if owl.moved {
+		panic("Cannot extend moved owned reference")
+	}
+	return OwnedWithLifetime<T, newLifetime]{
+		data: owl.data,
+		valid_until: time.Now().Add(newLifetime),
+		moved: false,
+	}
+}
+
+// Test ownership patterns with error handling
+type Result<T, E> struct {
+	value T
+	err E
+	is_err bool
+}
+
+func NewResultOk<T, E>(value T) Result<T, E> {
+	return Result<T, E]{
+		value: value,
+		is_err: false,
+	}
+}
+
+func NewResultErr<T, E>(err E) Result<T, E> {
+	return Result<T, E]{
+		err: err,
+		is_err: true,
+	}
+}
+
+func (r Result<T, E>) Unwrap() T {
+	if r.is_err {
+		panic("Cannot unwrap error result")
+	}
+	return r.value
+}
+
+func (r Result<T, E>) UnwrapErr() E {
+	if !r.is_err {
+		panic("Cannot unwrap error from ok result")
+	}
+	return r.err
+}
+
+// Test ownership with reference counting and custom allocators
+type ReferenceCounted<T> struct {
+	data *T
+	ref_count *atomic.Int32
+	destructor func(T)
+}
+
+func NewReferenceCounted<T>(data T, destructor func(T)) ReferenceCounted<T> {
+	ptr := &data
+	return ReferenceCounted<T]{
+		data: ptr,
+		ref_count: &atomic.Int32{},
+		destructor: destructor,
+	}
+}
+
+func (rc *ReferenceCounted<T>) Clone() ReferenceCounted<T> {
+	if rc.ref_count.Add(1) == 1 {
+		panic("Cannot clone from dead reference")
+	}
+	return ReferenceCounted<T]{
+		data: rc.data,
+		ref_count: rc.ref_count,
+		destructor: rc.destructor,
+	}
+}
+
+func (rc *ReferenceCounted<T>) Drop() {
+	if rc.ref_count.Add(-1) == 0 {
+		if rc.destructor != nil {
+			rc.destructor(*rc.data)
+		}
+	}
+}
+
+func testThreadSafeOwnership() {
+	fmt.Println("=== Testing Thread-Safe Ownership ===")
+
+	// Create thread-safe owned data
+	owned := NewThreadSafeOwned(42)
+	fmt.Printf("Initial value: %d\n", *owned.data)
+
+	// Move ownership
+	moved := owned.Move()
+	fmt.Printf("Moved value: %d, new owner: %d\n", *moved.data, moved.owner)
+
+	// Apply transformation with access
+	transformed := moved.WithAccess(func(x int) int {
+		return x * 2
+	})
+	fmt.Printf("Transformed value: %d\n", *transformed.data)
+}
+
+func testChannelOwnership() {
+	fmt.Println("\n=== Testing Channel Ownership ===")
+
+	// Create channel-owned data
+	channelOwned := NewChannelOwned("Hello, Channel!")
+
+	// Send to another channel
+	dest := make(chan string, 1)
+	channelOwned.SendTo(dest)
+
+	// Receive from destination
+	message := <-dest
+	fmt.Printf("Received message: %s\n", message)
+}
+
+func testLifetimeOwnership() {
+	fmt.Println("\n=== Testing Lifetime Ownership ===")
+
+	// Create owned value with lifetime
+	owned := NewOwnedWithLifetime(42, 100*time.Millisecond)
+	fmt.Printf("Created owned value with 100ms lifetime\n")
+
+	// Get value immediately
+	if value, err := owned.Get(); err == nil {
+		fmt.Printf("Got value: %d\n", value)
+	}
+
+	// Try to extend lifetime
+	extended := owned.Extend(200*time.Millisecond)
+	fmt.Printf("Extended lifetime to 200ms\n")
+
+	// Wait for original to expire
+	time.Sleep(150*time.Millisecond)
+	if _, err := owned.Get(); err != nil {
+		fmt.Printf("Original expired: %v\n", err)
+	}
+
+	// Extended should still be valid
+	if value, err := extended.Get(); err == nil {
+		fmt.Printf("Extended still valid: %d\n", value)
+	}
+}
+
+func testResultOwnership() {
+	fmt.Println("\n=== Testing Result Ownership ===")
+
+	// Create successful result
+	okResult := NewResultOk<int, string>(42)
+	fmt.Printf("Ok result: %d\n", okResult.Unwrap())
+
+	// Create error result
+	errResult := NewResultErr<int, string>("something went wrong")
+	fmt.Printf("Error result: %s\n", errResult.UnwrapErr())
+
+	// Test error handling
+	if errResult.is_err {
+		fmt.Printf("Result is error: %s\n", errResult.err)
+	}
+}
+
+func testReferenceCountedOwnership() {
+	fmt.Println("\n=== Testing Reference-Counted Ownership ===")
+
+	// Create reference-counted data with destructor
+	rc := NewReferenceCounted(42, func(x int) {
+		fmt.Printf("Destructor called for: %d\n", x)
+	})
+
+	// Clone reference
+	rc1 := rc.Clone()
+	rc2 := rc.Clone()
+
+	fmt.Printf("Reference count after cloning: %d\n", *rc1.ref_count)
+
+	// Drop references
+	rc1.Drop()
+	fmt.Printf("Reference count after dropping one: %d\n", *rc.ref_count)
+
+	rc2.Drop()
+	fmt.Printf("Reference count after dropping second: %d\n", *rc.ref_count)
+
+	// Drop original
+	rc.Drop()
+	fmt.Printf("Reference count after dropping original: %d\n", *rc.ref_count)
+}
+
+func testOwnershipWithGoroutines() {
+	fmt.Println("\n=== Testing Ownership with Goroutines ===")
+
+	// Test thread-safe ownership across goroutines
+	owned := NewThreadSafeOwned(100)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	// Goroutine 1: move ownership
+	go func() {
+		defer wg.Done()
+		moved := owned.Move()
+		fmt.Printf("Goroutine 1 - moved value: %d\n", *moved.data)
+	}()
+
+	// Goroutine 2: try to access (this should handle the move safely)
+	go func() {
+		defer wg.Done()
+		time.Sleep(10 * time.Millisecond) // Let the other goroutine move first
+		fmt.Printf("Goroutine 2 - checking if moved: %t\n", owned.moved)
+	}()
+
+	wg.Wait()
+}
+
+func testOwnershipWithPanicRecovery() {
+	fmt.Println("\n=== Testing Ownership with Panic Recovery ===")
+
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("Recovered from panic: %v\n", r)
+		}
+	}()
+
+	// Test double move panic
+	owned := NewThreadSafeOwned(42)
+	moved1 := owned.Move()
+
+	// This should panic
+	// moved2 := owned.Move() // Uncomment to test panic recovery
+	fmt.Printf("First move successful: %d\n", *moved1.data)
+}
+
+func testComplexOwnershipChains() {
+	fmt.Println("\n=== Testing Complex Ownership Chains ===")
+
+	// Create a chain of owned values
+	owned1 := NewThreadSafeOwned(1)
+	owned2 := NewThreadSafeOwned(2)
+	owned3 := NewThreadSafeOwned(3)
+
+	// Transform through chain
+	chain1 := owned1.WithAccess(func(x int) int { return x * 10 })
+	chain2 := owned2.WithAccess(func(x int) int { return x * 100 })
+	chain3 := owned3.WithAccess(func(x int) int { return x * 1000 })
+
+	fmt.Printf("Chain values: %d, %d, %d\n",
+		*chain1.data, *chain2.data, *chain3.data)
+
+	// Move through chain
+	final1 := chain1.Move()
+	final2 := chain2.Move()
+	final3 := chain3.Move()
+
+	fmt.Printf("Final values: %d, %d, %d\n",
+		*final1.data, *final2.data, *final3.data)
+}
+
+func main() {
+	fmt.Println("=== Advanced Ownership Test ===")
+
+	testThreadSafeOwnership()
+	testChannelOwnership()
+	testLifetimeOwnership()
+	testResultOwnership()
+	testReferenceCountedOwnership()
+	testOwnershipWithGoroutines()
+	testOwnershipWithPanicRecovery()
+	testComplexOwnershipChains()
+
+	fmt.Println("\n=== All advanced ownership tests completed ===")
+}

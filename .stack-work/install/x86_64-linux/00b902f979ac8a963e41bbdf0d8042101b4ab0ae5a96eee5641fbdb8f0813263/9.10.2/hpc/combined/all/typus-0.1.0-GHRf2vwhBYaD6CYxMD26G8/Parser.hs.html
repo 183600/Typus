@@ -1,0 +1,735 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE LambdaCase #-}
+<span class="lineno">    2 </span>{-# LANGUAGE RecordWildCards #-}
+<span class="lineno">    3 </span>module Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), defaultFileDirectives, defaultBlockDirectives) where
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>import Data.Char (isSpace)
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>-- ============================================================================
+<span class="lineno">    8 </span>-- Data Types
+<span class="lineno">    9 </span>-- ============================================================================
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>data FileDirectives = FileDirectives
+<span class="lineno">   12 </span>    { <span class="istickedoff"><span class="decl"><span class="istickedoff">fdOwnership</span></span></span> :: Maybe Bool
+<span class="lineno">   13 </span>    , <span class="istickedoff"><span class="decl"><span class="istickedoff">fdDependentTypes</span></span></span> :: Maybe Bool
+<span class="lineno">   14 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">fdConstraints</span></span></span> :: Maybe Bool
+<span class="lineno">   15 </span>    } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>data BlockDirectives = BlockDirectives
+<span class="lineno">   18 </span>    { <span class="istickedoff"><span class="decl"><span class="istickedoff">bdOwnership</span></span></span> :: Bool
+<span class="lineno">   19 </span>    , <span class="istickedoff"><span class="decl"><span class="istickedoff">bdDependentTypes</span></span></span> :: Bool
+<span class="lineno">   20 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">bdConstraints</span></span></span> :: Bool
+<span class="lineno">   21 </span>} deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">   22 </span>
+<span class="lineno">   23 </span>data CodeBlock = CodeBlock
+<span class="lineno">   24 </span>    { <span class="istickedoff"><span class="decl"><span class="istickedoff">cbDirectives</span></span></span> :: BlockDirectives
+<span class="lineno">   25 </span>    , <span class="istickedoff"><span class="decl"><span class="istickedoff">cbContent</span></span></span> :: String
+<span class="lineno">   26 </span>    } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">   27 </span>
+<span class="lineno">   28 </span>data TypusFile = TypusFile
+<span class="lineno">   29 </span>    { <span class="istickedoff"><span class="decl"><span class="istickedoff">tfDirectives</span></span></span> :: FileDirectives
+<span class="lineno">   30 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tfBuildTags</span></span></span> :: [String]  -- Go build tags like //go:build and // +build
+<span class="lineno">   31 </span>    , <span class="istickedoff"><span class="decl"><span class="istickedoff">tfBlocks</span></span></span> :: [CodeBlock]
+<span class="lineno">   32 </span>    } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">   33 </span>
+<span class="lineno">   34 </span>-- Default values
+<span class="lineno">   35 </span>defaultFileDirectives :: FileDirectives
+<span class="lineno">   36 </span><span class="decl"><span class="istickedoff">defaultFileDirectives = FileDirectives Nothing Nothing <span class="nottickedoff">Nothing</span></span></span>
+<span class="lineno">   37 </span>
+<span class="lineno">   38 </span>defaultBlockDirectives :: BlockDirectives
+<span class="lineno">   39 </span><span class="decl"><span class="istickedoff">defaultBlockDirectives = BlockDirectives False False <span class="nottickedoff">False</span></span></span>
+<span class="lineno">   40 </span>
+<span class="lineno">   41 </span>
+<span class="lineno">   42 </span>-- ============================================================================
+<span class="lineno">   43 </span>-- Tokenizer (kept and fixed; parser below uses a robust line-based approach)
+<span class="lineno">   44 </span>-- ============================================================================
+<span class="lineno">   45 </span>
+<span class="lineno">   46 </span>data Token
+<span class="lineno">   47 </span>    = TIdentifier String
+<span class="lineno">   48 </span>    | TStringLiteral String
+<span class="lineno">   49 </span>    | TNumberLiteral String
+<span class="lineno">   50 </span>    | TSymbol String
+<span class="lineno">   51 </span>    | TDirective String  -- For parsing directives like //! ownership: on
+<span class="lineno">   52 </span>    | TComment String
+<span class="lineno">   53 </span>    | TWhitespace
+<span class="lineno">   54 </span>    | TEOF
+<span class="lineno">   55 </span>    deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">   56 </span>
+<span class="lineno">   57 </span>-- Tokenizer state
+<span class="lineno">   58 </span>data TokenizerState = TokenizerState
+<span class="lineno">   59 </span>    { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tsInput</span></span></span> :: String
+<span class="lineno">   60 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tsPosition</span></span></span> :: Int
+<span class="lineno">   61 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tsLine</span></span></span> :: Int
+<span class="lineno">   62 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tsColumn</span></span></span> :: Int
+<span class="lineno">   63 </span>    } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   64 </span>
+<span class="lineno">   65 </span>
+<span class="lineno">   66 </span>{-
+<span class="lineno">   67 </span>-- Create initial tokenizer state
+<span class="lineno">   68 </span>initTokenizer :: String -&gt; TokenizerState
+<span class="lineno">   69 </span>initTokenizer input = TokenizerState
+<span class="lineno">   70 </span>    { tsInput = input
+<span class="lineno">   71 </span>    , tsPosition = 0
+<span class="lineno">   72 </span>    , tsLine = 1
+<span class="lineno">   73 </span>    , tsColumn = 1
+<span class="lineno">   74 </span>    }
+<span class="lineno">   75 </span>-}
+<span class="lineno">   76 </span>
+<span class="lineno">   77 </span>{-
+<span class="lineno">   78 </span>-- Get current character
+<span class="lineno">   79 </span>currentChar :: Tokenizer (Maybe Char)
+<span class="lineno">   80 </span>currentChar = do
+<span class="lineno">   81 </span>    input &lt;- gets tsInput
+<span class="lineno">   82 </span>    case input of
+<span class="lineno">   83 </span>        [] -&gt; return Nothing
+<span class="lineno">   84 </span>        (c:_) -&gt; return (Just c)
+<span class="lineno">   85 </span>-}
+<span class="lineno">   86 </span>
+<span class="lineno">   87 </span>{-
+<span class="lineno">   88 </span>-- Advance to next character
+<span class="lineno">   89 </span>advance :: Tokenizer ()
+<span class="lineno">   90 </span>advance = do
+<span class="lineno">   91 </span>    st &lt;- get
+<span class="lineno">   92 </span>    case tsInput st of
+<span class="lineno">   93 </span>        [] -&gt; return ()
+<span class="lineno">   94 </span>        (c:rest) -&gt; put st
+<span class="lineno">   95 </span>            { tsInput = rest
+<span class="lineno">   96 </span>            , tsPosition = tsPosition st + 1
+<span class="lineno">   97 </span>            , tsColumn = if c == '\n' then 1 else tsColumn st + 1
+<span class="lineno">   98 </span>            , tsLine = if c == '\n' then tsLine st + 1 else tsLine st
+<span class="lineno">   99 </span>            }
+<span class="lineno">  100 </span>-}
+<span class="lineno">  101 </span>
+<span class="lineno">  102 </span>{-
+<span class="lineno">  103 </span>-- Tokenizer error
+<span class="lineno">  104 </span>tokenizerError :: String -&gt; Tokenizer a
+<span class="lineno">  105 </span>tokenizerError msg = do
+<span class="lineno">  106 </span>    pos &lt;- gets tsPosition
+<span class="lineno">  107 </span>    lift $ Left $ &quot;Tokenizer error at position &quot; ++ show pos ++ &quot;: &quot; ++ msg
+<span class="lineno">  108 </span>-}
+<span class="lineno">  109 </span>
+<span class="lineno">  110 </span>{-
+<span class="lineno">  111 </span>-- Skip whitespace
+<span class="lineno">  112 </span>skipWhitespace :: Tokenizer ()
+<span class="lineno">  113 </span>skipWhitespace = do
+<span class="lineno">  114 </span>    mc &lt;- currentChar
+<span class="lineno">  115 </span>    case mc of
+<span class="lineno">  116 </span>        Just c | isSpace c -&gt; advance &gt;&gt; skipWhitespace
+<span class="lineno">  117 </span>        _ -&gt; return ()
+<span class="lineno">  118 </span>-}
+<span class="lineno">  119 </span>
+<span class="lineno">  120 </span>{-
+<span class="lineno">  121 </span>-- Parse identifier
+<span class="lineno">  122 </span>parseIdentifier :: Tokenizer Token
+<span class="lineno">  123 </span>parseIdentifier = do
+<span class="lineno">  124 </span>    mc &lt;- currentChar
+<span class="lineno">  125 </span>    case mc of
+<span class="lineno">  126 </span>        Just c | isAlpha c || c == '_' -&gt; do
+<span class="lineno">  127 </span>            ident &lt;- parseIdentifier'
+<span class="lineno">  128 </span>            return $ TIdentifier ident
+<span class="lineno">  129 </span>        _ -&gt; tokenizerError &quot;Expected identifier&quot;
+<span class="lineno">  130 </span>-}
+<span class="lineno">  131 </span>
+<span class="lineno">  132 </span>{-/*
+<span class="lineno">  133 </span>-- Helper for parsing identifier
+<span class="lineno">  134 </span>parseIdentifier' :: Tokenizer String
+<span class="lineno">  135 </span>parseIdentifier' = do
+<span class="lineno">  136 </span>    mc &lt;- currentChar
+<span class="lineno">  137 </span>    case mc of
+<span class="lineno">  138 </span>        Just c | isAlphaNum c || c == '_' -&gt; do
+<span class="lineno">  139 </span>            advance
+<span class="lineno">  140 </span>            rest &lt;- parseIdentifier'
+<span class="lineno">  141 </span>            return (c:rest)
+<span class="lineno">  142 </span>        _ -&gt; return &quot;&quot; */
+<span class="lineno">  143 </span>-}
+<span class="lineno">  144 </span>
+<span class="lineno">  145 </span>{-
+<span class="lineno">  146 </span>-- Check if character is alpha
+<span class="lineno">  147 </span>isAlpha :: Char -&gt; Bool
+<span class="lineno">  148 </span>isAlpha c = (c &gt;= 'a' &amp;&amp; c &lt;= 'z') || (c &gt;= 'A' &amp;&amp; c &lt;= 'Z')
+<span class="lineno">  149 </span>-}
+<span class="lineno">  150 </span>
+<span class="lineno">  151 </span>{-
+<span class="lineno">  152 </span>-- Check if character is alphanumeric
+<span class="lineno">  153 </span>isAlphaNum :: Char -&gt; Bool
+<span class="lineno">  154 </span>isAlphaNum c = isAlpha c || (c &gt;= '0' &amp;&amp; c &lt;= '9')
+<span class="lineno">  155 </span>-}
+<span class="lineno">  156 </span>
+<span class="lineno">  157 </span>{-
+<span class="lineno">  158 </span>-- Parse string literal
+<span class="lineno">  159 </span>parseStringLiteral :: Tokenizer Token
+<span class="lineno">  160 </span>parseStringLiteral = do
+<span class="lineno">  161 </span>    mc &lt;- currentChar
+<span class="lineno">  162 </span>    case mc of
+<span class="lineno">  163 </span>        Just '&quot;' -&gt; do
+<span class="lineno">  164 </span>            advance  -- Skip opening quote
+<span class="lineno">  165 </span>            str &lt;- parseStringContent
+<span class="lineno">  166 </span>            return $ TStringLiteral str
+<span class="lineno">  167 </span>        _ -&gt; tokenizerError &quot;Expected string literal&quot;
+<span class="lineno">  168 </span>-}
+<span class="lineno">  169 </span>
+<span class="lineno">  170 </span>{-
+<span class="lineno">  171 </span>-- Parse string content
+<span class="lineno">  172 </span>parseStringContent :: Tokenizer String
+<span class="lineno">  173 </span>parseStringContent = do
+<span class="lineno">  174 </span>    mc &lt;- currentChar
+<span class="lineno">  175 </span>    case mc of
+<span class="lineno">  176 </span>        Just '&quot;' -&gt; do
+<span class="lineno">  177 </span>            advance  -- Skip closing quote
+<span class="lineno">  178 </span>            return &quot;&quot;
+<span class="lineno">  179 </span>        Just '\\' -&gt; do
+<span class="lineno">  180 </span>            advance  -- Skip escape character
+<span class="lineno">  181 </span>            mc' &lt;- currentChar
+<span class="lineno">  182 </span>            case mc' of
+<span class="lineno">  183 </span>                Just c -&gt; do
+<span class="lineno">  184 </span>                    advance
+<span class="lineno">  185 </span>                    rest &lt;- parseStringContent
+<span class="lineno">  186 </span>                    return (c:rest)
+<span class="lineno">  187 </span>                Nothing -&gt; tokenizerError &quot;Unexpected end of input in string literal&quot;
+<span class="lineno">  188 </span>        Just c -&gt; do
+<span class="lineno">  189 </span>            advance
+<span class="lineno">  190 </span>            rest &lt;- parseStringContent
+<span class="lineno">  191 </span>            return (c:rest)
+<span class="lineno">  192 </span>        Nothing -&gt; tokenizerError &quot;Unexpected end of input in string literal&quot;
+<span class="lineno">  193 </span>-}
+<span class="lineno">  194 </span>
+<span class="lineno">  195 </span>{-
+<span class="lineno">  196 </span>-- Parse number literal
+<span class="lineno">  197 </span>parseNumberLiteral :: Tokenizer Token
+<span class="lineno">  198 </span>parseNumberLiteral = do
+<span class="lineno">  199 </span>    mc &lt;- currentChar
+<span class="lineno">  200 </span>    case mc of
+<span class="lineno">  201 </span>        Just c | isDigit c -&gt; do
+<span class="lineno">  202 </span>            num &lt;- parseNumberContent
+<span class="lineno">  203 </span>            return $ TNumberLiteral num
+<span class="lineno">  204 </span>        _ -&gt; tokenizerError &quot;Expected number literal&quot;
+<span class="lineno">  205 </span>-}
+<span class="lineno">  206 </span>
+<span class="lineno">  207 </span>{-
+<span class="lineno">  208 </span>-- Helper for parsing number content
+<span class="lineno">  209 </span>parseNumberContent :: Tokenizer String
+<span class="lineno">  210 </span>parseNumberContent = do
+<span class="lineno">  211 </span>    mc &lt;- currentChar
+<span class="lineno">  212 </span>    case mc of
+<span class="lineno">  213 </span>        Just c | isDigit c -&gt; do
+<span class="lineno">  214 </span>            advance
+<span class="lineno">  215 </span>            rest &lt;- parseNumberContent
+<span class="lineno">  216 </span>            return (c:rest)
+<span class="lineno">  217 </span>        _ -&gt; return &quot;&quot;
+<span class="lineno">  218 </span>-}
+<span class="lineno">  219 </span>
+<span class="lineno">  220 </span>{-
+<span class="lineno">  221 </span>-- Check if character is digit
+<span class="lineno">  222 </span>isDigit :: Char -&gt; Bool
+<span class="lineno">  223 </span>isDigit c = c &gt;= '0' &amp;&amp; c &lt;= '9'
+<span class="lineno">  224 </span>-}
+<span class="lineno">  225 </span>
+<span class="lineno">  226 </span>{-
+<span class="lineno">  227 </span>-- Parse symbol
+<span class="lineno">  228 </span>parseSymbol :: Tokenizer Token
+<span class="lineno">  229 </span>parseSymbol = do
+<span class="lineno">  230 </span>    mc &lt;- currentChar
+<span class="lineno">  231 </span>    case mc of
+<span class="lineno">  232 </span>        Just c | isSymbolChar c -&gt; do
+<span class="lineno">  233 </span>            sym &lt;- parseSymbol'
+<span class="lineno">  234 </span>            return $ TSymbol sym
+<span class="lineno">  235 </span>        _ -&gt; tokenizerError &quot;Expected symbol&quot;
+<span class="lineno">  236 </span>
+<span class="lineno">  237 </span>{-
+<span class="lineno">  238 </span>-- Check if character is symbol character
+<span class="lineno">  239 </span>isSymbolChar :: Char -&gt; Bool
+<span class="lineno">  240 </span>isSymbolChar c = c `elem` &quot;{}()[];,.*+-/=&lt;&gt;!&amp;|:&quot;
+<span class="lineno">  241 </span>-}
+<span class="lineno">  242 </span>
+<span class="lineno">  243 </span>{-
+<span class="lineno">  244 </span>-- Helper for parsing symbol
+<span class="lineno">  245 </span>parseSymbol' :: Tokenizer String
+<span class="lineno">  246 </span>parseSymbol' = do
+<span class="lineno">  247 </span>    mc &lt;- currentChar
+<span class="lineno">  248 </span>    case mc of
+<span class="lineno">  249 </span>        Just c | isSymbolChar c -&gt; do
+<span class="lineno">  250 </span>            advance
+<span class="lineno">  251 </span>            rest &lt;- parseSymbol'
+<span class="lineno">  252 </span>            return (c:rest)
+<span class="lineno">  253 </span>        _ -&gt; return &quot;&quot;
+<span class="lineno">  254 </span>-}
+<span class="lineno">  255 </span>
+<span class="lineno">  256 </span>{-
+<span class="lineno">  257 </span>-- Parse directive (starts with //!)
+<span class="lineno">  258 </span>parseDirective :: Tokenizer Token
+<span class="lineno">  259 </span>parseDirective = do
+<span class="lineno">  260 </span>    input &lt;- gets tsInput
+<span class="lineno">  261 </span>    if &quot;//!&quot; `isPrefixOf` input
+<span class="lineno">  262 </span>        then do
+<span class="lineno">  263 </span>            replicateM_ 3 advance
+<span class="lineno">  264 </span>            content &lt;- parseLineContent
+<span class="lineno">  265 </span>            return $ TDirective content
+<span class="lineno">  266 </span>        else tokenizerError &quot;Expected directive marker //!&quot;
+<span class="lineno">  267 </span>-}
+<span class="lineno">  268 </span>
+<span class="lineno">  269 </span>{-
+<span class="lineno">  270 </span>-- Parse comment (starts with // but not //!)
+<span class="lineno">  271 </span>parseComment :: Tokenizer Token
+<span class="lineno">  272 </span>parseComment = do
+<span class="lineno">  273 </span>    input &lt;- gets tsInput
+<span class="lineno">  274 </span>    if &quot;//&quot; `isPrefixOf` input &amp;&amp; not (&quot;//!&quot; `isPrefixOf` input)
+<span class="lineno">  275 </span>        then do
+<span class="lineno">  276 </span>            replicateM_ 2 advance
+<span class="lineno">  277 </span>            content &lt;- parseLineContent
+<span class="lineno">  278 </span>            return $ TComment content
+<span class="lineno">  279 </span>        else tokenizerError &quot;Expected comment marker //&quot;
+<span class="lineno">  280 </span>-}
+<span class="lineno">  281 </span>
+<span class="lineno">  282 </span>{-
+<span class="lineno">  283 </span>-- Helper to parse content until end of line
+<span class="lineno">  284 </span>parseLineContent :: Tokenizer String
+<span class="lineno">  285 </span>parseLineContent = do
+<span class="lineno">  286 </span>    mc &lt;- currentChar
+<span class="lineno">  287 </span>    case mc of
+<span class="lineno">  288 </span>        Just '\n' -&gt; return &quot;&quot;  -- End of line
+<span class="lineno">  289 </span>        Just c -&gt; do
+<span class="lineno">  290 </span>            advance
+<span class="lineno">  291 </span>            rest &lt;- parseLineContent
+<span class="lineno">  292 </span>            return (c:rest)
+<span class="lineno">  293 </span>        Nothing -&gt; return &quot;&quot;  -- End of input
+<span class="lineno">  294 </span>-}
+<span class="lineno">  295 </span>
+<span class="lineno">  296 </span>{-
+<span class="lineno">  297 </span>-- Main tokenization function (fixed order for / vs symbol; doesn't emit TWhitespace)
+<span class="lineno">  298 </span>tokenize :: String -&gt; Either String [Token]
+<span class="lineno">  299 </span>tokenize input = evalStateT (tokenize') (initTokenizer input)
+<span class="lineno">  300 </span>  where
+<span class="lineno">  301 </span>    tokenize' :: Tokenizer [Token]
+<span class="lineno">  302 </span>    tokenize' = do
+<span class="lineno">  303 </span>        skipWhitespace
+<span class="lineno">  304 </span>        mc &lt;- currentChar
+<span class="lineno">  305 </span>        case mc of
+<span class="lineno">  306 </span>            Nothing -&gt; return [TEOF]
+<span class="lineno">  307 </span>            Just '/' -&gt; do
+<span class="lineno">  308 </span>                input' &lt;- gets tsInput
+<span class="lineno">  309 </span>                tok &lt;- if &quot;//!&quot; `isPrefixOf` input'
+<span class="lineno">  310 </span>                      then parseDirective
+<span class="lineno">  311 </span>                      else if &quot;//&quot; `isPrefixOf` input'
+<span class="lineno">  312 </span>                           then parseComment
+<span class="lineno">  313 </span>                           else parseSymbol
+<span class="lineno">  314 </span>                rest &lt;- tokenize'
+<span class="lineno">  315 </span>                return (tok:rest)
+<span class="lineno">  316 </span>            Just '&quot;' -&gt; do
+<span class="lineno">  317 </span>                tok &lt;- parseStringLiteral
+<span class="lineno">  318 </span>                rest &lt;- tokenize'
+<span class="lineno">  319 </span>                return (tok:rest)
+<span class="lineno">  320 </span>            Just c
+<span class="lineno">  321 </span>                | isDigit c -&gt; do
+<span class="lineno">  322 </span>                    tok &lt;- parseNumberLiteral
+<span class="lineno">  323 </span>                    rest &lt;- tokenize'
+<span class="lineno">  324 </span>                    return (tok:rest)
+<span class="lineno">  325 </span>                | isAlpha c || c == '_' -&gt; do
+<span class="lineno">  326 </span>                    tok &lt;- parseIdentifier
+<span class="lineno">  327 </span>                    rest &lt;- tokenize'
+<span class="lineno">  328 </span>                    return (tok:rest)
+<span class="lineno">  329 </span>                | isSymbolChar c -&gt; do
+<span class="lineno">  330 </span>                    tok &lt;- parseSymbol
+<span class="lineno">  331 </span>                    rest &lt;- tokenize'
+<span class="lineno">  332 </span>                    return (tok:rest)
+<span class="lineno">  333 </span>                | isSpace c -&gt; do
+<span class="lineno">  334 </span>                    -- skipWhitespace already consumed them; just continue
+<span class="lineno">  335 </span>                    advance
+<span class="lineno">  336 </span>                    tokenize'
+<span class="lineno">  337 </span>                | otherwise -&gt; tokenizerError (&quot;Unexpected character: &quot; ++ [c])
+<span class="lineno">  338 </span>-}
+<span class="lineno">  339 </span>-}
+<span class="lineno">  340 </span>
+<span class="lineno">  341 </span>-- ============================================================================
+<span class="lineno">  342 </span>-- Parser (robust, line-based parsing for directives and blocks)
+<span class="lineno">  343 </span>-- ============================================================================
+<span class="lineno">  344 </span>
+<span class="lineno">  345 </span>-- Public API
+<span class="lineno">  346 </span>
+<span class="lineno">  347 </span>-- High-level parser that works line-by-line to handle directives and blocks.
+<span class="lineno">  348 </span>parseTypus :: String -&gt; Either String TypusFile
+<span class="lineno">  349 </span><span class="decl"><span class="istickedoff">parseTypus input = do</span>
+<span class="lineno">  350 </span><span class="spaces">    </span><span class="istickedoff">let ls = map stripCR (lines input)</span>
+<span class="lineno">  351 </span><span class="spaces">    </span><span class="istickedoff">(fileDirs, buildTags, rest) &lt;- parseFileDirectivesFromLines ls</span>
+<span class="lineno">  352 </span><span class="spaces">    </span><span class="istickedoff">blocks &lt;- parseBlocksFromLines rest</span>
+<span class="lineno">  353 </span><span class="spaces">    </span><span class="istickedoff">return $ TypusFile fileDirs <span class="nottickedoff">buildTags</span> blocks</span></span>
+<span class="lineno">  354 </span>
+<span class="lineno">  355 </span>-- Parse file-level directives at the very top of file.
+<span class="lineno">  356 </span>-- It skips leading blank lines, and accepts consecutive &quot;//! key: value&quot; lines.
+<span class="lineno">  357 </span>-- Also preserves Go build tags (//go:build and // +build) at the very top.
+<span class="lineno">  358 </span>-- Stops at the first non-blank non-file-directive non-build-tag line.
+<span class="lineno">  359 </span>parseFileDirectivesFromLines :: [String] -&gt; Either String (FileDirectives, [String], [String])
+<span class="lineno">  360 </span><span class="decl"><span class="istickedoff">parseFileDirectivesFromLines = go defaultFileDirectives <span class="nottickedoff">[]</span></span>
+<span class="lineno">  361 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  362 </span><span class="spaces">    </span><span class="istickedoff">go :: FileDirectives -&gt; [String] -&gt; [String] -&gt; Either String (FileDirectives, [String], [String])</span>
+<span class="lineno">  363 </span><span class="spaces">    </span><span class="istickedoff">go acc buildTags [] = Right (acc, <span class="nottickedoff">buildTags</span>, [])</span>
+<span class="lineno">  364 </span><span class="spaces">    </span><span class="istickedoff">go acc buildTags (l:ls) =</span>
+<span class="lineno">  365 </span><span class="spaces">        </span><span class="istickedoff">let t = trim l</span>
+<span class="lineno">  366 </span><span class="spaces">        </span><span class="istickedoff">in if t == &quot;&quot;</span>
+<span class="lineno">  367 </span><span class="spaces">            </span><span class="istickedoff">then go acc <span class="nottickedoff">buildTags</span> ls</span>
+<span class="lineno">  368 </span><span class="spaces">            </span><span class="istickedoff">else if isPrefixOf &quot;//!&quot; t</span>
+<span class="lineno">  369 </span><span class="spaces">                </span><span class="istickedoff">then do</span>
+<span class="lineno">  370 </span><span class="spaces">                    </span><span class="istickedoff">(k, v) &lt;- parseFileDirectiveLine t</span>
+<span class="lineno">  371 </span><span class="spaces">                    </span><span class="istickedoff">acc' &lt;- updateFileDirective acc k v</span>
+<span class="lineno">  372 </span><span class="spaces">                    </span><span class="istickedoff">go acc' <span class="nottickedoff">buildTags</span> ls</span>
+<span class="lineno">  373 </span><span class="spaces">            </span><span class="istickedoff">else if <span class="tickonlyfalse">isBuildTagLine t</span></span>
+<span class="lineno">  374 </span><span class="spaces">                </span><span class="istickedoff">then -- Preserve build tags by keeping them in the buildTags list</span>
+<span class="lineno">  375 </span><span class="spaces">                     </span><span class="istickedoff"><span class="nottickedoff">go acc (buildTags ++ [l]) ls</span></span>
+<span class="lineno">  376 </span><span class="spaces">                </span><span class="istickedoff">else Right (acc, <span class="nottickedoff">buildTags</span>, l:ls)</span>
+<span class="lineno">  377 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  378 </span><span class="spaces">    </span><span class="istickedoff">isBuildTagLine line = </span>
+<span class="lineno">  379 </span><span class="spaces">        </span><span class="istickedoff">isPrefixOf &quot;//go:build&quot; line || isPrefixOf &quot;// +build&quot; line</span></span>
+<span class="lineno">  380 </span>
+<span class="lineno">  381 </span>-- Parse blocks:
+<span class="lineno">  382 </span>-- - Normal code is accumulated as a default block (if non-empty).
+<span class="lineno">  383 </span>-- - &quot;{//! ...}&quot; starts a directive block; we gather lines until the &quot;extra }&quot;
+<span class="lineno">  384 </span>--   that closes the directive block. Any inner code braces are balanced and
+<span class="lineno">  385 </span>--   do not end the directive block prematurely.
+<span class="lineno">  386 </span>parseBlocksFromLines :: [String] -&gt; Either String [CodeBlock]
+<span class="lineno">  387 </span><span class="decl"><span class="istickedoff">parseBlocksFromLines = go [] []</span>
+<span class="lineno">  388 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  389 </span><span class="spaces">    </span><span class="istickedoff">-- go accBlocks accCodeBuf remainingLines</span>
+<span class="lineno">  390 </span><span class="spaces">    </span><span class="istickedoff">go :: [CodeBlock] -&gt; [String] -&gt; [String] -&gt; Either String [CodeBlock]</span>
+<span class="lineno">  391 </span><span class="spaces">    </span><span class="istickedoff">go acc blocksBuf [] =</span>
+<span class="lineno">  392 </span><span class="spaces">        </span><span class="istickedoff">let finalBlocks = acc ++ flushCodeBuf blocksBuf</span>
+<span class="lineno">  393 </span><span class="spaces">        </span><span class="istickedoff">in Right finalBlocks</span>
+<span class="lineno">  394 </span><span class="spaces">    </span><span class="istickedoff">go acc blocksBuf (l:ls) =</span>
+<span class="lineno">  395 </span><span class="spaces">        </span><span class="istickedoff">let t = trim l</span>
+<span class="lineno">  396 </span><span class="spaces">        </span><span class="istickedoff">in if <span class="tickonlyfalse">startsWithBlockDirective t</span></span>
+<span class="lineno">  397 </span><span class="spaces">            </span><span class="istickedoff">then <span class="nottickedoff">do</span></span>
+<span class="lineno">  398 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">-- Flush any pending normal code into a default block</span></span>
+<span class="lineno">  399 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">let acc' = acc ++ flushCodeBuf blocksBuf</span></span>
+<span class="lineno">  400 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">-- Parse block directives</span></span>
+<span class="lineno">  401 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">kvs &lt;- parseBlockDirectiveLine t</span></span>
+<span class="lineno">  402 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">bd &lt;- parseBlockDirectives kvs</span></span>
+<span class="lineno">  403 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">-- Capture block content until the directive-closing '}'</span></span>
+<span class="lineno">  404 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">(blockLines, rest) &lt;- captureDirectiveBlock ls</span></span>
+<span class="lineno">  405 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">let codeTxt = unlines blockLines</span></span>
+<span class="lineno">  406 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">let blk = CodeBlock bd codeTxt</span></span>
+<span class="lineno">  407 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">go (acc' ++ [blk]) [] rest</span></span>
+<span class="lineno">  408 </span><span class="spaces">            </span><span class="istickedoff">else</span>
+<span class="lineno">  409 </span><span class="spaces">                </span><span class="istickedoff">-- Accumulate normal code</span>
+<span class="lineno">  410 </span><span class="spaces">                </span><span class="istickedoff">go acc (blocksBuf ++ [l]) ls</span>
+<span class="lineno">  411 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  412 </span><span class="spaces">    </span><span class="istickedoff">flushCodeBuf :: [String] -&gt; [CodeBlock]</span>
+<span class="lineno">  413 </span><span class="spaces">    </span><span class="istickedoff">flushCodeBuf buf =</span>
+<span class="lineno">  414 </span><span class="spaces">        </span><span class="istickedoff">let codeTxt = trimRight (unlines buf)</span>
+<span class="lineno">  415 </span><span class="spaces">        </span><span class="istickedoff">in if codeTxt == &quot;&quot; then [] else [CodeBlock defaultBlockDirectives codeTxt]</span>
+<span class="lineno">  416 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  417 </span><span class="spaces">    </span><span class="istickedoff">startsWithBlockDirective :: String -&gt; Bool</span>
+<span class="lineno">  418 </span><span class="spaces">    </span><span class="istickedoff">startsWithBlockDirective s = isPrefixOf &quot;{//!&quot; (dropWhile isSpace s)</span></span>
+<span class="lineno">  419 </span>
+<span class="lineno">  420 </span>-- Capture lines of a directive block until we see the &quot;extra }&quot; that closes it.
+<span class="lineno">  421 </span>-- We keep a brace-depth over code to avoid stopping at function's }.
+<span class="lineno">  422 </span>-- The closing '}' for the directive block will make the depth go from 0 to -1.
+<span class="lineno">  423 </span>captureDirectiveBlock :: [String] -&gt; Either String ([String], [String])
+<span class="lineno">  424 </span><span class="decl"><span class="nottickedoff">captureDirectiveBlock = go 0 []</span>
+<span class="lineno">  425 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  426 </span><span class="spaces">    </span><span class="nottickedoff">go :: Int -&gt; [String] -&gt; [String] -&gt; Either String ([String], [String])</span>
+<span class="lineno">  427 </span><span class="spaces">    </span><span class="nottickedoff">go _ _acc [] = Left &quot;Unclosed directive block: missing closing '}'&quot;</span>
+<span class="lineno">  428 </span><span class="spaces">    </span><span class="nottickedoff">go depth acc (l:ls) =</span>
+<span class="lineno">  429 </span><span class="spaces">        </span><span class="nottickedoff">let d = curlyDelta l</span>
+<span class="lineno">  430 </span><span class="spaces">            </span><span class="nottickedoff">newDepth = depth + d</span>
+<span class="lineno">  431 </span><span class="spaces">        </span><span class="nottickedoff">in if newDepth &lt; 0</span>
+<span class="lineno">  432 </span><span class="spaces">            </span><span class="nottickedoff">then -- The last line l is the directive-closing '}', do not include it</span>
+<span class="lineno">  433 </span><span class="spaces">                 </span><span class="nottickedoff">Right (acc, ls)</span>
+<span class="lineno">  434 </span><span class="spaces">            </span><span class="nottickedoff">else go newDepth (acc ++ [l]) ls</span></span>
+<span class="lineno">  435 </span>
+<span class="lineno">  436 </span>-- Compute net curly-brace delta for a line, ignoring braces inside strings and line-comments.
+<span class="lineno">  437 </span>-- Strings: &quot;...&quot; with support for escaping \&quot; inside (approx).
+<span class="lineno">  438 </span>-- Line comments: // ... (ignored).
+<span class="lineno">  439 </span>curlyDelta :: String -&gt; Int
+<span class="lineno">  440 </span><span class="decl"><span class="nottickedoff">curlyDelta = go False False 0 0</span>
+<span class="lineno">  441 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  442 </span><span class="spaces">    </span><span class="nottickedoff">go :: Bool -&gt; Bool -&gt; Int -&gt; Int -&gt; String -&gt; Int</span>
+<span class="lineno">  443 </span><span class="spaces">    </span><span class="nottickedoff">go _ _ acc _ [] = acc</span>
+<span class="lineno">  444 </span><span class="spaces">    </span><span class="nottickedoff">go inStr _esc acc _ ('/':'/':_) | not inStr = acc  -- comment starts, ignore rest</span>
+<span class="lineno">  445 </span><span class="spaces">    </span><span class="nottickedoff">go inStr _esc acc _prev (c:cs)</span>
+<span class="lineno">  446 </span><span class="spaces">        </span><span class="nottickedoff">| inStr =</span>
+<span class="lineno">  447 </span><span class="spaces">            </span><span class="nottickedoff">case c of</span>
+<span class="lineno">  448 </span><span class="spaces">                </span><span class="nottickedoff">'&quot;' | not _esc -&gt; go False False acc (fromEnum c) cs</span>
+<span class="lineno">  449 </span><span class="spaces">                </span><span class="nottickedoff">'\\' -&gt; go True True acc (fromEnum c) cs</span>
+<span class="lineno">  450 </span><span class="spaces">                </span><span class="nottickedoff">_    -&gt; go True False acc (fromEnum c) cs</span>
+<span class="lineno">  451 </span><span class="spaces">        </span><span class="nottickedoff">| otherwise =</span>
+<span class="lineno">  452 </span><span class="spaces">            </span><span class="nottickedoff">case c of</span>
+<span class="lineno">  453 </span><span class="spaces">                </span><span class="nottickedoff">'&quot;'  -&gt; go True False acc (fromEnum c) cs</span>
+<span class="lineno">  454 </span><span class="spaces">                </span><span class="nottickedoff">'{'  -&gt; go False False (acc + 1) (fromEnum c) cs</span>
+<span class="lineno">  455 </span><span class="spaces">                </span><span class="nottickedoff">'}'  -&gt; go False False (acc - 1) (fromEnum c) cs</span>
+<span class="lineno">  456 </span><span class="spaces">                </span><span class="nottickedoff">_    -&gt; go False False acc (fromEnum c) cs</span></span>
+<span class="lineno">  457 </span>
+<span class="lineno">  458 </span>-- ============================================================================
+<span class="lineno">  459 </span>-- Directive Parsing
+<span class="lineno">  460 </span>-- ============================================================================
+<span class="lineno">  461 </span>
+<span class="lineno">  462 </span>parseFileDirectiveLine :: String -&gt; Either String (String, String)
+<span class="lineno">  463 </span><span class="decl"><span class="istickedoff">parseFileDirectiveLine line =</span>
+<span class="lineno">  464 </span><span class="spaces">    </span><span class="istickedoff">let directivePart = trim (drop 3 (dropWhile isSpace line))  -- Drop &quot;//!&quot;</span>
+<span class="lineno">  465 </span><span class="spaces">    </span><span class="istickedoff">in case break (== ':') directivePart of</span>
+<span class="lineno">  466 </span><span class="spaces">        </span><span class="istickedoff">(key, ':':value) -&gt; Right (trim key, trim value)</span>
+<span class="lineno">  467 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">Left $ &quot;Invalid file directive format: &quot; ++ line</span></span></span>
+<span class="lineno">  468 </span>
+<span class="lineno">  469 </span>parseBlockDirectiveLine :: String -&gt; Either String [(String, String)]
+<span class="lineno">  470 </span><span class="decl"><span class="nottickedoff">parseBlockDirectiveLine line = do</span>
+<span class="lineno">  471 </span><span class="spaces">    </span><span class="nottickedoff">-- Expect a line like: {//! ownership: off, constraints: on}</span>
+<span class="lineno">  472 </span><span class="spaces">    </span><span class="nottickedoff">let tline = dropWhile isSpace line</span>
+<span class="lineno">  473 </span><span class="spaces">    </span><span class="nottickedoff">if not (&quot;{//!&quot; `isPrefixOf` tline)</span>
+<span class="lineno">  474 </span><span class="spaces">       </span><span class="nottickedoff">then Left $ &quot;Invalid block directive line (missing {//!): &quot; ++ line</span>
+<span class="lineno">  475 </span><span class="spaces">       </span><span class="nottickedoff">else do</span>
+<span class="lineno">  476 </span><span class="spaces">           </span><span class="nottickedoff">-- Extract content between {//! and the matching }</span>
+<span class="lineno">  477 </span><span class="spaces">           </span><span class="nottickedoff">let afterPrefix = trim (drop 4 tline)  -- drop &quot;{//!&quot;</span>
+<span class="lineno">  478 </span><span class="spaces">           </span><span class="nottickedoff">let content = takeWhile (/= '}') afterPrefix</span>
+<span class="lineno">  479 </span><span class="spaces">           </span><span class="nottickedoff">if null (trim content)</span>
+<span class="lineno">  480 </span><span class="spaces">           </span><span class="nottickedoff">then Right []</span>
+<span class="lineno">  481 </span><span class="spaces">           </span><span class="nottickedoff">else mapM parseKeyValue $ splitOn ',' content</span>
+<span class="lineno">  482 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  483 </span><span class="spaces">    </span><span class="nottickedoff">parseKeyValue :: String -&gt; Either String (String, String)</span>
+<span class="lineno">  484 </span><span class="spaces">    </span><span class="nottickedoff">parseKeyValue s = case break (== ':') (trim s) of</span>
+<span class="lineno">  485 </span><span class="spaces">        </span><span class="nottickedoff">(key, ':':value) -&gt; Right (trim key, trim value)</span>
+<span class="lineno">  486 </span><span class="spaces">        </span><span class="nottickedoff">_ -&gt; Left $ &quot;Invalid key:value format: &quot; ++ s</span></span>
+<span class="lineno">  487 </span>
+<span class="lineno">  488 </span>updateFileDirective :: FileDirectives -&gt; String -&gt; String -&gt; Either String FileDirectives
+<span class="lineno">  489 </span><span class="decl"><span class="istickedoff">updateFileDirective fd key value = do</span>
+<span class="lineno">  490 </span><span class="spaces">    </span><span class="istickedoff">boolValue &lt;- parseBool value</span>
+<span class="lineno">  491 </span><span class="spaces">    </span><span class="istickedoff">case key of</span>
+<span class="lineno">  492 </span><span class="spaces">        </span><span class="istickedoff">&quot;ownership&quot; -&gt; Right fd { fdOwnership = Just boolValue }</span>
+<span class="lineno">  493 </span><span class="spaces">        </span><span class="istickedoff">&quot;dependent_types&quot; -&gt; Right fd { fdDependentTypes = Just boolValue }</span>
+<span class="lineno">  494 </span><span class="spaces">        </span><span class="istickedoff">&quot;constraints&quot; -&gt; <span class="nottickedoff">Right fd { fdConstraints = Just boolValue }</span></span>
+<span class="lineno">  495 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">Left $ &quot;Unknown file directive: &quot; ++ key</span></span></span>
+<span class="lineno">  496 </span>
+<span class="lineno">  497 </span>parseBlockDirectives :: [(String, String)] -&gt; Either String BlockDirectives
+<span class="lineno">  498 </span><span class="decl"><span class="nottickedoff">parseBlockDirectives [] = Right defaultBlockDirectives</span>
+<span class="lineno">  499 </span><span class="spaces"></span><span class="nottickedoff">parseBlockDirectives ((key, value):kvs) = do</span>
+<span class="lineno">  500 </span><span class="spaces">    </span><span class="nottickedoff">bd &lt;- updateBlockDirective defaultBlockDirectives (key, value)</span>
+<span class="lineno">  501 </span><span class="spaces">    </span><span class="nottickedoff">parseBlockDirectives' bd kvs</span></span>
+<span class="lineno">  502 </span>
+<span class="lineno">  503 </span>parseBlockDirectives' :: BlockDirectives -&gt; [(String, String)] -&gt; Either String BlockDirectives
+<span class="lineno">  504 </span><span class="decl"><span class="nottickedoff">parseBlockDirectives' bd [] = Right bd</span>
+<span class="lineno">  505 </span><span class="spaces"></span><span class="nottickedoff">parseBlockDirectives' bd ((key, value):kvs) = do</span>
+<span class="lineno">  506 </span><span class="spaces">    </span><span class="nottickedoff">bd' &lt;- updateBlockDirective bd (key, value)</span>
+<span class="lineno">  507 </span><span class="spaces">    </span><span class="nottickedoff">parseBlockDirectives' bd' kvs</span></span>
+<span class="lineno">  508 </span>
+<span class="lineno">  509 </span>updateBlockDirective :: BlockDirectives -&gt; (String, String) -&gt; Either String BlockDirectives
+<span class="lineno">  510 </span><span class="decl"><span class="nottickedoff">updateBlockDirective bd (key, value) = do</span>
+<span class="lineno">  511 </span><span class="spaces">    </span><span class="nottickedoff">boolValue &lt;- parseBool value</span>
+<span class="lineno">  512 </span><span class="spaces">    </span><span class="nottickedoff">case key of</span>
+<span class="lineno">  513 </span><span class="spaces">        </span><span class="nottickedoff">&quot;ownership&quot; -&gt; Right bd { bdOwnership = boolValue }</span>
+<span class="lineno">  514 </span><span class="spaces">        </span><span class="nottickedoff">&quot;dependent_types&quot; -&gt; Right bd { bdDependentTypes = boolValue }</span>
+<span class="lineno">  515 </span><span class="spaces">        </span><span class="nottickedoff">&quot;constraints&quot; -&gt; Right bd { bdConstraints = boolValue }</span>
+<span class="lineno">  516 </span><span class="spaces">        </span><span class="nottickedoff">_ -&gt; Left $ &quot;Unknown block directive: &quot; ++ key</span></span>
+<span class="lineno">  517 </span>
+<span class="lineno">  518 </span>parseBool :: String -&gt; Either String Bool
+<span class="lineno">  519 </span><span class="decl"><span class="istickedoff">parseBool s = case trim s of</span>
+<span class="lineno">  520 </span><span class="spaces">    </span><span class="istickedoff">&quot;on&quot; -&gt; Right True</span>
+<span class="lineno">  521 </span><span class="spaces">    </span><span class="istickedoff">&quot;off&quot; -&gt; <span class="nottickedoff">Right False</span></span>
+<span class="lineno">  522 </span><span class="spaces">    </span><span class="istickedoff">&quot;true&quot; -&gt; <span class="nottickedoff">Right True</span></span>
+<span class="lineno">  523 </span><span class="spaces">    </span><span class="istickedoff">&quot;false&quot; -&gt; <span class="nottickedoff">Right False</span></span>
+<span class="lineno">  524 </span><span class="spaces">    </span><span class="istickedoff">v -&gt; <span class="nottickedoff">Left $ &quot;Invalid boolean value: &quot; ++ v</span></span></span>
+<span class="lineno">  525 </span>
+<span class="lineno">  526 </span>-- ============================================================================
+<span class="lineno">  527 </span>-- Utility Functions
+<span class="lineno">  528 </span>-- ============================================================================
+<span class="lineno">  529 </span>
+<span class="lineno">  530 </span>trim :: String -&gt; String
+<span class="lineno">  531 </span><span class="decl"><span class="istickedoff">trim = f . f</span>
+<span class="lineno">  532 </span><span class="spaces">  </span><span class="istickedoff">where f = reverse . dropWhile isSpace</span></span>
+<span class="lineno">  533 </span>
+<span class="lineno">  534 </span>trimRight :: String -&gt; String
+<span class="lineno">  535 </span><span class="decl"><span class="istickedoff">trimRight = reverse . dropWhile (`elem` &quot;\r\n&quot;) . reverse</span></span>
+<span class="lineno">  536 </span>
+<span class="lineno">  537 </span>{-
+<span class="lineno">  538 </span>breakOn :: String -&gt; String -&gt; (String, String)
+<span class="lineno">  539 </span>breakOn delimiter str = go str
+<span class="lineno">  540 </span>  where
+<span class="lineno">  541 </span>    go [] = (&quot;&quot;, &quot;&quot;)
+<span class="lineno">  542 </span>    go s@(x:xs)
+<span class="lineno">  543 </span>        | delimiter `isPrefixOf` s = (&quot;&quot;, s)
+<span class="lineno">  544 </span>        | otherwise = let (before, after) = go xs in (x:before, after)
+<span class="lineno">  545 </span>-}
+<span class="lineno">  546 </span>
+<span class="lineno">  547 </span>splitOn :: Char -&gt; String -&gt; [String]
+<span class="lineno">  548 </span><span class="decl"><span class="nottickedoff">splitOn _ [] = []</span>
+<span class="lineno">  549 </span><span class="spaces"></span><span class="nottickedoff">splitOn delim str = case break (== delim) str of</span>
+<span class="lineno">  550 </span><span class="spaces">    </span><span class="nottickedoff">(before, []) -&gt; [before]</span>
+<span class="lineno">  551 </span><span class="spaces">    </span><span class="nottickedoff">(before, _:after) -&gt; before : splitOn delim after</span></span>
+<span class="lineno">  552 </span>
+<span class="lineno">  553 </span>isPrefixOf :: String -&gt; String -&gt; Bool
+<span class="lineno">  554 </span><span class="decl"><span class="istickedoff">isPrefixOf [] _ = True</span>
+<span class="lineno">  555 </span><span class="spaces"></span><span class="istickedoff">isPrefixOf _ [] = False</span>
+<span class="lineno">  556 </span><span class="spaces"></span><span class="istickedoff">isPrefixOf (x:xs) (y:ys) = x == y &amp;&amp; isPrefixOf xs ys</span></span>
+<span class="lineno">  557 </span>
+<span class="lineno">  558 </span>{-
+<span class="lineno">  559 </span>isInfixOf :: String -&gt; String -&gt; Bool
+<span class="lineno">  560 </span>isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
+<span class="lineno">  561 </span>  where
+<span class="lineno">  562 </span>    tails [] = [[]]
+<span class="lineno">  563 </span>    tails xs@(_:xs') = xs : tails xs'
+<span class="lineno">  564 </span>-}
+<span class="lineno">  565 </span>
+<span class="lineno">  566 </span>stripCR :: String -&gt; String
+<span class="lineno">  567 </span><span class="decl"><span class="istickedoff">stripCR = reverse . dropWhile (== '\r') . reverse</span></span>
+<span class="lineno">  568 </span>
+<span class="lineno">  569 </span>-- ============================================================================
+<span class="lineno">  570 </span>-- Legacy parser state/types (kept for completeness, not used by line-based parser)
+<span class="lineno">  571 </span>-- ============================================================================
+<span class="lineno">  572 </span>
+<span class="lineno">  573 </span>data ParserState = ParserState
+<span class="lineno">  574 </span>    { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">psTokens</span></span></span> :: [Token]
+<span class="lineno">  575 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">psPosition</span></span></span> :: Int
+<span class="lineno">  576 </span>    } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  577 </span>
+<span class="lineno">  578 </span>
+<span class="lineno">  579 </span>{-
+<span class="lineno">  580 </span>initParser :: [Token] -&gt; ParserState
+<span class="lineno">  581 </span>initParser tokens = ParserState
+<span class="lineno">  582 </span>    { psTokens = tokens
+<span class="lineno">  583 </span>    , psPosition = 0
+<span class="lineno">  584 </span>    }
+<span class="lineno">  585 </span>-}
+<span class="lineno">  586 </span>
+<span class="lineno">  587 </span>{-
+<span class="lineno">  588 </span>currentToken :: Parser Token
+<span class="lineno">  589 </span>currentToken = do
+<span class="lineno">  590 </span>    tokens &lt;- gets psTokens
+<span class="lineno">  591 </span>    case tokens of
+<span class="lineno">  592 </span>        [] -&gt; return TEOF
+<span class="lineno">  593 </span>        (t:_) -&gt; return t
+<span class="lineno">  594 </span>-}
+<span class="lineno">  595 </span>
+<span class="lineno">  596 </span>{-
+<span class="lineno">  597 </span>advanceToken :: Parser ()
+<span class="lineno">  598 </span>advanceToken = do
+<span class="lineno">  599 </span>    st &lt;- get
+<span class="lineno">  600 </span>    case psTokens st of
+<span class="lineno">  601 </span>        [] -&gt; return ()
+<span class="lineno">  602 </span>        (_:rest) -&gt; put st { psTokens = rest }
+<span class="lineno">  603 </span>-}
+<span class="lineno">  604 </span>
+<span class="lineno">  605 </span>{-
+<span class="lineno">  606 </span>parserError :: String -&gt; Parser a
+<span class="lineno">  607 </span>parserError msg = do
+<span class="lineno">  608 </span>    pos &lt;- gets psPosition
+<span class="lineno">  609 </span>    lift $ Left $ &quot;Parser error at token &quot; ++ show pos ++ &quot;: &quot; ++ msg
+<span class="lineno">  610 </span>-}
+<span class="lineno">  611 </span>
+<span class="lineno">  612 </span>{-
+<span class="lineno">  613 </span>expectToken :: Token -&gt; Parser ()
+<span class="lineno">  614 </span>expectToken expected = do
+<span class="lineno">  615 </span>    actual &lt;- currentToken
+<span class="lineno">  616 </span>    if actual == expected
+<span class="lineno">  617 </span>        then advanceToken
+<span class="lineno">  618 </span>        else parserError $ &quot;Expected &quot; ++ show expected ++ &quot;, but got &quot; ++ show actual
+<span class="lineno">  619 </span>-}
+<span class="lineno">  620 </span>
+<span class="lineno">  621 </span>{-
+<span class="lineno">  622 </span>expectIdentifier :: Parser String
+<span class="lineno">  623 </span>expectIdentifier = do
+<span class="lineno">  624 </span>    token &lt;- currentToken
+<span class="lineno">  625 </span>    case token of
+<span class="lineno">  626 </span>        TIdentifier name -&gt; do
+<span class="lineno">  627 </span>            advanceToken
+<span class="lineno">  628 </span>            return name
+<span class="lineno">  629 </span>        _ -&gt; parserError $ &quot;Expected identifier, but got &quot; ++ show token
+<span class="lineno">  630 </span>-}
+<span class="lineno">  631 </span>
+<span class="lineno">  632 </span>-- ============================================================================
+<span class="lineno">  633 </span>-- Test the parser
+<span class="lineno">  634 </span>-- ============================================================================
+<span class="lineno">  635 </span>
+<span class="lineno">  636 </span>{-
+<span class="lineno">  637 </span>testParser :: IO ()
+<span class="lineno">  638 </span>testParser = do
+<span class="lineno">  639 </span>    let testCases =
+<span class="lineno">  640 </span>            [ ( &quot;Simple function&quot;
+<span class="lineno">  641 </span>              , unlines
+<span class="lineno">  642 </span>                    [ &quot;package main&quot;
+<span class="lineno">  643 </span>                    , &quot;&quot;
+<span class="lineno">  644 </span>                    , &quot;func main() {&quot;
+<span class="lineno">  645 </span>                    , &quot;    println(\&quot;Hello\&quot;)&quot;
+<span class="lineno">  646 </span>                    , &quot;}&quot;
+<span class="lineno">  647 </span>                    ]
+<span class="lineno">  648 </span>              )
+<span class="lineno">  649 </span>            , ( &quot;With file directives&quot;
+<span class="lineno">  650 </span>              , unlines
+<span class="lineno">  651 </span>                    [ &quot;//! ownership: on&quot;
+<span class="lineno">  652 </span>                    , &quot;//! dependent_types: off&quot;
+<span class="lineno">  653 </span>                    , &quot;&quot;
+<span class="lineno">  654 </span>                    , &quot;func test() {&quot;
+<span class="lineno">  655 </span>                    , &quot;    return 42&quot;
+<span class="lineno">  656 </span>                    , &quot;}&quot;
+<span class="lineno">  657 </span>                    ]
+<span class="lineno">  658 </span>              )
+<span class="lineno">  659 </span>            , ( &quot;With block directives&quot;
+<span class="lineno">  660 </span>              , unlines
+<span class="lineno">  661 </span>                    [ &quot;{//! ownership: off}&quot;
+<span class="lineno">  662 </span>                    , &quot;func special() {&quot;
+<span class="lineno">  663 </span>                    , &quot;    // Special function&quot;
+<span class="lineno">  664 </span>                    , &quot;}&quot;
+<span class="lineno">  665 </span>                    , &quot;}&quot;
+<span class="lineno">  666 </span>                    ]
+<span class="lineno">  667 </span>              )
+<span class="lineno">  668 </span>            , ( &quot;Nested braces&quot;
+<span class="lineno">  669 </span>              , unlines
+<span class="lineno">  670 </span>                    [ &quot;func nested() {&quot;
+<span class="lineno">  671 </span>                    , &quot;    if true {&quot;
+<span class="lineno">  672 </span>                    , &quot;        while false {&quot;
+<span class="lineno">  673 </span>                    , &quot;            break&quot;
+<span class="lineno">  674 </span>                    , &quot;        }&quot;
+<span class="lineno">  675 </span>                    , &quot;    }&quot;
+<span class="lineno">  676 </span>                    , &quot;}&quot;
+<span class="lineno">  677 </span>                    ]
+<span class="lineno">  678 </span>              )
+<span class="lineno">  679 </span>            , ( &quot;Mixed directives&quot;
+<span class="lineno">  680 </span>              , unlines
+<span class="lineno">  681 </span>                    [ &quot;//! ownership: on&quot;
+<span class="lineno">  682 </span>                    , &quot;//! dependent_types: off&quot;
+<span class="lineno">  683 </span>                    , &quot;&quot;
+<span class="lineno">  684 </span>                    , &quot;// Normal code&quot;
+<span class="lineno">  685 </span>                    , &quot;func normal() {&quot;
+<span class="lineno">  686 </span>                    , &quot;    x := 10&quot;
+<span class="lineno">  687 </span>                    , &quot;}&quot;
+<span class="lineno">  688 </span>                    , &quot;&quot;
+<span class="lineno">  689 </span>                    , &quot;{//! constraints: on, ownership: off}&quot;
+<span class="lineno">  690 </span>                    , &quot;func constrained() {&quot;
+<span class="lineno">  691 </span>                    , &quot;    // With constraints&quot;
+<span class="lineno">  692 </span>                    , &quot;    assert(x &gt; 0)&quot;
+<span class="lineno">  693 </span>                    , &quot;}&quot;
+<span class="lineno">  694 </span>                    , &quot;}&quot;
+<span class="lineno">  695 </span>                    ]
+<span class="lineno">  696 </span>              )
+<span class="lineno">  697 </span>            ]
+<span class="lineno">  698 </span>
+<span class="lineno">  699 </span>    mapM_ (\(name, code) -&gt; do
+<span class="lineno">  700 </span>        putStrLn $ &quot;\n=== Testing: &quot; ++ name ++ &quot; ===&quot;
+<span class="lineno">  701 </span>        case parse code of
+<span class="lineno">  702 </span>            Left err -&gt; putStrLn $ &quot;ERROR: &quot; ++ err
+<span class="lineno">  703 </span>            Right result -&gt; do
+<span class="lineno">  704 </span>                putStrLn &quot;SUCCESS&quot;
+<span class="lineno">  705 </span>        ) testCases
+<span class="lineno">  706 </span>-}
+<span class="lineno">  707 </span>
+<span class="lineno">  708 </span>{-
+<span class="lineno">  709 </span>-- Run the test
+<span class="lineno">  710 </span>main :: IO ()
+<span class="lineno">  711 </span>main = testParser
+<span class="lineno">  712 </span>-}
+
+</pre>
+</body>
+</html>

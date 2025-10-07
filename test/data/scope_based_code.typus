@@ -1,0 +1,13 @@
+//! ownership: on
+
+package main
+
+func main() {
+    {
+        s1 := "scoped"
+        s2 := s1  // Move within scope
+        println(s2)
+    }
+    // s1 and s2 are out of scope here
+    println("done")
+}

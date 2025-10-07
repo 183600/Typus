@@ -1,0 +1,37 @@
+//! ownership: on
+
+package main
+
+import "fmt"
+
+func main() {
+    // Test basic variable declarations
+    x := 42
+    y := x + 10
+    fmt.Println(y)
+
+    // Test ownership transfer (this should trigger errors)
+    z := x  // This should be a move
+    fmt.Println(x)  // This should trigger UseAfterMove error
+
+    // Test borrowing patterns
+    a := 100
+    b := &a  // Immutable borrow
+    fmt.Println(b)
+    fmt.Println(a)  // Should be OK with immutable borrow
+
+    // Test mutable borrowing
+    c := 200
+    d := &mut c  // Mutable borrow
+    *d = 300
+    fmt.Println(c)  // Should trigger UseWhileMutBorrowed error
+
+    // Test function calls with moves
+    e := 50
+    testFunc(e)
+    fmt.Println(e)  // Should trigger UseAfterMove error
+}
+
+func testFunc(value int) {
+    fmt.Println("Received:", value)
+}

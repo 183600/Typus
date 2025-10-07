@@ -1,0 +1,38 @@
+package utils
+
+import (
+    "strings"
+    "regexp"
+)
+
+func FormatUserName(name string) string {
+    // Convert to title case
+    return strings.Title(strings.ReplaceAll(name, "_", " "))
+}
+
+func ValidateEmail(email string) bool {
+    // Simple email validation regex
+    pattern := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+    matched, _ := regexp.MatchString(pattern, email)
+    return matched
+}
+
+func SanitizeInput(input string) string {
+    // Remove potentially harmful characters
+    sanitized := strings.ReplaceAll(input, "<", "&lt;")
+    sanitized = strings.ReplaceAll(sanitized, ">", "&gt;")
+    return sanitized
+}
+
+// Function to test string ownership patterns
+func ProcessStringData(data *string) string {
+    // Move string data and process it
+    processed := strings.ToUpper(*data)
+    return processed
+}
+
+func SplitAndProcess(text string) ([]string, string) {
+    words := strings.Split(text, " ")
+    processed := strings.Join(words, "-")
+    return words, processed
+}

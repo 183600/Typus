@@ -1,0 +1,131 @@
+模块覆盖率分析:
+----------------------------------------
+模块: AnalyzerIntegration
+100% expressions used (0/0)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (0/0)
+----------------------------------------
+模块: Cli
+100% expressions used (0/0)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (0/0)
+----------------------------------------
+模块: Compiler
+100% expressions used (0/0)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (0/0)
+----------------------------------------
+模块: CompilerUtils
+100% expressions used (0/0)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (0/0)
+----------------------------------------
+模块: Compiler_fixed
+100% expressions used (0/0)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (0/0)
+----------------------------------------
+模块: Dependencies
+100% expressions used (0/0)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (0/0)
+----------------------------------------
+模块: DependentTypesParser
+100% expressions used (0/0)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (0/0)
+----------------------------------------
+模块: IntegratedCompiler
+100% expressions used (0/0)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (0/0)
+----------------------------------------
+模块: Ownership
+100% expressions used (0/0)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (0/0)
+----------------------------------------
+模块: Parser
+100% expressions used (0/0)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (0/0)
+----------------------------------------
+模块: SimpleSyntaxValidator
+100% expressions used (0/0)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (0/0)
+----------------------------------------
+模块: SyntaxValidator
+100% expressions used (0/0)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (0/0)
+----------------------------------------
+模块: Utils
+100% expressions used (0/0)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (0/0)

@@ -1,0 +1,337 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE ScopedTypeVariables #-}
+<span class="lineno">    3 </span>module EndToEndTests (runEndToEndTests, defaultE2EConfig) where
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>import Test.Tasty
+<span class="lineno">    6 </span>import Test.Tasty.HUnit
+<span class="lineno">    7 </span>import Test.Tasty.QuickCheck
+<span class="lineno">    8 </span>import Test.Tasty.Ingredients (tryIngredients)
+<span class="lineno">    9 </span>import Test.Tasty.Ingredients.ConsoleReporter (consoleTestReporter)
+<span class="lineno">   10 </span>import Data.Monoid (mempty)
+<span class="lineno">   11 </span>import qualified Parser (parseTypus, TypusFile(..), FileDirectives(..), BlockDirectives(..), CodeBlock(..))
+<span class="lineno">   12 </span>import qualified Compiler (compile)
+<span class="lineno">   13 </span>import qualified Ownership (analyzeOwnership)
+<span class="lineno">   14 </span>import qualified SyntaxValidator (validateSyntax)
+<span class="lineno">   15 </span>import System.Directory (doesFileExist, createDirectoryIfMissing, removeDirectoryRecursive)
+<span class="lineno">   16 </span>import System.FilePath ((&lt;/&gt;))
+<span class="lineno">   17 </span>import System.Process (readProcessWithExitCode, callCommand)
+<span class="lineno">   18 </span>import System.Exit (ExitCode(..))
+<span class="lineno">   19 </span>import System.IO.Temp (withSystemTempDirectory)
+<span class="lineno">   20 </span>import Data.List (isInfixOf, isPrefixOf)
+<span class="lineno">   21 </span>import Control.Monad (when)
+<span class="lineno">   22 </span>import System.Timeout (timeout)
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>-- End-to-End Test Configuration
+<span class="lineno">   25 </span>data E2ETestConfig = E2ETestConfig
+<span class="lineno">   26 </span>    { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tempDir</span></span></span> :: String
+<span class="lineno">   27 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">goCompilerPath</span></span></span> :: String
+<span class="lineno">   28 </span>    , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">timeoutSeconds</span></span></span> :: Int
+<span class="lineno">   29 </span>    }
+<span class="lineno">   30 </span>
+<span class="lineno">   31 </span>defaultE2EConfig :: E2ETestConfig
+<span class="lineno">   32 </span><span class="decl"><span class="nottickedoff">defaultE2EConfig = E2ETestConfig</span>
+<span class="lineno">   33 </span><span class="spaces">    </span><span class="nottickedoff">{ tempDir = &quot;test_e2e_temp&quot;</span>
+<span class="lineno">   34 </span><span class="spaces">    </span><span class="nottickedoff">, goCompilerPath = &quot;go&quot;</span>
+<span class="lineno">   35 </span><span class="spaces">    </span><span class="nottickedoff">, timeoutSeconds = 60</span>
+<span class="lineno">   36 </span><span class="spaces">    </span><span class="nottickedoff">}</span></span>
+<span class="lineno">   37 </span>
+<span class="lineno">   38 </span>-- Setup and cleanup
+<span class="lineno">   39 </span>setupE2ETestEnvironment :: E2ETestConfig -&gt; IO ()
+<span class="lineno">   40 </span><span class="decl"><span class="nottickedoff">setupE2ETestEnvironment config = do</span>
+<span class="lineno">   41 </span><span class="spaces">    </span><span class="nottickedoff">createDirectoryIfMissing True (tempDir config)</span></span>
+<span class="lineno">   42 </span>
+<span class="lineno">   43 </span>cleanupE2ETestEnvironment :: E2ETestConfig -&gt; IO ()
+<span class="lineno">   44 </span><span class="decl"><span class="nottickedoff">cleanupE2ETestEnvironment config = do</span>
+<span class="lineno">   45 </span><span class="spaces">    </span><span class="nottickedoff">exists &lt;- doesFileExist (tempDir config)</span>
+<span class="lineno">   46 </span><span class="spaces">    </span><span class="nottickedoff">when exists $ removeDirectoryRecursive (tempDir config)</span></span>
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>-- Helper function to test full compilation and execution pipeline
+<span class="lineno">   49 </span>testCompilationAndExecution :: E2ETestConfig -&gt; String -&gt; String -&gt; TestTree
+<span class="lineno">   50 </span><span class="decl"><span class="nottickedoff">testCompilationAndExecution config testName code = testCase testName $ do</span>
+<span class="lineno">   51 </span><span class="spaces">    </span><span class="nottickedoff">setupE2ETestEnvironment config</span>
+<span class="lineno">   52 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">   53 </span><span class="spaces">    </span><span class="nottickedoff">-- Step 1: Parse the code</span>
+<span class="lineno">   54 </span><span class="spaces">    </span><span class="nottickedoff">parsedFile &lt;- case Parser.parseTypus code of</span>
+<span class="lineno">   55 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Parsing failed: &quot; ++ err</span>
+<span class="lineno">   56 </span><span class="spaces">        </span><span class="nottickedoff">Right typusFile -&gt; return typusFile</span>
+<span class="lineno">   57 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">   58 </span><span class="spaces">    </span><span class="nottickedoff">-- Step 2: Compile to Go</span>
+<span class="lineno">   59 </span><span class="spaces">    </span><span class="nottickedoff">goCode &lt;- case Compiler.compile parsedFile of</span>
+<span class="lineno">   60 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Compilation failed: &quot; ++ err</span>
+<span class="lineno">   61 </span><span class="spaces">        </span><span class="nottickedoff">Right compiledCode -&gt; return compiledCode</span>
+<span class="lineno">   62 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">   63 </span><span class="spaces">    </span><span class="nottickedoff">-- Step 3: Validate generated Go code</span>
+<span class="lineno">   64 </span><span class="spaces">    </span><span class="nottickedoff">assertBool (testName ++ &quot;: Generated Go code should contain package declaration&quot;)</span>
+<span class="lineno">   65 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;package main&quot; `isInfixOf` goCode)</span>
+<span class="lineno">   66 </span><span class="spaces">    </span><span class="nottickedoff">assertBool (testName ++ &quot;: Generated Go code should contain main function&quot;)</span>
+<span class="lineno">   67 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;func main&quot; `isInfixOf` goCode)</span>
+<span class="lineno">   68 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">   69 </span><span class="spaces">    </span><span class="nottickedoff">-- Step 4: Write Go code to temporary file</span>
+<span class="lineno">   70 </span><span class="spaces">    </span><span class="nottickedoff">let goFile = tempDir config &lt;/&gt; testName ++ &quot;.go&quot;</span>
+<span class="lineno">   71 </span><span class="spaces">    </span><span class="nottickedoff">writeFile goFile goCode</span>
+<span class="lineno">   72 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">   73 </span><span class="spaces">    </span><span class="nottickedoff">-- Step 5: Compile Go code with timeout</span>
+<span class="lineno">   74 </span><span class="spaces">    </span><span class="nottickedoff">let executableFile = tempDir config &lt;/&gt; testName</span>
+<span class="lineno">   75 </span><span class="spaces">    </span><span class="nottickedoff">compileResult &lt;- timeout (timeoutSeconds config * 1000000) $</span>
+<span class="lineno">   76 </span><span class="spaces">        </span><span class="nottickedoff">readProcessWithExitCode (goCompilerPath config) [&quot;build&quot;, &quot;-o&quot;, executableFile, goFile] &quot;&quot;</span>
+<span class="lineno">   77 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">   78 </span><span class="spaces">    </span><span class="nottickedoff">case compileResult of</span>
+<span class="lineno">   79 </span><span class="spaces">        </span><span class="nottickedoff">Nothing -&gt; assertFailure (testName ++ &quot;: Go compilation timed out&quot;)</span>
+<span class="lineno">   80 </span><span class="spaces">        </span><span class="nottickedoff">Just (exitCode, stdout, stderr) -&gt; case exitCode of</span>
+<span class="lineno">   81 </span><span class="spaces">            </span><span class="nottickedoff">ExitFailure c -&gt; do</span>
+<span class="lineno">   82 </span><span class="spaces">                </span><span class="nottickedoff">-- Check if go compiler is available</span>
+<span class="lineno">   83 </span><span class="spaces">                </span><span class="nottickedoff">if &quot;command not found&quot; `isInfixOf` stderr || &quot;not found&quot; `isInfixOf` stderr</span>
+<span class="lineno">   84 </span><span class="spaces">                    </span><span class="nottickedoff">then do</span>
+<span class="lineno">   85 </span><span class="spaces">                        </span><span class="nottickedoff">putStrLn $ &quot;WARNING: Go compiler not found, skipping execution test for &quot; ++ testName</span>
+<span class="lineno">   86 </span><span class="spaces">                        </span><span class="nottickedoff">cleanupE2ETestEnvironment config</span>
+<span class="lineno">   87 </span><span class="spaces">                    </span><span class="nottickedoff">else assertFailure (testName ++ &quot;: Go compilation failed with exit code &quot; ++ show c ++ &quot;: &quot; ++ stderr)</span>
+<span class="lineno">   88 </span><span class="spaces">            </span><span class="nottickedoff">ExitSuccess -&gt; do</span>
+<span class="lineno">   89 </span><span class="spaces">                </span><span class="nottickedoff">-- Step 6: Execute the compiled program with timeout</span>
+<span class="lineno">   90 </span><span class="spaces">                </span><span class="nottickedoff">execResult &lt;- timeout (timeoutSeconds config * 1000000) $</span>
+<span class="lineno">   91 </span><span class="spaces">                    </span><span class="nottickedoff">readProcessWithExitCode executableFile [] &quot;&quot;</span>
+<span class="lineno">   92 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">   93 </span><span class="spaces">                </span><span class="nottickedoff">case execResult of</span>
+<span class="lineno">   94 </span><span class="spaces">                    </span><span class="nottickedoff">Nothing -&gt; assertFailure (testName ++ &quot;: Program execution timed out&quot;)</span>
+<span class="lineno">   95 </span><span class="spaces">                    </span><span class="nottickedoff">Just (exitCode', stdout', stderr') -&gt; case exitCode' of</span>
+<span class="lineno">   96 </span><span class="spaces">                        </span><span class="nottickedoff">ExitFailure c' -&gt; assertFailure (testName ++ &quot;: Program execution failed with exit code &quot; ++ show c' ++ &quot;: &quot; ++ stderr')</span>
+<span class="lineno">   97 </span><span class="spaces">                        </span><span class="nottickedoff">ExitSuccess -&gt; do</span>
+<span class="lineno">   98 </span><span class="spaces">                            </span><span class="nottickedoff">-- Step 7: Validate output (if applicable)</span>
+<span class="lineno">   99 </span><span class="spaces">                            </span><span class="nottickedoff">when (not $ null stdout') $ do</span>
+<span class="lineno">  100 </span><span class="spaces">                                </span><span class="nottickedoff">-- Basic output validation</span>
+<span class="lineno">  101 </span><span class="spaces">                                </span><span class="nottickedoff">assertBool (testName ++ &quot;: Program should produce output&quot;) (not $ null stdout')</span>
+<span class="lineno">  102 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  103 </span><span class="spaces">                            </span><span class="nottickedoff">cleanupE2ETestEnvironment config</span>
+<span class="lineno">  104 </span><span class="spaces">                            </span><span class="nottickedoff">return ()</span></span>
+<span class="lineno">  105 </span>
+<span class="lineno">  106 </span>-- End-to-End test cases
+<span class="lineno">  107 </span>endToEndTests :: E2ETestConfig -&gt; TestTree
+<span class="lineno">  108 </span><span class="decl"><span class="nottickedoff">endToEndTests config = testGroup &quot;End-to-End Tests&quot; [</span>
+<span class="lineno">  109 </span><span class="spaces">    </span><span class="nottickedoff">testCompilationAndExecution config &quot;SimpleHelloWorld&quot; $ unlines [</span>
+<span class="lineno">  110 </span><span class="spaces">        </span><span class="nottickedoff">&quot;package main&quot;,</span>
+<span class="lineno">  111 </span><span class="spaces">        </span><span class="nottickedoff">&quot;&quot;,</span>
+<span class="lineno">  112 </span><span class="spaces">        </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  113 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    println(\&quot;Hello, World!\&quot;)&quot;,</span>
+<span class="lineno">  114 </span><span class="spaces">        </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  115 </span><span class="spaces">        </span><span class="nottickedoff">],</span>
+<span class="lineno">  116 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  117 </span><span class="spaces">    </span><span class="nottickedoff">testCompilationAndExecution config &quot;VariableDeclaration&quot; $ unlines [</span>
+<span class="lineno">  118 </span><span class="spaces">        </span><span class="nottickedoff">&quot;package main&quot;,</span>
+<span class="lineno">  119 </span><span class="spaces">        </span><span class="nottickedoff">&quot;&quot;,</span>
+<span class="lineno">  120 </span><span class="spaces">        </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  121 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    let x = 42&quot;,</span>
+<span class="lineno">  122 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    let y = x + 8&quot;,</span>
+<span class="lineno">  123 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    println(y)&quot;,</span>
+<span class="lineno">  124 </span><span class="spaces">        </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  125 </span><span class="spaces">        </span><span class="nottickedoff">],</span>
+<span class="lineno">  126 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  127 </span><span class="spaces">    </span><span class="nottickedoff">testCompilationAndExecution config &quot;FunctionDeclaration&quot; $ unlines [</span>
+<span class="lineno">  128 </span><span class="spaces">        </span><span class="nottickedoff">&quot;package main&quot;,</span>
+<span class="lineno">  129 </span><span class="spaces">        </span><span class="nottickedoff">&quot;&quot;,</span>
+<span class="lineno">  130 </span><span class="spaces">        </span><span class="nottickedoff">&quot;func add(a: int, b: int): int {&quot;,</span>
+<span class="lineno">  131 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    return a + b&quot;,</span>
+<span class="lineno">  132 </span><span class="spaces">        </span><span class="nottickedoff">&quot;}&quot;,</span>
+<span class="lineno">  133 </span><span class="spaces">        </span><span class="nottickedoff">&quot;&quot;,</span>
+<span class="lineno">  134 </span><span class="spaces">        </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  135 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    let result = add(10, 20)&quot;,</span>
+<span class="lineno">  136 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    println(result)&quot;,</span>
+<span class="lineno">  137 </span><span class="spaces">        </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  138 </span><span class="spaces">        </span><span class="nottickedoff">],</span>
+<span class="lineno">  139 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  140 </span><span class="spaces">    </span><span class="nottickedoff">testCompilationAndExecution config &quot;ConditionalLogic&quot; $ unlines [</span>
+<span class="lineno">  141 </span><span class="spaces">        </span><span class="nottickedoff">&quot;package main&quot;,</span>
+<span class="lineno">  142 </span><span class="spaces">        </span><span class="nottickedoff">&quot;&quot;,</span>
+<span class="lineno">  143 </span><span class="spaces">        </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  144 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    let x = 10&quot;,</span>
+<span class="lineno">  145 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    if x &gt; 5 {&quot;,</span>
+<span class="lineno">  146 </span><span class="spaces">        </span><span class="nottickedoff">&quot;        println(\&quot;Greater than 5\&quot;)&quot;,</span>
+<span class="lineno">  147 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    } else {&quot;,</span>
+<span class="lineno">  148 </span><span class="spaces">        </span><span class="nottickedoff">&quot;        println(\&quot;Less than or equal to 5\&quot;)&quot;,</span>
+<span class="lineno">  149 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    }&quot;,</span>
+<span class="lineno">  150 </span><span class="spaces">        </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  151 </span><span class="spaces">        </span><span class="nottickedoff">],</span>
+<span class="lineno">  152 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  153 </span><span class="spaces">    </span><span class="nottickedoff">testCompilationAndExecution config &quot;LoopStructure&quot; $ unlines [</span>
+<span class="lineno">  154 </span><span class="spaces">        </span><span class="nottickedoff">&quot;package main&quot;,</span>
+<span class="lineno">  155 </span><span class="spaces">        </span><span class="nottickedoff">&quot;&quot;,</span>
+<span class="lineno">  156 </span><span class="spaces">        </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  157 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    let sum = 0&quot;,</span>
+<span class="lineno">  158 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    for i in 1..10 {&quot;,</span>
+<span class="lineno">  159 </span><span class="spaces">        </span><span class="nottickedoff">&quot;        sum = sum + i&quot;,</span>
+<span class="lineno">  160 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    }&quot;,</span>
+<span class="lineno">  161 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    println(sum)&quot;,</span>
+<span class="lineno">  162 </span><span class="spaces">        </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  163 </span><span class="spaces">        </span><span class="nottickedoff">],</span>
+<span class="lineno">  164 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  165 </span><span class="spaces">    </span><span class="nottickedoff">testCompilationAndExecution config &quot;StringOperations&quot; $ unlines [</span>
+<span class="lineno">  166 </span><span class="spaces">        </span><span class="nottickedoff">&quot;package main&quot;,</span>
+<span class="lineno">  167 </span><span class="spaces">        </span><span class="nottickedoff">&quot;&quot;,</span>
+<span class="lineno">  168 </span><span class="spaces">        </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  169 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    let message = \&quot;Hello from Typus!\&quot;&quot;,</span>
+<span class="lineno">  170 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    let processed = message + \&quot; - Compiled to Go\&quot;&quot;,</span>
+<span class="lineno">  171 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    println(processed)&quot;,</span>
+<span class="lineno">  172 </span><span class="spaces">        </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  173 </span><span class="spaces">        </span><span class="nottickedoff">],</span>
+<span class="lineno">  174 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  175 </span><span class="spaces">    </span><span class="nottickedoff">testCompilationAndExecution config &quot;ArrayOperations&quot; $ unlines [</span>
+<span class="lineno">  176 </span><span class="spaces">        </span><span class="nottickedoff">&quot;package main&quot;,</span>
+<span class="lineno">  177 </span><span class="spaces">        </span><span class="nottickedoff">&quot;&quot;,</span>
+<span class="lineno">  178 </span><span class="spaces">        </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  179 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    let arr = [1, 2, 3, 4, 5]&quot;,</span>
+<span class="lineno">  180 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    let sum = 0&quot;,</span>
+<span class="lineno">  181 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    for i in 0..4 {&quot;,</span>
+<span class="lineno">  182 </span><span class="spaces">        </span><span class="nottickedoff">&quot;        sum = sum + arr[i]&quot;,</span>
+<span class="lineno">  183 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    }&quot;,</span>
+<span class="lineno">  184 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    println(sum)&quot;,</span>
+<span class="lineno">  185 </span><span class="spaces">        </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  186 </span><span class="spaces">        </span><span class="nottickedoff">],</span>
+<span class="lineno">  187 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  188 </span><span class="spaces">    </span><span class="nottickedoff">testCompilationAndExecution config &quot;UnicodeSupport&quot; $ unlines [</span>
+<span class="lineno">  189 </span><span class="spaces">        </span><span class="nottickedoff">&quot;package main&quot;,</span>
+<span class="lineno">  190 </span><span class="spaces">        </span><span class="nottickedoff">&quot;&quot;,</span>
+<span class="lineno">  191 </span><span class="spaces">        </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  192 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    let greeting = \&quot;你好，世界！\&quot;&quot;,</span>
+<span class="lineno">  193 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    let message = \&quot;Unicode test: \&quot; + greeting&quot;,</span>
+<span class="lineno">  194 </span><span class="spaces">        </span><span class="nottickedoff">&quot;    println(message)&quot;,</span>
+<span class="lineno">  195 </span><span class="spaces">        </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  196 </span><span class="spaces">        </span><span class="nottickedoff">],</span>
+<span class="lineno">  197 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  198 </span><span class="spaces">    </span><span class="nottickedoff">testCase &quot;Error Handling Pipeline&quot; $ do</span>
+<span class="lineno">  199 </span><span class="spaces">        </span><span class="nottickedoff">setupE2ETestEnvironment config</span>
+<span class="lineno">  200 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  201 </span><span class="spaces">        </span><span class="nottickedoff">let invalidCode = unlines [</span>
+<span class="lineno">  202 </span><span class="spaces">                </span><span class="nottickedoff">&quot;package main&quot;,</span>
+<span class="lineno">  203 </span><span class="spaces">                </span><span class="nottickedoff">&quot;&quot;,</span>
+<span class="lineno">  204 </span><span class="spaces">                </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  205 </span><span class="spaces">                </span><span class="nottickedoff">&quot;    let x = &quot;,  -- Incomplete declaration</span>
+<span class="lineno">  206 </span><span class="spaces">                </span><span class="nottickedoff">&quot;    println(x)&quot;,</span>
+<span class="lineno">  207 </span><span class="spaces">                </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  208 </span><span class="spaces">                </span><span class="nottickedoff">]</span>
+<span class="lineno">  209 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  210 </span><span class="spaces">        </span><span class="nottickedoff">-- Test that parsing fails gracefully</span>
+<span class="lineno">  211 </span><span class="spaces">        </span><span class="nottickedoff">case Parser.parseTypus invalidCode of</span>
+<span class="lineno">  212 </span><span class="spaces">            </span><span class="nottickedoff">Left _ -&gt; return ()  -- Expected to fail</span>
+<span class="lineno">  213 </span><span class="spaces">            </span><span class="nottickedoff">Right _ -&gt; assertFailure &quot;Parser should have failed on invalid code&quot;</span>
+<span class="lineno">  214 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  215 </span><span class="spaces">        </span><span class="nottickedoff">cleanupE2ETestEnvironment config,</span>
+<span class="lineno">  216 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  217 </span><span class="spaces">    </span><span class="nottickedoff">testCase &quot;Large File Processing&quot; $ do</span>
+<span class="lineno">  218 </span><span class="spaces">        </span><span class="nottickedoff">setupE2ETestEnvironment config</span>
+<span class="lineno">  219 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  220 </span><span class="spaces">        </span><span class="nottickedoff">-- Generate a large piece of code</span>
+<span class="lineno">  221 </span><span class="spaces">        </span><span class="nottickedoff">let largeCode = unlines $ [</span>
+<span class="lineno">  222 </span><span class="spaces">                </span><span class="nottickedoff">&quot;package main&quot;,</span>
+<span class="lineno">  223 </span><span class="spaces">                </span><span class="nottickedoff">&quot;&quot;,</span>
+<span class="lineno">  224 </span><span class="spaces">                </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  225 </span><span class="spaces">                </span><span class="nottickedoff">&quot;    let sum = 0&quot;</span>
+<span class="lineno">  226 </span><span class="spaces">                </span><span class="nottickedoff">] ++ [&quot;    let x&quot; ++ show i ++ &quot; = &quot; ++ show i | i &lt;- [1..1000 :: Int]] ++ [</span>
+<span class="lineno">  227 </span><span class="spaces">                </span><span class="nottickedoff">&quot;    for i in 1..1000 :: Int {&quot;,</span>
+<span class="lineno">  228 </span><span class="spaces">                </span><span class="nottickedoff">&quot;        sum = sum + i&quot;,</span>
+<span class="lineno">  229 </span><span class="spaces">                </span><span class="nottickedoff">&quot;    }&quot;,</span>
+<span class="lineno">  230 </span><span class="spaces">                </span><span class="nottickedoff">&quot;    println(sum)&quot;,</span>
+<span class="lineno">  231 </span><span class="spaces">                </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  232 </span><span class="spaces">                </span><span class="nottickedoff">]</span>
+<span class="lineno">  233 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  234 </span><span class="spaces">        </span><span class="nottickedoff">-- Test that the system can handle large files</span>
+<span class="lineno">  235 </span><span class="spaces">        </span><span class="nottickedoff">case Parser.parseTypus largeCode of</span>
+<span class="lineno">  236 </span><span class="spaces">            </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Parser failed on large code: &quot; ++ err</span>
+<span class="lineno">  237 </span><span class="spaces">            </span><span class="nottickedoff">Right typusFile -&gt; do</span>
+<span class="lineno">  238 </span><span class="spaces">                </span><span class="nottickedoff">case Compiler.compile typusFile of</span>
+<span class="lineno">  239 </span><span class="spaces">                    </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Compilation failed on large code: &quot; ++ err</span>
+<span class="lineno">  240 </span><span class="spaces">                    </span><span class="nottickedoff">Right _ -&gt; return ()</span>
+<span class="lineno">  241 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  242 </span><span class="spaces">        </span><span class="nottickedoff">cleanupE2ETestEnvironment config,</span>
+<span class="lineno">  243 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  244 </span><span class="spaces">    </span><span class="nottickedoff">testCase &quot;Performance Benchmark&quot; $ do</span>
+<span class="lineno">  245 </span><span class="spaces">        </span><span class="nottickedoff">setupE2ETestEnvironment config</span>
+<span class="lineno">  246 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  247 </span><span class="spaces">        </span><span class="nottickedoff">let performanceCode = unlines [</span>
+<span class="lineno">  248 </span><span class="spaces">                </span><span class="nottickedoff">&quot;package main&quot;,</span>
+<span class="lineno">  249 </span><span class="spaces">                </span><span class="nottickedoff">&quot;&quot;,</span>
+<span class="lineno">  250 </span><span class="spaces">                </span><span class="nottickedoff">&quot;func fibonacci(n: int): int {&quot;,</span>
+<span class="lineno">  251 </span><span class="spaces">                </span><span class="nottickedoff">&quot;    if n &lt;= 1 {&quot;,</span>
+<span class="lineno">  252 </span><span class="spaces">                </span><span class="nottickedoff">&quot;        return n&quot;,</span>
+<span class="lineno">  253 </span><span class="spaces">                </span><span class="nottickedoff">&quot;    } else {&quot;,</span>
+<span class="lineno">  254 </span><span class="spaces">                </span><span class="nottickedoff">&quot;        return fibonacci(n-1) + fibonacci(n-2)&quot;,</span>
+<span class="lineno">  255 </span><span class="spaces">                </span><span class="nottickedoff">&quot;    }&quot;,</span>
+<span class="lineno">  256 </span><span class="spaces">                </span><span class="nottickedoff">&quot;}&quot;,</span>
+<span class="lineno">  257 </span><span class="spaces">                </span><span class="nottickedoff">&quot;&quot;,</span>
+<span class="lineno">  258 </span><span class="spaces">                </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  259 </span><span class="spaces">                </span><span class="nottickedoff">&quot;    let result = fibonacci(10)&quot;,</span>
+<span class="lineno">  260 </span><span class="spaces">                </span><span class="nottickedoff">&quot;    println(result)&quot;,</span>
+<span class="lineno">  261 </span><span class="spaces">                </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  262 </span><span class="spaces">                </span><span class="nottickedoff">]</span>
+<span class="lineno">  263 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  264 </span><span class="spaces">        </span><span class="nottickedoff">-- Test that performance-critical code works</span>
+<span class="lineno">  265 </span><span class="spaces">        </span><span class="nottickedoff">case Parser.parseTypus performanceCode of</span>
+<span class="lineno">  266 </span><span class="spaces">            </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Parser failed on performance code: &quot; ++ err</span>
+<span class="lineno">  267 </span><span class="spaces">            </span><span class="nottickedoff">Right typusFile -&gt; do</span>
+<span class="lineno">  268 </span><span class="spaces">                </span><span class="nottickedoff">case Compiler.compile typusFile of</span>
+<span class="lineno">  269 </span><span class="spaces">                    </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Compilation failed on performance code: &quot; ++ err</span>
+<span class="lineno">  270 </span><span class="spaces">                    </span><span class="nottickedoff">Right goCode -&gt; do</span>
+<span class="lineno">  271 </span><span class="spaces">                        </span><span class="nottickedoff">assertBool &quot;Generated code should contain fibonacci function&quot;</span>
+<span class="lineno">  272 </span><span class="spaces">                            </span><span class="nottickedoff">(&quot;func fibonacci&quot; `isInfixOf` goCode)</span>
+<span class="lineno">  273 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  274 </span><span class="spaces">        </span><span class="nottickedoff">cleanupE2ETestEnvironment config,</span>
+<span class="lineno">  275 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  276 </span><span class="spaces">    </span><span class="nottickedoff">testProperty &quot;End-to-End Pipeline Correctness&quot; $ \code -&gt;</span>
+<span class="lineno">  277 </span><span class="spaces">        </span><span class="nottickedoff">case Parser.parseTypus code of</span>
+<span class="lineno">  278 </span><span class="spaces">            </span><span class="nottickedoff">Left _ -&gt; True  -- Invalid code is allowed</span>
+<span class="lineno">  279 </span><span class="spaces">            </span><span class="nottickedoff">Right typusFile -&gt;</span>
+<span class="lineno">  280 </span><span class="spaces">                </span><span class="nottickedoff">case Compiler.compile typusFile of</span>
+<span class="lineno">  281 </span><span class="spaces">                    </span><span class="nottickedoff">Left _ -&gt; True  -- Compilation errors are allowed</span>
+<span class="lineno">  282 </span><span class="spaces">                    </span><span class="nottickedoff">Right goCode -&gt;</span>
+<span class="lineno">  283 </span><span class="spaces">                        </span><span class="nottickedoff">-- Basic checks on generated Go code</span>
+<span class="lineno">  284 </span><span class="spaces">                        </span><span class="nottickedoff">(&quot;package main&quot; `isInfixOf` goCode &amp;&amp; &quot;func main&quot; `isInfixOf` goCode) ||</span>
+<span class="lineno">  285 </span><span class="spaces">                        </span><span class="nottickedoff">(null goCode &amp;&amp; null code)</span>
+<span class="lineno">  286 </span><span class="spaces">    </span><span class="nottickedoff">]</span></span>
+<span class="lineno">  287 </span>
+<span class="lineno">  288 </span>-- End-to-End test runner
+<span class="lineno">  289 </span>runEndToEndTests :: E2ETestConfig -&gt; IO ()
+<span class="lineno">  290 </span><span class="decl"><span class="nottickedoff">runEndToEndTests config = do</span>
+<span class="lineno">  291 </span><span class="spaces">    </span><span class="nottickedoff">putStrLn &quot;Running end-to-end test suite for Typus compiler...&quot;</span>
+<span class="lineno">  292 </span><span class="spaces">    </span><span class="nottickedoff">putStrLn &quot;================================================&quot;</span>
+<span class="lineno">  293 </span><span class="spaces">    </span><span class="nottickedoff">putStrLn $ &quot;Test configuration:&quot;</span>
+<span class="lineno">  294 </span><span class="spaces">    </span><span class="nottickedoff">putStrLn $ &quot;  Temporary directory: &quot; ++ tempDir config</span>
+<span class="lineno">  295 </span><span class="spaces">    </span><span class="nottickedoff">putStrLn $ &quot;  Go compiler path: &quot; ++ goCompilerPath config</span>
+<span class="lineno">  296 </span><span class="spaces">    </span><span class="nottickedoff">putStrLn $ &quot;  Timeout: &quot; ++ show (timeoutSeconds config) ++ &quot; seconds&quot;</span>
+<span class="lineno">  297 </span><span class="spaces">    </span><span class="nottickedoff">putStrLn &quot;&quot;</span>
+<span class="lineno">  298 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  299 </span><span class="spaces">    </span><span class="nottickedoff">setupE2ETestEnvironment config</span>
+<span class="lineno">  300 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  301 </span><span class="spaces">    </span><span class="nottickedoff">-- Run the test suite</span>
+<span class="lineno">  302 </span><span class="spaces">    </span><span class="nottickedoff">let ingredients = [consoleTestReporter]</span>
+<span class="lineno">  303 </span><span class="spaces">    </span><span class="nottickedoff">case tryIngredients ingredients mempty (endToEndTests config) of</span>
+<span class="lineno">  304 </span><span class="spaces">        </span><span class="nottickedoff">Nothing -&gt; putStrLn &quot;ERROR: No suitable ingredient found to run end-to-end tests&quot;</span>
+<span class="lineno">  305 </span><span class="spaces">        </span><span class="nottickedoff">Just runTest -&gt; do</span>
+<span class="lineno">  306 </span><span class="spaces">            </span><span class="nottickedoff">success &lt;- runTest</span>
+<span class="lineno">  307 </span><span class="spaces">            </span><span class="nottickedoff">if success</span>
+<span class="lineno">  308 </span><span class="spaces">                </span><span class="nottickedoff">then do</span>
+<span class="lineno">  309 </span><span class="spaces">                    </span><span class="nottickedoff">cleanupE2ETestEnvironment config</span>
+<span class="lineno">  310 </span><span class="spaces">                    </span><span class="nottickedoff">putStrLn &quot;SUCCESS: All end-to-end tests passed. The project is ready for production.&quot;</span>
+<span class="lineno">  311 </span><span class="spaces">                </span><span class="nottickedoff">else do</span>
+<span class="lineno">  312 </span><span class="spaces">                    </span><span class="nottickedoff">cleanupE2ETestEnvironment config</span>
+<span class="lineno">  313 </span><span class="spaces">                    </span><span class="nottickedoff">putStrLn &quot;ERROR: Some end-to-end tests failed.&quot;</span>
+<span class="lineno">  314 </span><span class="spaces">    </span><span class="nottickedoff">return ()</span></span>
+
+</pre>
+</body>
+</html>

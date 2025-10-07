@@ -1,0 +1,89 @@
+package gateway
+
+import (
+    "microservice_structure/user_service"
+    "microservice_structure/order_service"
+    "microservice_structure/notification_service"
+    "errors"
+)
+
+type Gateway struct {
+    userSrv    *user_service.UserService
+    orderSrv   *order_service.OrderService
+    notifSrv   *notification_service.NotificationService
+}
+
+func NewGateway(
+    userSrv *user_service.UserService,
+    orderSrv *order_service.OrderService,
+    notifSrv *notification_service.NotificationService,
+) *Gateway {
+    return &Gateway{
+        userSrv:  userSrv,
+        orderSrv: orderSrv,
+        notifSrv: notifSrv,
+    }
+}
+
+func (g *Gateway) CreateUser(username, email string) (*user_service.User, error) {
+    return g.userSrv.CreateUser(username, email)
+}
+
+func (g *Gateway) CreateOrder(userID, productID string, quantity int) (*order_service.Order, error) {
+    // Verify user exists
+    user, err := g.userSrv.GetUser(userID)
+    if err != nil {
+        return nil, errors.New("user not found")
+    }
+
+    // Create order
+    order, err := g.orderSrv.CreateOrder(userID, productID, quantity)
+    if err != nil {
+        return nil, err
+    }
+
+    // Send notification
+    err = g.notifSrv.SendOrderConfirmation(user.Email, order.ID)
+    if err != nil {
+        // Log error but don't fail the operation
+        return order, nil
+    }
+
+    return order, nil
+}
+
+func (g *Gateway) ProcessOrder(orderID string) error {
+    order, err := g.orderSrv.GetOrder(orderID)
+    if err != nil {
+        return err
+    }
+
+    // Process payment (simulated)
+    err = g.orderSrv.UpdateOrderStatus(orderID, "processing")
+    if err != nil {
+        return err
+    }
+
+    // Get user for notification
+    user, err := g.userSrv.GetUser(order.UserID)
+    if err != nil {
+        return err
+    }
+
+    // Send processing notification
+    err = g.notifSrv.SendOrderUpdate(user.Email, orderID, "processing")
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
+func (g *Gateway) GetUserOrders(userID string) ([]*order_service.Order, error) {
+    return g.orderSrv.GetUserOrders(userID)
+}
+
+// Test gateway ownership patterns
+func TransferGateway(gw *Gateway) *Gateway {
+    return gw
+}

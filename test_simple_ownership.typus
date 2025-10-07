@@ -1,0 +1,20 @@
+//! ownership: on
+
+func test_use_after_move() {
+    data := "hello"
+    moved_data := data  // This moves data
+    println(data)       // This should be UseAfterMove error
+}
+
+func test_valid_usage() {
+    data := "hello"
+    println(data)       // This should be OK - no move happened
+    println(data)       // This should also be OK
+}
+
+func test_borrow() {
+    data := "hello"
+    ref := &data        // Immutable borrow
+    println(data)       // Should be OK - can use while immutably borrowed
+    println(*ref)       // Should be OK - using the borrow
+}

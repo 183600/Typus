@@ -1,0 +1,9 @@
+//! ownership: on
+
+package main
+
+func main() {
+    s1 := "hello"
+    s2 := s1
+    println(s1)
+}

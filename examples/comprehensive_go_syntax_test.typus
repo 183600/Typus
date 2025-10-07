@@ -1,0 +1,452 @@
+package main
+
+import (
+	"fmt"
+	"math"
+	"runtime"
+	"sync"
+	"time"
+)
+
+// 基本类型和变量声明
+var (
+	intVar       int       = 42
+	floatVar     float64   = 3.14159
+	stringVar    string    = "Hello, Typus!"
+	boolVar      bool      = true
+	byteVar      byte      = 'A'
+	runeVar      rune      = '世'
+	int8Var      int8      = 127
+	int16Var     int16     = 32767
+	int32Var     int32     = 2147483647
+	int64Var     int64     = 9223372036854775807
+	uintVar      uint      = 42
+	uint8Var     uint8     = 255
+	uint16Var    uint16    = 65535
+	uint32Var    uint32    = 4294967295
+	uint64Var    uint64    = 18446744073709551615
+	uintptrVar   uintptr   = 0x1234
+	float32Var   float32   = 3.14
+	complex64Var complex64 = 1 + 2i
+	complex128Var complex128 = 3 + 4i
+)
+
+// 常量声明
+const (
+	PI       = 3.14159
+	Language = "Go"
+	MaxInt   = math.MaxInt64
+)
+
+// 枚举类型使用iota
+const (
+	_ = iota
+	Monday
+	Tuesday
+	Wednesday
+	Thursday
+	Friday
+	Saturday
+	Sunday
+)
+
+// 类型别名
+type MyInt int
+type MyString string
+
+// 函数声明
+func add(a, b int) int {
+	return a + b
+}
+
+// 多返回值函数
+func divide(a, b float64) (float64, error) {
+	if b == 0 {
+		return 0, fmt.Errorf("division by zero")
+	}
+	return a / b, nil
+}
+
+// 命名返回值
+func swap(x, y string) (a, b string) {
+	a, b = y, x
+	return
+}
+
+// 可变参数函数
+func sum(nums ...int) int {
+	total := 0
+	for _, num := range nums {
+		total += num
+	}
+	return total
+}
+
+// 闭包函数
+func getSequence() func() int {
+	i := 0
+	return func() int {
+		i++
+		return i
+	}
+}
+
+// 递归函数
+func factorial(n int) int {
+	if n <= 1 {
+		return 1
+	}
+	return n * factorial(n-1)
+}
+
+// 结构体
+type Person struct {
+	Name string
+	Age  int
+}
+
+// 结构体方法
+func (p Person) greet() string {
+	return fmt.Sprintf("Hello, my name is %s and I'm %d years old", p.Name, p.Age)
+}
+
+// 指针接收器方法
+func (p *Person) birthday() {
+	p.Age++
+}
+
+// 嵌入结构体
+type Employee struct {
+	Person
+	Position string
+	Salary   float64
+}
+
+// 接口
+type Shape interface {
+	Area() float64
+	Perimeter() float64
+}
+
+// 接口实现
+type Rectangle struct {
+	Width  float64
+	Height float64
+}
+
+func (r Rectangle) Area() float64 {
+	return r.Width * r.Height
+}
+
+func (r Rectangle) Perimeter() float64 {
+	return 2 * (r.Width + r.Height)
+}
+
+type Circle struct {
+	Radius float64
+}
+
+func (c Circle) Area() float64 {
+	return math.Pi * c.Radius * c.Radius
+}
+
+func (c Circle) Perimeter() float64 {
+	return 2 * math.Pi * c.Radius
+}
+
+// 空接口
+func printValue(v interface{}) {
+	fmt.Printf("Value: %v, Type: %T\n", v, v)
+}
+
+// 类型断言
+func getType(v interface{}) string {
+	switch t := v.(type) {
+	case int:
+		return "int"
+	case string:
+		return "string"
+	case bool:
+		return "bool"
+	default:
+		return fmt.Sprintf("unknown type: %T", t)
+	}
+}
+
+// 切片操作
+func sliceOperations() {
+	// 创建切片
+	numbers := []int{1, 2, 3, 4, 5}
+	
+	// 切片子集
+	subset := numbers[1:3]
+	
+	// 追加元素
+	numbers = append(numbers, 6, 7, 8)
+	
+	// 复制切片
+	copyNumbers := make([]int, len(numbers))
+	copy(copyNumbers, numbers)
+	
+	fmt.Printf("Original: %v\n", numbers)
+	fmt.Printf("Subset: %v\n", subset)
+	fmt.Printf("Copy: %v\n", copyNumbers)
+}
+
+// 映射操作
+func mapOperations() {
+	// 创建映射
+	person := map[string]interface{}{
+		"name":  "Alice",
+		"age":   30,
+		"email": "alice@example.com",
+	}
+	
+	// 添加/更新元素
+	person["phone"] = "123-456-7890"
+	
+	// 删除元素
+	delete(person, "email")
+	
+	// 遍历映射
+	for key, value := range person {
+		fmt.Printf("%s: %v\n", key, value)
+	}
+}
+
+// 通道操作
+func channelOperations() {
+	// 创建通道
+	ch := make(chan int)
+	
+	// 发送数据
+	go func() {
+		ch <- 42
+	}()
+	
+	// 接收数据
+	value := <-ch
+	fmt.Printf("Received from channel: %d\n", value)
+	
+	// 缓冲通道
+	bufferedCh := make(chan string, 3)
+	bufferedCh <- "Hello"
+	bufferedCh <- "World"
+	
+	close(bufferedCh)
+	
+	// 遍历通道
+	for msg := range bufferedCh {
+		fmt.Println(msg)
+	}
+}
+
+// 互斥锁
+var counter int
+var mutex sync.Mutex
+
+func incrementCounter(wg *sync.WaitGroup) {
+	defer wg.Done()
+	
+	mutex.Lock()
+	counter++
+	fmt.Printf("Counter: %d\n", counter)
+	mutex.Unlock()
+}
+
+// 等待组
+func waitGroupExample() {
+	var wg sync.WaitGroup
+	
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go incrementCounter(&wg)
+	}
+	
+	wg.Wait()
+	fmt.Println("All goroutines finished")
+}
+
+// 延迟调用
+func deferExample() {
+	fmt.Println("Start")
+	defer fmt.Println("Deferred 1")
+	defer fmt.Println("Deferred 2")
+	fmt.Println("End")
+}
+
+// 恐慌恢复
+func panicRecovery() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("Recovered from panic: %v\n", r)
+		}
+	}()
+	
+	panic("Something went wrong!")
+}
+
+// 反射
+func reflectionExample() {
+	var x float64 = 3.4
+	fmt.Printf("Type: %T, Value: %v\n", x, x)
+}
+
+// 选择器
+func selectorExample() {
+	ch1 := make(chan string)
+	ch2 := make(chan string)
+	
+	go func() {
+		time.Sleep(1 * time.Second)
+		ch1 <- "Message 1"
+	}()
+	
+	go func() {
+		time.Sleep(2 * time.Second)
+		ch2 <- "Message 2"
+	}()
+	
+	for i := 0; i < 2; i++ {
+		select {
+		case msg1 := <-ch1:
+			fmt.Println("Received:", msg1)
+		case msg2 := <-ch2:
+			fmt.Println("Received:", msg2)
+		case <-time.After(3 * time.Second):
+			fmt.Println("Timeout")
+		}
+	}
+}
+
+// 标签和goto
+func gotoExample() {
+	i := 0
+loop:
+	if i < 5 {
+		fmt.Println(i)
+		i++
+		goto loop
+	}
+}
+
+// 主函数
+func main() {
+	// 基本输出
+	fmt.Println("=== Basic Types ===")
+	fmt.Printf("Int: %d, Float: %f, String: %s, Bool: %t\n", intVar, floatVar, stringVar, boolVar)
+	fmt.Printf("Byte: %c, Rune: %c\n", byteVar, runeVar)
+	
+	// 常量
+	fmt.Println("\n=== Constants ===")
+	fmt.Printf("PI: %f, Language: %s, MaxInt: %d\n", PI, Language, MaxInt)
+	
+	// 枚举
+	fmt.Println("\n=== Enumerations ===")
+	fmt.Printf("Monday: %d, Tuesday: %d, Wednesday: %d\n", Monday, Tuesday, Wednesday)
+	
+	// 类型别名
+	fmt.Println("\n=== Type Aliases ===")
+	var myInt MyInt = 100
+	var myString MyString = "Custom String"
+	fmt.Printf("MyInt: %d, MyString: %s\n", myInt, myString)
+	
+	// 函数调用
+	fmt.Println("\n=== Functions ===")
+	fmt.Printf("Add: %d\n", add(10, 20))
+	
+	result, err := divide(10, 2)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	} else {
+		fmt.Printf("Divide: %f\n", result)
+	}
+	
+	a, b := swap("hello", "world")
+	fmt.Printf("Swap: %s, %s\n", a, b)
+	
+	fmt.Printf("Sum: %d\n", sum(1, 2, 3, 4, 5))
+	
+	sequence := getSequence()
+	fmt.Printf("Sequence: %d, %d, %d\n", sequence(), sequence(), sequence())
+	
+	fmt.Printf("Factorial: %d\n", factorial(5))
+	
+	// 结构体
+	fmt.Println("\n=== Structs ===")
+	person := Person{Name: "Alice", Age: 30}
+	fmt.Println(person.greet())
+	person.birthday()
+	fmt.Printf("After birthday: %s\n", person.greet())
+	
+	// 嵌入结构体
+	employee := Employee{
+		Person:   Person{Name: "Bob", Age: 35},
+		Position: "Developer",
+		Salary:   50000.0,
+	}
+	fmt.Printf("Employee: %s, Position: %s\n", employee.Name, employee.Position)
+	
+	// 接口
+	fmt.Println("\n=== Interfaces ===")
+	shapes := []Shape{
+		Rectangle{Width: 5, Height: 3},
+		Circle{Radius: 2},
+	}
+	
+	for _, shape := range shapes {
+		fmt.Printf("Shape: %T, Area: %f, Perimeter: %f\n", shape, shape.Area(), shape.Perimeter())
+	}
+	
+	// 空接口和类型断言
+	fmt.Println("\n=== Empty Interface ===")
+	printValue(42)
+	printValue("hello")
+	printValue(true)
+	
+	fmt.Printf("Type of 42: %s\n", getType(42))
+	fmt.Printf("Type of \"hello\": %s\n", getType("hello"))
+	
+	// 切片操作
+	fmt.Println("\n=== Slices ===")
+	sliceOperations()
+	
+	// 映射操作
+	fmt.Println("\n=== Maps ===")
+	mapOperations()
+	
+	// 通道操作
+	fmt.Println("\n=== Channels ===")
+	channelOperations()
+	
+	// 并发控制
+	fmt.Println("\n=== Concurrency ===")
+	waitGroupExample()
+	
+	// 延迟调用
+	fmt.Println("\n=== Defer ===")
+	deferExample()
+	
+	// 恐慌恢复
+	fmt.Println("\n=== Panic Recovery ===")
+	panicRecovery()
+	
+	// 反射
+	fmt.Println("\n=== Reflection ===")
+	reflectionExample()
+	
+	// 选择器
+	fmt.Println("\n=== Select ===")
+	selectorExample()
+	
+	// 标签和goto
+	fmt.Println("\n=== Goto ===")
+	gotoExample()
+	
+	// 运行时信息
+	fmt.Println("\n=== Runtime Info ===")
+	fmt.Printf("GOOS: %s, GOARCH: %s\n", runtime.GOOS, runtime.GOARCH)
+	fmt.Printf("NumCPU: %d, NumGoroutine: %d\n", runtime.NumCPU(), runtime.NumGoroutine())
+	
+	fmt.Println("\n=== All tests completed ===")
+}

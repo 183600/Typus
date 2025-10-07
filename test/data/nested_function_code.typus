@@ -1,0 +1,18 @@
+package main
+
+import "fmt"
+
+func outer() {
+    x := 42
+    
+    func inner() {
+        y := x + 1
+        fmt.Println(y)
+    }
+    
+    inner()
+}
+
+func main() {
+    outer()
+}

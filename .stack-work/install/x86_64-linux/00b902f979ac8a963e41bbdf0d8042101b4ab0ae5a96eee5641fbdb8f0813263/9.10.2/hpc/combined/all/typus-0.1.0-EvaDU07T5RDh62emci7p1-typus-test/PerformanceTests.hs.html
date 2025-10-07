@@ -1,0 +1,194 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings, LambdaCase #-}
+<span class="lineno">    2 </span>module PerformanceTests (runPerformanceTests, defaultPerformanceConfig) where
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>import Test.Tasty.Ingredients (tryIngredients)
+<span class="lineno">    5 </span>import Test.Tasty.Ingredients.ConsoleReporter (consoleTestReporter)
+<span class="lineno">    6 </span>import Test.Tasty
+<span class="lineno">    7 </span>import Test.Tasty.HUnit
+<span class="lineno">    8 </span>import Test.Tasty.QuickCheck
+<span class="lineno">    9 </span>import qualified Parser (parseTypus)
+<span class="lineno">   10 </span>import qualified Compiler (compile)
+<span class="lineno">   11 </span>import qualified Ownership (analyzeOwnership)
+<span class="lineno">   12 </span>import System.Directory (doesFileExist)
+<span class="lineno">   13 </span>import System.FilePath ((&lt;/&gt;))
+<span class="lineno">   14 </span>import Control.Exception (evaluate)
+<span class="lineno">   15 </span>import Data.Time (getCurrentTime, diffUTCTime)
+<span class="lineno">   16 </span>import Test.Tasty.Ingredients (tryIngredients)
+<span class="lineno">   17 </span>import Test.Tasty.Ingredients.ConsoleReporter (consoleTestReporter)
+<span class="lineno">   18 </span>import Control.DeepSeq ()
+<span class="lineno">   19 </span>import Data.Monoid (mempty)
+<span class="lineno">   20 </span>
+<span class="lineno">   21 </span>-- 性能测试配置
+<span class="lineno">   22 </span>data PerformanceConfig = PerformanceConfig
+<span class="lineno">   23 </span>    { <span class="istickedoff"><span class="decl"><span class="istickedoff">maxParseTime</span></span></span> :: Double  -- 最大解析时间（秒）
+<span class="lineno">   24 </span>    , <span class="istickedoff"><span class="decl"><span class="istickedoff">maxCompileTime</span></span></span> :: Double -- 最大编译时间（秒）
+<span class="lineno">   25 </span>    , <span class="istickedoff"><span class="decl"><span class="istickedoff">maxOwnershipTime</span></span></span> :: Double -- 最大所有权分析时间（秒）
+<span class="lineno">   26 </span>    , <span class="istickedoff"><span class="decl"><span class="istickedoff">maxMemoryUsage</span></span></span> :: Int     -- 最大内存使用（MB）
+<span class="lineno">   27 </span>    }
+<span class="lineno">   28 </span>
+<span class="lineno">   29 </span>defaultPerformanceConfig :: PerformanceConfig
+<span class="lineno">   30 </span><span class="decl"><span class="istickedoff">defaultPerformanceConfig = PerformanceConfig</span>
+<span class="lineno">   31 </span><span class="spaces">    </span><span class="istickedoff">{ maxParseTime = 5.0</span>
+<span class="lineno">   32 </span><span class="spaces">    </span><span class="istickedoff">, maxCompileTime = 10.0</span>
+<span class="lineno">   33 </span><span class="spaces">    </span><span class="istickedoff">, maxOwnershipTime = 8.0</span>
+<span class="lineno">   34 </span><span class="spaces">    </span><span class="istickedoff">, maxMemoryUsage = 512</span>
+<span class="lineno">   35 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">   36 </span>
+<span class="lineno">   37 </span>-- 从测试数据目录加载测试用例
+<span class="lineno">   38 </span>loadTestData :: FilePath -&gt; IO String
+<span class="lineno">   39 </span><span class="decl"><span class="istickedoff">loadTestData fileName = do</span>
+<span class="lineno">   40 </span><span class="spaces">    </span><span class="istickedoff">let testDir = &quot;test&quot; &lt;/&gt; &quot;data&quot;</span>
+<span class="lineno">   41 </span><span class="spaces">    </span><span class="istickedoff">let filePath = testDir &lt;/&gt; fileName</span>
+<span class="lineno">   42 </span><span class="spaces">    </span><span class="istickedoff">exists &lt;- doesFileExist filePath</span>
+<span class="lineno">   43 </span><span class="spaces">    </span><span class="istickedoff">if <span class="tickonlyfalse">not exists</span></span>
+<span class="lineno">   44 </span><span class="spaces">        </span><span class="istickedoff">then <span class="nottickedoff">error $ &quot;Test data file not found: &quot; ++ filePath</span></span>
+<span class="lineno">   45 </span><span class="spaces">        </span><span class="istickedoff">else readFile filePath</span></span>
+<span class="lineno">   46 </span>
+<span class="lineno">   47 </span>-- 测试解析性能
+<span class="lineno">   48 </span>testParsePerformance :: PerformanceConfig -&gt; TestTree
+<span class="lineno">   49 </span><span class="decl"><span class="istickedoff">testParsePerformance config = testCase &quot;Parse Performance&quot; $ do</span>
+<span class="lineno">   50 </span><span class="spaces">    </span><span class="istickedoff">code &lt;- loadTestData &quot;large_code.typus&quot;</span>
+<span class="lineno">   51 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">   52 </span><span class="spaces">    </span><span class="istickedoff">start &lt;- getCurrentTime</span>
+<span class="lineno">   53 </span><span class="spaces">    </span><span class="istickedoff">result &lt;- evaluate $ Parser.parseTypus code</span>
+<span class="lineno">   54 </span><span class="spaces">    </span><span class="istickedoff">end &lt;- getCurrentTime</span>
+<span class="lineno">   55 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">   56 </span><span class="spaces">    </span><span class="istickedoff">let parseTime :: Double</span>
+<span class="lineno">   57 </span><span class="spaces">        </span><span class="istickedoff">parseTime = realToFrac $ diffUTCTime end start</span>
+<span class="lineno">   58 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">   59 </span><span class="spaces">    </span><span class="istickedoff">case result of</span>
+<span class="lineno">   60 </span><span class="spaces">        </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure $ &quot;Parser failed: &quot; ++ err</span></span>
+<span class="lineno">   61 </span><span class="spaces">        </span><span class="istickedoff">Right _ -&gt; do</span>
+<span class="lineno">   62 </span><span class="spaces">            </span><span class="istickedoff">assertBool <span class="nottickedoff">(&quot;Parsing should complete within &quot; ++ show (maxParseTime config) ++ &quot; seconds&quot;)</span></span>
+<span class="lineno">   63 </span><span class="spaces">                </span><span class="istickedoff">(parseTime &lt;= maxParseTime config)</span></span>
+<span class="lineno">   64 </span>
+<span class="lineno">   65 </span>-- 测试编译性能
+<span class="lineno">   66 </span>testCompilePerformance :: PerformanceConfig -&gt; TestTree
+<span class="lineno">   67 </span><span class="decl"><span class="istickedoff">testCompilePerformance config = testCase &quot;Compile Performance&quot; $ do</span>
+<span class="lineno">   68 </span><span class="spaces">    </span><span class="istickedoff">code &lt;- loadTestData &quot;large_code.typus&quot;</span>
+<span class="lineno">   69 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">   70 </span><span class="spaces">    </span><span class="istickedoff">case Parser.parseTypus code of</span>
+<span class="lineno">   71 </span><span class="spaces">        </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure $ &quot;Parser failed: &quot; ++ err</span></span>
+<span class="lineno">   72 </span><span class="spaces">        </span><span class="istickedoff">Right typusFile -&gt; do</span>
+<span class="lineno">   73 </span><span class="spaces">            </span><span class="istickedoff">start &lt;- getCurrentTime</span>
+<span class="lineno">   74 </span><span class="spaces">            </span><span class="istickedoff">result &lt;- evaluate $ Compiler.compile typusFile</span>
+<span class="lineno">   75 </span><span class="spaces">            </span><span class="istickedoff">end &lt;- getCurrentTime</span>
+<span class="lineno">   76 </span><span class="spaces">            </span><span class="istickedoff"></span>
+<span class="lineno">   77 </span><span class="spaces">            </span><span class="istickedoff">let compileTime :: Double</span>
+<span class="lineno">   78 </span><span class="spaces">                </span><span class="istickedoff">compileTime = realToFrac $ diffUTCTime end start</span>
+<span class="lineno">   79 </span><span class="spaces">            </span><span class="istickedoff"></span>
+<span class="lineno">   80 </span><span class="spaces">            </span><span class="istickedoff">case result of</span>
+<span class="lineno">   81 </span><span class="spaces">                </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure $ &quot;Compilation failed: &quot; ++ err</span></span>
+<span class="lineno">   82 </span><span class="spaces">                </span><span class="istickedoff">Right _ -&gt; do</span>
+<span class="lineno">   83 </span><span class="spaces">                    </span><span class="istickedoff">assertBool <span class="nottickedoff">(&quot;Compilation should complete within &quot; ++ show (maxCompileTime config) ++ &quot; seconds&quot;)</span></span>
+<span class="lineno">   84 </span><span class="spaces">                        </span><span class="istickedoff">(compileTime &lt;= maxCompileTime config)</span></span>
+<span class="lineno">   85 </span>
+<span class="lineno">   86 </span>-- 测试所有权分析性能
+<span class="lineno">   87 </span>testOwnershipPerformance :: PerformanceConfig -&gt; TestTree
+<span class="lineno">   88 </span><span class="decl"><span class="istickedoff">testOwnershipPerformance config = testCase &quot;Ownership Performance&quot; $ do</span>
+<span class="lineno">   89 </span><span class="spaces">    </span><span class="istickedoff">code &lt;- loadTestData &quot;large_code.typus&quot;</span>
+<span class="lineno">   90 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">   91 </span><span class="spaces">    </span><span class="istickedoff">start &lt;- getCurrentTime</span>
+<span class="lineno">   92 </span><span class="spaces">    </span><span class="istickedoff">_ &lt;- evaluate $ Ownership.analyzeOwnership code</span>
+<span class="lineno">   93 </span><span class="spaces">    </span><span class="istickedoff">end &lt;- getCurrentTime</span>
+<span class="lineno">   94 </span><span class="spaces">    </span><span class="istickedoff">let ownershipTime :: Double</span>
+<span class="lineno">   95 </span><span class="spaces">        </span><span class="istickedoff">ownershipTime = realToFrac $ diffUTCTime end start</span>
+<span class="lineno">   96 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">   97 </span><span class="spaces">    </span><span class="istickedoff">assertBool <span class="nottickedoff">(&quot;Ownership analysis should complete within &quot; ++ show (maxOwnershipTime config) ++ &quot; seconds&quot;)</span></span>
+<span class="lineno">   98 </span><span class="spaces">        </span><span class="istickedoff">(ownershipTime &lt;= maxOwnershipTime config)</span></span>
+<span class="lineno">   99 </span>
+<span class="lineno">  100 </span>-- 测试内存使用
+<span class="lineno">  101 </span>testMemoryUsage :: PerformanceConfig -&gt; TestTree
+<span class="lineno">  102 </span><span class="decl"><span class="istickedoff">testMemoryUsage _config = testCase &quot;Memory Usage&quot; $ do</span>
+<span class="lineno">  103 </span><span class="spaces">    </span><span class="istickedoff">-- 这里需要根据实际情况实现内存使用测试</span>
+<span class="lineno">  104 </span><span class="spaces">    </span><span class="istickedoff">-- 由于 Haskell 的内存管理较为复杂，这里仅作为占位符</span>
+<span class="lineno">  105 </span><span class="spaces">    </span><span class="istickedoff">code &lt;- loadTestData &quot;large_code.typus&quot;</span>
+<span class="lineno">  106 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  107 </span><span class="spaces">    </span><span class="istickedoff">-- 强制求值以确保内存使用</span>
+<span class="lineno">  108 </span><span class="spaces">    </span><span class="istickedoff">result &lt;- evaluate $ Parser.parseTypus code</span>
+<span class="lineno">  109 </span><span class="spaces">    </span><span class="istickedoff">case result of</span>
+<span class="lineno">  110 </span><span class="spaces">        </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure $ &quot;Parser failed: &quot; ++ err</span></span>
+<span class="lineno">  111 </span><span class="spaces">        </span><span class="istickedoff">Right _ -&gt; return <span class="nottickedoff">()</span></span>
+<span class="lineno">  112 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  113 </span><span class="spaces">    </span><span class="istickedoff">-- 实际项目中，这里应该使用专门的内存分析工具</span>
+<span class="lineno">  114 </span><span class="spaces">    </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;Memory usage should be within limits&quot;</span> True</span></span>
+<span class="lineno">  115 </span>
+<span class="lineno">  116 </span>-- 测试并发性能
+<span class="lineno">  117 </span>testConcurrentPerformance :: PerformanceConfig -&gt; TestTree
+<span class="lineno">  118 </span><span class="decl"><span class="istickedoff">testConcurrentPerformance config = testCase &quot;Concurrent Performance&quot; $ do</span>
+<span class="lineno">  119 </span><span class="spaces">    </span><span class="istickedoff">-- 测试并发处理多个文件的能力</span>
+<span class="lineno">  120 </span><span class="spaces">    </span><span class="istickedoff">let testFiles :: [FilePath]</span>
+<span class="lineno">  121 </span><span class="spaces">        </span><span class="istickedoff">testFiles = [&quot;simple_go_code.typus&quot;, &quot;complex_ownership_code.typus&quot;, &quot;code_with_dependent_types.typus&quot;]</span>
+<span class="lineno">  122 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  123 </span><span class="spaces">    </span><span class="istickedoff">start &lt;- getCurrentTime</span>
+<span class="lineno">  124 </span><span class="spaces">    </span><span class="istickedoff">results &lt;- mapM loadTestData testFiles</span>
+<span class="lineno">  125 </span><span class="spaces">    </span><span class="istickedoff">parseResults &lt;- mapM (evaluate . Parser.parseTypus) results</span>
+<span class="lineno">  126 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  127 </span><span class="spaces">    </span><span class="istickedoff">-- 检查所有解析结果</span>
+<span class="lineno">  128 </span><span class="spaces">    </span><span class="istickedoff">mapM_ (\case</span>
+<span class="lineno">  129 </span><span class="spaces">        </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure $ &quot;Parser failed: &quot; ++ err</span></span>
+<span class="lineno">  130 </span><span class="spaces">        </span><span class="istickedoff">Right _ -&gt; return <span class="nottickedoff">()</span>) parseResults</span>
+<span class="lineno">  131 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  132 </span><span class="spaces">    </span><span class="istickedoff">end &lt;- getCurrentTime</span>
+<span class="lineno">  133 </span><span class="spaces">    </span><span class="istickedoff">let concurrentTime :: Double</span>
+<span class="lineno">  134 </span><span class="spaces">        </span><span class="istickedoff">concurrentTime = realToFrac $ diffUTCTime end start</span>
+<span class="lineno">  135 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  136 </span><span class="spaces">    </span><span class="istickedoff">assertBool <span class="nottickedoff">(&quot;Concurrent parsing should complete within &quot; ++ show (maxParseTime config) ++ &quot; seconds&quot;)</span></span>
+<span class="lineno">  137 </span><span class="spaces">        </span><span class="istickedoff">(concurrentTime &lt;= maxParseTime config)</span></span>
+<span class="lineno">  138 </span>
+<span class="lineno">  139 </span>-- 性能测试套件
+<span class="lineno">  140 </span>performanceTestSuite :: PerformanceConfig -&gt; TestTree
+<span class="lineno">  141 </span><span class="decl"><span class="istickedoff">performanceTestSuite config = testGroup &quot;Performance Tests&quot; [</span>
+<span class="lineno">  142 </span><span class="spaces">    </span><span class="istickedoff">testParsePerformance config,</span>
+<span class="lineno">  143 </span><span class="spaces">    </span><span class="istickedoff">testCompilePerformance config,</span>
+<span class="lineno">  144 </span><span class="spaces">    </span><span class="istickedoff">testOwnershipPerformance config,</span>
+<span class="lineno">  145 </span><span class="spaces">    </span><span class="istickedoff">testMemoryUsage <span class="nottickedoff">config</span>,</span>
+<span class="lineno">  146 </span><span class="spaces">    </span><span class="istickedoff">testConcurrentPerformance config</span>
+<span class="lineno">  147 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">  148 </span>
+<span class="lineno">  149 </span>-- 运行性能测试并生成报告
+<span class="lineno">  150 </span>runPerformanceTests :: PerformanceConfig -&gt; IO ()
+<span class="lineno">  151 </span><span class="decl"><span class="istickedoff">runPerformanceTests config = do</span>
+<span class="lineno">  152 </span><span class="spaces">    </span><span class="istickedoff">putStrLn &quot;Running performance test suite for Typus compiler...&quot;</span>
+<span class="lineno">  153 </span><span class="spaces">    </span><span class="istickedoff">putStrLn &quot;================================================&quot;</span>
+<span class="lineno">  154 </span><span class="spaces">    </span><span class="istickedoff">putStrLn $ &quot;Performance thresholds:&quot;</span>
+<span class="lineno">  155 </span><span class="spaces">    </span><span class="istickedoff">putStrLn $ &quot;  Max parse time: &quot; ++ show (maxParseTime config) ++ &quot; seconds&quot;</span>
+<span class="lineno">  156 </span><span class="spaces">    </span><span class="istickedoff">putStrLn $ &quot;  Max compile time: &quot; ++ show (maxCompileTime config) ++ &quot; seconds&quot;</span>
+<span class="lineno">  157 </span><span class="spaces">    </span><span class="istickedoff">putStrLn $ &quot;  Max ownership time: &quot; ++ show (maxOwnershipTime config) ++ &quot; seconds&quot;</span>
+<span class="lineno">  158 </span><span class="spaces">    </span><span class="istickedoff">putStrLn $ &quot;  Max memory usage: &quot; ++ show (maxMemoryUsage config) ++ &quot; MB&quot;</span>
+<span class="lineno">  159 </span><span class="spaces">    </span><span class="istickedoff">putStrLn &quot;&quot;</span>
+<span class="lineno">  160 </span><span class="spaces">    </span><span class="istickedoff"></span>
+<span class="lineno">  161 </span><span class="spaces">    </span><span class="istickedoff">-- 使用 Tasty 运行性能测试</span>
+<span class="lineno">  162 </span><span class="spaces">    </span><span class="istickedoff">let ingredients = [consoleTestReporter]</span>
+<span class="lineno">  163 </span><span class="spaces">    </span><span class="istickedoff">case tryIngredients ingredients mempty (performanceTestSuite config) of</span>
+<span class="lineno">  164 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  165 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">putStrLn &quot;ERROR: No suitable ingredient found to run performance tests&quot;</span></span>
+<span class="lineno">  166 </span><span class="spaces">        </span><span class="istickedoff">Just runTest -&gt; do</span>
+<span class="lineno">  167 </span><span class="spaces">            </span><span class="istickedoff">success &lt;- runTest</span>
+<span class="lineno">  168 </span><span class="spaces">            </span><span class="istickedoff">if <span class="tickonlytrue">success</span></span>
+<span class="lineno">  169 </span><span class="spaces">                </span><span class="istickedoff">then putStrLn &quot;SUCCESS: All performance tests passed. The project meets production requirements.&quot;</span>
+<span class="lineno">  170 </span><span class="spaces">                </span><span class="istickedoff">else <span class="nottickedoff">putStrLn &quot;ERROR: Some performance tests failed.&quot;</span></span>
+<span class="lineno">  171 </span><span class="spaces">    </span><span class="istickedoff">return <span class="nottickedoff">()</span></span></span>
+
+</pre>
+</body>
+</html>

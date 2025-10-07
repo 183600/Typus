@@ -1,0 +1,8 @@
+package main
+
+import "fmt"
+
+func main() {
+    total := 0
+    fmt.Printf("total = %d\n", total)
+}

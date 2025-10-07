@@ -1,0 +1,22 @@
+//! ownership: on
+package main
+
+import "fmt"
+
+// 假设有一个 NewString 函数用于演示所有权
+// 在实际的Typus中，这可能是内置的或来自标准库
+type MyString struct {
+    data string
+}
+
+func NewMyString(s string) MyString {
+    return MyString{data: s}
+}
+
+func main() {
+    s1 := NewMyString("owned string")
+    s2 := s1 // s1 的所有权转移给 s2
+
+    // fmt.Println(s1.data) // 如果所有权系统严格执行，这里应该会报错 (use after move)
+    fmt.Println(s2.data)
+}

@@ -1,0 +1,8 @@
+func main() {
+    data := []int{1, 2, 3}
+    f := func() {
+        fmt.Println(data)
+    }
+    f()
+    fmt.Println(data)
+}

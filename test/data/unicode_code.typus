@@ -1,0 +1,10 @@
+package main
+
+import "fmt"
+
+func main() {
+    message := "你好，世界！"
+    emoji := "🌍 Hello World 🚀"
+    fmt.Println(message)
+    fmt.Println(emoji)
+}

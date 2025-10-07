@@ -1,0 +1,515 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE LambdaCase #-}
+<span class="lineno">    2 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>-- 一个健壮的依赖类型（示例语言）解析器，使用 Megaparsec 实现
+<span class="lineno">    5 </span>-- 特性：
+<span class="lineno">    6 </span>-- - 词法/语法分离：由 Megaparsec 的 space/lexeme/symbol 主动处理空白与注释
+<span class="lineno">    7 </span>-- - 支持 type/func/alias 顶层定义
+<span class="lineno">    8 </span>-- - 支持嵌套泛型的类型引用 TypeRef
+<span class="lineno">    9 </span>-- - 支持 struct { ... } 结构体体，字段 name: TypeRef
+<span class="lineno">   10 </span>-- - 支持 where 子句以及常见约束（==、&gt;、&gt;=、&lt;、&lt;=、len、nonempty、谓词调用）
+<span class="lineno">   11 </span>-- - 多错误收集与错误恢复：一个定义出错不会阻断后续定义的解析
+<span class="lineno">   12 </span>-- - 状态中收集作用域（typeScope）并做重复定义检测
+<span class="lineno">   13 </span>-- - 单文件实现（不依赖外部 Utils）
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>module DependentTypesParser (
+<span class="lineno">   16 </span>  -- 状态与错误
+<span class="lineno">   17 </span>  DependentTypesParser(..),
+<span class="lineno">   18 </span>  DependentTypeError(..),
+<span class="lineno">   19 </span>
+<span class="lineno">   20 </span>  -- 抽象语法树
+<span class="lineno">   21 </span>  TypeRef(..),
+<span class="lineno">   22 </span>  TypeBody(..),
+<span class="lineno">   23 </span>  Field(..),
+<span class="lineno">   24 </span>  TypeParameter(..),
+<span class="lineno">   25 </span>  TypeConstraint(..),
+<span class="lineno">   26 </span>  DependentType(..),
+<span class="lineno">   27 </span>
+<span class="lineno">   28 </span>  -- 运行与入口
+<span class="lineno">   29 </span>  DependentParseResult,
+<span class="lineno">   30 </span>  runDependentTypesParser,       -- 解析整个输入，返回所有定义与最终状态
+<span class="lineno">   31 </span>  parseDependentType,            -- 解析并返回第一个顶层定义（若存在）
+<span class="lineno">   32 </span>  parseTypeDeclaration,          -- 单独解析一个 type 定义
+<span class="lineno">   33 </span>  validateDependentTypeSyntax    -- 校验输入，返回收集到的错误（不抛异常）
+<span class="lineno">   34 </span>) where
+<span class="lineno">   35 </span>
+<span class="lineno">   36 </span>import Control.Monad (void)
+<span class="lineno">   37 </span>import Data.Char (isAlphaNum)
+<span class="lineno">   38 </span>import Data.List (foldl')
+<span class="lineno">   39 </span>import qualified Data.Map.Strict as Map
+<span class="lineno">   40 </span>import Data.Map.Strict (Map)
+<span class="lineno">   41 </span>import Data.Maybe (fromMaybe)
+<span class="lineno">   42 </span>import Data.Void (Void)
+<span class="lineno">   43 </span>import Text.Megaparsec
+<span class="lineno">   44 </span>  ( Parsec, (&lt;?&gt;)
+<span class="lineno">   45 </span>  , MonadParsec(try, eof, lookAhead)
+<span class="lineno">   46 </span>  , anySingle
+<span class="lineno">   47 </span>  , manyTill
+<span class="lineno">   48 </span>  , withRecovery
+<span class="lineno">   49 </span>  , runParser
+<span class="lineno">   50 </span>  , errorBundlePretty
+<span class="lineno">   51 </span>  )
+<span class="lineno">   52 </span>import qualified Text.Megaparsec as MP
+<span class="lineno">   53 </span>import Text.Megaparsec.Char (char, letterChar, space1)
+<span class="lineno">   54 </span>import qualified Text.Megaparsec.Char.Lexer as L
+<span class="lineno">   55 </span>
+<span class="lineno">   56 </span>--------------------------------------------------------------------------------
+<span class="lineno">   57 </span>-- 辅助与通用
+<span class="lineno">   58 </span>--------------------------------------------------------------------------------
+<span class="lineno">   59 </span>
+<span class="lineno">   60 </span>-- 内部工具：去空白
+<span class="lineno">   61 </span>trim :: String -&gt; String
+<span class="lineno">   62 </span><span class="decl"><span class="nottickedoff">trim = f . f</span>
+<span class="lineno">   63 </span><span class="spaces">  </span><span class="nottickedoff">where f = reverse . dropWhile (&lt;= ' ')</span></span>
+<span class="lineno">   64 </span>
+<span class="lineno">   65 </span>-- Parser 类型（直接用 String 流，避免引入 text 依赖）
+<span class="lineno">   66 </span>type Parser = Parsec Void String
+<span class="lineno">   67 </span>
+<span class="lineno">   68 </span>-- 空白与注释（--、// 行注释；/* ... */ 块注释）
+<span class="lineno">   69 </span>sc :: Parser ()
+<span class="lineno">   70 </span><span class="decl"><span class="nottickedoff">sc = L.space</span>
+<span class="lineno">   71 </span><span class="spaces">      </span><span class="nottickedoff">space1</span>
+<span class="lineno">   72 </span><span class="spaces">      </span><span class="nottickedoff">(L.skipLineComment &quot;--&quot; MP.&lt;|&gt; L.skipLineComment &quot;//&quot;)</span>
+<span class="lineno">   73 </span><span class="spaces">      </span><span class="nottickedoff">(L.skipBlockComment &quot;/*&quot; &quot;*/&quot;)</span></span>
+<span class="lineno">   74 </span>
+<span class="lineno">   75 </span>-- 带空白消费的词法构建工具
+<span class="lineno">   76 </span>lexeme :: Parser a -&gt; Parser a
+<span class="lineno">   77 </span><span class="decl"><span class="nottickedoff">lexeme = L.lexeme sc</span></span>
+<span class="lineno">   78 </span>
+<span class="lineno">   79 </span>symbol :: String -&gt; Parser String
+<span class="lineno">   80 </span><span class="decl"><span class="nottickedoff">symbol = L.symbol sc</span></span>
+<span class="lineno">   81 </span>
+<span class="lineno">   82 </span>-- 一些括号小工具
+<span class="lineno">   83 </span>parens :: Parser a -&gt; Parser a
+<span class="lineno">   84 </span><span class="decl"><span class="nottickedoff">parens = MP.between (symbol &quot;(&quot;) (symbol &quot;)&quot;)</span></span>
+<span class="lineno">   85 </span>
+<span class="lineno">   86 </span>braces :: Parser a -&gt; Parser a
+<span class="lineno">   87 </span><span class="decl"><span class="nottickedoff">braces = MP.between (symbol &quot;{&quot;) (symbol &quot;}&quot;)</span></span>
+<span class="lineno">   88 </span>
+<span class="lineno">   89 </span>angles :: Parser a -&gt; Parser a
+<span class="lineno">   90 </span><span class="decl"><span class="nottickedoff">angles = MP.between (symbol &quot;&lt;&quot;) (symbol &quot;&gt;&quot;)</span></span>
+<span class="lineno">   91 </span>
+<span class="lineno">   92 </span>comma :: Parser String
+<span class="lineno">   93 </span><span class="decl"><span class="nottickedoff">comma = symbol &quot;,&quot;</span></span>
+<span class="lineno">   94 </span>
+<span class="lineno">   95 </span>colon :: Parser String
+<span class="lineno">   96 </span><span class="decl"><span class="nottickedoff">colon = symbol &quot;:&quot;</span></span>
+<span class="lineno">   97 </span>
+<span class="lineno">   98 </span>pipe :: Parser String
+<span class="lineno">   99 </span><span class="decl"><span class="nottickedoff">pipe = symbol &quot;|&quot;</span></span>
+<span class="lineno">  100 </span>
+<span class="lineno">  101 </span>
+<span class="lineno">  102 </span>arrow :: Parser String
+<span class="lineno">  103 </span><span class="decl"><span class="nottickedoff">arrow = symbol &quot;-&gt;&quot;</span></span>
+<span class="lineno">  104 </span>
+<span class="lineno">  105 </span>-- 关键字与标识符
+<span class="lineno">  106 </span>reservedWords :: [String]
+<span class="lineno">  107 </span><span class="decl"><span class="nottickedoff">reservedWords =</span>
+<span class="lineno">  108 </span><span class="spaces">  </span><span class="nottickedoff">[ &quot;type&quot;, &quot;func&quot;, &quot;where&quot;, &quot;alias&quot;, &quot;struct&quot;, &quot;len&quot;, &quot;nonempty&quot;</span>
+<span class="lineno">  109 </span><span class="spaces">  </span><span class="nottickedoff">]</span></span>
+<span class="lineno">  110 </span>
+<span class="lineno">  111 </span>-- 标识符：首字符字母或下划线，后续字母/数字/下划线；不允许关键字
+<span class="lineno">  112 </span>identifier :: Parser String
+<span class="lineno">  113 </span><span class="decl"><span class="nottickedoff">identifier = (lexeme . try) (p &gt;&gt;= check)</span>
+<span class="lineno">  114 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  115 </span><span class="spaces">    </span><span class="nottickedoff">p = (:) &lt;$&gt; identStart &lt;*&gt; MP.many identChar</span>
+<span class="lineno">  116 </span><span class="spaces">    </span><span class="nottickedoff">identStart :: Parser Char</span>
+<span class="lineno">  117 </span><span class="spaces">    </span><span class="nottickedoff">identStart = letterChar MP.&lt;|&gt; char '_'</span>
+<span class="lineno">  118 </span><span class="spaces">    </span><span class="nottickedoff">identChar :: Parser Char</span>
+<span class="lineno">  119 </span><span class="spaces">    </span><span class="nottickedoff">identChar  = MP.satisfy (\c -&gt; isAlphaNum c || c == '_')</span>
+<span class="lineno">  120 </span><span class="spaces">    </span><span class="nottickedoff">check x = if x `elem` reservedWords</span>
+<span class="lineno">  121 </span><span class="spaces">              </span><span class="nottickedoff">then fail $ &quot;关键字不能作为标识符: &quot; ++ show x</span>
+<span class="lineno">  122 </span><span class="spaces">              </span><span class="nottickedoff">else return x</span></span>
+<span class="lineno">  123 </span>
+<span class="lineno">  124 </span>-- 解析整型字面量
+<span class="lineno">  125 </span>pInt :: Parser Int
+<span class="lineno">  126 </span><span class="decl"><span class="nottickedoff">pInt = lexeme L.decimal</span></span>
+<span class="lineno">  127 </span>
+<span class="lineno">  128 </span>-- 在需要&quot;至少一个空白&quot;的地方使用（例如参数名 与 类型之间）
+<span class="lineno">  129 </span>
+<span class="lineno">  130 </span>--------------------------------------------------------------------------------
+<span class="lineno">  131 </span>-- AST 定义
+<span class="lineno">  132 </span>--------------------------------------------------------------------------------
+<span class="lineno">  133 </span>
+<span class="lineno">  134 </span>-- 依赖类型错误
+<span class="lineno">  135 </span>data DependentTypeError
+<span class="lineno">  136 </span>    = SyntaxError String Int String        -- 消息、行号（若无法获取则置 0）、片段（可空）
+<span class="lineno">  137 </span>    | InvalidTypeSyntax String             -- 例如重复定义
+<span class="lineno">  138 </span>    | MissingConstraint String
+<span class="lineno">  139 </span>    | InvalidParameter String
+<span class="lineno">  140 </span>    | ConstraintParseError String
+<span class="lineno">  141 </span>    | TypeVariableError String
+<span class="lineno">  142 </span>    deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">  143 </span>
+<span class="lineno">  144 </span>-- 类型引用，支持嵌套泛型，如 Map&lt;Key, Value&lt;T&gt;&gt;
+<span class="lineno">  145 </span>data TypeRef = TypeRef
+<span class="lineno">  146 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">refName</span></span></span> :: String
+<span class="lineno">  147 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">refArgs</span></span></span> :: [TypeRef]
+<span class="lineno">  148 </span>  } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">  149 </span>
+<span class="lineno">  150 </span>-- 结构体字段
+<span class="lineno">  151 </span>data Field = Field
+<span class="lineno">  152 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">fieldName</span></span></span> :: String
+<span class="lineno">  153 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">fieldType</span></span></span> :: TypeRef
+<span class="lineno">  154 </span>  } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">  155 </span>
+<span class="lineno">  156 </span>-- 类型体，目前支持结构体
+<span class="lineno">  157 </span>data TypeBody
+<span class="lineno">  158 </span>  = StructBody [Field]
+<span class="lineno">  159 </span>  deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">  160 </span>
+<span class="lineno">  161 </span>-- 类型参数
+<span class="lineno">  162 </span>data TypeParameter = TypeParameter
+<span class="lineno">  163 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">paramName</span></span></span>        :: String
+<span class="lineno">  164 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">paramType</span></span></span>        :: TypeRef               -- 参数&quot;类型/种类&quot;，默认 int
+<span class="lineno">  165 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">paramConstraints</span></span></span> :: [TypeConstraint]
+<span class="lineno">  166 </span>  } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">  167 </span>
+<span class="lineno">  168 </span>-- 类型约束
+<span class="lineno">  169 </span>data TypeConstraint
+<span class="lineno">  170 </span>    = EqualityConstraint String String        -- a == b
+<span class="lineno">  171 </span>    | RangeConstraint String Int Int          -- x in [low, high]（使用 Int 的 minBound/maxBound 表开区间）
+<span class="lineno">  172 </span>    | SizeConstraint String Int               -- len name == n
+<span class="lineno">  173 </span>    | NonEmptyConstraint String               -- nonempty name
+<span class="lineno">  174 </span>    | PredicateConstraint String [String]     -- pred(arg1, arg2, ...)
+<span class="lineno">  175 </span>    | CustomConstraint String String          -- 自由形式（保留）
+<span class="lineno">  176 </span>    deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">  177 </span>
+<span class="lineno">  178 </span>-- 顶层定义
+<span class="lineno">  179 </span>data DependentType
+<span class="lineno">  180 </span>    = TypeDecl String [TypeParameter] TypeBody [TypeConstraint]
+<span class="lineno">  181 </span>    | DependentFunction String [(String, TypeRef)] TypeRef [TypeConstraint]
+<span class="lineno">  182 </span>    | TypeAlias String TypeRef [TypeConstraint]
+<span class="lineno">  183 </span>    deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">  184 </span>
+<span class="lineno">  185 </span>-- 辅助函数用于访问记录字段
+<span class="lineno">  186 </span>
+<span class="lineno">  187 </span>
+<span class="lineno">  188 </span>
+<span class="lineno">  189 </span>
+<span class="lineno">  190 </span>
+<span class="lineno">  191 </span>
+<span class="lineno">  192 </span>
+<span class="lineno">  193 </span>
+<span class="lineno">  194 </span>
+<span class="lineno">  195 </span>
+<span class="lineno">  196 </span>
+<span class="lineno">  197 </span>-- 解析器状态
+<span class="lineno">  198 </span>data DependentTypesParser = DependentTypesParser
+<span class="lineno">  199 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">parserErrors</span></span></span> :: [DependentTypeError]
+<span class="lineno">  200 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">typeScope</span></span></span>    :: Map String DependentType
+<span class="lineno">  201 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">sourceName</span></span></span>   :: String
+<span class="lineno">  202 </span>  } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">  203 </span>
+<span class="lineno">  204 </span>-- 解析结果：返回所有成功的定义 与 最终状态（包含错误集合与作用域）
+<span class="lineno">  205 </span>type DependentParseResult = Either String ([DependentType], DependentTypesParser)
+<span class="lineno">  206 </span>
+<span class="lineno">  207 </span>--------------------------------------------------------------------------------
+<span class="lineno">  208 </span>-- 类型引用解析（支持嵌套泛型）
+<span class="lineno">  209 </span>--------------------------------------------------------------------------------
+<span class="lineno">  210 </span>
+<span class="lineno">  211 </span>-- 通用类型引用：Simple | Generic&lt;...&gt;
+<span class="lineno">  212 </span>parseTypeReference :: Parser TypeRef
+<span class="lineno">  213 </span><span class="decl"><span class="nottickedoff">parseTypeReference = do</span>
+<span class="lineno">  214 </span><span class="spaces">  </span><span class="nottickedoff">name &lt;- identifier</span>
+<span class="lineno">  215 </span><span class="spaces">  </span><span class="nottickedoff">args &lt;- MP.option [] (angles (parseTypeReference `MP.sepBy1` comma))</span>
+<span class="lineno">  216 </span><span class="spaces">  </span><span class="nottickedoff">pure $ TypeRef name args</span></span>
+<span class="lineno">  217 </span>
+<span class="lineno">  218 </span>-- 常用的内置类型便捷值
+<span class="lineno">  219 </span>tInt :: TypeRef
+<span class="lineno">  220 </span><span class="decl"><span class="nottickedoff">tInt = TypeRef &quot;int&quot; []</span></span>
+<span class="lineno">  221 </span>
+<span class="lineno">  222 </span>tVoid :: TypeRef
+<span class="lineno">  223 </span><span class="decl"><span class="nottickedoff">tVoid = TypeRef &quot;void&quot; []</span></span>
+<span class="lineno">  224 </span>
+<span class="lineno">  225 </span>--------------------------------------------------------------------------------
+<span class="lineno">  226 </span>-- 约束解析
+<span class="lineno">  227 </span>--------------------------------------------------------------------------------
+<span class="lineno">  228 </span>
+<span class="lineno">  229 </span>-- 操作符解析
+<span class="lineno">  230 </span>opEq, opGT, opLT, opGE, opLE :: Parser String
+<span class="lineno">  231 </span><span class="decl"><span class="nottickedoff">opEq = symbol &quot;==&quot;</span></span>
+<span class="lineno">  232 </span><span class="decl"><span class="nottickedoff">opGT = symbol &quot;&gt;&quot;</span></span>
+<span class="lineno">  233 </span><span class="decl"><span class="nottickedoff">opLT = symbol &quot;&lt;&quot;</span></span>
+<span class="lineno">  234 </span><span class="decl"><span class="nottickedoff">opGE = symbol &quot;&gt;=&quot;</span></span>
+<span class="lineno">  235 </span><span class="decl"><span class="nottickedoff">opLE = symbol &quot;&lt;=&quot;</span></span>
+<span class="lineno">  236 </span>
+<span class="lineno">  237 </span>-- 简单值：标识符或数字，最终统一存入 String
+<span class="lineno">  238 </span>simpleVal :: Parser String
+<span class="lineno">  239 </span><span class="decl"><span class="nottickedoff">simpleVal = (show &lt;$&gt; pInt) MP.&lt;|&gt; identifier</span></span>
+<span class="lineno">  240 </span>
+<span class="lineno">  241 </span>-- 谓词调用：pred(arg1, arg2, ...)
+<span class="lineno">  242 </span>predicateCall :: Parser TypeConstraint
+<span class="lineno">  243 </span><span class="decl"><span class="nottickedoff">predicateCall = do</span>
+<span class="lineno">  244 </span><span class="spaces">  </span><span class="nottickedoff">name &lt;- identifier</span>
+<span class="lineno">  245 </span><span class="spaces">  </span><span class="nottickedoff">args &lt;- parens (simpleVal `MP.sepBy` comma)</span>
+<span class="lineno">  246 </span><span class="spaces">  </span><span class="nottickedoff">pure $ PredicateConstraint name args</span></span>
+<span class="lineno">  247 </span>
+<span class="lineno">  248 </span>-- len name (op) int
+<span class="lineno">  249 </span>lenConstraint :: Parser TypeConstraint
+<span class="lineno">  250 </span><span class="decl"><span class="nottickedoff">lenConstraint = do</span>
+<span class="lineno">  251 </span><span class="spaces">  </span><span class="nottickedoff">_ &lt;- MP.try (symbol &quot;len&quot;)</span>
+<span class="lineno">  252 </span><span class="spaces">  </span><span class="nottickedoff">nm &lt;- identifier</span>
+<span class="lineno">  253 </span><span class="spaces">  </span><span class="nottickedoff">c &lt;- (   (opEq &gt;&gt; (SizeConstraint nm &lt;$&gt; pInt))</span>
+<span class="lineno">  254 </span><span class="spaces">       </span><span class="nottickedoff">MP.&lt;|&gt; (opGT &gt;&gt; ((\n -&gt; SizeConstraint nm (n + 1)) &lt;$&gt; pInt))  -- len x &gt; n 等价 len x == n+1（示例）</span>
+<span class="lineno">  255 </span><span class="spaces">       </span><span class="nottickedoff">) &lt;?&gt; &quot;len 约束操作（== 或 &gt;）&quot;</span>
+<span class="lineno">  256 </span><span class="spaces">  </span><span class="nottickedoff">pure c</span></span>
+<span class="lineno">  257 </span>
+<span class="lineno">  258 </span>-- nonempty name
+<span class="lineno">  259 </span>nonemptyConstraint :: Parser TypeConstraint
+<span class="lineno">  260 </span><span class="decl"><span class="nottickedoff">nonemptyConstraint = do</span>
+<span class="lineno">  261 </span><span class="spaces">  </span><span class="nottickedoff">_ &lt;- MP.try (symbol &quot;nonempty&quot;)</span>
+<span class="lineno">  262 </span><span class="spaces">  </span><span class="nottickedoff">nm &lt;- identifier</span>
+<span class="lineno">  263 </span><span class="spaces">  </span><span class="nottickedoff">pure $ NonEmptyConstraint nm</span></span>
+<span class="lineno">  264 </span>
+<span class="lineno">  265 </span>-- 一般比较：x &gt;= 3 / x &gt; 0 / x == y ...
+<span class="lineno">  266 </span>compareConstraint :: Parser TypeConstraint
+<span class="lineno">  267 </span><span class="decl"><span class="nottickedoff">compareConstraint = do</span>
+<span class="lineno">  268 </span><span class="spaces">  </span><span class="nottickedoff">nm &lt;- identifier</span>
+<span class="lineno">  269 </span><span class="spaces">  </span><span class="nottickedoff">let _range low hi = RangeConstraint nm low hi</span>
+<span class="lineno">  270 </span><span class="spaces">  </span><span class="nottickedoff">c &lt;- (   (opGE &gt;&gt; (RangeConstraint nm &lt;$&gt; pInt &lt;*&gt; pure maxBound))</span>
+<span class="lineno">  271 </span><span class="spaces">       </span><span class="nottickedoff">MP.&lt;|&gt; (opLE &gt;&gt; (RangeConstraint nm &lt;$&gt; pure minBound &lt;*&gt; pInt))</span>
+<span class="lineno">  272 </span><span class="spaces">       </span><span class="nottickedoff">MP.&lt;|&gt; (opGT &gt;&gt; (RangeConstraint nm &lt;$&gt; ((+1) &lt;$&gt; pInt) &lt;*&gt; pure maxBound))</span>
+<span class="lineno">  273 </span><span class="spaces">       </span><span class="nottickedoff">MP.&lt;|&gt; (opLT &gt;&gt; (RangeConstraint nm &lt;$&gt; pure minBound &lt;*&gt; (subtract 1 &lt;$&gt; pInt)))</span>
+<span class="lineno">  274 </span><span class="spaces">       </span><span class="nottickedoff">MP.&lt;|&gt; (opEq &gt;&gt; (EqualityConstraint nm &lt;$&gt; simpleVal))</span>
+<span class="lineno">  275 </span><span class="spaces">       </span><span class="nottickedoff">) &lt;?&gt; &quot;比较约束（==, &gt;, &gt;=, &lt;, &lt;=）&quot;</span>
+<span class="lineno">  276 </span><span class="spaces">  </span><span class="nottickedoff">pure c</span></span>
+<span class="lineno">  277 </span>
+<span class="lineno">  278 </span>-- 单个约束
+<span class="lineno">  279 </span>parseConstraint :: Parser TypeConstraint
+<span class="lineno">  280 </span><span class="decl"><span class="nottickedoff">parseConstraint =</span>
+<span class="lineno">  281 </span><span class="spaces">      </span><span class="nottickedoff">MP.try predicateCall</span>
+<span class="lineno">  282 </span><span class="spaces">  </span><span class="nottickedoff">MP.&lt;|&gt; MP.try lenConstraint</span>
+<span class="lineno">  283 </span><span class="spaces">  </span><span class="nottickedoff">MP.&lt;|&gt; MP.try nonemptyConstraint</span>
+<span class="lineno">  284 </span><span class="spaces">  </span><span class="nottickedoff">MP.&lt;|&gt; compareConstraint</span>
+<span class="lineno">  285 </span><span class="spaces">  </span><span class="nottickedoff">MP.&lt;|&gt; do</span>
+<span class="lineno">  286 </span><span class="spaces">        </span><span class="nottickedoff">-- 兜底，自定义形式，尽量消耗到分隔符</span>
+<span class="lineno">  287 </span><span class="spaces">        </span><span class="nottickedoff">raw &lt;- lexeme $ MP.some (MP.satisfy (\c -&gt; c /= '&amp;' &amp;&amp; c /= ',' &amp;&amp; c /= '\n' &amp;&amp; c /= '\r'))</span>
+<span class="lineno">  288 </span><span class="spaces">        </span><span class="nottickedoff">pure $ CustomConstraint (trim raw) &quot;&quot;</span></span>
+<span class="lineno">  289 </span>
+<span class="lineno">  290 </span>-- 约束列表：c1 &amp; c2 &amp; ...
+<span class="lineno">  291 </span>parseConstraints :: Parser [TypeConstraint]
+<span class="lineno">  292 </span><span class="decl"><span class="nottickedoff">parseConstraints = parseConstraint `MP.sepBy1` symbol &quot;&amp;&quot;</span></span>
+<span class="lineno">  293 </span>
+<span class="lineno">  294 </span>-- where 子句
+<span class="lineno">  295 </span>parseWhereClause :: Parser [TypeConstraint]
+<span class="lineno">  296 </span><span class="decl"><span class="nottickedoff">parseWhereClause = do</span>
+<span class="lineno">  297 </span><span class="spaces">  </span><span class="nottickedoff">_ &lt;- symbol &quot;where&quot;</span>
+<span class="lineno">  298 </span><span class="spaces">  </span><span class="nottickedoff">parseConstraints</span></span>
+<span class="lineno">  299 </span>
+<span class="lineno">  300 </span>--------------------------------------------------------------------------------
+<span class="lineno">  301 </span>-- 类型参数解析
+<span class="lineno">  302 </span>--------------------------------------------------------------------------------
+<span class="lineno">  303 </span>
+<span class="lineno">  304 </span>-- 类型参数：name [: TypeRef] [| constraints]
+<span class="lineno">  305 </span>-- 兼容：如果没有 &quot;:&quot;，则默认类型为 int
+<span class="lineno">  306 </span>parseTypeParameter :: Parser TypeParameter
+<span class="lineno">  307 </span><span class="decl"><span class="nottickedoff">parseTypeParameter = do</span>
+<span class="lineno">  308 </span><span class="spaces">  </span><span class="nottickedoff">name &lt;- identifier</span>
+<span class="lineno">  309 </span><span class="spaces">  </span><span class="nottickedoff">mTy &lt;- MP.optional (MP.try (colon *&gt; parseTypeReference))</span>
+<span class="lineno">  310 </span><span class="spaces">  </span><span class="nottickedoff">mCons &lt;- MP.optional (pipe *&gt; parseConstraints)</span>
+<span class="lineno">  311 </span><span class="spaces">  </span><span class="nottickedoff">pure $ TypeParameter</span>
+<span class="lineno">  312 </span><span class="spaces">    </span><span class="nottickedoff">{ paramName        = name</span>
+<span class="lineno">  313 </span><span class="spaces">    </span><span class="nottickedoff">, paramType        = fromMaybe tInt mTy</span>
+<span class="lineno">  314 </span><span class="spaces">    </span><span class="nottickedoff">, paramConstraints = fromMaybe [] mCons</span>
+<span class="lineno">  315 </span><span class="spaces">    </span><span class="nottickedoff">}</span></span>
+<span class="lineno">  316 </span>
+<span class="lineno">  317 </span>parseTypeParameterList :: Parser [TypeParameter]
+<span class="lineno">  318 </span><span class="decl"><span class="nottickedoff">parseTypeParameterList =</span>
+<span class="lineno">  319 </span><span class="spaces">  </span><span class="nottickedoff">angles (parseTypeParameter `MP.sepBy` comma)</span></span>
+<span class="lineno">  320 </span>
+<span class="lineno">  321 </span>--------------------------------------------------------------------------------
+<span class="lineno">  322 </span>-- 结构体解析
+<span class="lineno">  323 </span>--------------------------------------------------------------------------------
+<span class="lineno">  324 </span>
+<span class="lineno">  325 </span>-- 字段：name : TypeRef
+<span class="lineno">  326 </span>parseField :: Parser Field
+<span class="lineno">  327 </span><span class="decl"><span class="nottickedoff">parseField = do</span>
+<span class="lineno">  328 </span><span class="spaces">  </span><span class="nottickedoff">nm &lt;- identifier</span>
+<span class="lineno">  329 </span><span class="spaces">  </span><span class="nottickedoff">_  &lt;- colon</span>
+<span class="lineno">  330 </span><span class="spaces">  </span><span class="nottickedoff">ty &lt;- parseTypeReference</span>
+<span class="lineno">  331 </span><span class="spaces">  </span><span class="nottickedoff">pure $ Field nm ty</span></span>
+<span class="lineno">  332 </span>
+<span class="lineno">  333 </span>fieldSep :: Parser ()
+<span class="lineno">  334 </span><span class="decl"><span class="nottickedoff">fieldSep = void (symbol &quot;,&quot;) MP.&lt;|&gt; void (symbol &quot;;&quot;)</span></span>
+<span class="lineno">  335 </span>
+<span class="lineno">  336 </span>-- struct { f1: T, f2: U; ... }
+<span class="lineno">  337 </span>parseStructBody :: Parser TypeBody
+<span class="lineno">  338 </span><span class="decl"><span class="nottickedoff">parseStructBody = do</span>
+<span class="lineno">  339 </span><span class="spaces">  </span><span class="nottickedoff">_ &lt;- symbol &quot;struct&quot;</span>
+<span class="lineno">  340 </span><span class="spaces">  </span><span class="nottickedoff">fields &lt;- braces (parseField `MP.sepEndBy` fieldSep)</span>
+<span class="lineno">  341 </span><span class="spaces">  </span><span class="nottickedoff">pure $ StructBody fields</span></span>
+<span class="lineno">  342 </span>
+<span class="lineno">  343 </span>--------------------------------------------------------------------------------
+<span class="lineno">  344 </span>-- 顶层定义解析
+<span class="lineno">  345 </span>--------------------------------------------------------------------------------
+<span class="lineno">  346 </span>
+<span class="lineno">  347 </span>-- type Name [&lt;params&gt;] struct {...} [where ...]
+<span class="lineno">  348 </span>parseTypeDecl :: Parser DependentType
+<span class="lineno">  349 </span><span class="decl"><span class="nottickedoff">parseTypeDecl = do</span>
+<span class="lineno">  350 </span><span class="spaces">  </span><span class="nottickedoff">_ &lt;- symbol &quot;type&quot;</span>
+<span class="lineno">  351 </span><span class="spaces">  </span><span class="nottickedoff">name &lt;- identifier</span>
+<span class="lineno">  352 </span><span class="spaces">  </span><span class="nottickedoff">params &lt;- MP.option [] (MP.try parseTypeParameterList)</span>
+<span class="lineno">  353 </span><span class="spaces">  </span><span class="nottickedoff">body &lt;- parseStructBody</span>
+<span class="lineno">  354 </span><span class="spaces">  </span><span class="nottickedoff">cons &lt;- MP.option [] (MP.try parseWhereClause)</span>
+<span class="lineno">  355 </span><span class="spaces">  </span><span class="nottickedoff">pure $ TypeDecl name params body cons</span></span>
+<span class="lineno">  356 </span>
+<span class="lineno">  357 </span>-- alias Name = TypeRef [where ...]
+<span class="lineno">  358 </span>parseAlias :: Parser DependentType
+<span class="lineno">  359 </span><span class="decl"><span class="nottickedoff">parseAlias = do</span>
+<span class="lineno">  360 </span><span class="spaces">  </span><span class="nottickedoff">_ &lt;- symbol &quot;alias&quot;</span>
+<span class="lineno">  361 </span><span class="spaces">  </span><span class="nottickedoff">name &lt;- identifier</span>
+<span class="lineno">  362 </span><span class="spaces">  </span><span class="nottickedoff">_ &lt;- symbol &quot;=&quot;</span>
+<span class="lineno">  363 </span><span class="spaces">  </span><span class="nottickedoff">target &lt;- parseTypeReference</span>
+<span class="lineno">  364 </span><span class="spaces">  </span><span class="nottickedoff">cons &lt;- MP.option [] (MP.try parseWhereClause)</span>
+<span class="lineno">  365 </span><span class="spaces">  </span><span class="nottickedoff">pure $ TypeAlias name target cons</span></span>
+<span class="lineno">  366 </span>
+<span class="lineno">  367 </span>-- 函数参数：name [: TypeRef]，若不写类型默认 int
+<span class="lineno">  368 </span>parseFunctionParam :: Parser (String, TypeRef)
+<span class="lineno">  369 </span><span class="decl"><span class="nottickedoff">parseFunctionParam = do</span>
+<span class="lineno">  370 </span><span class="spaces">  </span><span class="nottickedoff">nm &lt;- identifier</span>
+<span class="lineno">  371 </span><span class="spaces">  </span><span class="nottickedoff">mTy &lt;- MP.optional (colon *&gt; parseTypeReference)</span>
+<span class="lineno">  372 </span><span class="spaces">  </span><span class="nottickedoff">pure (nm, fromMaybe tInt mTy)</span></span>
+<span class="lineno">  373 </span>
+<span class="lineno">  374 </span>-- 跳过函数体（若存在）：平衡大括号
+<span class="lineno">  375 </span>skipBalancedBraces :: Parser ()
+<span class="lineno">  376 </span><span class="decl"><span class="nottickedoff">skipBalancedBraces = void $ braces (MP.many chunk)</span>
+<span class="lineno">  377 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  378 </span><span class="spaces">    </span><span class="nottickedoff">chunk =</span>
+<span class="lineno">  379 </span><span class="spaces">          </span><span class="nottickedoff">void (MP.some (MP.satisfy (\c -&gt; c /= '{' &amp;&amp; c /= '}' )))</span>
+<span class="lineno">  380 </span><span class="spaces">      </span><span class="nottickedoff">MP.&lt;|&gt; skipBalancedBraces</span></span>
+<span class="lineno">  381 </span>
+<span class="lineno">  382 </span>-- func Name(params) [-&gt; TypeRef] [where ...] [{ ... }]
+<span class="lineno">  383 </span>parseFuncDecl :: Parser DependentType
+<span class="lineno">  384 </span><span class="decl"><span class="nottickedoff">parseFuncDecl = do</span>
+<span class="lineno">  385 </span><span class="spaces">  </span><span class="nottickedoff">_ &lt;- symbol &quot;func&quot;</span>
+<span class="lineno">  386 </span><span class="spaces">  </span><span class="nottickedoff">name &lt;- identifier</span>
+<span class="lineno">  387 </span><span class="spaces">  </span><span class="nottickedoff">params &lt;- parens (parseFunctionParam `MP.sepBy` comma)</span>
+<span class="lineno">  388 </span><span class="spaces">  </span><span class="nottickedoff">ret &lt;- MP.option tVoid (MP.try (arrow *&gt; parseTypeReference))</span>
+<span class="lineno">  389 </span><span class="spaces">  </span><span class="nottickedoff">cons &lt;- MP.option [] (MP.try parseWhereClause)</span>
+<span class="lineno">  390 </span><span class="spaces">  </span><span class="nottickedoff">-- 可选函数体</span>
+<span class="lineno">  391 </span><span class="spaces">  </span><span class="nottickedoff">_ &lt;- MP.optional (MP.try skipBalancedBraces)</span>
+<span class="lineno">  392 </span><span class="spaces">  </span><span class="nottickedoff">pure $ DependentFunction name params ret cons</span></span>
+<span class="lineno">  393 </span>
+<span class="lineno">  394 </span>-- 顶层定义（无恢复）
+<span class="lineno">  395 </span>parseTopDecl :: Parser DependentType
+<span class="lineno">  396 </span><span class="decl"><span class="nottickedoff">parseTopDecl =</span>
+<span class="lineno">  397 </span><span class="spaces">      </span><span class="nottickedoff">MP.try parseTypeDecl</span>
+<span class="lineno">  398 </span><span class="spaces">  </span><span class="nottickedoff">MP.&lt;|&gt; MP.try parseAlias</span>
+<span class="lineno">  399 </span><span class="spaces">  </span><span class="nottickedoff">MP.&lt;|&gt; parseFuncDecl</span></span>
+<span class="lineno">  400 </span>
+<span class="lineno">  401 </span>-- 同步到下一个顶层定义的开始（type/func/alias）或 EOF
+<span class="lineno">  402 </span>syncToNextDecl :: Parser ()
+<span class="lineno">  403 </span><span class="decl"><span class="nottickedoff">syncToNextDecl = do</span>
+<span class="lineno">  404 </span><span class="spaces">  </span><span class="nottickedoff">let starts = MP.try (lookAhead (symbol &quot;type&quot;))</span>
+<span class="lineno">  405 </span><span class="spaces">           </span><span class="nottickedoff">MP.&lt;|&gt; MP.try (lookAhead (symbol &quot;func&quot;))</span>
+<span class="lineno">  406 </span><span class="spaces">           </span><span class="nottickedoff">MP.&lt;|&gt; MP.try (lookAhead (symbol &quot;alias&quot;))</span>
+<span class="lineno">  407 </span><span class="spaces">           </span><span class="nottickedoff">MP.&lt;|&gt; MP.try (lookAhead (symbol &quot;&quot;))</span>
+<span class="lineno">  408 </span><span class="spaces">  </span><span class="nottickedoff">_ &lt;- manyTill anySingle starts</span>
+<span class="lineno">  409 </span><span class="spaces">  </span><span class="nottickedoff">pure ()</span></span>
+<span class="lineno">  410 </span>
+<span class="lineno">  411 </span>-- 带恢复的顶层定义解析：出错时收集错误并跳到下一个定义
+<span class="lineno">  412 </span>parseTopDeclWithRecovery :: Parser (Either DependentTypeError DependentType)
+<span class="lineno">  413 </span><span class="decl"><span class="nottickedoff">parseTopDeclWithRecovery =</span>
+<span class="lineno">  414 </span><span class="spaces">  </span><span class="nottickedoff">withRecovery handler (Right &lt;$&gt; parseTopDecl)</span>
+<span class="lineno">  415 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  416 </span><span class="spaces">    </span><span class="nottickedoff">handler :: MP.ParseError String Void -&gt; Parser (Either DependentTypeError DependentType)</span>
+<span class="lineno">  417 </span><span class="spaces">    </span><span class="nottickedoff">handler _ = do</span>
+<span class="lineno">  418 </span><span class="spaces">      </span><span class="nottickedoff">-- 记录错误消息；行号可选（此处置 0），片段为空</span>
+<span class="lineno">  419 </span><span class="spaces">      </span><span class="nottickedoff">syncToNextDecl</span>
+<span class="lineno">  420 </span><span class="spaces">      </span><span class="nottickedoff">pure $ Left (SyntaxError &quot;Parse error&quot; 0 &quot;&quot;)</span></span>
+<span class="lineno">  421 </span>
+<span class="lineno">  422 </span>-- 整个程序：可包含多个定义
+<span class="lineno">  423 </span>parseProgram :: Parser [Either DependentTypeError DependentType]
+<span class="lineno">  424 </span><span class="decl"><span class="nottickedoff">parseProgram = do</span>
+<span class="lineno">  425 </span><span class="spaces">  </span><span class="nottickedoff">sc</span>
+<span class="lineno">  426 </span><span class="spaces">  </span><span class="nottickedoff">decls &lt;- MP.many (parseTopDeclWithRecovery &lt;* sc)</span>
+<span class="lineno">  427 </span><span class="spaces">  </span><span class="nottickedoff">eof</span>
+<span class="lineno">  428 </span><span class="spaces">  </span><span class="nottickedoff">pure decls</span></span>
+<span class="lineno">  429 </span>
+<span class="lineno">  430 </span>--------------------------------------------------------------------------------
+<span class="lineno">  431 </span>-- 运行与 API
+<span class="lineno">  432 </span>--------------------------------------------------------------------------------
+<span class="lineno">  433 </span>
+<span class="lineno">  434 </span>-- 把成功的定义累进到作用域，同时检测重复定义
+<span class="lineno">  435 </span>buildScope :: [DependentType] -&gt; ([DependentTypeError], Map String DependentType)
+<span class="lineno">  436 </span><span class="decl"><span class="nottickedoff">buildScope ds =</span>
+<span class="lineno">  437 </span><span class="spaces">  </span><span class="nottickedoff">foldl' go ([], Map.empty) ds</span>
+<span class="lineno">  438 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  439 </span><span class="spaces">    </span><span class="nottickedoff">defName :: DependentType -&gt; String</span>
+<span class="lineno">  440 </span><span class="spaces">    </span><span class="nottickedoff">defName = \case</span>
+<span class="lineno">  441 </span><span class="spaces">      </span><span class="nottickedoff">TypeDecl n _ _ _      -&gt; n</span>
+<span class="lineno">  442 </span><span class="spaces">      </span><span class="nottickedoff">TypeAlias n _ _       -&gt; n</span>
+<span class="lineno">  443 </span><span class="spaces">      </span><span class="nottickedoff">DependentFunction n _ _ _ -&gt; n</span>
+<span class="lineno">  444 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  445 </span><span class="spaces">    </span><span class="nottickedoff">go (errs, mp) d =</span>
+<span class="lineno">  446 </span><span class="spaces">      </span><span class="nottickedoff">let n = defName d</span>
+<span class="lineno">  447 </span><span class="spaces">      </span><span class="nottickedoff">in if Map.member n mp</span>
+<span class="lineno">  448 </span><span class="spaces">         </span><span class="nottickedoff">then (errs ++ [InvalidTypeSyntax (&quot;重复定义: &quot; ++ n)], mp)</span>
+<span class="lineno">  449 </span><span class="spaces">         </span><span class="nottickedoff">else (errs, Map.insert n d mp)</span></span>
+<span class="lineno">  450 </span>
+<span class="lineno">  451 </span>-- 解析整个输入，返回所有定义与最终状态
+<span class="lineno">  452 </span>runDependentTypesParser :: String -&gt; DependentParseResult
+<span class="lineno">  453 </span><span class="decl"><span class="nottickedoff">runDependentTypesParser input =</span>
+<span class="lineno">  454 </span><span class="spaces">  </span><span class="nottickedoff">case runParser parseProgram &quot;&lt;input&gt;&quot; input of</span>
+<span class="lineno">  455 </span><span class="spaces">    </span><span class="nottickedoff">Left fatalBundle -&gt;</span>
+<span class="lineno">  456 </span><span class="spaces">      </span><span class="nottickedoff">Left (errorBundlePretty fatalBundle)</span>
+<span class="lineno">  457 </span><span class="spaces">    </span><span class="nottickedoff">Right parts -&gt;</span>
+<span class="lineno">  458 </span><span class="spaces">      </span><span class="nottickedoff">let (errs1, oks) = foldl'</span>
+<span class="lineno">  459 </span><span class="spaces">             </span><span class="nottickedoff">(\(es, ds) r -&gt; case r of</span>
+<span class="lineno">  460 </span><span class="spaces">                                </span><span class="nottickedoff">Left e  -&gt; (es ++ [e], ds)</span>
+<span class="lineno">  461 </span><span class="spaces">                                </span><span class="nottickedoff">Right d -&gt; (es, ds ++ [d]))</span>
+<span class="lineno">  462 </span><span class="spaces">             </span><span class="nottickedoff">([], [])</span>
+<span class="lineno">  463 </span><span class="spaces">             </span><span class="nottickedoff">parts</span>
+<span class="lineno">  464 </span><span class="spaces">          </span><span class="nottickedoff">(errs2, scope) = buildScope oks</span>
+<span class="lineno">  465 </span><span class="spaces">          </span><span class="nottickedoff">st = DependentTypesParser</span>
+<span class="lineno">  466 </span><span class="spaces">                 </span><span class="nottickedoff">{ parserErrors = errs1 ++ errs2</span>
+<span class="lineno">  467 </span><span class="spaces">                 </span><span class="nottickedoff">, typeScope    = scope</span>
+<span class="lineno">  468 </span><span class="spaces">                 </span><span class="nottickedoff">, sourceName   = &quot;&lt;input&gt;&quot;</span>
+<span class="lineno">  469 </span><span class="spaces">                 </span><span class="nottickedoff">}</span>
+<span class="lineno">  470 </span><span class="spaces">      </span><span class="nottickedoff">in Right (oks, st)</span></span>
+<span class="lineno">  471 </span>
+<span class="lineno">  472 </span>-- 返回第一个成功的顶层定义（如果没有则报错），并返回最终状态
+<span class="lineno">  473 </span>parseDependentType :: String -&gt; Either String (DependentType, DependentTypesParser)
+<span class="lineno">  474 </span><span class="decl"><span class="nottickedoff">parseDependentType input = do</span>
+<span class="lineno">  475 </span><span class="spaces">  </span><span class="nottickedoff">(defs, st) &lt;- runDependentTypesParser input</span>
+<span class="lineno">  476 </span><span class="spaces">  </span><span class="nottickedoff">case defs of</span>
+<span class="lineno">  477 </span><span class="spaces">    </span><span class="nottickedoff">(d:_) -&gt; Right (d, st)</span>
+<span class="lineno">  478 </span><span class="spaces">    </span><span class="nottickedoff">[]    -&gt; Left &quot;未找到任何可解析的顶层定义&quot;</span></span>
+<span class="lineno">  479 </span>
+<span class="lineno">  480 </span>-- 仅解析一个 type 定义（不含其他定义）
+<span class="lineno">  481 </span>parseTypeDeclaration :: String -&gt; Either String DependentType
+<span class="lineno">  482 </span><span class="decl"><span class="nottickedoff">parseTypeDeclaration input =</span>
+<span class="lineno">  483 </span><span class="spaces">  </span><span class="nottickedoff">case runParser (sc *&gt; parseTypeDecl &lt;* sc &lt;* eof) &quot;&lt;type decl&gt;&quot; input of</span>
+<span class="lineno">  484 </span><span class="spaces">    </span><span class="nottickedoff">Left e  -&gt; Left (errorBundlePretty e)</span>
+<span class="lineno">  485 </span><span class="spaces">    </span><span class="nottickedoff">Right d -&gt; Right d</span></span>
+<span class="lineno">  486 </span>
+<span class="lineno">  487 </span>-- 校验输入语法并返回错误集合（不抛异常）
+<span class="lineno">  488 </span>validateDependentTypeSyntax :: String -&gt; [DependentTypeError]
+<span class="lineno">  489 </span><span class="decl"><span class="nottickedoff">validateDependentTypeSyntax input =</span>
+<span class="lineno">  490 </span><span class="spaces">  </span><span class="nottickedoff">case runDependentTypesParser input of</span>
+<span class="lineno">  491 </span><span class="spaces">    </span><span class="nottickedoff">Left fatal -&gt; [SyntaxError fatal 0 input]</span>
+<span class="lineno">  492 </span><span class="spaces">    </span><span class="nottickedoff">Right (_, st) -&gt; parserErrors st</span></span>
+
+</pre>
+</body>
+</html>

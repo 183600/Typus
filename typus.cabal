@@ -1,0 +1,307 @@
+cabal-version: 2.2
+name:          typus
+version:       0.1.0
+synopsis:      Typus compiler with dependent types and ownership analysis
+description:   A compiler for the Typus language with support for dependent types and ownership analysis
+license:       MIT
+author:        Typus Development Team
+maintainer:    dev@typus.example.com
+category:      Compilers, Language
+build-type:    Simple
+extra-doc-files: ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://gitee.com/qwe12345678/typus.git
+
+common warnings
+    ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -Wmissing-export-lists -Wmissing-home-modules -Wmonomorphism-restriction -Wmissing-signatures -Wname-shadowing -Worphans -Wpartial-type-signatures -Wtabs -Wtype-defaults -Wunrecognised-pragmas -Wunused-do-bind -Wunused-foralls -Wunused-imports -Wunused-matches -Wunused-top-binds -Wunused-type-patterns -Wwarn=deprecations -Wwarn=unused-imports -Wwarn=unused-matches -Wwarn=unused-local-binds -Wwarn=unused-top-binds -Wwarn=unused-type-patterns
+    if flag(werror)
+        ghc-options: -Werror
+
+library
+    import:           warnings
+    hs-source-dirs:   src
+    exposed-modules:
+        Compiler,
+        Parser,
+        SyntaxValidator,
+        SimpleSyntaxValidator,
+        Ownership,
+        OwnershipFixed,
+        OwnershipAdvanced,
+        OwnershipComprehensive,
+        OwnershipControlFlow,
+        OwnershipControlFlowFixed,
+        OwnershipControlFlowEnhanced,
+        Dependencies,
+        CompilerUtils,
+        AnalyzerIntegration,
+        DependentTypesParser,
+        Utils,
+        Cli,
+        IntegratedCompiler,
+        Debug,
+        CommandLineDebug,
+        DebugIntegration
+    build-depends:
+        base >=4.7 && <5,
+        containers >= 0.6 && <1,
+        mtl >= 2.2 && <3,
+        parsec >= 3.1.0 && <3.2,
+        megaparsec >= 9.0.0 && <10,
+        parser-combinators >= 1.3.0 && <2,
+        text >= 1.2.0 && <3,
+        directory >= 1.3.0 && <2,
+        filepath >= 1.4.0 && <2,
+        process >= 1.6.0 && <2,
+        regex-tdfa >= 1.3.0 && <2,
+        optparse-applicative >= 0.16.0 && <1,
+        temporary >= 1.2 && <2,
+        time >= 1.8 && <2,
+        old-time >= 1.1 && <2,
+        QuickCheck >= 2.14
+    default-language: Haskell2010
+
+executable typus
+    import:           warnings
+    main-is:          Main.hs
+    build-depends:
+        base >=4.7 && <5,
+        typus,
+        containers,
+        mtl,
+        parsec >= 3.1.0,
+        directory >= 1.3.0,
+        filepath >= 1.4.0,
+        process >= 1.6.0,
+        temporary >= 1.2,
+        Glob >= 0.10 && <1
+    hs-source-dirs:   app
+    default-language: Haskell2010
+    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+
+-- Consolidate tests: keep only the canonical test-suite as the production gate
+
+-- Fast/Full test flags
+flag fast
+    description: Run only fast tests by default
+    default:     True
+
+flag full
+    description: Include slow/integration/perf tests
+    default:     False
+
+-- Production testing flags
+flag production
+    description: Enable production-grade testing with strict requirements
+    default:     False
+
+flag coverage
+    description: Enable test coverage generation
+    default:     False
+
+flag werror
+    description: Treat warnings as errors
+    default:     True
+    manual:      True
+
+
+
+executable parser-test
+    import:           warnings
+    main-is:          ParserTest.hs
+    hs-source-dirs:   app
+    build-depends:
+        base >=4.7 && <5,
+        typus,
+        containers,
+        mtl,
+        parsec >= 3.1.0,
+        directory >= 1.3.0,
+        filepath >= 1.4.0,
+        process >= 1.6.0
+    default-language: Haskell2010
+    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+
+executable compiler-test
+    import:           warnings
+    main-is:          CompilerTest.hs
+    hs-source-dirs:   app
+    build-depends:
+        base >=4.7 && <5,
+        typus,
+        containers,
+        mtl,
+        parsec >= 3.1.0,
+        directory >= 1.3.0,
+        filepath >= 1.4.0,
+        process >= 1.6.0
+    default-language: Haskell2010
+    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+
+executable minimal-compiler-test
+    import:           warnings
+    main-is:          MinimalCompilerTest.hs
+    hs-source-dirs:   app
+    build-depends:
+        base >=4.7 && <5,
+        typus,
+        containers,
+        mtl,
+        parsec >= 3.1.0,
+        directory >= 1.3.0,
+        filepath >= 1.4.0,
+        process >= 1.6.0
+    default-language: Haskell2010
+    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+
+executable typus-compilation-test
+    import:           warnings
+    main-is:          TypusCompilationTest.hs
+    hs-source-dirs:   app
+    build-depends:
+        base >=4.7 && <5,
+        typus,
+        containers,
+        mtl,
+        parsec >= 3.1.0,
+        directory >= 1.3.0,
+        filepath >= 1.4.0,
+        process >= 1.6.0,
+        Glob >= 0.10 && <1,
+        temporary >= 1.2 && <2
+    default-language: Haskell2010
+    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+
+
+
+
+-- Benchmark suite for performance testing
+benchmark typus-bench
+    import:           warnings
+    type:             exitcode-stdio-1.0
+    main-is:          BenchmarkRunner.hs
+    hs-source-dirs:   test
+    other-modules:
+        BenchmarkTests
+    build-depends:
+        base >=4.7 && <5,
+        typus,
+        containers,
+        mtl,
+        parsec >= 3.1.0,
+        directory >= 1.3.0,
+        filepath >= 1.4.0,
+        criterion >= 1.6,
+        deepseq >= 1.4.0
+    default-language: Haskell2010
+    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+
+-- Canonical test-suite
+test-suite typus-test
+    import:           warnings
+    type:             exitcode-stdio-1.0
+    main-is:          TestSuite.hs
+    hs-source-dirs:   test
+    other-modules:
+        TestParser,
+        TestCompiler,
+        TestOwnership,
+        ComprehensiveTestSuite,
+        PerformanceTests,
+        IntegrationTests,
+        ProductionTests,
+        BenchmarkTests,
+        ConversionTest,
+        TypusCompilationTest,
+        ComprehensiveUnitTests,
+        EndToEndTests,
+        CLICommandTests,
+        DirectiveParsingTests,
+        DependentTypesAndVectorTests,
+        OwnershipTransferTests,
+        PreciseTypeTests,
+        EnhancedPreciseTypeTests,
+        RunEnhancedPreciseTypeTests,
+        EnhancedOwnershipTests,
+        EnhancedStackTest,
+        RunEnhancedOwnershipTests
+    build-depends:
+        base >=4.7 && <5,
+        typus,
+        containers,
+        mtl,
+        parsec >= 3.1.0,
+        directory >= 1.3.0,
+        filepath >= 1.4.0,
+        process >= 1.6.0,
+        HUnit >= 1.6.0,
+        deepseq >= 1.4.0,
+        time >= 1.8.0,
+        tasty >= 1.4,
+        tasty-hunit >= 0.10,
+        tasty-golden >= 2.3,
+        tasty-quickcheck >= 0.10,
+        criterion >= 1.6,
+        QuickCheck >= 2.14,
+        async >= 2.2,
+        stm >= 2.5,
+        Glob >= 0.10 && <1,
+        temporary >= 1.2 && <2,
+        time >= 1.8 && <2,
+        text >= 1.2.0 && <3,
+        hpc >= 0.7
+    default-language: Haskell2010
+    ghc-options:      -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-M4G
+    if flag(fast)
+        cpp-options:   -DFAST_TESTS
+    if flag(full)
+        cpp-options:   -DFULL_TESTS
+    if flag(production)
+        cpp-options:   -DPRODUCTION_TESTS
+        ghc-options:   -threaded -with-rtsopts=-N -with-rtsopts=-M8G -Werror
+    else
+        ghc-options:   -fno-warn-unused-imports -fno-warn-unused-matches -fno-warn-unused-binds -fno-warn-unused-top-binds -fno-warn-unused-type-patterns -fno-warn-missing-signatures -Wno-name-shadowing -Wno-missing-export-lists -Wno-compat-unqualified-imports -Wno-type-defaults -Wno-misplaced-pragmas -Wno-monomorphism-restriction
+    if flag(coverage)
+        ghc-options:   -fhpc -fno-warn-unused-imports -fno-warn-unused-matches -fno-warn-unused-binds -fno-warn-unused-top-binds -fno-warn-unused-type-patterns
+
+-- Enhanced Ownership Test Suite
+test-suite enhanced-ownership-tests
+    import:           warnings
+    type:             exitcode-stdio-1.0
+    main-is:          RunEnhancedOwnershipTestsMain.hs
+    hs-source-dirs:   test
+    other-modules:
+        EnhancedOwnershipTests,
+        EnhancedStackTest,
+        RunEnhancedOwnershipTests,
+        TestOwnership,
+        OwnershipAnalysisTests
+    build-depends:
+        base >=4.7 && <5,
+        typus,
+        containers,
+        mtl,
+        parsec >= 3.1.0,
+        directory >= 1.3.0,
+        filepath >= 1.4.0,
+        process >= 1.6.0,
+        HUnit >= 1.6.0,
+        deepseq >= 1.4.0,
+        time >= 1.8.0,
+        tasty >= 1.4,
+        tasty-hunit >= 0.10,
+        tasty-golden >= 2.3,
+        tasty-quickcheck >= 0.10,
+        QuickCheck >= 2.14,
+        temporary >= 1.2 && <2,
+        text >= 1.2.0 && <3
+    default-language: Haskell2010
+    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+    if flag(fast)
+        cpp-options:   -DFAST_TESTS
+    if flag(full)
+        buildable: True
+    else
+        buildable: False

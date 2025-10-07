@@ -1,0 +1,14 @@
+package main
+
+import (
+	"fmt"
+)
+
+var (
+	x int = 42
+	y string = "hello"
+)
+
+func main() {
+	fmt.Println(x, y)
+}

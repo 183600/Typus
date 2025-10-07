@@ -1,0 +1,17 @@
+package main
+
+import (
+    "fmt"
+)
+
+func test() {
+    left := []int{1, 2, 3}
+    
+    for _, v := range left {
+        fmt.Println(v)
+    }
+}
+
+func main() {
+    test()
+}

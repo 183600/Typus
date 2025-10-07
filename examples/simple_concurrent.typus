@@ -1,0 +1,473 @@
+//! dependent_types: on
+package main
+
+import (
+    "fmt"
+    "sync"
+    "time"
+    "sync/atomic"
+)
+
+type Channel struct {
+    ch chan int
+    closed int32
+    sender_count int32
+    receiver_count int32
+}
+
+type Actor struct {
+    mailbox chan string
+    handler func(string)
+    running int32
+    stop_signal chan struct{}
+    wg sync.WaitGroup
+}
+
+type WorkerPool struct {
+    jobs chan int
+    results chan string
+    worker_count int
+    active_workers int32
+    shutdown chan struct{}
+    wg sync.WaitGroup
+}
+
+type ConcurrentMap struct {
+    data map[string]int
+    mutex sync.RWMutex
+}
+
+type LockFreeQueue struct {
+    elements []int
+    head int32
+    tail int32
+    mask int32
+}
+
+func NewChannel(bufferSize int) *Channel {
+    return &Channel{
+        ch: make(chan int, bufferSize),
+        closed: 0,
+        sender_count: 0,
+        receiver_count: 0,
+    }
+}
+
+func (c *Channel) Send(value int) bool {
+    if atomic.LoadInt32(&c.closed) == 1 {
+        return false
+    }
+    
+    atomic.AddInt32(&c.sender_count, 1)
+    defer atomic.AddInt32(&c.sender_count, -1)
+    
+    select {
+    case c.ch <- value:
+        return true
+    default:
+        return false
+    }
+}
+
+func (c *Channel) Receive() (int, bool) {
+    atomic.AddInt32(&c.receiver_count, 1)
+    defer atomic.AddInt32(&c.receiver_count, -1)
+    
+    select {
+    case value, ok := <-c.ch:
+        return value, ok
+    default:
+        return 0, false
+    }
+}
+
+func (c *Channel) Close() {
+    if atomic.CompareAndSwapInt32(&c.closed, 0, 1) {
+        close(c.ch)
+    }
+}
+
+func (c *Channel) IsClosed() bool {
+    return atomic.LoadInt32(&c.closed) == 1
+}
+
+func (c *Channel) Stats() (int32, int32, bool) {
+    return atomic.LoadInt32(&c.sender_count), 
+           atomic.LoadInt32(&c.receiver_count), 
+           atomic.LoadInt32(&c.closed) == 1
+}
+
+func NewActor(handler func(string), bufferSize int) *Actor {
+    return &Actor{
+        mailbox: make(chan string, bufferSize),
+        handler: handler,
+        running: 0,
+        stop_signal: make(chan struct{}),
+    }
+}
+
+func (a *Actor) Start() {
+    if atomic.CompareAndSwapInt32(&a.running, 0, 1) {
+        a.wg.Add(1)
+        go a.run()
+    }
+}
+
+func (a *Actor) run() {
+    defer a.wg.Done()
+    
+    for {
+        select {
+        case msg, ok := <-a.mailbox:
+            if !ok {
+                return
+            }
+            a.handler(msg)
+        case <-a.stop_signal:
+            return
+        }
+    }
+}
+
+func (a *Actor) Send(msg string) bool {
+    if atomic.LoadInt32(&a.running) == 0 {
+        return false
+    }
+    
+    select {
+    case a.mailbox <- msg:
+        return true
+    default:
+        return false
+    }
+}
+
+func (a *Actor) Stop() {
+    if atomic.CompareAndSwapInt32(&a.running, 1, 0) {
+        close(a.stop_signal)
+        close(a.mailbox)
+        a.wg.Wait()
+    }
+}
+
+func NewWorkerPool(worker_count int, job_func func(int) string) *WorkerPool {
+    pool := &WorkerPool{
+        jobs: make(chan int, worker_count*2),
+        results: make(chan string, worker_count*2),
+        worker_count: worker_count,
+        shutdown: make(chan struct{}),
+    }
+    
+    return pool
+}
+
+func (wp *WorkerPool) Start() {
+    for i := 0; i < wp.worker_count; i++ {
+        wp.wg.Add(1)
+        go wp.runWorker(i)
+    }
+}
+
+func (wp *WorkerPool) runWorker(id int) {
+    defer wp.wg.Done()
+    atomic.AddInt32(&wp.active_workers, 1)
+    defer atomic.AddInt32(&wp.active_workers, -1)
+    
+    for {
+        select {
+        case job, ok := <-wp.jobs:
+            if !ok {
+                return
+            }
+            result := fmt.Sprintf("Worker %d processed job %d", id, job)
+            select {
+            case wp.results <- result:
+            case <-wp.shutdown:
+                return
+            }
+        case <-wp.shutdown:
+            return
+        }
+    }
+}
+
+func (wp *WorkerPool) Submit(job int) bool {
+    select {
+    case wp.jobs <- job:
+        return true
+    default:
+        return false
+    }
+}
+
+func (wp *WorkerPool) GetResult() (string, bool) {
+    select {
+    case result, ok := <-wp.results:
+        return result, ok
+    default:
+        return "", false
+    }
+}
+
+func (wp *WorkerPool) Shutdown() {
+    close(wp.shutdown)
+    close(wp.jobs)
+    wp.wg.Wait()
+    close(wp.results)
+}
+
+func (wp *WorkerPool) ActiveWorkers() int32 {
+    return atomic.LoadInt32(&wp.active_workers)
+}
+
+func NewConcurrentMap() *ConcurrentMap {
+    return &ConcurrentMap{
+        data: make(map[string]int),
+    }
+}
+
+func (cm *ConcurrentMap) Set(key string, value int) {
+    cm.mutex.Lock()
+    defer cm.mutex.Unlock()
+    cm.data[key] = value
+}
+
+func (cm *ConcurrentMap) Get(key string) (int, bool) {
+    cm.mutex.RLock()
+    defer cm.mutex.RUnlock()
+    value, exists := cm.data[key]
+    return value, exists
+}
+
+func (cm *ConcurrentMap) Delete(key string) bool {
+    cm.mutex.Lock()
+    defer cm.mutex.Unlock()
+    _, exists := cm.data[key]
+    if exists {
+        delete(cm.data, key)
+    }
+    return exists
+}
+
+func (cm *ConcurrentMap) Size() int {
+    cm.mutex.RLock()
+    defer cm.mutex.RUnlock()
+    return len(cm.data)
+}
+
+func NewLockFreeQueue(capacity int) *LockFreeQueue {
+    // 容量必须是2的幂
+    size := 1
+    for size < capacity {
+        size *= 2
+    }
+    
+    return &LockFreeQueue{
+        elements: make([]int, size),
+        head: 0,
+        tail: 0,
+        mask: int32(size - 1),
+    }
+}
+
+func (q *LockFreeQueue) Enqueue(value int) bool {
+    for {
+        head := atomic.LoadInt32(&q.head)
+        tail := atomic.LoadInt32(&q.tail)
+        
+        if (tail+1)&q.mask == head {
+            // 队列已满
+            return false
+        }
+        
+        if atomic.CompareAndSwapInt32(&q.tail, tail, (tail+1)&q.mask) {
+            q.elements[tail] = value
+            return true
+        }
+    }
+}
+
+func (q *LockFreeQueue) Dequeue() (int, bool) {
+    for {
+        head := atomic.LoadInt32(&q.head)
+        tail := atomic.LoadInt32(&q.tail)
+        
+        if head == tail {
+            // 队列为空
+            return 0, false
+        }
+        
+        value := q.elements[head]
+        if atomic.CompareAndSwapInt32(&q.head, head, (head+1)&q.mask) {
+            return value, true
+        }
+    }
+}
+
+func testChannel() {
+    fmt.Println("=== 测试Channel ===")
+    
+    ch := NewChannel(3)
+    
+    // 发送数据
+    for i := 0; i < 5; i++ {
+        if ch.Send(i) {
+            fmt.Printf("发送: %d\n", i)
+        } else {
+            fmt.Printf("发送失败: %d\n", i)
+        }
+    }
+    
+    // 接收数据
+    for i := 0; i < 5; i++ {
+        if value, ok := ch.Receive(); ok {
+            fmt.Printf("接收: %d\n", value)
+        } else {
+            fmt.Printf("接收失败\n")
+        }
+    }
+    
+    senders, receivers, closed := ch.Stats()
+    fmt.Printf("Channel统计: 发送者=%d, 接收者=%d, 已关闭=%t\n", senders, receivers, closed)
+    
+    ch.Close()
+}
+
+func testActor() {
+    fmt.Println("\n=== 测试Actor ===")
+    
+    handler := func(msg string) {
+        fmt.Printf("Actor处理消息: %s\n", msg)
+        time.Sleep(100 * time.Millisecond)
+    }
+    
+    actor := NewActor(handler, 10)
+    actor.Start()
+    
+    messages := []string{"Hello", "World", "From", "Actor", "System"}
+    for _, msg := range messages {
+        if actor.Send(msg) {
+            fmt.Printf("发送消息: %s\n", msg)
+        } else {
+            fmt.Printf("发送失败: %s\n", msg)
+        }
+    }
+    
+    time.Sleep(1 * time.Second)
+    actor.Stop()
+}
+
+func testWorkerPool() {
+    fmt.Println("\n=== 测试WorkerPool ===")
+    
+    jobFunc := func(job int) string {
+        time.Sleep(100 * time.Millisecond)
+        return fmt.Sprintf("Job %d completed", job)
+    }
+    
+    pool := NewWorkerPool(3, jobFunc)
+    pool.Start()
+    
+    // 提交任务
+    for i := 0; i < 10; i++ {
+        if pool.Submit(i) {
+            fmt.Printf("提交任务: %d\n", i)
+        }
+    }
+    
+    // 获取结果
+    time.Sleep(2 * time.Second)
+    for i := 0; i < 10; i++ {
+        if result, ok := pool.GetResult(); ok {
+            fmt.Printf("获取结果: %s\n", result)
+        }
+    }
+    
+    fmt.Printf("活跃工作者数量: %d\n", pool.ActiveWorkers())
+    pool.Shutdown()
+}
+
+func testConcurrentMap() {
+    fmt.Println("\n=== 测试ConcurrentMap ===")
+    
+    cm := NewConcurrentMap()
+    
+    // 并发写入
+    var wg sync.WaitGroup
+    for i := 0; i < 10; i++ {
+        wg.Add(1)
+        go func(i int) {
+            defer wg.Done()
+            key := fmt.Sprintf("key%d", i)
+            cm.Set(key, i*10)
+            fmt.Printf("设置: %s = %d\n", key, i*10)
+        }(i)
+    }
+    
+    wg.Wait()
+    
+    // 并发读取
+    for i := 0; i < 10; i++ {
+        wg.Add(1)
+        go func(i int) {
+            defer wg.Done()
+            key := fmt.Sprintf("key%d", i)
+            if value, exists := cm.Get(key); exists {
+                fmt.Printf("获取: %s = %d\n", key, value)
+            }
+        }(i)
+    }
+    
+    wg.Wait()
+    
+    fmt.Printf("Map大小: %d\n", cm.Size())
+}
+
+func testLockFreeQueue() {
+    fmt.Println("\n=== 测试无锁队列 ===")
+    
+    queue := NewLockFreeQueue(8)
+    
+    // 并发入队
+    var wg sync.WaitGroup
+    for i := 0; i < 10; i++ {
+        wg.Add(1)
+        go func(i int) {
+            defer wg.Done()
+            if queue.Enqueue(i) {
+                fmt.Printf("入队: %d\n", i)
+            } else {
+                fmt.Printf("入队失败: %d\n", i)
+            }
+        }(i)
+    }
+    
+    wg.Wait()
+    
+    // 并发出队
+    for i := 0; i < 10; i++ {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            if value, ok := queue.Dequeue(); ok {
+                fmt.Printf("出队: %d\n", value)
+            } else {
+                fmt.Printf("出队失败\n")
+            }
+        }()
+    }
+    
+    wg.Wait()
+}
+
+func main() {
+    fmt.Println("=== 并发编程特性测试 ===")
+    
+    testChannel()
+    testActor()
+    testWorkerPool()
+    testConcurrentMap()
+    testLockFreeQueue()
+    
+    fmt.Println("\n=== 所有并发测试完成 ===")
+}

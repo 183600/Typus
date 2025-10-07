@@ -1,0 +1,86 @@
+package main
+
+import (
+	"fmt"
+	"runtime"
+)
+
+// Test various Go syntax features
+type TestStruct struct {
+	Name  string
+	Value int
+}
+
+func (t TestStruct) String() string {
+	return fmt.Sprintf("TestStruct{Name: %s, Value: %d}", t.Name, t.Value)
+}
+
+func testFunction() (string, int, error) {
+	return "test", 42, nil
+}
+
+func variadicFunc(nums ...int) int {
+	sum := 0
+	for _, n := range nums {
+		sum += n
+	}
+	return sum
+}
+
+func main() {
+	fmt.Println("=== Go Syntax Compatibility Test ===")
+	
+	// Struct initialization
+	ts := TestStruct{Name: "test", Value: 100}
+	fmt.Printf("Struct: %v\n", ts)
+	
+	// Multiple return values
+	str, num, err := testFunction()
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	} else {
+		fmt.Printf("Function returned: %s, %d\n", str, num)
+	}
+	
+	// Variadic function
+	result := variadicFunc(1, 2, 3, 4, 5)
+	fmt.Printf("Variadic sum: %d\n", result)
+	
+	// Switch statement
+	switch runtime.GOOS {
+	case "linux":
+		fmt.Println("Running on Linux")
+	case "darwin":
+		fmt.Println("Running on macOS")
+	case "windows":
+		fmt.Println("Running on Windows")
+	default:
+		fmt.Printf("Running on %s\n", runtime.GOOS)
+	}
+	
+	// For loop with range
+	numbers := []int{10, 20, 30}
+	for i, num := range numbers {
+		fmt.Printf("Index %d: %d\n", i, num)
+	}
+	
+	// Map operations
+	m := make(map[string]int)
+	m["one"] = 1
+	m["two"] = 2
+	
+	if val, exists := m["one"]; exists {
+		fmt.Printf("Map value for 'one': %d\n", val)
+	}
+	
+	// Type assertion
+	var x interface{} = "hello"
+	if s, ok := x.(string); ok {
+		fmt.Printf("Type assertion successful: %s\n", s)
+	}
+	
+	// Defer
+	defer fmt.Println("Deferred function called")
+	
+	fmt.Println("=== Test Completed ===")
+}

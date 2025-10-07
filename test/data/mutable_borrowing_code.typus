@@ -1,0 +1,9 @@
+//! ownership: on
+
+package main
+
+func main() {
+    s1 := "hello"
+    s2 := &mut s1  // Mutable borrow
+    println(s1, s2)
+}

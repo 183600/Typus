@@ -1,0 +1,18 @@
+//! ownership: on
+
+func test_builtin_functions() {
+    data := "hello"
+    println(data)     // 内置函数，不应报错
+    print(data)       // 内置函数，不应报错
+    len(data)         // 内置函数，不应报错
+}
+
+func test_real_errors() {
+    data := "hello"
+    take_value(data)  // 移动data
+    println(data)     // 这里应该报UseAfterMove错误，因为data已移动
+}
+
+func take_value(s string) {
+    println(s)        // 内置函数在函数体内也不应报错
+}

@@ -1,0 +1,13 @@
+//! ownership: on
+
+package main
+
+func main() {
+    s1 := "hello"
+    if true {
+        s2 := s1  // Conditional move
+        println(s2)
+    } else {
+        println(s1)  // This might be use after move
+    }
+}

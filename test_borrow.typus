@@ -1,0 +1,6 @@
+//! ownership: on
+
+x := 42
+y := &x
+println(x)
+println(y)

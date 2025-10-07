@@ -1,0 +1,26 @@
+//! ownership: on
+//! dependent_types: on
+
+package main
+
+import "fmt"
+
+func processData(data []int) int {
+    sum := 0
+    for _, value := range data {
+        sum += value
+    }
+    return sum
+}
+
+func main() {
+    // Test basic Typus features that should compile to valid Go
+    message := "Hello from Typus!"
+    count := 42
+
+    // Test basic data processing
+    data := []int{1, 2, 3, 4, 5}
+    result := processData(data)
+
+    fmt.Println(message, result, count)
+}

@@ -1,0 +1,13 @@
+//! ownership: on
+
+package main
+
+func consumeString(s string) {
+    println(s)
+}
+
+func main() {
+    s1 := "hello"
+    consumeString(s1)  // Move into function
+    // println(s1)  // This would be use after move
+}

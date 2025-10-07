@@ -1,0 +1,26 @@
+package main
+
+import "fmt"
+
+type MyString struct { // 与上面例子相同
+    data string
+}
+
+func NewMyString(s string) MyString {
+    return MyString{data: s}
+}
+
+func main() {
+    // 常规 Go 代码
+    x := 10
+    fmt.Println("Regular x:", x)
+
+    // 启用所有权的块
+    {//! ownership: on
+        s1 := NewMyString("block-owned string")
+        s2 := s1 // 所有权转移
+        fmt.Println("Owned s2 in block:", s2.data)
+        // fmt.Println(s1.data) // 应该报错
+    }
+    // s2 在这里已失效（如果块作用域也影响所有权生命周期）
+}

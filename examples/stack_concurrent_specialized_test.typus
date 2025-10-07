@@ -1,0 +1,855 @@
+package main
+
+import (
+	"fmt"
+	"runtime"
+	"strconv"
+	"sync"
+	"time"
+)
+
+// Concurrent Stack Implementation
+type ConcurrentStack struct {
+	elements []interface{}
+	top      int
+	mu       sync.Mutex
+}
+
+func NewConcurrentStack() *ConcurrentStack {
+	return &ConcurrentStack{
+		elements: make([]interface{}, 0),
+		top:      -1,
+	}
+}
+
+func (s *ConcurrentStack) Push(element interface{}) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.elements = append(s.elements, element)
+	s.top++
+}
+
+func (s *ConcurrentStack) Pop() (interface{}, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.IsEmpty() {
+		return nil, false
+	}
+
+	element := s.elements[s.top]
+	s.elements = s.elements[:s.top]
+	s.top--
+	return element, true
+}
+
+func (s *ConcurrentStack) Peek() (interface{}, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.IsEmpty() {
+		return nil, false
+	}
+	return s.elements[s.top], true
+}
+
+func (s *ConcurrentStack) IsEmpty() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.top < 0
+}
+
+func (s *ConcurrentStack) Size() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.top + 1
+}
+
+// Type-Specific Stack Implementations
+type IntStack struct {
+	elements []int
+	top      int
+}
+
+func NewIntStack() *IntStack {
+	return &IntStack{
+		elements: make([]int, 0),
+		top:      -1,
+	}
+}
+
+func (s *IntStack) Push(element int) {
+	s.elements = append(s.elements, element)
+	s.top++
+}
+
+func (s *IntStack) Pop() (int, bool) {
+	if s.IsEmpty() {
+		return 0, false
+	}
+	element := s.elements[s.top]
+	s.elements = s.elements[:s.top]
+	s.top--
+	return element, true
+}
+
+func (s *IntStack) Peek() (int, bool) {
+	if s.IsEmpty() {
+		return 0, false
+	}
+	return s.elements[s.top], true
+}
+
+func (s *IntStack) IsEmpty() bool {
+	return s.top < 0
+}
+
+func (s *IntStack) Size() int {
+	return s.top + 1
+}
+
+func (s *IntStack) Sum() int {
+	sum := 0
+	for i := 0; i <= s.top; i++ {
+		sum += s.elements[i]
+	}
+	return sum
+}
+
+func (s *IntStack) Average() float64 {
+	if s.IsEmpty() {
+		return 0
+	}
+	return float64(s.Sum()) / float64(s.Size())
+}
+
+func (s *IntStack) Max() (int, bool) {
+	if s.IsEmpty() {
+		return 0, false
+	}
+	max := s.elements[0]
+	for i := 1; i <= s.top; i++ {
+		if s.elements[i] > max {
+			max = s.elements[i]
+		}
+	}
+	return max, true
+}
+
+func (s *IntStack) Min() (int, bool) {
+	if s.IsEmpty() {
+		return 0, false
+	}
+	min := s.elements[0]
+	for i := 1; i <= s.top; i++ {
+		if s.elements[i] < min {
+			min = s.elements[i]
+		}
+	}
+	return min, true
+}
+
+// String Stack Implementation
+type StringStack struct {
+	elements []string
+	top      int
+}
+
+func NewStringStack() *StringStack {
+	return &StringStack{
+		elements: make([]string, 0),
+		top:      -1,
+	}
+}
+
+func (s *StringStack) Push(element string) {
+	s.elements = append(s.elements, element)
+	s.top++
+}
+
+func (s *StringStack) Pop() (string, bool) {
+	if s.IsEmpty() {
+		return "", false
+	}
+	element := s.elements[s.top]
+	s.elements = s.elements[:s.top]
+	s.top--
+	return element, true
+}
+
+func (s *StringStack) Peek() (string, bool) {
+	if s.IsEmpty() {
+		return "", false
+	}
+	return s.elements[s.top], true
+}
+
+func (s *StringStack) IsEmpty() bool {
+	return s.top < 0
+}
+
+func (s *StringStack) Size() int {
+	return s.top + 1
+}
+
+func (s *StringStack) Concatenate() string {
+	result := ""
+	for i := 0; i <= s.top; i++ {
+		result += s.elements[i]
+	}
+	return result
+}
+
+func (s *StringStack) Join(separator string) string {
+	if s.IsEmpty() {
+		return ""
+	}
+	result := s.elements[0]
+	for i := 1; i <= s.top; i++ {
+		result += separator + s.elements[i]
+	}
+	return result
+}
+
+// Bounded Stack Implementation
+type BoundedStack struct {
+	elements []interface{}
+	top      int
+	capacity int
+}
+
+func NewBoundedStack(capacity int) *BoundedStack {
+	return &BoundedStack{
+		elements: make([]interface{}, capacity),
+		top:      -1,
+		capacity: capacity,
+	}
+}
+
+func (s *BoundedStack) Push(element interface{}) bool {
+	if s.IsFull() {
+		return false
+	}
+	s.top++
+	s.elements[s.top] = element
+	return true
+}
+
+func (s *BoundedStack) Pop() (interface{}, bool) {
+	if s.IsEmpty() {
+		return nil, false
+	}
+	element := s.elements[s.top]
+	s.top--
+	return element, true
+}
+
+func (s *BoundedStack) Peek() (interface{}, bool) {
+	if s.IsEmpty() {
+		return nil, false
+	}
+	return s.elements[s.top], true
+}
+
+func (s *BoundedStack) IsEmpty() bool {
+	return s.top < 0
+}
+
+func (s *BoundedStack) IsFull() bool {
+	return s.top >= s.capacity-1
+}
+
+func (s *BoundedStack) Size() int {
+	return s.top + 1
+}
+
+func (s *BoundedStack) Capacity() int {
+	return s.capacity
+}
+
+// === Test Functions ===
+
+func testConcurrentStack() {
+	fmt.Println("=== Concurrent Stack Test ===")
+
+	stack := NewConcurrentStack()
+	var wg sync.WaitGroup
+	numGoroutines := 10
+	operationsPerGoroutine := 100
+
+	// Test concurrent pushes
+	fmt.Println("Testing concurrent pushes...")
+	start := time.Now()
+
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < operationsPerGoroutine; j++ {
+				stack.Push(fmt.Sprintf("G%d-O%d", id, j))
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	elapsed := time.Since(start)
+	fmt.Printf("Concurrent push time: %v\n", elapsed)
+	fmt.Printf("Final stack size: %d\n", stack.Size())
+
+	// Test concurrent pops
+	fmt.Println("\nTesting concurrent pops...")
+	start = time.Now()
+
+	var results []interface{}
+	var mu sync.Mutex
+
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < operationsPerGoroutine/2; j++ {
+				if element, ok := stack.Pop(); ok {
+					mu.Lock()
+					results = append(results, element)
+					mu.Unlock()
+				}
+			}
+		}()
+	}
+
+	wg.Wait()
+	elapsed = time.Since(start)
+	fmt.Printf("Concurrent pop time: %v\n", elapsed)
+	fmt.Printf("Elements popped: %d\n", len(results))
+	fmt.Printf("Remaining stack size: %d\n", stack.Size())
+
+	fmt.Println("✅ Concurrent stack test completed")
+}
+
+func testIntStack() {
+	fmt.Println("\n=== Integer Stack Test ===")
+
+	stack := NewIntStack()
+
+	// Test basic operations
+	fmt.Println("Testing basic operations...")
+	numbers := []int{10, 20, 30, 40, 50}
+	for _, num := range numbers {
+		stack.Push(num)
+		fmt.Printf("Pushed: %d, Size: %d\n", num, stack.Size())
+	}
+
+	// Test statistical operations
+	fmt.Println("\nTesting statistical operations...")
+	fmt.Printf("Sum: %d\n", stack.Sum())
+	fmt.Printf("Average: %.2f\n", stack.Average())
+
+	if max, ok := stack.Max(); ok {
+		fmt.Printf("Max: %d\n", max)
+	}
+
+	if min, ok := stack.Min(); ok {
+		fmt.Printf("Min: %d\n", min)
+	}
+
+	// Test pop operations
+	fmt.Println("\nTesting pop operations...")
+	for !stack.IsEmpty() {
+		if element, ok := stack.Pop(); ok {
+			fmt.Printf("Popped: %d, Size: %d\n", element, stack.Size())
+		}
+	}
+
+	// Test empty stack operations
+	fmt.Println("\nTesting empty stack operations...")
+	fmt.Printf("Sum (empty): %d\n", stack.Sum())
+	fmt.Printf("Average (empty): %.2f\n", stack.Average())
+
+	if _, ok := stack.Max(); !ok {
+		fmt.Printf("Max (empty): correctly returned false\n")
+	}
+
+	if _, ok := stack.Min(); !ok {
+		fmt.Printf("Min (empty): correctly returned false\n")
+	}
+
+	fmt.Println("✅ Integer stack test completed")
+}
+
+func testStringStack() {
+	fmt.Println("\n=== String Stack Test ===")
+
+	stack := NewStringStack()
+
+	// Test basic operations
+	fmt.Println("Testing basic operations...")
+	words := []string{"Hello", "World", "Stack", "Test", "Go"}
+	for _, word := range words {
+		stack.Push(word)
+		fmt.Printf("Pushed: %s, Size: %d\n", word, stack.Size())
+	}
+
+	// Test string operations
+	fmt.Println("\nTesting string operations...")
+	fmt.Printf("Concatenated: %s\n", stack.Concatenate())
+	fmt.Printf("Joined with '-': %s\n", stack.Join("-"))
+	fmt.Printf("Joined with ' ': %s\n", stack.Join(" "))
+
+	// Test pop operations
+	fmt.Println("\nTesting pop operations...")
+	for !stack.IsEmpty() {
+		if element, ok := stack.Pop(); ok {
+			fmt.Printf("Popped: %s, Size: %d\n", element, stack.Size())
+		}
+	}
+
+	// Test empty string operations
+	fmt.Println("\nTesting empty string operations...")
+	fmt.Printf("Concatenated (empty): '%s'\n", stack.Concatenate())
+	fmt.Printf("Joined (empty): '%s'\n", stack.Join("-"))
+
+	fmt.Println("✅ String stack test completed")
+}
+
+func testBoundedStack() {
+	fmt.Println("\n=== Bounded Stack Test ===")
+
+	capacity := 5
+	stack := NewBoundedStack(capacity)
+
+	// Test capacity
+	fmt.Printf("Stack capacity: %d\n", stack.Capacity())
+
+	// Test fill to capacity
+	fmt.Println("\nTesting fill to capacity...")
+	for i := 1; i <= capacity; i++ {
+		if stack.Push(i) {
+			fmt.Printf("Pushed: %d, Size: %d/%d\n", i, stack.Size(), capacity)
+		} else {
+			fmt.Printf("Failed to push: %d\n", i)
+		}
+	}
+
+	// Test overflow
+	fmt.Println("\nTesting overflow...")
+	if stack.Push(999) {
+		fmt.Printf("Unexpected: Pushed to full stack\n")
+	} else {
+		fmt.Printf("Expected: Cannot push to full stack\n")
+	}
+
+	// Test pop operations
+	fmt.Println("\nTesting pop operations...")
+	for !stack.IsEmpty() {
+		if element, ok := stack.Pop(); ok {
+			fmt.Printf("Popped: %d, Size: %d/%d\n", element, stack.Size(), capacity)
+		}
+	}
+
+	// Test empty operations
+	fmt.Println("\nTesting empty operations...")
+	if _, ok := stack.Pop(); !ok {
+		fmt.Printf("Expected: Cannot pop from empty stack\n")
+	}
+
+	if _, ok := stack.Peek(); !ok {
+		fmt.Printf("Expected: Cannot peek empty stack\n")
+	}
+
+	fmt.Println("✅ Bounded stack test completed")
+}
+
+func testStackPerformanceComparison() {
+	fmt.Println("\n=== Stack Performance Comparison Test ===")
+
+	iterations := 100000
+	fmt.Printf("Testing with %d operations...\n", iterations)
+
+	// Test ConcurrentStack
+	fmt.Println("\nTesting ConcurrentStack...")
+	concurrentStack := NewConcurrentStack()
+	start := time.Now()
+
+	for i := 0; i < iterations; i++ {
+		concurrentStack.Push(i)
+	}
+
+	for i := 0; i < iterations; i++ {
+		concurrentStack.Pop()
+	}
+
+	elapsed := time.Since(start)
+	fmt.Printf("ConcurrentStack time: %v\n", elapsed)
+
+	// Test IntStack
+	fmt.Println("\nTesting IntStack...")
+	intStack := NewIntStack()
+	start = time.Now()
+
+	for i := 0; i < iterations; i++ {
+		intStack.Push(i)
+	}
+
+	for i := 0; i < iterations; i++ {
+		intStack.Pop()
+	}
+
+	elapsed = time.Since(start)
+	fmt.Printf("IntStack time: %v\n", elapsed)
+
+	// Test BoundedStack
+	fmt.Println("\nTesting BoundedStack...")
+	boundedStack := NewBoundedStack(iterations + 1000)
+	start = time.Now()
+
+	for i := 0; i < iterations; i++ {
+		boundedStack.Push(i)
+	}
+
+	for i := 0; i < iterations; i++ {
+		boundedStack.Pop()
+	}
+
+	elapsed = time.Since(start)
+	fmt.Printf("BoundedStack time: %v\n", elapsed)
+
+	fmt.Println("✅ Stack performance comparison test completed")
+}
+
+func testStackMemoryUsage() {
+	fmt.Println("\n=== Stack Memory Usage Test ===")
+
+	// Test large number of elements
+	fmt.Println("Testing memory usage with large dataset...")
+	stack := NewConcurrentStack()
+
+	start := time.Now()
+	for i := 0; i < 1000000; i++ {
+		stack.Push(i)
+	}
+	elapsed := time.Since(start)
+	fmt.Printf("Time to push 1,000,000 elements: %v\n", elapsed)
+
+	// Check memory stats
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	fmt.Printf("Memory usage after pushing 1,000,000 elements: %d bytes\n", m.HeapAlloc)
+
+	// Clear the stack
+	start = time.Now()
+	for i := 0; i < 1000000; i++ {
+		stack.Pop()
+	}
+	elapsed = time.Since(start)
+	fmt.Printf("Time to pop 1,000,000 elements: %v\n", elapsed)
+
+	// Check memory after cleanup
+	runtime.ReadMemStats(&m)
+	fmt.Printf("Memory usage after cleanup: %d bytes\n", m.HeapAlloc)
+
+	fmt.Println("✅ Stack memory usage test completed")
+}
+
+func testStackUseCaseExamples() {
+	fmt.Println("\n=== Stack Use Case Examples Test ===")
+
+	// Use Case 1: Browser Navigation
+	fmt.Println("\nUse Case 1: Browser Navigation Stack...")
+	browserStack := NewStringStack()
+	visited := []string{"google.com", "github.com", "stackoverflow.com", "example.com"}
+
+	for _, site := range visited {
+		browserStack.Push(site)
+		fmt.Printf("Visited: %s\n", site)
+	}
+
+	fmt.Println("\nGoing back (popping from stack)...")
+	for !browserStack.IsEmpty() {
+		if site, ok := browserStack.Pop(); ok {
+			fmt.Printf("Going back to: %s\n", site)
+		}
+	}
+
+	// Use Case 2: Undo/Redo Operations
+	fmt.Println("\nUse Case 2: Undo Operations...")
+	undoStack := NewStringStack()
+	actions := []string{"Type 'Hello'", "Type 'World'", "Insert comma", "Delete space"}
+
+	for _, action := range actions {
+		undoStack.Push(action)
+		fmt.Printf("Action: %s\n", action)
+	}
+
+	fmt.Println("\nUndoing actions...")
+	for !undoStack.IsEmpty() {
+		if action, ok := undoStack.Pop(); ok {
+			fmt.Printf("Undo: %s\n", action)
+		}
+	}
+
+	// Use Case 3: Expression Validation
+	fmt.Println("\nUse Case 3: Expression Validation...")
+	expressions := []string{"(a + b)", "{[a * (b + c)]}", "([)]", "{(a + b)}"}
+
+	for _, expr := range expressions {
+		isValid := validateExpression(expr)
+		fmt.Printf("Expression '%s' is valid: %t\n", expr, isValid)
+	}
+
+	fmt.Println("✅ Stack use case examples test completed")
+}
+
+func testTypeSafeStackOperations() {
+	fmt.Println("\n=== Type Safe Stack Operations Test ===")
+
+	// Test 1: IntStack type precision
+	fmt.Println("Testing IntStack type precision:")
+	intStack := NewIntStack()
+
+	// Test with various int values
+	testInts := []int{0, 1, -1, 2147483647, -2147483648, 42, -100}
+	for _, num := range testInts {
+		intStack.Push(num)
+		fmt.Printf("Pushed int: %d (type: %T), Size: %d\n", num, num, intStack.Size())
+	}
+
+	// Test statistical operations
+	fmt.Println("\nTesting IntStack statistical operations:")
+	if sum := intStack.Sum(); sum == 2147483647+1-2147483648+42-100 {
+		fmt.Printf("Sum verification passed: %d\n", sum)
+	} else {
+		fmt.Printf("Sum verification failed: %d\n", sum)
+	}
+
+	if avg := intStack.Average(); avg > 0 {
+		fmt.Printf("Average calculated correctly: %.2f\n", avg)
+	}
+
+	if max, ok := intStack.Max(); ok && max == 2147483647 {
+		fmt.Printf("Max correctly identified: %d\n", max)
+	}
+
+	if min, ok := intStack.Min(); ok && min == -2147483648 {
+		fmt.Printf("Min correctly identified: %d\n", min)
+	}
+
+	// Test 2: StringStack type precision
+	fmt.Println("\nTesting StringStack type precision:")
+	stringStack := NewStringStack()
+
+	// Test with various string types
+	testStrings := []string{
+		"", "hello", "world", "123", "true", "false",
+		"special@chars#here", "unicode: 你好", "emoji: 😊",
+	}
+
+	for _, str := range testStrings {
+		stringStack.Push(str)
+		fmt.Printf("Pushed string: '%s' (len: %d), Size: %d\n", str, len(str), stringStack.Size())
+	}
+
+	// Test string operations
+	fmt.Println("\nTesting StringStack string operations:")
+	concatenated := stringStack.Concatenate()
+	fmt.Printf("Concatenated: '%s'\n", concatenated)
+
+	joined := stringStack.Join("|")
+	fmt.Printf("Joined with '|': '%s'\n", joined)
+
+	// Test 3: BoundedStack type precision
+	fmt.Println("\nTesting BoundedStack type precision:")
+	boundedStack := NewBoundedStack(5)
+
+	// Test with mixed types
+	mixedTypes := []interface{}{42, "hello", 3.14, true, []int{1, 2, 3}}
+	for i, data := range mixedTypes {
+		if boundedStack.Push(data) {
+			fmt.Printf("Pushed %T: %v (position: %d)\n", data, data, i)
+		} else {
+			fmt.Printf("Failed to push %T: %v (stack full)\n", data, data)
+		}
+	}
+
+	// Test overflow
+	overflowData := "this should fail"
+	if boundedStack.Push(overflowData) {
+		fmt.Printf("❌ Overflow check failed: pushed '%s'\n", overflowData)
+	} else {
+		fmt.Printf("✅ Overflow check passed: rejected '%s'\n", overflowData)
+	}
+
+	// Test type preservation
+	fmt.Println("\nTesting type preservation in BoundedStack:")
+	for !boundedStack.IsEmpty() {
+		if element, ok := boundedStack.Pop(); ok {
+			fmt.Printf("Popped %T: %v\n", element, element)
+		}
+	}
+
+	fmt.Println("✅ Type safe stack operations test completed")
+}
+
+func testGenericTypeValidation() {
+	fmt.Println("\n=== Generic Type Validation Test ===")
+
+	// Test 1: Interface{} type validation
+	fmt.Println("Testing interface{} type validation:")
+	stack := NewConcurrentStack()
+
+	// Push various types
+	typesToTest := []interface{}{
+		int(42),
+		int8(127),
+		int16(32767),
+		int32(2147483647),
+		int64(9223372036854775807),
+		uint(42),
+		float32(3.14),
+		float64(2.71828),
+		string("hello"),
+		bool(true),
+		[]int{1, 2, 3},
+		map[string]int{"one": 1},
+		struct{ Name string }{Name: "Alice"},
+	}
+
+	for i, data := range typesToTest {
+		stack.Push(data)
+		fmt.Printf("Pushed [%d]: %T = %v\n", i, data, data)
+	}
+
+	// Retrieve and validate types
+	fmt.Println("\nRetrieving and validating types:")
+	for i := 0; i < len(typesToTest); i++ {
+		if element, ok := stack.Pop(); ok {
+			fmt.Printf("Retrieved [%d]: %T = %v\n", i, element, element)
+
+			// Additional type validation
+			switch v := element.(type) {
+			case int, int8, int16, int32, int64:
+				fmt.Printf("  ✓ Numeric integer type\n")
+			case uint, uint8, uint16, uint32, uint64:
+				fmt.Printf("  ✓ Unsigned integer type\n")
+			case float32, float64:
+				fmt.Printf("  ✓ Floating-point type\n")
+			case string:
+				fmt.Printf("  ✓ String type\n")
+			case bool:
+				fmt.Printf("  ✓ Boolean type\n")
+			case []int:
+				fmt.Printf("  ✓ Slice type\n")
+			case map[string]int:
+				fmt.Printf("  ✓ Map type\n")
+			default:
+				fmt.Printf("  ✓ Custom/Other type\n")
+			}
+		}
+	}
+
+	// Test 2: Type conversion safety
+	fmt.Println("\nTesting type conversion safety:")
+	conversionTests := []struct {
+		input     interface{}
+		targetType string
+		shouldFail bool
+	}{
+		{42, "int", false},
+		{"42", "int", false},
+		{"hello", "int", true},
+		{3.14, "string", true},
+		{true, "bool", false},
+		{[]int{1, 2, 3}, "[]int", false},
+	}
+
+	for i, test := range conversionTests {
+		stack.Push(test.input)
+		if element, ok := stack.Pop(); ok {
+			switch test.targetType {
+			case "int":
+				if _, ok := element.(int); ok == test.shouldFail {
+					fmt.Printf("Test %d: %T -> int (expected fail: %t) ❌\n", i, element, test.shouldFail)
+				} else {
+					fmt.Printf("Test %d: %T -> int (expected fail: %t) ✓\n", i, element, test.shouldFail)
+				}
+			case "string":
+				if _, ok := element.(string); ok == test.shouldFail {
+					fmt.Printf("Test %d: %T -> string (expected fail: %t) ❌\n", i, element, test.shouldFail)
+				} else {
+					fmt.Printf("Test %d: %T -> string (expected fail: %t) ✓\n", i, element, test.shouldFail)
+				}
+			case "bool":
+				if _, ok := element.(bool); ok == test.shouldFail {
+					fmt.Printf("Test %d: %T -> bool (expected fail: %t) ❌\n", i, element, test.shouldFail)
+				} else {
+					fmt.Printf("Test %d: %T -> bool (expected fail: %t) ✓\n", i, element, test.shouldFail)
+				}
+			case "[]int":
+				if _, ok := element.([]int); ok == test.shouldFail {
+					fmt.Printf("Test %d: %T -> []int (expected fail: %t) ❌\n", i, element, test.shouldFail)
+				} else {
+					fmt.Printf("Test %d: %T -> []int (expected fail: %t) ✓\n", i, element, test.shouldFail)
+				}
+			}
+		}
+	}
+
+	fmt.Println("✅ Generic type validation test completed")
+}
+
+// Helper function for expression validation
+func validateExpression(expr string) bool {
+	stack := NewStringStack()
+	pairs := map[rune]rune{
+		')': '(',
+		']': '[',
+		'}': '{',
+	}
+
+	for _, char := range expr {
+		switch char {
+		case '(', '[', '{':
+			stack.Push(string(char))
+		case ')', ']', '}':
+			if stack.IsEmpty() {
+				return false
+			}
+			if popped, ok := stack.Pop(); ok && popped != string(pairs[char]) {
+				return false
+			}
+		}
+	}
+
+	return stack.IsEmpty()
+}
+
+func runAllConcurrentSpecializedTests() {
+	fmt.Println("=== Concurrent and Specialized Stack Test Suite ===")
+	fmt.Println("Testing concurrent and specialized stack implementations")
+	fmt.Println()
+
+	testConcurrentStack()
+	testIntStack()
+	testStringStack()
+	testBoundedStack()
+	testStackPerformanceComparison()
+	testStackMemoryUsage()
+	testStackUseCaseExamples()
+	testTypeSafeStackOperations()
+	testGenericTypeValidation()
+
+	fmt.Println()
+	fmt.Println("=== All Concurrent and Specialized Tests Completed ===")
+	fmt.Println("✅ Concurrent stack tested")
+	fmt.Println("✅ Type-specific stacks tested")
+	fmt.Println("✅ Bounded stack tested")
+	fmt.Println("✅ Performance compared")
+	fmt.Println("✅ Memory usage tested")
+	fmt.Println("✅ Real-world use cases tested")
+	fmt.Println("✅ Type-safe operations verified")
+	fmt.Println("✅ Generic type validation completed")
+}
+
+func main() {
+	runAllConcurrentSpecializedTests()
+}

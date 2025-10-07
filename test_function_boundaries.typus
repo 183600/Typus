@@ -1,0 +1,98 @@
+//! ownership: on
+
+// Test 1: Function boundary handling - basic function call
+func main() {
+    x := 42
+    y := &x
+    println(x)  // Should be OK with immutable borrow
+    println(y)
+}
+
+// Test 2: Function with parameters that move ownership
+func take_value(s string) {
+    println(s)
+}
+
+func test_function_move() {
+    data := "hello"
+    take_value(data)  // This should move data
+    println(data)     // This should be UseAfterMove error
+}
+
+// Test 3: Function with borrow parameters
+func take_borrow(s &string) {
+    println(*s)
+}
+
+func test_function_borrow() {
+    data := "hello"
+    take_borrow(&data)  // This should borrow data
+    println(data)       // This should be OK (immutable borrow)
+}
+
+// Test 4: Function with mutable borrow parameters
+func take_mut_borrow(s &mut string) {
+    *s = "modified"
+}
+
+func test_function_mut_borrow() {
+    data := "hello"
+    take_mut_borrow(&mut data)  // This should mutably borrow data
+    println(data)               // This should be UseWhileMutBorrowed error
+}
+
+// Test 5: Function returning ownership
+func return_string() string {
+    return "returned_value"
+}
+
+func test_function_return() {
+    result := return_string()
+    println(result)
+}
+
+// Test 6: Complex cross-function ownership
+func process_data(input &string) string {
+    processed := "processed_" + *input
+    return processed
+}
+
+func test_cross_function() {
+    original := "test"
+    result := process_data(&original)
+    println(original)  // Should be OK
+    println(result)   // Should be OK
+}
+
+// Test 7: Nested function calls with ownership transfer
+func level1(x string) {
+    level2(x)
+}
+
+func level2(y string) {
+    println(y)
+}
+
+func test_nested_calls() {
+    data := "nested"
+    level1(data)
+    println(data)  // Should be UseAfterMove error
+}
+
+// Test 8: Function with mixed ownership and borrow parameters
+func mixed_params(a string, b &string, c &mut string) {
+    println(a)
+    println(*b)
+    *c = "changed"
+}
+
+func test_mixed_params() {
+    val := "value"
+    ref := "reference"
+    mut := "mutable"
+
+    mixed_params(val, &ref, &mut mut)
+    println(val)    // Should be UseAfterMove error
+    println(ref)    // Should be OK
+    println(mut)    // Should be UseWhileMutBorrowed error
+}

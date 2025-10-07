@@ -1,0 +1,65 @@
+package main
+
+import (
+    "dependency_injection/services"
+    "dependency_injection/repositories"
+    "dependency_injection/config"
+    "fmt"
+)
+
+// Dependency injection container
+type Container struct {
+    config         *config.Config
+    userRepo       *repositories.UserRepository
+    userService    *services.UserService
+    notificationService *services.NotificationService
+}
+
+func NewContainer() *Container {
+    cfg := config.NewConfig()
+
+    userRepo := repositories.NewUserRepository(cfg.DatabaseURL)
+    userService := services.NewUserService(userRepo)
+    notificationService := services.NewNotificationService(cfg.SMTPHost)
+
+    return &Container{
+        config:         cfg,
+        userRepo:       userRepo,
+        userService:    userService,
+        notificationService: notificationService,
+    }
+}
+
+func (c *Container) GetUserService() *services.UserService {
+    return c.userService
+}
+
+func (c *Container) GetNotificationService() *services.NotificationService {
+    return c.notificationService
+}
+
+func main() {
+    container := NewContainer()
+
+    userService := container.GetUserService()
+    notificationService := container.GetNotificationService()
+
+    // Test user creation with notification
+    user, err := userService.CreateUserWithNotification("alice", "alice@example.com", notificationService)
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+
+    fmt.Printf("Created user: %s\n", user.Name)
+
+    // Test ownership transfer in DI context
+    transferredUser := transferUserOwnership(user)
+    fmt.Printf("Transferred user: %s\n", transferredUser.Name)
+}
+
+func transferUserOwnership(user *services.User) *services.User {
+    // Simulate ownership transfer
+    newUser := user
+    return newUser
+}

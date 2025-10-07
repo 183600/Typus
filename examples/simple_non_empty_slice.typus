@@ -1,0 +1,18 @@
+//! dependent_types: on
+package main
+
+import "fmt"
+
+type NonEmptySlice struct {
+    elements []int
+}
+
+func getFirst(s NonEmptySlice) int {
+    return s.elements[0]
+}
+
+func main() {
+    var validSlice NonEmptySlice
+    validSlice.elements = []int{10, 20, 30}
+    fmt.Println("First element of validSlice:", getFirst(validSlice))
+}

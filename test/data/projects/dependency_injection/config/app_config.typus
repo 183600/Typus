@@ -1,0 +1,57 @@
+package config
+
+import (
+    "os"
+)
+
+type Config struct {
+    DatabaseURL string
+    SMTPHost    string
+    ServerPort  string
+}
+
+func NewConfig() *Config {
+    return &Config{
+        DatabaseURL: getEnvOrDefault("DATABASE_URL", "localhost:5432"),
+        SMTPHost:    getEnvOrDefault("SMTP_HOST", "localhost:587"),
+        ServerPort:  getEnvOrDefault("SERVER_PORT", "8080"),
+    }
+}
+
+func getEnvOrDefault(key, defaultValue string) string {
+    if value := os.Getenv(key); value != "" {
+        return value
+    }
+    return defaultValue
+}
+
+func (c *Config) IsProduction() bool {
+    return os.Getenv("ENVIRONMENT") == "production"
+}
+
+func (c *Config) GetDatabaseConnection() string {
+    return "postgres://" + c.DatabaseURL + "/dbname"
+}
+
+// Test config ownership patterns
+func CloneConfig(cfg *Config) *Config {
+    return &Config{
+        DatabaseURL: cfg.DatabaseURL,
+        SMTPHost:    cfg.SMTPHost,
+        ServerPort:  cfg.ServerPort,
+    }
+}
+
+func MergeConfigs(base, override *Config) *Config {
+    merged := CloneConfig(base)
+    if override.DatabaseURL != "" {
+        merged.DatabaseURL = override.DatabaseURL
+    }
+    if override.SMTPHost != "" {
+        merged.SMTPHost = override.SMTPHost
+    }
+    if override.ServerPort != "" {
+        merged.ServerPort = override.ServerPort
+    }
+    return merged
+}

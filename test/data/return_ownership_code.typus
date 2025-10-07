@@ -1,0 +1,13 @@
+//! ownership: on
+
+package main
+
+func createString() string {
+    s := "created"
+    return s  // Move out of function
+}
+
+func main() {
+    s1 := createString()  // Receive ownership
+    println(s1)
+}

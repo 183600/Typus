@@ -1,0 +1,164 @@
+package main
+
+import (
+    "fmt"
+    "math"
+    "reflect"
+)
+
+// ===== 简化的类型定义 =====
+type Vector struct {
+    elements []interface{}
+}
+
+type Matrix struct {
+    data []interface{}
+}
+
+type BoundedInt struct {
+    value int
+    min int
+    max int
+}
+
+type NonEmptyString struct {
+    content string
+}
+
+// ===== 简化的函数 =====
+func NewVector(elements []interface{}) *Vector {
+    return &Vector{elements: elements}
+}
+
+func NewMatrix(data []interface{}) *Matrix {
+    return &Matrix{data: data}
+}
+
+func NewBoundedInt(value, min, max int) *BoundedInt {
+    if value < min || value > max {
+        panic(fmt.Sprintf("Value %d out of bounds [%d, %d]", value, min, max))
+    }
+    return &BoundedInt{value: value, min: min, max: max}
+}
+
+func NewNonEmptyString(content string) *NonEmptyString {
+    if len(content) == 0 {
+        panic("Cannot create NonEmptyString with empty content")
+    }
+    return &NonEmptyString{content: content}
+}
+
+func (v *Vector) Dot(other *Vector) int {
+    if len(v.elements) != len(other.elements) {
+        panic("Vector dimensions must match")
+    }
+    
+    result := 0
+    for i := 0; i < len(v.elements); i++ {
+        a, _ := v.elements[i].(int)
+        b, _ := other.elements[i].(int)
+        result += a * b
+    }
+    return result
+}
+
+func (v *Vector) Length() float64 {
+    sum := 0
+    for i := 0; i < len(v.elements); i++ {
+        val, _ := v.elements[i].(int)
+        sum += val * val
+    }
+    return math.Sqrt(float64(sum))
+}
+
+func (b *BoundedInt) Add(other *BoundedInt) *BoundedInt {
+    newValue := b.value + other.value
+    if newValue < b.min || newValue > b.max {
+        panic(fmt.Sprintf("Addition result %d out of bounds [%d, %d]", newValue, b.min, b.max))
+    }
+    return &BoundedInt{value: newValue, min: b.min, max: b.max}
+}
+
+func (s *NonEmptyString) Concat(other *NonEmptyString) *NonEmptyString {
+    return &NonEmptyString{content: s.content + other.content}
+}
+
+func (s *NonEmptyString) GetFirst() rune {
+    runes := []rune(s.content)
+    return runes[0]
+}
+
+func SafeDivide(a, b float64) float64 {
+    if b == 0 {
+        panic("SafeDivide: 除数不能为零")
+    }
+    return a / b
+}
+
+func ArrayAccess(arr []int, index int) int {
+    if index < 0 || index >= len(arr) {
+        panic("Array index out of bounds")
+    }
+    return arr[index]
+}
+
+func StringSlice(s string, start, end int) string {
+    if start < 0 || end > len(s) || start > end {
+        panic("Invalid string slice bounds")
+    }
+    return s[start:end]
+}
+
+func main() {
+    fmt.Println("=== 高级类型系统测试 ===")
+    
+    // 测试 Vector
+    v1 := NewVector([]interface{}{1, 2, 3})
+    v2 := NewVector([]interface{}{4, 5, 6})
+    fmt.Printf("Vector v1: %v\n", v1.elements)
+    fmt.Printf("Vector v2: %v\n", v2.elements)
+    fmt.Printf("Dot product: %d\n", v1.Dot(v2))
+    fmt.Printf("v1 Length: %.2f\n", v1.Length())
+    
+    // 测试 Matrix
+    m1 := NewMatrix([]interface{}{1, 2, 3, 4, 5, 6})
+    fmt.Printf("Matrix m1 (2x3): %v\n", m1.data)
+    fmt.Printf("m1[0,1] = %v\n", m1.data[1])
+    
+    // 测试 BoundedInt
+    b1 := NewBoundedInt(50, 0, 100)
+    b2 := NewBoundedInt(25, 0, 100)
+    fmt.Printf("BoundedInt b1: %d\n", b1.value)
+    fmt.Printf("BoundedInt b2: %d\n", b2.value)
+    b3 := b1.Add(b2)
+    fmt.Printf("b1 + b2: %d\n", b3.value)
+    
+    // 测试 NonEmptyString
+    s1 := NewNonEmptyString("Hello")
+    s2 := NewNonEmptyString("World")
+    fmt.Printf("NonEmptyString s1: %s\n", s1.content)
+    fmt.Printf("NonEmptyString s2: %s\n", s2.content)
+    s3 := s1.Concat(s2)
+    fmt.Printf("s1 + s2: %s\n", s3.content)
+    fmt.Printf("First character of s1: %c\n", s1.GetFirst())
+    
+    // 测试约束函数
+    result := SafeDivide(10.0, 2.0)
+    fmt.Printf("SafeDivide(10.0, 2.0): %.2f\n", result)
+    
+    arr := []int{100, 200, 300, 400, 500}
+    value := ArrayAccess(arr, 2)
+    fmt.Printf("ArrayAccess(arr, 2): %d\n", value)
+    
+    substring := StringSlice("Hello World", 0, 5)
+    fmt.Printf("StringSlice('Hello World', 0, 5): %s\n", substring)
+    
+    // 反射和类型信息
+    fmt.Println("\n=== 类型信息 ===")
+    fmt.Printf("Type of v1: %v\n", reflect.TypeOf(v1))
+    fmt.Printf("Type of m1: %v\n", reflect.TypeOf(m1))
+    fmt.Printf("Type of b1: %v\n", reflect.TypeOf(b1))
+    fmt.Printf("Type of s1: %v\n", reflect.TypeOf(s1))
+    
+    fmt.Println("\n=== 所有测试完成 ===")
+}

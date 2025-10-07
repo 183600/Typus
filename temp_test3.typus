@@ -1,0 +1,13 @@
+//! ownership: on
+//! dependent_types: on
+
+package main
+
+import (
+	"fmt"
+	"math"
+)
+
+func mathExample() {
+	fmt.Printf("Pi: %.6f\n", math.Pi)
+}

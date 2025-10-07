@@ -1,0 +1,514 @@
+//! ownership: on
+//! dependent_types: on
+
+package main
+
+import (
+	"fmt"
+	"time"
+	"os"
+	"sync"
+	"bytes"
+	"encoding/json"
+	"io/ioutil"
+	"regexp"
+	"crypto/md5"
+	"encoding/base64"
+	"encoding/hex"
+	"context"
+	"path/filepath"
+)
+
+// Basic types and constants
+const (
+	Pi = 3.141592653589793
+)
+
+const (
+	Monday = iota
+	Tuesday
+	Wednesday
+)
+
+// Variables
+var (
+	boolVar    bool   = true
+	intVar     int    = 42
+	float64Var float64 = 3.141592653589793
+	stringVar  string = "Hello, World!"
+)
+
+// Arrays and slices
+var (
+	intArray    [5]int    = [5]int{1, 2, 3, 4, 5}
+	intSlice    []int     = []int{1, 2, 3, 4, 5}
+	stringSlice []string  = []string{"hello", "world"}
+)
+
+// Maps
+var (
+	stringIntMap map[string]int = map[string]int{"one": 1, "two": 2, "three": 3}
+)
+
+// Structs
+type Person struct {
+	Name    string
+	Age     int
+	Email   string
+	Active  bool
+}
+
+type ComplexStruct struct {
+	ID        int64
+	Title     string
+	Tags      []string
+	Metadata  map[string]interface{}
+	CreatedAt time.Time
+}
+
+// Interfaces
+type Reader interface {
+	Read(p []byte) (n int, err error)
+}
+
+type Writer interface {
+	Write(p []byte) (n int, err error)
+}
+
+type ReadWriter interface {
+	Reader
+	Writer
+}
+
+// Custom types
+type (
+	UserID    int64
+	Price     float64
+)
+
+// Functions
+func add(a, b int) int {
+	return a + b
+}
+
+func sum(numbers ...int) int {
+	total := 0
+	for _, num := range numbers {
+		total += num
+	}
+	return total
+}
+
+func applyOperation(a, b int, op func(int, int) int) int {
+	return op(a, b)
+}
+
+func createMultiplier(factor int) func(int) int {
+	return func(x int) int {
+		return x * factor
+	}
+}
+
+// Recursive functions
+func factorial(n int) int {
+	if n <= 1 {
+		return 1
+	}
+	return n * factorial(n-1)
+}
+
+func fibonacci(n int) int {
+	if n <= 1 {
+		return n
+	}
+	return fibonacci(n-1) + fibonacci(n-2)
+}
+
+// Methods
+type Calculator struct {
+	value float64
+}
+
+func (c Calculator) Add(x float64) float64 {
+	return c.value + x
+}
+
+func (c *Calculator) AddTo(x float64) {
+	c.value += x
+}
+
+func (c Calculator) Value() float64 {
+	return c.value
+}
+
+type Counter struct {
+	count int
+	mu    sync.Mutex
+}
+
+func (c *Counter) Increment() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.count++
+}
+
+func (c *Counter) Value() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.count
+}
+
+// Interface implementation
+type MemoryBuffer struct {
+	buffer bytes.Buffer
+}
+
+func (mb *MemoryBuffer) Read(p []byte) (int, error) {
+	return mb.buffer.Read(p)
+}
+
+func (mb *MemoryBuffer) Write(p []byte) (int, error) {
+	return mb.buffer.Write(p)
+}
+
+func (mb *MemoryBuffer) Close() error {
+	mb.buffer.Reset()
+	return nil
+}
+
+// Error handling
+type ValidationError struct {
+	Field   string
+	Message string
+	Code    int
+}
+
+func (e ValidationError) Error() string {
+	return fmt.Sprintf("validation error: %s - %s (code: %d)", e.Field, e.Message, e.Code)
+}
+
+// Concurrency
+type SafeMap struct {
+	mu   sync.RWMutex
+	data map[string]interface{}
+}
+
+func NewSafeMap() *SafeMap {
+	return &SafeMap{
+		data: make(map[string]interface{}),
+	}
+}
+
+func (sm *SafeMap) Set(key string, value interface{}) {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	sm.data[key] = value
+}
+
+func (sm *SafeMap) Get(key string) (interface{}, bool) {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	value, exists := sm.data[key]
+	return value, exists
+}
+
+// Generics
+type Container[T any] struct {
+	items []T
+}
+
+func NewContainer[T any]() *Container[T] {
+	return &Container[T]{
+		items: make([]T, 0),
+	}
+}
+
+func (c *Container[T]) Add(item T) {
+	c.items = append(c.items, item)
+}
+
+func (c *Container[T]) Size() int {
+	return len(c.items)
+}
+
+func FilterGeneric[T any](slice []T, predicate func(T) bool) []T {
+	result := make([]T, 0)
+	for _, item := range slice {
+		if predicate(item) {
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+func MapGeneric[T, U any](slice []T, transform func(T) U) []U {
+	result := make([]U, len(slice))
+	for i, item := range slice {
+		result[i] = transform(item)
+	}
+	return result
+}
+
+// Type constraints
+type Number interface {
+	int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64 | float32 | float64
+}
+
+func SumNumbers[T Number](numbers []T) T {
+	var sum T
+	for _, num := range numbers {
+		sum += num
+	}
+	return sum
+}
+
+type Ordered interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~float32 | ~float64 | ~string
+}
+
+func Max[T Ordered](a, b T) T {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func Min[T Ordered](a, b T) T {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// Reflection
+func reflectionExample() {
+	var x int = 42
+	rx := reflect.ValueOf(x)
+	fmt.Printf("Type: %s, Value: %v\n", rx.Type(), rx.Int())
+	
+	type Person struct {
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+	}
+	
+	p := Person{Name: "Alice", Age: 30}
+	rv := reflect.ValueOf(p)
+	rt := reflect.TypeOf(p)
+	
+	fmt.Printf("Struct type: %s\n", rt.Name())
+	for i := 0; i < rt.NumField(); i++ {
+		field := rt.Field(i)
+		value := rv.Field(i)
+		fmt.Printf("Field %s: %v (tag: %s)\n", field.Name, value, field.Tag)
+	}
+}
+
+// File operations
+func filesystemExample() {
+	tempFile, err := ioutil.TempFile("", "typus_test_*.txt")
+	if err != nil {
+		fmt.Printf("Error creating temp file: %v\n", err)
+		return
+	}
+	defer os.Remove(tempFile.Name())
+	defer tempFile.Close()
+	
+	_, err = tempFile.WriteString("Hello, Typus!")
+	if err != nil {
+		fmt.Printf("Error writing to temp file: %v\n", err)
+		return
+	}
+	
+	content, err := ioutil.ReadFile(tempFile.Name())
+	if err != nil {
+		fmt.Printf("Error reading temp file: %v\n", err)
+		return
+	}
+	
+	fmt.Printf("File content: %s\n", string(content))
+}
+
+// Time operations
+func timeExample() {
+	now := time.Now()
+	fmt.Printf("Current time: %s\n", now.Format(time.RFC3339))
+	
+	formatted := now.Format("2006-01-02 15:04:05")
+	fmt.Printf("Formatted: %s\n", formatted)
+	
+	future := now.Add(24 * time.Hour)
+	fmt.Printf("Tomorrow: %s\n", future.Format("2006-01-02"))
+}
+
+// Cryptography
+func cryptoExample() {
+	data := []byte("Hello, World!")
+	hash := md5.Sum(data)
+	fmt.Printf("MD5: %x\n", hash)
+	
+	hash256 := sha256.Sum256(data)
+	fmt.Printf("SHA256: %x\n", hash256)
+	
+	encoded := base64.StdEncoding.EncodeToString(data)
+	fmt.Printf("Base64: %s\n", encoded)
+	
+	hexEncoded := hex.EncodeToString(data)
+	fmt.Printf("Hex: %s\n", hexEncoded)
+}
+
+// Regular expressions
+func regexExample() {
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	fmt.Printf("Valid email: %t\n", emailRegex.MatchString("test@example.com"))
+	
+	numberRegex := regexp.MustCompile(`\d+`)
+	numbers := numberRegex.FindAllString("abc123def456ghi789", -1)
+	fmt.Printf("Numbers found: %v\n", numbers)
+}
+
+// Network operations
+func networkExample() {
+	u, _ := url.Parse("https://example.com/path?query=value")
+	fmt.Printf("Scheme: %s, Host: %s, Path: %s\n", u.Scheme, u.Host, u.Path)
+	
+	ip := net.ParseIP("192.168.1.1")
+	fmt.Printf("IP: %s\n", ip.String())
+}
+
+// Context operations
+func contextExample() {
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	
+	select {
+	case <-ctx.Done():
+		fmt.Printf("Context cancelled: %v\n", ctx.Err())
+	case <-time.After(1 * time.Second):
+		fmt.Println("Operation completed")
+	}
+}
+
+// Concurrency examples
+func channelExample() {
+	ch := make(chan int)
+	go func() {
+		ch <- 42
+	}()
+	
+	select {
+	case msg := <-ch:
+		fmt.Printf("Received: %v\n", msg)
+	case <-time.After(100 * time.Millisecond):
+		fmt.Println("Timeout")
+	}
+}
+
+func selectExample() {
+	ch1 := make(chan string)
+	ch2 := make(chan int)
+	
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		ch1 <- "hello"
+	}()
+	
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		ch2 <- 42
+	}()
+	
+	for i := 0; i < 2; i++ {
+		select {
+		case msg1 := <-ch1:
+			fmt.Printf("Received from ch1: %s\n", msg1)
+		case msg2 := <-ch2:
+			fmt.Printf("Received from ch2: %d\n", msg2)
+		case <-time.After(200 * time.Millisecond):
+			fmt.Println("Timeout in select")
+		}
+	}
+}
+
+func atomicExample() {
+	var counter int64
+	atomic.AddInt64(&counter, 1)
+	value := atomic.LoadInt64(&counter)
+	fmt.Printf("Atomic counter: %d\n", value)
+}
+
+// Error handling
+func riskyOperation() error {
+	return ValidationError{Field: "test", Message: "something went wrong", Code: 500}
+}
+
+// Main function
+func main() {
+	fmt.Println("=== Comprehensive Go Syntax Test ===")
+	
+	fmt.Println("\n1. Basic Types and Variables:")
+	fmt.Printf("bool: %t, int: %d, float64: %.2f, string: %s\n", boolVar, intVar, float64Var, stringVar)
+	
+	fmt.Println("\n2. Arrays and Slices:")
+	fmt.Printf("Array: %v, Slice: %v\n", intArray, intSlice)
+	
+	fmt.Println("\n3. Maps:")
+	fmt.Printf("Map: %v\n", stringIntMap)
+	
+	fmt.Println("\n4. Functions:")
+	fmt.Printf("add(5, 3) = %d\n", add(5, 3))
+	fmt.Printf("sum(1, 2, 3, 4, 5) = %d\n", sum(1, 2, 3, 4, 5))
+	
+	fmt.Println("\n5. Methods and Structs:")
+	calc := Calculator{value: 10}
+	fmt.Printf("Calculator value: %.2f\n", calc.Value())
+	calc.AddTo(5)
+	fmt.Printf("After adding 5: %.2f\n", calc.Value())
+	
+	fmt.Println("\n6. Interfaces:")
+	buffer := &MemoryBuffer{}
+	buffer.Write([]byte("Hello, Interface!"))
+	data := make([]byte, 20)
+	n, _ := buffer.Read(data)
+	fmt.Printf("Read %d bytes: %s\n", n, string(data[:n]))
+	
+	fmt.Println("\n7. Concurrency:")
+	selectExample()
+	atomicExample()
+	
+	fmt.Println("\n8. Generics:")
+	numbers := []int{3, 1, 4, 1, 5, 9, 2, 6}
+	even := FilterGeneric(numbers, func(n int) bool { return n%2 == 0 })
+	fmt.Printf("Even numbers: %v\n", even)
+	
+	squared := MapGeneric(numbers, func(n int) int { return n * n })
+	fmt.Printf("Squared numbers: %v\n", squared)
+	
+	fmt.Println("\n9. Reflection:")
+	reflectionExample()
+	
+	fmt.Println("\n10. Error Handling:")
+	if err := riskyOperation(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+	}
+	
+	fmt.Println("\n11. File System:")
+	filesystemExample()
+	
+	fmt.Println("\n12. Time and Date:")
+	timeExample()
+	
+	fmt.Println("\n13. Cryptography:")
+	cryptoExample()
+	
+	fmt.Println("\n14. Regular Expressions:")
+	regexExample()
+	
+	fmt.Println("\n15. Context Management:")
+	contextExample()
+	
+	fmt.Println("\n16. Network Programming:")
+	networkExample()
+	
+	fmt.Println("\n=== All tests completed successfully! ===")
+}

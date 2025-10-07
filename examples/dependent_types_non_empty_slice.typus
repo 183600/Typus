@@ -1,0 +1,28 @@
+//! dependent_types: on
+package main
+
+import "fmt"
+
+type NonEmptySlice struct {
+    elements []int
+}
+
+func getFirst(s NonEmptySlice) int {
+    return s.elements[0] // 安全的，因为len(elements) > 0
+}
+
+func main() {
+    // validSlice := NonEmptySlice{elements: []int{1, 2, 3}} // 假设这是有效的实例化方式
+    // fmt.Println("First element:", getFirst(validSlice))
+
+    // 更好的方式可能是通过构造函数来保证约束
+    // 这里我们假设可以直接构造符合条件的实例
+    var validSlice NonEmptySlice
+    validSlice.elements = []int{10, 20, 30} // 假设这样赋值后类型检查通过
+    fmt.Println("First element of validSlice:", getFirst(validSlice))
+
+
+    // invalidSliceData := []int{}
+    // invalidSlice := NonEmptySlice{elements: invalidSliceData} // 这应该会导致编译错误
+    // fmt.Println(invalidSlice)
+}

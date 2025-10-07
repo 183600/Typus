@@ -1,0 +1,25 @@
+//! ownership: on
+//! dependent_types: on
+
+package main
+
+import "fmt"
+
+func main() {
+	// Test various string escape scenarios
+	fmt.Println("Simple string")
+	fmt.Println("String with newline\ncharacter")
+	fmt.Println("String with tab\tcharacter")
+	fmt.Println("String with quote\"character")
+	fmt.Println("String with backslash\\character")
+	fmt.Println("String with carriage return\rcharacter")
+	
+	// Test multiline string that caused the original issue
+	message := "Hello   World	From
+Go"
+	fmt.Println(message)
+	
+	// Test raw string
+	raw := `Raw string with \n no escaping`
+	fmt.Println(raw)
+}

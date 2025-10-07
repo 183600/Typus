@@ -1,0 +1,17 @@
+package main
+
+func main() {
+    // Ownership-enabled block
+    {//! ownership: on
+        // Create a string and transfer ownership
+        s := "hello"
+        t := s  // Ownership transferred
+        // Using s here would be an error: use after move
+        // fmt.Println(s)  // Uncommenting this would cause an ownership error
+    }
+    
+    // Dependent types block
+    {//! dependent_types: on
+        // Dependent type code would go here
+    }
+}

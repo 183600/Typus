@@ -1,0 +1,30 @@
+-- Clean code blocks by removing duplicate package declarations and imports
+cleanCodeBlocks :: String -> String
+cleanCodeBlocks content = 
+  let
+    linesList = lines content
+    -- Remove package declarations and import blocks
+    filteredLines = removeImportBlock $ filter (\line -> 
+        not (isPrefixOf "package main" line) && 
+        not (isImportLine line)) linesList
+  in
+    unlines filteredLines
+  where
+    -- Check if a line is just an import statement (like "fmt" or "sync")
+    isImportLine line = 
+      let trimmed = trim line
+      in (trimmed == "fmt" || trimmed == "sync" || trimmed == "time" || 
+          trimmed == "unsafe" || trimmed == "os" || trimmed == "io" || 
+          trimmed == "strings" || trimmed == "math" || trimmed == "runtime" ||
+          trimmed == "\"fmt\"" || trimmed == "\"sync\"" || trimmed == "\"time\"" || 
+          trimmed == "\"unsafe\"" || trimmed == "\"os\"" || trimmed == "\"io\"" || 
+          trimmed == "\"strings\"" || trimmed == "\"math\"" || trimmed == "\"runtime\"")
+    
+    -- Remove entire import blocks including the opening "import (" and closing ")"
+    removeImportBlock :: [String] -> [String]
+    removeImportBlock [] = []
+    removeImportBlock (line:rest) 
+      | isPrefixOf "import (" line = 
+          let (importBlock, remaining) = span (not . (== ")")) rest
+          in drop 1 remaining  -- Drop the closing ")" as well
+      | otherwise = line : removeImportBlock rest

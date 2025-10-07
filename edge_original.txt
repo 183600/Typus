@@ -1,0 +1,14 @@
+=== Edge Cases Test ===
+Multi-line string: 
+		SELECT * FROM users 
+		WHERE id = ? 
+		AND status = 'active'
+	
+Escaped string length: 22
+Slice subset: [2 3]
+Complex map: map[{1 2}:point1 {3 4}:point2]
+No data available
+AST parsed successfully: main
+Complex boolean: true
+Pointer value: 200
+=== Edge Cases Test Completed ===

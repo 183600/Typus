@@ -1,0 +1,12 @@
+=== Go Syntax Compatibility Test ===
+Struct: TestStruct{Name: test, Value: 100}
+Function returned: test, 42
+Variadic sum: 15
+Running on Linux
+Index 0: 10
+Index 1: 20
+Index 2: 30
+Map value for 'one': 1
+Type assertion successful: hello
+=== Test Completed ===
+Deferred function called

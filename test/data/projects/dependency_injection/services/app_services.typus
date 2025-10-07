@@ -1,0 +1,99 @@
+package services
+
+import (
+    "dependency_injection/repositories"
+    "errors"
+)
+
+type User struct {
+    ID    string
+    Name  string
+    Email string
+}
+
+type NotificationService interface {
+    SendNotification(to, subject, body string) error
+}
+
+type UserService struct {
+    userRepo *repositories.UserRepository
+}
+
+func NewUserService(repo *repositories.UserRepository) *UserService {
+    return &UserService{
+        userRepo: repo,
+    }
+}
+
+func (us *UserService) CreateUser(name, email string) (*User, error) {
+    if name == "" || email == "" {
+        return nil, errors.New("name and email required")
+    }
+
+    user := &User{
+        ID:    generateID(),
+        Name:  name,
+        Email: email,
+    }
+
+    err := us.userRepo.Save(user)
+    if err != nil {
+        return nil, err
+    }
+
+    return user, nil
+}
+
+func (us *UserService) CreateUserWithNotification(name, email string, notifService NotificationService) (*User, error) {
+    user, err := us.CreateUser(name, email)
+    if err != nil {
+        return nil, err
+    }
+
+    // Send welcome notification
+    err = notifService.SendNotification(email, "Welcome!", "Welcome to our service!")
+    if err != nil {
+        // User was created but notification failed - handle appropriately
+        return user, nil
+    }
+
+    return user, nil
+}
+
+func (us *UserService) GetUser(id string) (*User, error) {
+    return us.userRepo.FindByID(id)
+}
+
+func (us *UserService) UpdateUser(user *User) error {
+    return us.userRepo.Update(user)
+}
+
+func (us *UserService) DeleteUser(id string) error {
+    return us.userRepo.Delete(id)
+}
+
+// Test ownership patterns with services
+func TransferUserService(source *UserService) *UserService {
+    // Move ownership of user service
+    newService := source
+    return newService
+}
+
+func generateID() string {
+    return "user_123"
+}
+
+type EmailNotificationService struct {
+    smtpHost string
+}
+
+func NewNotificationService(smtpHost string) *EmailNotificationService {
+    return &EmailNotificationService{
+        smtpHost: smtpHost,
+    }
+}
+
+func (ens *EmailNotificationService) SendNotification(to, subject, body string) error {
+    // Simulate sending email
+    return nil
+}

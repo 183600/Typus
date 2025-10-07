@@ -1,0 +1,116 @@
+package order_service
+
+import (
+    "errors"
+    "time"
+)
+
+type Order struct {
+    ID         string
+    UserID     string
+    ProductID  string
+    Quantity   int
+    Status     string
+    CreatedAt  time.Time
+    TotalPrice float64
+}
+
+type OrderService struct {
+    orders map[string]*Order
+}
+
+func NewOrderService() *OrderService {
+    return &OrderService{
+        orders: make(map[string]*Order),
+    }
+}
+
+func (os *OrderService) CreateOrder(userID, productID string, quantity int) (*Order, error) {
+    if userID == "" || productID == "" || quantity <= 0 {
+        return nil, errors.New("invalid order parameters")
+    }
+
+    order := &Order{
+        ID:         generateOrderID(),
+        UserID:     userID,
+        ProductID:  productID,
+        Quantity:   quantity,
+        Status:     "pending",
+        CreatedAt:  time.Now(),
+        TotalPrice: calculatePrice(productID, quantity),
+    }
+
+    os.orders[order.ID] = order
+    return order, nil
+}
+
+func (os *OrderService) GetOrder(id string) (*Order, error) {
+    order, exists := os.orders[id]
+    if !exists {
+        return nil, errors.New("order not found")
+    }
+    return order, nil
+}
+
+func (os *OrderService) UpdateOrderStatus(id, status string) error {
+    order, err := os.GetOrder(id)
+    if err != nil {
+        return err
+    }
+
+    order.Status = status
+    os.orders[id] = order
+    return nil
+}
+
+func (os *OrderService) GetUserOrders(userID string) ([]*Order, error) {
+    userOrders := make([]*Order, 0)
+    for _, order := range os.orders {
+        if order.UserID == userID {
+            userOrders = append(userOrders, order)
+        }
+    }
+
+    if len(userOrders) == 0 {
+        return nil, errors.New("no orders found for user")
+    }
+
+    return userOrders, nil
+}
+
+func (os *OrderService) CancelOrder(id string) error {
+    order, err := os.GetOrder(id)
+    if err != nil {
+        return err
+    }
+
+    if order.Status == "shipped" {
+        return errors.New("cannot cancel shipped order")
+    }
+
+    order.Status = "cancelled"
+    os.orders[id] = order
+    return nil
+}
+
+// Test order service ownership patterns
+func TransferOrderService(service *OrderService) *OrderService {
+    return service
+}
+
+func ProcessOrderOwnership(order *Order) *Order {
+    // Move order ownership to processing system
+    processedOrder := order
+    processedOrder.Status = "processing"
+    return processedOrder
+}
+
+func generateOrderID() string {
+    return "order_" + "67890"
+}
+
+func calculatePrice(productID string, quantity int) float64 {
+    // Simulate price calculation
+    basePrice := 10.0
+    return float64(quantity) * basePrice
+}

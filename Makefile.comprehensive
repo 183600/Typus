@@ -1,0 +1,27 @@
+# Makefile for comprehensive Typus compiler testing
+
+.PHONY: help build test test-comprehensive clean
+
+help:
+	@echo "Available targets:"
+	@echo "  build                 - Build the typus compiler"
+	@echo "  test                  - Run standard tests"
+	@echo "  test-comprehensive   - Run comprehensive compiler tests"
+	@echo "  test-shell            - Run comprehensive tests via shell script"
+	@echo "  clean                 - Clean build artifacts"
+
+build:
+	stack build --flag typus:werror
+
+test: build
+	stack test
+
+test-comprehensive: build
+	stack run comprehensive-stack-test
+
+test-shell: build
+	./test_typus_comprehensive.sh
+
+clean:
+	stack clean
+	rm -rf test_typus_comprehensive.sh 2>/dev/null || true

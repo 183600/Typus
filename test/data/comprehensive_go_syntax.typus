@@ -1,0 +1,471 @@
+package main
+
+import (
+	"fmt"
+	"math"
+	"reflect"
+	"runtime"
+	"unsafe"
+)
+
+// Test all basic Go types
+func testBasicTypes() {
+	// Integer types
+	var (
+		intVar   int       = 42
+		int8Var  int8      = 127
+		int16Var int16     = 32767
+		int32Var int32     = 2147483647
+		int64Var int64     = 9223372036854775807
+
+		uintVar   uint       = 42
+		uint8Var  uint8      = 255
+		uint16Var uint16     = 65535
+		uint32Var uint32     = 4294967295
+		uint64Var uint64     = 18446744073709551615
+
+		uintptrVar uintptr    = 0x12345
+
+		float32Var float32    = 3.14159265
+		float64Var float64    = 3.14159265358979323846
+
+		complex64Var  complex64  = complex(3.14, 2.71)
+		complex128Var complex128 = complex(1.41421356237, 1.73205080757)
+
+		runeVar rune      = '🌍'
+		byteVar byte      = 255
+
+		boolVar bool      = true
+		stringVar string   = "Hello, World!"
+	)
+
+	fmt.Printf("Integer types: %d, %d, %d, %d, %d\n", intVar, int8Var, int16Var, int32Var, int64Var)
+	fmt.Printf("Unsigned types: %d, %d, %d, %d, %d, %d\n", uintVar, uint8Var, uint16Var, uint32Var, uint64Var, uintptrVar)
+	fmt.Printf("Float types: %g, %g\n", float32Var, float64Var)
+	fmt.Printf("Complex types: %v, %v\n", complex64Var, complex128Var)
+	fmt.Printf("Rune and byte: %c, %d\n", runeVar, byteVar)
+	fmt.Printf("Bool and string: %t, %s\n", boolVar, stringVar)
+}
+
+// Test type aliases and conversions
+func testTypeAliases() {
+	type (
+		MyInt     int
+		MyFloat   float64
+		MyString  string
+		MyBool    bool
+	)
+
+	var (
+		myInt     MyInt     = 100
+		myFloat   MyFloat   = 2.71828
+		myString  MyString  = "Type alias test"
+		myBool    MyBool    = false
+	)
+
+	// Type conversions
+	convertedInt := int(myInt)
+	convertedFloat := float64(myFloat)
+	convertedString := string(myString)
+	convertedBool := bool(myBool)
+
+	fmt.Printf("Type aliases: %d, %g, %s, %t\n", convertedInt, convertedFloat, convertedString, convertedBool)
+}
+
+// Test array types
+func testArrays() {
+	// Fixed-size arrays
+	var intArray [5]int = [5]int{1, 2, 3, 4, 5}
+	var stringArray [3]string = [3]string{"a", "b", "c"}
+
+	// Multi-dimensional arrays
+	var matrix [3][4]int = [3][4]int{
+		{1, 2, 3, 4},
+		{5, 6, 7, 8},
+		{9, 10, 11, 12},
+	}
+
+	fmt.Printf("Int array: %v\n", intArray)
+	fmt.Printf("String array: %v\n", stringArray)
+	fmt.Printf("Matrix: %v\n", matrix)
+
+	// Array operations
+	fmt.Printf("First element: %d\n", intArray[0])
+	fmt.Printf("Array length: %d\n", len(intArray))
+	fmt.Printf("Array capacity: %d\n", cap(intArray))
+}
+
+// Test slice types
+func testSlices() {
+	// Slice creation
+	var intSlice []int = []int{1, 2, 3, 4, 5}
+	var stringSlice []string = []string{"hello", "world"}
+
+	// Slice operations
+	intSlice = append(intSlice, 6)
+	fmt.Printf("After append: %v\n", intSlice)
+
+	// Slicing operations
+	subSlice := intSlice[1:4]
+	fmt.Printf("Sub-slice: %v\n", subSlice)
+
+	// Make slice
+	dynamicSlice := make([]int, 0, 10)
+	dynamicSlice = append(dynamicSlice, 1, 2, 3)
+	fmt.Printf("Dynamic slice: %v\n", dynamicSlice)
+
+	// Copy slices
+	copySlice := make([]int, len(intSlice))
+	copy(copySlice, intSlice)
+	fmt.Printf("Copied slice: %v\n", copySlice)
+}
+
+// Test map types
+func testMaps() {
+	// Map creation
+	intMap := make(map[string]int)
+	intMap["one"] = 1
+	intMap["two"] = 2
+	intMap["three"] = 3
+
+	// Map literal
+	stringMap := map[int]string{
+		1: "one",
+		2: "two",
+		3: "three",
+	}
+
+	// Map operations
+	value, exists := intMap["two"]
+	fmt.Printf("Map value exists: %t, value: %d\n", exists, value)
+
+	// Delete from map
+	delete(intMap, "one")
+	fmt.Printf("After delete: %v\n", intMap)
+
+	// Map iteration
+	fmt.Println("Map iteration:")
+	for key, val := range stringMap {
+		fmt.Printf("  %d: %s\n", key, val)
+	}
+}
+
+// Test channel types
+func testChannels() {
+	// Unbuffered channel
+	unbuffered := make(chan int)
+
+	// Buffered channel
+	buffered := make(chan string, 5)
+
+	// Directional channels
+	var sendChan chan<- int = make(chan int, 1)
+	var receiveChan <-chan int = make(chan int, 1)
+
+	// Channel operations
+	go func() {
+		sendChan <- 42
+	}()
+
+	go func() {
+		value := <-receiveChan
+		fmt.Printf("Received from channel: %d\n", value)
+	}()
+
+	// Buffered channel operations
+	buffered <- "hello"
+	buffered <- "world"
+
+	fmt.Printf("Buffered channel length: %d\n", len(buffered))
+
+	// Close channels
+	close(buffered)
+}
+
+// Test struct types
+func testStructs() {
+	// Simple struct
+	type Person struct {
+		Name string
+		Age  int
+		City string
+	}
+
+	// Struct with different field types
+	type Complex struct {
+		ID       int64
+		Price    float64
+		Active   bool
+		Tags     []string
+		Metadata map[string]interface{}
+	}
+
+	// Struct initialization
+	person := Person{
+		Name: "John Doe",
+		Age:  30,
+		City: "New York",
+	}
+
+	// Struct with embedded types
+	type Address struct {
+		Street string
+		City   string
+	}
+
+	type Employee struct {
+		Person
+		Address
+		EmployeeID string
+	}
+
+	employee := Employee{
+		Person: Person{
+			Name: "Jane Smith",
+			Age:  25,
+			City: "San Francisco",
+		},
+		Address: Address{
+			Street: "123 Main St",
+			City:   "San Francisco",
+		},
+		EmployeeID: "EMP001",
+	}
+
+	fmt.Printf("Person: %+v\n", person)
+	fmt.Printf("Employee: %+v\n", employee)
+}
+
+// Test interface types
+func testInterfaces() {
+	// Empty interface
+	var any interface{} = "Hello"
+
+	// Simple interface
+	type Reader interface {
+		Read([]byte) (int, error)
+	}
+
+	// Multiple interface
+	type ReadWriter interface {
+		Reader
+		Write([]byte) (int, error)
+	}
+
+	// Type assertion
+	if str, ok := any.(string); ok {
+		fmt.Printf("String assertion: %s\n", str)
+	}
+
+	// Type switch
+	switch v := any.(type) {
+	case string:
+		fmt.Printf("Type is string: %s\n", v)
+	case int:
+		fmt.Printf("Type is int: %d\n", v)
+	default:
+		fmt.Printf("Type is unknown: %T\n", v)
+	}
+}
+
+// Test function types
+func testFunctionTypes() {
+	// Function type definition
+	type BinaryOp func(int, int) int
+
+	// Function variable
+	var add BinaryOp = func(a, b int) int { return a + b }
+	var subtract BinaryOp = func(a, b int) int { return a - b }
+
+	// Higher-order function
+	func apply(op BinaryOp, a, b int) int {
+		return op(a, b)
+	}
+
+	result1 := apply(add, 10, 5)
+	result2 := apply(subtract, 10, 5)
+
+	fmt.Printf("Function results: %d, %d\n", result1, result2)
+
+	// Variadic function
+	sum := func(nums ...int) int {
+		total := 0
+		for _, num := range nums {
+			total += num
+		}
+		return total
+	}
+
+	fmt.Printf("Sum: %d\n", sum(1, 2, 3, 4, 5))
+}
+
+// Test pointer types
+func testPointers() {
+	var x int = 42
+	var ptr *int = &x
+
+	fmt.Printf("Original value: %d\n", x)
+	fmt.Printf("Pointer value: %p\n", ptr)
+	fmt.Printf("Dereferenced: %d\n", *ptr)
+
+	// Modify through pointer
+	*ptr = 100
+	fmt.Printf("Modified value: %d\n", x)
+
+	// Pointer to struct
+	type Point struct {
+		X, Y int
+	}
+
+	p := &Point{X: 1, Y: 2}
+	p.X = 10 // Automatic dereference
+
+	fmt.Printf("Point: %+v\n", p)
+}
+
+// Test control structures
+func testControlStructures() {
+	// If-else
+	x := 10
+	if x > 0 {
+		fmt.Println("x is positive")
+	} else if x == 0 {
+		fmt.Println("x is zero")
+	} else {
+		fmt.Println("x is negative")
+	}
+
+	// Switch statement
+	switch x {
+	case 1, 2, 3:
+		fmt.Println("x is small")
+	case 4, 5, 6:
+		fmt.Println("x is medium")
+	default:
+		fmt.Println("x is large")
+	}
+
+	// Type switch
+	var val interface{} = 42
+	switch v := val.(type) {
+	case int:
+		fmt.Printf("Type is int: %d\n", v)
+	case string:
+		fmt.Printf("Type is string: %s\n", v)
+	}
+
+	// For loops
+	fmt.Print("For loop: ")
+	for i := 0; i < 5; i++ {
+		fmt.Printf("%d ", i)
+	}
+	fmt.Println()
+
+	// Range loop
+	slice := []string{"a", "b", "c"}
+	fmt.Print("Range loop: ")
+	for i, v := range slice {
+		fmt.Printf("%d:%s ", i, v)
+	}
+	fmt.Println()
+
+	// While-style loop
+	fmt.Print("While loop: ")
+	count := 0
+	for count < 3 {
+		fmt.Printf("%d ", count)
+		count++
+	}
+	fmt.Println()
+
+	// Break and continue
+	fmt.Print("Break/Continue: ")
+	for i := 0; i < 10; i++ {
+		if i == 8 {
+			break
+		}
+		if i%2 == 0 {
+			continue
+		}
+		fmt.Printf("%d ", i)
+	}
+	fmt.Println()
+}
+
+// Test defer, panic, and recover
+func testErrorHandling() {
+	// Defer
+	defer fmt.Println("This will be printed last")
+
+	// Panic and recover
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Printf("Recovered from panic: %v\n", r)
+			}
+		}()
+
+		// This will panic
+		panic("intentional panic")
+	}()
+
+	// Multiple defers (LIFO order)
+	defer fmt.Println("Third")
+	defer fmt.Println("Second")
+	defer fmt.Println("First")
+}
+
+// Test constants and variables
+func testConstantsVariables() {
+	// Constants
+	const (
+		Pi         = 3.14159265359
+		MaxInt     = int(^uint(0) >> 1)
+		MinInt     = -MaxInt - 1
+		True       = true
+		False      = false
+		HelloWorld = "Hello, World!"
+	)
+
+	// Variables with explicit types
+	var (
+		globalInt    int       = 42
+		globalFloat float64   = 3.14
+		globalStr   string    = "global"
+		globalBool  bool      = true
+		globalSlice []int     = []int{1, 2, 3}
+	)
+
+	// Short variable declaration
+	shortVar := "short declaration"
+
+	fmt.Printf("Constants: %g, %d, %d, %t, %s\n", Pi, MaxInt, MinInt, True, HelloWorld)
+	fmt.Printf("Variables: %d, %g, %s, %t, %v, %s\n", globalInt, globalFloat, globalStr, globalBool, globalSlice, shortVar)
+}
+
+// Test package level variables
+var (
+	packageVar1 int    = 100
+	packageVar2 string = "package level"
+)
+
+func main() {
+	fmt.Println("=== Comprehensive Go Syntax Test ===")
+
+	testBasicTypes()
+	testTypeAliases()
+	testArrays()
+	testSlices()
+	testMaps()
+	testChannels()
+	testStructs()
+	testInterfaces()
+	testFunctionTypes()
+	testPointers()
+	testControlStructures()
+	testErrorHandling()
+	testConstantsVariables()
+
+	fmt.Printf("Package variables: %d, %s\n", packageVar1, packageVar2)
+	fmt.Println("=== All tests completed successfully ===")
+}

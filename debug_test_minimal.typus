@@ -1,0 +1,18 @@
+//! ownership: on
+//! dependent_types: on
+
+package main
+
+import (
+	"fmt"
+	"math"
+)
+
+func mathExample() {
+	fmt.Printf("Pi: %.6f\n", math.Pi)
+	fmt.Printf("Sin(Pi/2): %.6f\n", math.Sin(math.Pi/2))
+}
+
+func main() {
+	mathExample()
+}

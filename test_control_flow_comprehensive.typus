@@ -1,0 +1,227 @@
+// 彻底修复后的控制流所有权分析测试
+// 这个文件测试条件分支和循环中的所有权转移
+
+func testConditionalOwnershipFixed() {
+    // 测试1: 条件分支中的所有权转移 - 应该正确检测错误
+    let x = "hello"
+    let y = "world"
+    
+    if x > y {
+        // 在if分支中使用x
+        println(x)
+        // 在if分支中移动y
+        let z = y
+        println(z)
+    } else {
+        // 在else分支中移动x
+        let w = x
+        println(w)
+        // 在else分支中使用y
+        println(y)
+    }
+    
+    // 这里应该检测到错误：x和y都可能在某个分支被移动
+    println(x)  // ✗ 应该报错 - x可能在else分支被移动
+    println(y)  // ✗ 应该报错 - y可能在if分支被移动
+}
+
+func testLoopOwnershipFixed() {
+    // 测试2: 循环中的所有权模式 - 应该正确处理循环变量
+    let items = ["a", "b", "c"]
+    let mut sum = ""
+    
+    for item in items {
+        // 循环中借用item
+        let borrowed = &item
+        println(borrowed)
+        
+        // 在循环中移动sum - 每次迭代都会重新创建
+        let temp = sum
+        sum = temp + item
+    }
+    
+    // 循环后使用sum应该是安全的
+    println(sum)  // ✓ 应该安全
+}
+
+func testNestedConditionsFixed() {
+    // 测试3: 嵌套条件分支 - 应该正确跟踪深层嵌套的所有权状态
+    let a = "first"
+    let b = "second"
+    let c = "third"
+    
+    if a > b {
+        if b > c {
+            // 深层嵌套中的所有权转移
+            let temp1 = a
+            let temp2 = b
+            println(temp1)
+            println(temp2)
+        } else {
+            let temp3 = c
+            println(temp3)
+        }
+        // 这里a和b可能已经被移动
+        println(a)  // ✗ 应该报错 - a可能在深层嵌套被移动
+        println(b)  // ✗ 应该报错 - b可能在深层嵌套被移动
+    } else {
+        // 这里a没有被移动，b也没有被移动
+        println(a)  // ✓ 应该安全
+        println(b)  // ✓ 应该安全
+    }
+    
+    // 路径敏感分析应该能确定c始终可用
+    println(c)  // ✓ 应该安全
+}
+
+func testWhileLoopOwnershipFixed() {
+    // 测试4: while循环中的所有权 - 应该正确处理循环借用
+    let mut counter = 0
+    let data = "important"
+    
+    while counter < 3 {
+        // 在循环中借用data
+        let borrowed_data = &data
+        println(borrowed_data)
+        
+        // 修改计数器
+        counter = counter + 1
+    }
+    
+    // 循环后data仍然可用
+    println(data)  // ✓ 应该安全
+}
+
+func testComplexControlFlowFixed() {
+    // 测试5: 复杂控制流组合 - 应该正确跟踪跨分支跨循环的所有权
+    let resource1 = "resource1"
+    let resource2 = "resource2"
+    let mut flag = true
+    
+    if flag {
+        for i in [1, 2, 3] {
+            if i > 1 {
+                // 条件移动
+                let temp = resource1
+                println(temp)
+                flag = false
+            }
+        }
+    } else {
+        // 另一个分支
+        let temp2 = resource2
+        println(temp2)
+    }
+    
+    // 路径敏感分析应该能跟踪resource1和resource2的状态
+    // 基于flag的值和循环的执行情况
+    println(resource1)  // ✗ 可能在循环中被移动
+    println(resource2)  // ✗ 可能在else分支中被移动
+}
+
+func testBorrowInBranchesFixed() {
+    // 测试6: 分支中的借用模式 - 应该正确处理分支借用
+    let data = "shared_data"
+    let condition = true
+    
+    if condition {
+        // 在if分支中可变借用
+        let mut_ref = &mut data
+        // 使用mut_ref...
+    } else {
+        // 在else分支中不可变借用
+        let ref = &data
+        // 使用ref...
+    }
+    
+    // 两个分支都结束后，data应该可用
+    println(data)  // ✓ 应该安全
+}
+
+func testLoopBorrowPatternsFixed() {
+    // 测试7: 循环中的借用模式 - 应该检测迭代器失效
+    let mut collection = ["item1", "item2", "item3"]
+    
+    for item in collection {
+        // 在循环中借用item
+        let item_ref = &item
+        println(item_ref)
+        
+        // 通过可变引用修改集合
+        let mut_ref = &mut collection
+        // ✗ 应该检测到迭代器失效风险
+    }
+}
+
+func testPathSensitiveAnalysis() {
+    // 测试8: 路径敏感分析 - 应该精确跟踪不同路径的所有权状态
+    let data1 = "data1"
+    let data2 = "data2"
+    let mut path = true
+    
+    if path {
+        // 路径1: 移动data1
+        let moved1 = data1
+        println(moved1)
+        path = false
+    } else {
+        // 路径2: 移动data2
+        let moved2 = data2
+        println(moved2)
+    }
+    
+    // 路径敏感分析应该能确定哪个变量被移动了
+    println(data1)  // ✗ 可能在路径1被移动
+    println(data2)  // ✗ 可能在路径2被移动
+}
+
+func testLoopVariableScope() {
+    // 测试9: 循环变量作用域 - 应该正确处理循环变量的生命周期
+    let items = ["a", "b", "c"]
+    
+    for item in items {
+        // item只在循环体内有效
+        let local_item = item
+        println(local_item)
+    }
+    
+    // item在这里不应该可用
+    // println(item)  // ✗ 应该报错 - item不在作用域内
+}
+
+func testCrossLoopOwnership() {
+    // 测试10: 跨循环所有权 - 应该跟踪变量在不同循环间的状态
+    let mut data = "cross_loop_data"
+    let mut counter = 0
+    
+    while counter < 2 {
+        // 第一个循环：借用data
+        let ref = &data
+        println(ref)
+        counter = counter + 1
+    }
+    
+    for i in [1, 2] {
+        // 第二个循环：移动data
+        let moved = data
+        println(moved)
+        data = "new_data"  // 重新赋值
+    }
+    
+    // data在这里的状态取决于循环执行情况
+    println(data)  // ✓ 应该安全 - 在第二个循环中重新赋值
+}
+
+// 主函数测试所有场景
+func main() {
+    testConditionalOwnershipFixed()
+    testLoopOwnershipFixed()
+    testNestedConditionsFixed()
+    testWhileLoopOwnershipFixed()
+    testComplexControlFlowFixed()
+    testBorrowInBranchesFixed()
+    testLoopBorrowPatternsFixed()
+    testPathSensitiveAnalysis()
+    testLoopVariableScope()
+    testCrossLoopOwnership()
+}

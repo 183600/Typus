@@ -1,0 +1,36 @@
+//! dependent_types: on
+package main
+
+import "fmt"
+
+// Matrix 类型 - 在当前实现中简化为包含维度信息的结构体
+type Matrix struct {
+    rows, cols int
+    data       [][]float64
+}
+
+// 辅助函数创建和填充矩阵
+func NewMatrix(m, n int, fillValue float64) Matrix {
+    matData := make([][]float64, m)
+    for i := 0; i < m; i++ {
+        matData[i] = make([]float64, n)
+        for j := 0; j < n; j++ {
+            matData[i][j] = fillValue + float64(i*n+j)
+        }
+    }
+    return Matrix{rows: m, cols: n, data: matData}
+}
+
+func main() {
+    matrixA := NewMatrix(2, 3, 1.0)
+    fmt.Printf("Matrix A (%dx%d):\n", matrixA.rows, matrixA.cols)
+    for i, row := range matrixA.data {
+        fmt.Printf("Row %d: %v\n", i, row)
+    }
+
+    matrixB := NewMatrix(3, 2, 5.0)
+    fmt.Printf("\nMatrix B (%dx%d):\n", matrixB.rows, matrixB.cols)
+    for i, row := range matrixB.data {
+        fmt.Printf("Row %d: %v\n", i, row)
+    }
+}

@@ -1,0 +1,103 @@
+//! ownership: on
+//! dependent_types: on
+
+// This file demonstrates various error scenarios and recovery
+
+// Example 1: Syntax Error - Missing closing brace
+func example1() {
+    x := 10
+    if x > 5 {
+        println("Greater than 5")
+    // Missing closing brace - will generate E002
+
+// Example 2: Type Error - Type mismatch
+func example2() {
+    var x int = "hello"  // E002: Cannot assign string to int
+    println(x)
+}
+
+// Example 3: Ownership Error - Use after move
+{//! ownership: on}
+func example3() {
+    x := []int{1, 2, 3}
+    y := x  // Move x to y
+    println(x)  // E003: Use after move
+}
+}
+
+// Example 4: Ownership Error - Borrow while moved
+{//! ownership: on}
+func example4() {
+    x := []int{1, 2, 3}
+    y := &x  // Borrow x
+    z := x   // E003: Cannot move while borrowed
+    println(y, z)
+}
+}
+
+// Example 5: Dependent Type Error - Array bounds
+{//! dependent_types: on}
+func example5() {
+    arr := [5]int{1, 2, 3, 4, 5}
+    // Array<int, 5> ensures bounds checking
+    index := 10
+    value := arr[index]  // E004: Index out of bounds
+    println(value)
+}
+}
+
+// Example 6: Multiple errors in same function
+func example6() {
+    var x int = "wrong type"  // Type error
+    y := []int{1, 2, 3}
+    z := y
+    println(y)  // Ownership error - use after move
+    
+    // Missing closing brace
+    if x > 0 {
+        println("positive")
+    // Missing }
+}
+
+// Example 7: Recoverable warning - Empty block
+{//! ownership: off}
+func example7() {
+    // Empty function - generates warning
+}
+}
+
+// Example 8: Warning - All directives disabled
+{//! ownership: off, dependent_types: off, constraints: off}
+func example8() {
+    x := 10
+    println(x)
+}
+}
+
+// Example 9: Complex error with good recovery
+func example9() {
+    // This will generate an error but allow continuation
+    var result string = calculateSum(1, 2)  // Type mismatch
+    
+    // Compilation continues to find more errors
+    println(result)
+}
+
+func calculateSum(a int, b int) int {
+    return a + b
+}
+
+// Example 10: Nested errors
+func example10() {
+    type MyStruct struct {
+        field1 string
+        field2 int
+    }
+    
+    s := MyStruct{
+        field1: 123,        // Type error
+        field2: "wrong",    // Type error
+    }
+    
+    println(s)
+}

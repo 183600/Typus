@@ -1,0 +1,25 @@
+//! ownership: on
+
+package main
+
+type StringHolder struct {
+    value string
+}
+
+func (sh *StringHolder) getValue() string {
+    return sh.value  // No move, just access
+}
+
+func (sh *StringHolder) setValue(s string) {
+    sh.value = s  // Move into struct
+}
+
+func main() {
+    s1 := "hello"
+    holder := StringHolder{value: s1}  // Move into struct
+    println(holder.getValue())
+    
+    s2 := "world"
+    holder.setValue(s2)  // Move into struct
+    // println(s2)  // Use after move
+}

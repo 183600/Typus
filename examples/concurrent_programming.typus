@@ -1,0 +1,328 @@
+package main
+
+import (
+    "fmt"
+    "sync"
+    "sync/atomic"
+    "time"
+    "math/rand"
+)
+
+// ===== 简化并发结构 =====
+type Channel struct {
+    ch     chan interface{}
+    closed int32
+}
+
+type Actor struct {
+    mailbox chan string
+    handler func(string)
+    running int32
+    stop    chan struct{}
+    wg      sync.WaitGroup
+}
+
+type WorkerPool struct {
+    jobs    chan int
+    results chan string
+    workers int
+    wg      sync.WaitGroup
+}
+
+type ConcurrentMap struct {
+    data  map[string]int
+    mutex sync.RWMutex
+}
+
+// ===== Channel实现 =====
+func NewChannel(bufferSize int) *Channel {
+    return &Channel{
+        ch:     make(chan interface{}, bufferSize),
+        closed: 0,
+    }
+}
+
+func (c *Channel) Send(value interface{}) bool {
+    if atomic.LoadInt32(&c.closed) == 1 {
+        return false
+    }
+    
+    select {
+    case c.ch <- value:
+        return true
+    default:
+        return false
+    }
+}
+
+func (c *Channel) Receive() (interface{}, bool) {
+    select {
+    case value, ok := <-c.ch:
+        return value, ok
+    default:
+        return nil, false
+    }
+}
+
+func (c *Channel) Close() {
+    if atomic.CompareAndSwapInt32(&c.closed, 0, 1) {
+        close(c.ch)
+    }
+}
+
+// ===== Actor实现 =====
+func NewActor(handler func(string), bufferSize int) *Actor {
+    return &Actor{
+        mailbox: make(chan string, bufferSize),
+        handler: handler,
+        running: 0,
+        stop:    make(chan struct{}),
+    }
+}
+
+func (a *Actor) Start() {
+    if atomic.CompareAndSwapInt32(&a.running, 0, 1) {
+        a.wg.Add(1)
+        go a.run()
+    }
+}
+
+func (a *Actor) run() {
+    defer a.wg.Done()
+    
+    for {
+        select {
+        case msg, ok := <-a.mailbox:
+            if !ok {
+                return
+            }
+            a.handler(msg)
+        case <-a.stop:
+            return
+        }
+    }
+}
+
+func (a *Actor) Send(msg string) bool {
+    if atomic.LoadInt32(&a.running) == 0 {
+        return false
+    }
+    
+    select {
+    case a.mailbox <- msg:
+        return true
+    default:
+        return false
+    }
+}
+
+func (a *Actor) Stop() {
+    if atomic.CompareAndSwapInt32(&a.running, 1, 0) {
+        close(a.stop)
+        close(a.mailbox)
+        a.wg.Wait()
+    }
+}
+
+// ===== WorkerPool实现 =====
+func NewWorkerPool(workerCount int, jobFunc func(int) string) *WorkerPool {
+    return &WorkerPool{
+        jobs:    make(chan int, workerCount*2),
+        results: make(chan string, workerCount*2),
+        workers: workerCount,
+    }
+}
+
+func (wp *WorkerPool) Start() {
+    for i := 0; i < wp.workers; i++ {
+        wp.wg.Add(1)
+        go wp.runWorker(i)
+    }
+}
+
+func (wp *WorkerPool) runWorker(id int) {
+    defer wp.wg.Done()
+    
+    for job := range wp.jobs {
+        result := fmt.Sprintf("Worker %d processed job %d", id, job)
+        wp.results <- result
+    }
+}
+
+func (wp *WorkerPool) Submit(job int) bool {
+    select {
+    case wp.jobs <- job:
+        return true
+    default:
+        return false
+    }
+}
+
+func (wp *WorkerPool) GetResult() (string, bool) {
+    select {
+    case result, ok := <-wp.results:
+        return result, ok
+    default:
+        return "", false
+    }
+}
+
+func (wp *WorkerPool) Shutdown() {
+    close(wp.jobs)
+    wp.wg.Wait()
+    close(wp.results)
+}
+
+func (wp *WorkerPool) ActiveWorkers() int {
+    return wp.workers
+}
+
+// ===== ConcurrentMap实现 =====
+func NewConcurrentMap() *ConcurrentMap {
+    return &ConcurrentMap{
+        data: make(map[string]int),
+    }
+}
+
+func (cm *ConcurrentMap) Set(key string, value int) {
+    cm.mutex.Lock()
+    defer cm.mutex.Unlock()
+    cm.data[key] = value
+}
+
+func (cm *ConcurrentMap) Get(key string) (int, bool) {
+    cm.mutex.RLock()
+    defer cm.mutex.RUnlock()
+    value, exists := cm.data[key]
+    return value, exists
+}
+
+func (cm *ConcurrentMap) Size() int {
+    cm.mutex.RLock()
+    defer cm.mutex.RUnlock()
+    return len(cm.data)
+}
+
+// ===== 测试函数 =====
+func testChannel() {
+    fmt.Println("=== 测试Channel ===")
+    
+    ch := NewChannel(3)
+    
+    for i := 0; i < 5; i++ {
+        if ch.Send(i) {
+            fmt.Printf("发送: %d\n", i)
+        } else {
+            fmt.Printf("发送失败: %d\n", i)
+        }
+    }
+    
+    for i := 0; i < 5; i++ {
+        if value, ok := ch.Receive(); ok {
+            fmt.Printf("接收: %v\n", value)
+        } else {
+            fmt.Printf("接收失败\n")
+        }
+    }
+    
+    fmt.Printf("Channel统计: 发送者=%d, 接收者=%d, 已关闭=%t\n", 0, 0, false)
+    ch.Close()
+}
+
+func testActor() {
+    fmt.Println("\n=== 测试Actor ===")
+    
+    handler := func(msg string) {
+        fmt.Printf("Actor处理消息: %s\n", msg)
+        time.Sleep(100 * time.Millisecond)
+    }
+    
+    actor := NewActor(handler, 10)
+    actor.Start()
+    
+    messages := []string{"Hello", "World", "From", "Actor", "System"}
+    for _, msg := range messages {
+        if actor.Send(msg) {
+            fmt.Printf("发送消息: %s\n", msg)
+        } else {
+            fmt.Printf("发送失败: %s\n", msg)
+        }
+    }
+    
+    time.Sleep(1 * time.Second)
+    actor.Stop()
+}
+
+func testWorkerPool() {
+    fmt.Println("\n=== 测试WorkerPool ===")
+    
+    jobFunc := func(job int) string {
+        time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+        return fmt.Sprintf("Job %d completed", job)
+    }
+    
+    pool := NewWorkerPool(3, jobFunc)
+    pool.Start()
+    
+    for i := 0; i < 6; i++ {
+        if pool.Submit(i) {
+            fmt.Printf("提交任务: %d\n", i)
+        }
+    }
+    
+    for i := 0; i < 6; i++ {
+        if result, ok := pool.GetResult(); ok {
+            fmt.Printf("获取结果: %s\n", result)
+        }
+    }
+    
+    fmt.Printf("活跃工作者数量: %d\n", pool.ActiveWorkers())
+    pool.Shutdown()
+}
+
+func testConcurrentMap() {
+    fmt.Println("\n=== 测试ConcurrentMap ===")
+    
+    cm := NewConcurrentMap()
+    
+    var wg sync.WaitGroup
+    for i := 0; i < 10; i++ {
+        wg.Add(1)
+        go func(i int) {
+            defer wg.Done()
+            key := fmt.Sprintf("key%d", i)
+            cm.Set(key, i*10)
+            fmt.Printf("设置: %s = %d\n", key, i*10)
+        }(i)
+    }
+    
+    wg.Wait()
+    
+    for i := 0; i < 10; i++ {
+        wg.Add(1)
+        go func(i int) {
+            defer wg.Done()
+            key := fmt.Sprintf("key%d", i)
+            if value, exists := cm.Get(key); exists {
+                fmt.Printf("获取: %s = %d\n", key, value)
+            }
+        }(i)
+    }
+    
+    wg.Wait()
+    
+    fmt.Printf("Map大小: %d\n", cm.Size())
+}
+
+func main() {
+    fmt.Println("=== 并发编程特性测试 ===")
+    
+    rand.Seed(time.Now().UnixNano())
+    
+    testChannel()
+    testActor()
+    testWorkerPool()
+    testConcurrentMap()
+    
+    fmt.Println("\n=== 所有并发测试完成 ===")
+}

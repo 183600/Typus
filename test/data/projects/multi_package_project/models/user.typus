@@ -1,0 +1,42 @@
+package models
+
+import (
+    "time"
+)
+
+type User struct {
+    Name      string
+    Email     string
+    CreatedAt time.Time
+    Active    bool
+}
+
+func NewUser(name, email string) *User {
+    return &User{
+        Name:      name,
+        Email:     email,
+        CreatedAt: time.Now(),
+        Active:    true,
+    }
+}
+
+func (u *User) Deactivate() {
+    u.Active = false
+}
+
+func (u *User) UpdateEmail(newEmail string) {
+    u.Email = newEmail
+}
+
+// Function that moves ownership
+func CloneUser(original *User) *User {
+    // Create a copy and move ownership
+    clone := *original
+    return &clone
+}
+
+// Function to test borrowing concepts
+func BorrowUserInfo(user *User) (string, string) {
+    // Borrow user without moving ownership
+    return user.Name, user.Email
+}

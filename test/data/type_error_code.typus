@@ -1,0 +1,7 @@
+package main
+
+func main() {
+    var x string = 42  // Type mismatch
+    var y int = "hello"  // Type mismatch
+    fmt.Println(x, y)
+}

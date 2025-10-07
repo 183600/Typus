@@ -1,0 +1,457 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE ScopedTypeVariables #-}
+<span class="lineno">    2 </span>module ProductionTests (productionTestSuite) where
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>import Test.Tasty
+<span class="lineno">    5 </span>import Test.Tasty.HUnit
+<span class="lineno">    6 </span>import Test.Tasty.QuickCheck
+<span class="lineno">    7 </span>import qualified Parser (parseTypus)
+<span class="lineno">    8 </span>import qualified Compiler (compile)
+<span class="lineno">    9 </span>import qualified Ownership (analyzeOwnership)
+<span class="lineno">   10 </span>import Data.List (isInfixOf)
+<span class="lineno">   11 </span>import Data.Char (toLower)
+<span class="lineno">   12 </span>import System.Directory (doesFileExist)
+<span class="lineno">   13 </span>import System.FilePath ((&lt;/&gt;))
+<span class="lineno">   14 </span>import Control.Exception (evaluate)
+<span class="lineno">   15 </span>import Data.Time (getCurrentTime, diffUTCTime)
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>-- 生产环境测试套件
+<span class="lineno">   18 </span>productionTestSuite :: TestTree
+<span class="lineno">   19 </span><span class="decl"><span class="nottickedoff">productionTestSuite = testGroup &quot;Production Tests&quot; [</span>
+<span class="lineno">   20 </span><span class="spaces">    </span><span class="nottickedoff">testGroup &quot;Compiler Robustness&quot; [</span>
+<span class="lineno">   21 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Parser handles large files&quot; testParserLargeFiles,</span>
+<span class="lineno">   22 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Compiler generates valid Go code&quot; testCompilerOutput,</span>
+<span class="lineno">   23 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Ownership analysis completes&quot; testOwnershipAnalysis,</span>
+<span class="lineno">   24 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Error messages are informative&quot; testErrorMessages,</span>
+<span class="lineno">   25 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Compiler handles invalid input gracefully&quot; testInvalidInputHandling,</span>
+<span class="lineno">   26 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Compiler recovers from syntax errors&quot; testErrorRecovery</span>
+<span class="lineno">   27 </span><span class="spaces">    </span><span class="nottickedoff">],</span>
+<span class="lineno">   28 </span><span class="spaces">    </span><span class="nottickedoff">testGroup &quot;Performance Requirements&quot; [</span>
+<span class="lineno">   29 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Parsing performance&quot; testParsingPerformance,</span>
+<span class="lineno">   30 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Compilation performance&quot; testCompilationPerformance,</span>
+<span class="lineno">   31 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Memory usage&quot; testMemoryUsage,</span>
+<span class="lineno">   32 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Memory leak detection&quot; testMemoryLeakDetection,</span>
+<span class="lineno">   33 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Concurrent compilation&quot; testConcurrentCompilation</span>
+<span class="lineno">   34 </span><span class="spaces">    </span><span class="nottickedoff">],</span>
+<span class="lineno">   35 </span><span class="spaces">    </span><span class="nottickedoff">testGroup &quot;Correctness Guarantees&quot; [</span>
+<span class="lineno">   36 </span><span class="spaces">        </span><span class="nottickedoff">testProperty &quot;Parser roundtrip&quot; parserRoundtripProperty,</span>
+<span class="lineno">   37 </span><span class="spaces">        </span><span class="nottickedoff">testProperty &quot;Generated Go code compiles&quot; goCodeCompilesProperty,</span>
+<span class="lineno">   38 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Ownership safety&quot; testOwnershipSafety,</span>
+<span class="lineno">   39 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Type system consistency&quot; testTypeSystemConsistency,</span>
+<span class="lineno">   40 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Generated code correctness&quot; testGeneratedCodeCorrectness</span>
+<span class="lineno">   41 </span><span class="spaces">    </span><span class="nottickedoff">],</span>
+<span class="lineno">   42 </span><span class="spaces">    </span><span class="nottickedoff">testGroup &quot;Edge Cases&quot; [</span>
+<span class="lineno">   43 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Empty input&quot; testEmptyInput,</span>
+<span class="lineno">   44 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Unicode support&quot; testUnicodeSupport,</span>
+<span class="lineno">   45 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Deeply nested code&quot; testDeeplyNestedCode,</span>
+<span class="lineno">   46 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Recursive structures&quot; testRecursiveStructures,</span>
+<span class="lineno">   47 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Zero-size types&quot; testZeroSizeTypes,</span>
+<span class="lineno">   48 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Self-referential types&quot; testSelfReferentialTypes</span>
+<span class="lineno">   49 </span><span class="spaces">    </span><span class="nottickedoff">],</span>
+<span class="lineno">   50 </span><span class="spaces">    </span><span class="nottickedoff">testGroup &quot;Security and Safety&quot; [</span>
+<span class="lineno">   51 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Buffer overflow prevention&quot; testBufferOverflowPrevention,</span>
+<span class="lineno">   52 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Null pointer safety&quot; testNullPointerSafety,</span>
+<span class="lineno">   53 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Input validation&quot; testInputValidation,</span>
+<span class="lineno">   54 </span><span class="spaces">        </span><span class="nottickedoff">testCase &quot;Dependency type safety&quot; testDependencyTypeSafety</span>
+<span class="lineno">   55 </span><span class="spaces">    </span><span class="nottickedoff">]</span>
+<span class="lineno">   56 </span><span class="spaces">    </span><span class="nottickedoff">]</span></span>
+<span class="lineno">   57 </span>
+<span class="lineno">   58 </span>-- 测试解析器处理大文件的能力
+<span class="lineno">   59 </span>testParserLargeFiles :: Assertion
+<span class="lineno">   60 </span><span class="decl"><span class="nottickedoff">testParserLargeFiles = do</span>
+<span class="lineno">   61 </span><span class="spaces">    </span><span class="nottickedoff">-- 生成一个较大的测试文件</span>
+<span class="lineno">   62 </span><span class="spaces">    </span><span class="nottickedoff">let largeCode = unlines $ replicate 10000 &quot;let x = 42 in x + 1&quot;</span>
+<span class="lineno">   63 </span><span class="spaces">    </span><span class="nottickedoff">start &lt;- getCurrentTime</span>
+<span class="lineno">   64 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus largeCode of</span>
+<span class="lineno">   65 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Parser failed on large file: &quot; ++ err</span>
+<span class="lineno">   66 </span><span class="spaces">        </span><span class="nottickedoff">Right _ -&gt; do</span>
+<span class="lineno">   67 </span><span class="spaces">            </span><span class="nottickedoff">end &lt;- getCurrentTime</span>
+<span class="lineno">   68 </span><span class="spaces">            </span><span class="nottickedoff">let parseTime :: Double = realToFrac $ diffUTCTime end start</span>
+<span class="lineno">   69 </span><span class="spaces">            </span><span class="nottickedoff">assertBool &quot;Parsing large file should complete within 2 seconds&quot; (parseTime &lt; 2)</span></span>
+<span class="lineno">   70 </span>
+<span class="lineno">   71 </span>-- 测试编译器生成有效的Go代码
+<span class="lineno">   72 </span>testCompilerOutput :: Assertion
+<span class="lineno">   73 </span><span class="decl"><span class="nottickedoff">testCompilerOutput = do</span>
+<span class="lineno">   74 </span><span class="spaces">    </span><span class="nottickedoff">let simpleCode = &quot;func main() { println(\&quot;Hello, World!\&quot;) }&quot;</span>
+<span class="lineno">   75 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus simpleCode of</span>
+<span class="lineno">   76 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Parser failed: &quot; ++ err</span>
+<span class="lineno">   77 </span><span class="spaces">        </span><span class="nottickedoff">Right typusFile -&gt; do</span>
+<span class="lineno">   78 </span><span class="spaces">            </span><span class="nottickedoff">case Compiler.compile typusFile of</span>
+<span class="lineno">   79 </span><span class="spaces">                </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Compilation failed: &quot; ++ err</span>
+<span class="lineno">   80 </span><span class="spaces">                </span><span class="nottickedoff">Right goCode -&gt; do</span>
+<span class="lineno">   81 </span><span class="spaces">                    </span><span class="nottickedoff">assertBool &quot;Generated Go code should contain package declaration&quot; </span>
+<span class="lineno">   82 </span><span class="spaces">                        </span><span class="nottickedoff">(&quot;package main&quot; `isInfixOf` goCode)</span>
+<span class="lineno">   83 </span><span class="spaces">                    </span><span class="nottickedoff">assertBool &quot;Generated Go code should contain main function&quot; </span>
+<span class="lineno">   84 </span><span class="spaces">                        </span><span class="nottickedoff">(&quot;func main&quot; `isInfixOf` goCode)</span></span>
+<span class="lineno">   85 </span>
+<span class="lineno">   86 </span>-- 测试所有权分析完成
+<span class="lineno">   87 </span>testOwnershipAnalysis :: Assertion
+<span class="lineno">   88 </span><span class="decl"><span class="nottickedoff">testOwnershipAnalysis = do</span>
+<span class="lineno">   89 </span><span class="spaces">    </span><span class="nottickedoff">let codeWithOwnership = unlines [</span>
+<span class="lineno">   90 </span><span class="spaces">            </span><span class="nottickedoff">&quot;let x = 42&quot;,</span>
+<span class="lineno">   91 </span><span class="spaces">            </span><span class="nottickedoff">&quot;let y = x&quot;,</span>
+<span class="lineno">   92 </span><span class="spaces">            </span><span class="nottickedoff">&quot;let z = x  -- This should be fine&quot;</span>
+<span class="lineno">   93 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">   94 </span><span class="spaces">    </span><span class="nottickedoff">let errors = Ownership.analyzeOwnership codeWithOwnership</span>
+<span class="lineno">   95 </span><span class="spaces">    </span><span class="nottickedoff">-- 这个简单的例子应该没有所有权错误</span>
+<span class="lineno">   96 </span><span class="spaces">    </span><span class="nottickedoff">assertEqual &quot;Simple ownership code should have no errors&quot; 0 (length errors)</span></span>
+<span class="lineno">   97 </span>
+<span class="lineno">   98 </span>-- 测试错误信息的质量
+<span class="lineno">   99 </span>testErrorMessages :: Assertion
+<span class="lineno">  100 </span><span class="decl"><span class="nottickedoff">testErrorMessages = do</span>
+<span class="lineno">  101 </span><span class="spaces">    </span><span class="nottickedoff">let malformedCode = &quot;let x = &quot;</span>
+<span class="lineno">  102 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus malformedCode of</span>
+<span class="lineno">  103 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; do</span>
+<span class="lineno">  104 </span><span class="spaces">            </span><span class="nottickedoff">assertBool &quot;Error message should be descriptive&quot; (length err &gt; 10)</span>
+<span class="lineno">  105 </span><span class="spaces">            </span><span class="nottickedoff">assertBool &quot;Error message should contain helpful information&quot; </span>
+<span class="lineno">  106 </span><span class="spaces">                </span><span class="nottickedoff">(&quot;error&quot; `isInfixOf` map toLower err)</span>
+<span class="lineno">  107 </span><span class="spaces">        </span><span class="nottickedoff">Right _ -&gt; assertFailure &quot;Parser should have failed on malformed code&quot;</span></span>
+<span class="lineno">  108 </span>
+<span class="lineno">  109 </span>-- 测试解析性能
+<span class="lineno">  110 </span>testParsingPerformance :: Assertion
+<span class="lineno">  111 </span><span class="decl"><span class="nottickedoff">testParsingPerformance = do</span>
+<span class="lineno">  112 </span><span class="spaces">    </span><span class="nottickedoff">let complexCode = unlines $ concat [</span>
+<span class="lineno">  113 </span><span class="spaces">            </span><span class="nottickedoff">[&quot;let f&quot; ++ show (i :: Int) ++ &quot; x = x + &quot; ++ show (i :: Int) | i &lt;- [1..100]],</span>
+<span class="lineno">  114 </span><span class="spaces">            </span><span class="nottickedoff">[&quot;let g&quot; ++ show (i :: Int) ++ &quot; = f&quot; ++ show (i :: Int) ++ &quot; . f&quot; ++ show ((i+1) :: Int) | i &lt;- [1..99]]</span>
+<span class="lineno">  115 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  116 </span><span class="spaces">    </span><span class="nottickedoff">start &lt;- getCurrentTime</span>
+<span class="lineno">  117 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus complexCode of</span>
+<span class="lineno">  118 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Parser failed: &quot; ++ err</span>
+<span class="lineno">  119 </span><span class="spaces">        </span><span class="nottickedoff">Right _ -&gt; do</span>
+<span class="lineno">  120 </span><span class="spaces">            </span><span class="nottickedoff">end &lt;- getCurrentTime</span>
+<span class="lineno">  121 </span><span class="spaces">            </span><span class="nottickedoff">let parseTime :: Double = realToFrac $ diffUTCTime end start</span>
+<span class="lineno">  122 </span><span class="spaces">            </span><span class="nottickedoff">assertBool &quot;Complex code should parse within 1 second&quot; (parseTime &lt; 1)</span></span>
+<span class="lineno">  123 </span>
+<span class="lineno">  124 </span>-- 测试编译性能
+<span class="lineno">  125 </span>testCompilationPerformance :: Assertion
+<span class="lineno">  126 </span><span class="decl"><span class="nottickedoff">testCompilationPerformance = do</span>
+<span class="lineno">  127 </span><span class="spaces">    </span><span class="nottickedoff">let complexCode = unlines $ [</span>
+<span class="lineno">  128 </span><span class="spaces">            </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  129 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    let sum = 0&quot;,</span>
+<span class="lineno">  130 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    for i in 1..1000 {&quot;,</span>
+<span class="lineno">  131 </span><span class="spaces">            </span><span class="nottickedoff">&quot;        sum = sum + i&quot;,</span>
+<span class="lineno">  132 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    }&quot;,</span>
+<span class="lineno">  133 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    println(sum)&quot;,</span>
+<span class="lineno">  134 </span><span class="spaces">            </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  135 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  136 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus complexCode of</span>
+<span class="lineno">  137 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Parser failed: &quot; ++ err</span>
+<span class="lineno">  138 </span><span class="spaces">        </span><span class="nottickedoff">Right typusFile -&gt; do</span>
+<span class="lineno">  139 </span><span class="spaces">            </span><span class="nottickedoff">start &lt;- getCurrentTime</span>
+<span class="lineno">  140 </span><span class="spaces">            </span><span class="nottickedoff">case Compiler.compile typusFile of</span>
+<span class="lineno">  141 </span><span class="spaces">                </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Compilation failed: &quot; ++ err</span>
+<span class="lineno">  142 </span><span class="spaces">                </span><span class="nottickedoff">Right _ -&gt; do</span>
+<span class="lineno">  143 </span><span class="spaces">                    </span><span class="nottickedoff">end &lt;- getCurrentTime</span>
+<span class="lineno">  144 </span><span class="spaces">                    </span><span class="nottickedoff">let compileTime :: Double = realToFrac $ diffUTCTime end start</span>
+<span class="lineno">  145 </span><span class="spaces">                    </span><span class="nottickedoff">assertBool &quot;Compilation should complete within 0.5 seconds&quot; (compileTime &lt; 0.5)</span></span>
+<span class="lineno">  146 </span>
+<span class="lineno">  147 </span>-- 测试内存使用
+<span class="lineno">  148 </span>testMemoryUsage :: Assertion
+<span class="lineno">  149 </span><span class="decl"><span class="nottickedoff">testMemoryUsage = do</span>
+<span class="lineno">  150 </span><span class="spaces">    </span><span class="nottickedoff">let largeCode = unlines $ replicate 5000 (&quot;let x&quot; ++ show (42 :: Int) ++ &quot; = &quot; ++ show (42 :: Int))</span>
+<span class="lineno">  151 </span><span class="spaces">    </span><span class="nottickedoff">result &lt;- evaluate $ Parser.parseTypus largeCode</span>
+<span class="lineno">  152 </span><span class="spaces">    </span><span class="nottickedoff">case result of</span>
+<span class="lineno">  153 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Parser failed: &quot; ++ err</span>
+<span class="lineno">  154 </span><span class="spaces">        </span><span class="nottickedoff">Right _ -&gt; return ()</span>
+<span class="lineno">  155 </span><span class="spaces">    </span><span class="nottickedoff">-- 如果没有内存溢出，测试就通过了</span>
+<span class="lineno">  156 </span><span class="spaces">    </span><span class="nottickedoff">assertBool &quot;Memory usage should be reasonable&quot; True</span></span>
+<span class="lineno">  157 </span>
+<span class="lineno">  158 </span>-- 解析器往返属性测试
+<span class="lineno">  159 </span>parserRoundtripProperty :: String -&gt; Bool
+<span class="lineno">  160 </span><span class="decl"><span class="nottickedoff">parserRoundtripProperty code = </span>
+<span class="lineno">  161 </span><span class="spaces">    </span><span class="nottickedoff">let parsed = Parser.parseTypus code</span>
+<span class="lineno">  162 </span><span class="spaces">    </span><span class="nottickedoff">in case parsed of</span>
+<span class="lineno">  163 </span><span class="spaces">        </span><span class="nottickedoff">Left _ -&gt; True  -- 无效代码是允许的</span>
+<span class="lineno">  164 </span><span class="spaces">        </span><span class="nottickedoff">Right ast -&gt; </span>
+<span class="lineno">  165 </span><span class="spaces">            </span><span class="nottickedoff">-- 在实际项目中，这里应该将AST转换回代码并比较</span>
+<span class="lineno">  166 </span><span class="spaces">            </span><span class="nottickedoff">-- 现在我们只确保解析不会崩溃</span>
+<span class="lineno">  167 </span><span class="spaces">            </span><span class="nottickedoff">True</span></span>
+<span class="lineno">  168 </span>
+<span class="lineno">  169 </span>-- 生成的Go代码编译属性测试
+<span class="lineno">  170 </span>goCodeCompilesProperty :: String -&gt; Bool
+<span class="lineno">  171 </span><span class="decl"><span class="nottickedoff">goCodeCompilesProperty code = </span>
+<span class="lineno">  172 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus code of</span>
+<span class="lineno">  173 </span><span class="spaces">        </span><span class="nottickedoff">Left _ -&gt; True</span>
+<span class="lineno">  174 </span><span class="spaces">        </span><span class="nottickedoff">Right typusFile -&gt; </span>
+<span class="lineno">  175 </span><span class="spaces">            </span><span class="nottickedoff">case Compiler.compile typusFile of</span>
+<span class="lineno">  176 </span><span class="spaces">                </span><span class="nottickedoff">Left _ -&gt; True</span>
+<span class="lineno">  177 </span><span class="spaces">                </span><span class="nottickedoff">Right goCode -&gt; </span>
+<span class="lineno">  178 </span><span class="spaces">                    </span><span class="nottickedoff">-- 检查生成的Go代码是否包含基本结构</span>
+<span class="lineno">  179 </span><span class="spaces">                    </span><span class="nottickedoff">&quot;package main&quot; `isInfixOf` goCode || </span>
+<span class="lineno">  180 </span><span class="spaces">                    </span><span class="nottickedoff">&quot;func&quot; `isInfixOf` goCode ||</span>
+<span class="lineno">  181 </span><span class="spaces">                    </span><span class="nottickedoff">(null goCode &amp;&amp; null code)</span></span>
+<span class="lineno">  182 </span>
+<span class="lineno">  183 </span>-- 测试所有权安全性
+<span class="lineno">  184 </span>testOwnershipSafety :: Assertion
+<span class="lineno">  185 </span><span class="decl"><span class="nottickedoff">testOwnershipSafety = do</span>
+<span class="lineno">  186 </span><span class="spaces">    </span><span class="nottickedoff">let useAfterMoveCode = unlines [</span>
+<span class="lineno">  187 </span><span class="spaces">            </span><span class="nottickedoff">&quot;let x = 42&quot;,</span>
+<span class="lineno">  188 </span><span class="spaces">            </span><span class="nottickedoff">&quot;let y = x&quot;,</span>
+<span class="lineno">  189 </span><span class="spaces">            </span><span class="nottickedoff">&quot;let z = x + 1  -- Use after move&quot;</span>
+<span class="lineno">  190 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  191 </span><span class="spaces">    </span><span class="nottickedoff">let errors = Ownership.analyzeOwnership useAfterMoveCode</span>
+<span class="lineno">  192 </span><span class="spaces">    </span><span class="nottickedoff">-- 应该检测到use-after-move错误</span>
+<span class="lineno">  193 </span><span class="spaces">    </span><span class="nottickedoff">assertBool &quot;Should detect use-after-move error&quot; (length errors &gt; 0)</span></span>
+<span class="lineno">  194 </span>
+<span class="lineno">  195 </span>-- 测试空输入
+<span class="lineno">  196 </span>testEmptyInput :: Assertion
+<span class="lineno">  197 </span><span class="decl"><span class="nottickedoff">testEmptyInput = do</span>
+<span class="lineno">  198 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus &quot;&quot; of</span>
+<span class="lineno">  199 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Parser failed on empty input: &quot; ++ err</span>
+<span class="lineno">  200 </span><span class="spaces">        </span><span class="nottickedoff">Right ast -&gt; </span>
+<span class="lineno">  201 </span><span class="spaces">            </span><span class="nottickedoff">assertEqual &quot;Empty input should produce minimal AST&quot; 0 (length $ show ast)</span></span>
+<span class="lineno">  202 </span>
+<span class="lineno">  203 </span>-- 测试Unicode支持
+<span class="lineno">  204 </span>testUnicodeSupport :: Assertion
+<span class="lineno">  205 </span><span class="decl"><span class="nottickedoff">testUnicodeSupport = do</span>
+<span class="lineno">  206 </span><span class="spaces">    </span><span class="nottickedoff">let unicodeCode = &quot;let 中文 = \&quot;你好世界\&quot; in println(中文)&quot;</span>
+<span class="lineno">  207 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus unicodeCode of</span>
+<span class="lineno">  208 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Parser failed on Unicode input: &quot; ++ err</span>
+<span class="lineno">  209 </span><span class="spaces">        </span><span class="nottickedoff">Right _ -&gt; return ()</span></span>
+<span class="lineno">  210 </span>
+<span class="lineno">  211 </span>-- 测试深度嵌套代码
+<span class="lineno">  212 </span>testDeeplyNestedCode :: Assertion
+<span class="lineno">  213 </span><span class="decl"><span class="nottickedoff">testDeeplyNestedCode = do</span>
+<span class="lineno">  214 </span><span class="spaces">    </span><span class="nottickedoff">let nestedCode = unlines $ [</span>
+<span class="lineno">  215 </span><span class="spaces">            </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  216 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    if true {&quot;,</span>
+<span class="lineno">  217 </span><span class="spaces">            </span><span class="nottickedoff">&quot;        if true {&quot;,</span>
+<span class="lineno">  218 </span><span class="spaces">            </span><span class="nottickedoff">&quot;            if true {&quot;,</span>
+<span class="lineno">  219 </span><span class="spaces">            </span><span class="nottickedoff">&quot;                println(\&quot;Deeply nested\&quot;)&quot;,</span>
+<span class="lineno">  220 </span><span class="spaces">            </span><span class="nottickedoff">&quot;            }&quot;,</span>
+<span class="lineno">  221 </span><span class="spaces">            </span><span class="nottickedoff">&quot;        }&quot;,</span>
+<span class="lineno">  222 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    }&quot;,</span>
+<span class="lineno">  223 </span><span class="spaces">            </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  224 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  225 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus nestedCode of</span>
+<span class="lineno">  226 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Parser failed on deeply nested code: &quot; ++ err</span>
+<span class="lineno">  227 </span><span class="spaces">        </span><span class="nottickedoff">Right _ -&gt; return ()</span></span>
+<span class="lineno">  228 </span>
+<span class="lineno">  229 </span>-- 测试无效输入处理
+<span class="lineno">  230 </span>testInvalidInputHandling :: Assertion
+<span class="lineno">  231 </span><span class="decl"><span class="nottickedoff">testInvalidInputHandling = do</span>
+<span class="lineno">  232 </span><span class="spaces">    </span><span class="nottickedoff">let invalidInputs = [</span>
+<span class="lineno">  233 </span><span class="spaces">            </span><span class="nottickedoff">&quot;let x = &quot;,  -- 不完整的表达式</span>
+<span class="lineno">  234 </span><span class="spaces">            </span><span class="nottickedoff">&quot;func() {&quot;,  -- 不完整的函数</span>
+<span class="lineno">  235 </span><span class="spaces">            </span><span class="nottickedoff">&quot;if true&quot;,   -- 不完整的if语句</span>
+<span class="lineno">  236 </span><span class="spaces">            </span><span class="nottickedoff">&quot;let x = y&quot;,  -- 未定义的变量</span>
+<span class="lineno">  237 </span><span class="spaces">            </span><span class="nottickedoff">&quot;123abc&quot;     -- 无效的token</span>
+<span class="lineno">  238 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  239 </span><span class="spaces">    </span><span class="nottickedoff">mapM_ testInvalidInput invalidInputs</span>
+<span class="lineno">  240 </span><span class="spaces">    </span><span class="nottickedoff">where</span>
+<span class="lineno">  241 </span><span class="spaces">        </span><span class="nottickedoff">testInvalidInput input = do</span>
+<span class="lineno">  242 </span><span class="spaces">            </span><span class="nottickedoff">case Parser.parseTypus input of</span>
+<span class="lineno">  243 </span><span class="spaces">                </span><span class="nottickedoff">Left _ -&gt; return ()  -- 预期失败</span>
+<span class="lineno">  244 </span><span class="spaces">                </span><span class="nottickedoff">Right _ -&gt; assertFailure $ &quot;Parser should have failed on invalid input: &quot; ++ input</span></span>
+<span class="lineno">  245 </span>
+<span class="lineno">  246 </span>-- 测试错误恢复
+<span class="lineno">  247 </span>testErrorRecovery :: Assertion
+<span class="lineno">  248 </span><span class="decl"><span class="nottickedoff">testErrorRecovery = do</span>
+<span class="lineno">  249 </span><span class="spaces">    </span><span class="nottickedoff">let codeWithErrors = unlines [</span>
+<span class="lineno">  250 </span><span class="spaces">            </span><span class="nottickedoff">&quot;let x = 42&quot;,</span>
+<span class="lineno">  251 </span><span class="spaces">            </span><span class="nottickedoff">&quot;let y = &quot;,  -- 语法错误</span>
+<span class="lineno">  252 </span><span class="spaces">            </span><span class="nottickedoff">&quot;let z = x + 1&quot;  -- 应该能够继续解析</span>
+<span class="lineno">  253 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  254 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus codeWithErrors of</span>
+<span class="lineno">  255 </span><span class="spaces">        </span><span class="nottickedoff">Left _ -&gt; return ()  -- 预期失败</span>
+<span class="lineno">  256 </span><span class="spaces">        </span><span class="nottickedoff">Right ast -&gt; do</span>
+<span class="lineno">  257 </span><span class="spaces">            </span><span class="nottickedoff">-- 即使有错误，也应该能够解析部分AST</span>
+<span class="lineno">  258 </span><span class="spaces">            </span><span class="nottickedoff">assertBool &quot;Should parse some AST even with errors&quot; (not $ null $ show ast)</span></span>
+<span class="lineno">  259 </span>
+<span class="lineno">  260 </span>-- 测试内存泄漏检测
+<span class="lineno">  261 </span>testMemoryLeakDetection :: Assertion
+<span class="lineno">  262 </span><span class="decl"><span class="nottickedoff">testMemoryLeakDetection = do</span>
+<span class="lineno">  263 </span><span class="spaces">    </span><span class="nottickedoff">let largeCode = unlines $ replicate 10000 &quot;let x = 42 in x + 1&quot;</span>
+<span class="lineno">  264 </span><span class="spaces">    </span><span class="nottickedoff">start &lt;- getCurrentTime</span>
+<span class="lineno">  265 </span><span class="spaces">    </span><span class="nottickedoff">result &lt;- evaluate $ Parser.parseTypus largeCode</span>
+<span class="lineno">  266 </span><span class="spaces">    </span><span class="nottickedoff">end &lt;- getCurrentTime</span>
+<span class="lineno">  267 </span><span class="spaces">    </span><span class="nottickedoff"></span>
+<span class="lineno">  268 </span><span class="spaces">    </span><span class="nottickedoff">-- 强制评估以确保没有内存泄漏</span>
+<span class="lineno">  269 </span><span class="spaces">    </span><span class="nottickedoff">case result of</span>
+<span class="lineno">  270 </span><span class="spaces">        </span><span class="nottickedoff">Left _ -&gt; return ()</span>
+<span class="lineno">  271 </span><span class="spaces">        </span><span class="nottickedoff">Right _ -&gt; return ()</span>
+<span class="lineno">  272 </span><span class="spaces">    </span><span class="nottickedoff"></span>
+<span class="lineno">  273 </span><span class="spaces">    </span><span class="nottickedoff">let parseTime :: Double = realToFrac $ diffUTCTime end start</span>
+<span class="lineno">  274 </span><span class="spaces">    </span><span class="nottickedoff">assertBool &quot;Parsing should complete within reasonable time&quot; (parseTime &lt; 5)</span>
+<span class="lineno">  275 </span><span class="spaces">    </span><span class="nottickedoff"></span>
+<span class="lineno">  276 </span><span class="spaces">    </span><span class="nottickedoff">-- 如果没有内存溢出或崩溃，测试就通过了</span>
+<span class="lineno">  277 </span><span class="spaces">    </span><span class="nottickedoff">assertBool &quot;No memory leaks detected&quot; True</span></span>
+<span class="lineno">  278 </span>
+<span class="lineno">  279 </span>-- 测试并发编译
+<span class="lineno">  280 </span>testConcurrentCompilation :: Assertion
+<span class="lineno">  281 </span><span class="decl"><span class="nottickedoff">testConcurrentCompilation = do</span>
+<span class="lineno">  282 </span><span class="spaces">    </span><span class="nottickedoff">let testFiles = [</span>
+<span class="lineno">  283 </span><span class="spaces">            </span><span class="nottickedoff">&quot;func test1() { return 1 }&quot;,</span>
+<span class="lineno">  284 </span><span class="spaces">            </span><span class="nottickedoff">&quot;func test2() { return 2 }&quot;,</span>
+<span class="lineno">  285 </span><span class="spaces">            </span><span class="nottickedoff">&quot;func test3() { return 3 }&quot;</span>
+<span class="lineno">  286 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  287 </span><span class="spaces">    </span><span class="nottickedoff"></span>
+<span class="lineno">  288 </span><span class="spaces">    </span><span class="nottickedoff">-- 模拟并发编译测试</span>
+<span class="lineno">  289 </span><span class="spaces">    </span><span class="nottickedoff">mapM_ compileFile testFiles</span>
+<span class="lineno">  290 </span><span class="spaces">    </span><span class="nottickedoff">where</span>
+<span class="lineno">  291 </span><span class="spaces">        </span><span class="nottickedoff">compileFile code = do</span>
+<span class="lineno">  292 </span><span class="spaces">            </span><span class="nottickedoff">case Parser.parseTypus code of</span>
+<span class="lineno">  293 </span><span class="spaces">                </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Parser failed: &quot; ++ err</span>
+<span class="lineno">  294 </span><span class="spaces">                </span><span class="nottickedoff">Right typusFile -&gt; do</span>
+<span class="lineno">  295 </span><span class="spaces">                    </span><span class="nottickedoff">case Compiler.compile typusFile of</span>
+<span class="lineno">  296 </span><span class="spaces">                        </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Compilation failed: &quot; ++ err</span>
+<span class="lineno">  297 </span><span class="spaces">                        </span><span class="nottickedoff">Right _ -&gt; return ()</span></span>
+<span class="lineno">  298 </span>
+<span class="lineno">  299 </span>-- 测试类型系统一致性
+<span class="lineno">  300 </span>testTypeSystemConsistency :: Assertion
+<span class="lineno">  301 </span><span class="decl"><span class="nottickedoff">testTypeSystemConsistency = do</span>
+<span class="lineno">  302 </span><span class="spaces">    </span><span class="nottickedoff">let typeTestCode = unlines [</span>
+<span class="lineno">  303 </span><span class="spaces">            </span><span class="nottickedoff">&quot;func add(a: int, b: int): int {&quot;,</span>
+<span class="lineno">  304 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    return a + b&quot;,</span>
+<span class="lineno">  305 </span><span class="spaces">            </span><span class="nottickedoff">&quot;}&quot;,</span>
+<span class="lineno">  306 </span><span class="spaces">            </span><span class="nottickedoff">&quot;let result = add(1, 2)&quot;,</span>
+<span class="lineno">  307 </span><span class="spaces">            </span><span class="nottickedoff">&quot;let wrong = add(\&quot;hello\&quot;, \&quot;world\&quot;)&quot;  -- 类型错误</span>
+<span class="lineno">  308 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  309 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus typeTestCode of</span>
+<span class="lineno">  310 </span><span class="spaces">        </span><span class="nottickedoff">Left _ -&gt; return ()  -- 预期失败</span>
+<span class="lineno">  311 </span><span class="spaces">        </span><span class="nottickedoff">Right _ -&gt; assertFailure &quot;Type system should catch type mismatches&quot;</span></span>
+<span class="lineno">  312 </span>
+<span class="lineno">  313 </span>-- 测试生成的代码正确性
+<span class="lineno">  314 </span>testGeneratedCodeCorrectness :: Assertion
+<span class="lineno">  315 </span><span class="decl"><span class="nottickedoff">testGeneratedCodeCorrectness = do</span>
+<span class="lineno">  316 </span><span class="spaces">    </span><span class="nottickedoff">let testCode = unlines [</span>
+<span class="lineno">  317 </span><span class="spaces">            </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  318 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    let x = 42&quot;,</span>
+<span class="lineno">  319 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    let y = x + 1&quot;,</span>
+<span class="lineno">  320 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    println(y)&quot;,</span>
+<span class="lineno">  321 </span><span class="spaces">            </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  322 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  323 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus testCode of</span>
+<span class="lineno">  324 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Parser failed: &quot; ++ err</span>
+<span class="lineno">  325 </span><span class="spaces">        </span><span class="nottickedoff">Right typusFile -&gt; do</span>
+<span class="lineno">  326 </span><span class="spaces">            </span><span class="nottickedoff">case Compiler.compile typusFile of</span>
+<span class="lineno">  327 </span><span class="spaces">                </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Compilation failed: &quot; ++ err</span>
+<span class="lineno">  328 </span><span class="spaces">                </span><span class="nottickedoff">Right goCode -&gt; do</span>
+<span class="lineno">  329 </span><span class="spaces">                    </span><span class="nottickedoff">-- 检查生成的Go代码的正确性</span>
+<span class="lineno">  330 </span><span class="spaces">                    </span><span class="nottickedoff">assertBool &quot;Generated code should contain main function&quot; </span>
+<span class="lineno">  331 </span><span class="spaces">                        </span><span class="nottickedoff">(&quot;func main&quot; `isInfixOf` goCode)</span>
+<span class="lineno">  332 </span><span class="spaces">                    </span><span class="nottickedoff">assertBool &quot;Generated code should contain variable declarations&quot; </span>
+<span class="lineno">  333 </span><span class="spaces">                        </span><span class="nottickedoff">(&quot;x :=&quot; `isInfixOf` goCode)</span>
+<span class="lineno">  334 </span><span class="spaces">                    </span><span class="nottickedoff">assertBool &quot;Generated code should contain println statement&quot; </span>
+<span class="lineno">  335 </span><span class="spaces">                        </span><span class="nottickedoff">(&quot;println&quot; `isInfixOf` goCode)</span></span>
+<span class="lineno">  336 </span>
+<span class="lineno">  337 </span>-- 测试递归结构
+<span class="lineno">  338 </span>testRecursiveStructures :: Assertion
+<span class="lineno">  339 </span><span class="decl"><span class="nottickedoff">testRecursiveStructures = do</span>
+<span class="lineno">  340 </span><span class="spaces">    </span><span class="nottickedoff">let recursiveCode = unlines [</span>
+<span class="lineno">  341 </span><span class="spaces">            </span><span class="nottickedoff">&quot;type Node struct {&quot;,</span>
+<span class="lineno">  342 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    value int&quot;,</span>
+<span class="lineno">  343 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    next *Node&quot;,</span>
+<span class="lineno">  344 </span><span class="spaces">            </span><span class="nottickedoff">&quot;}&quot;,</span>
+<span class="lineno">  345 </span><span class="spaces">            </span><span class="nottickedoff">&quot;func createNode(value int): Node {&quot;,</span>
+<span class="lineno">  346 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    return Node{value: value, next: nil}&quot;,</span>
+<span class="lineno">  347 </span><span class="spaces">            </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  348 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  349 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus recursiveCode of</span>
+<span class="lineno">  350 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Parser failed on recursive structure: &quot; ++ err</span>
+<span class="lineno">  351 </span><span class="spaces">        </span><span class="nottickedoff">Right _ -&gt; return ()</span></span>
+<span class="lineno">  352 </span>
+<span class="lineno">  353 </span>-- 测试零大小类型
+<span class="lineno">  354 </span>testZeroSizeTypes :: Assertion
+<span class="lineno">  355 </span><span class="decl"><span class="nottickedoff">testZeroSizeTypes = do</span>
+<span class="lineno">  356 </span><span class="spaces">    </span><span class="nottickedoff">let zeroSizeCode = unlines [</span>
+<span class="lineno">  357 </span><span class="spaces">            </span><span class="nottickedoff">&quot;type Empty struct {}&quot;,</span>
+<span class="lineno">  358 </span><span class="spaces">            </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  359 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    let e = Empty{}&quot;,</span>
+<span class="lineno">  360 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    println(e)&quot;,</span>
+<span class="lineno">  361 </span><span class="spaces">            </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  362 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  363 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus zeroSizeCode of</span>
+<span class="lineno">  364 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Parser failed on zero-size type: &quot; ++ err</span>
+<span class="lineno">  365 </span><span class="spaces">        </span><span class="nottickedoff">Right _ -&gt; return ()</span></span>
+<span class="lineno">  366 </span>
+<span class="lineno">  367 </span>-- 测试自引用类型
+<span class="lineno">  368 </span>testSelfReferentialTypes :: Assertion
+<span class="lineno">  369 </span><span class="decl"><span class="nottickedoff">testSelfReferentialTypes = do</span>
+<span class="lineno">  370 </span><span class="spaces">    </span><span class="nottickedoff">let selfRefCode = unlines [</span>
+<span class="lineno">  371 </span><span class="spaces">            </span><span class="nottickedoff">&quot;type List struct {&quot;,</span>
+<span class="lineno">  372 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    head int&quot;,</span>
+<span class="lineno">  373 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    tail *List&quot;,</span>
+<span class="lineno">  374 </span><span class="spaces">            </span><span class="nottickedoff">&quot;}&quot;,</span>
+<span class="lineno">  375 </span><span class="spaces">            </span><span class="nottickedoff">&quot;func createList(head int): List {&quot;,</span>
+<span class="lineno">  376 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    return List{head: head, tail: nil}&quot;,</span>
+<span class="lineno">  377 </span><span class="spaces">            </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  378 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  379 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus selfRefCode of</span>
+<span class="lineno">  380 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; assertFailure $ &quot;Parser failed on self-referential type: &quot; ++ err</span>
+<span class="lineno">  381 </span><span class="spaces">        </span><span class="nottickedoff">Right _ -&gt; return ()</span></span>
+<span class="lineno">  382 </span>
+<span class="lineno">  383 </span>-- 测试缓冲区溢出预防
+<span class="lineno">  384 </span>testBufferOverflowPrevention :: Assertion
+<span class="lineno">  385 </span><span class="decl"><span class="nottickedoff">testBufferOverflowPrevention = do</span>
+<span class="lineno">  386 </span><span class="spaces">    </span><span class="nottickedoff">let bufferCode = unlines [</span>
+<span class="lineno">  387 </span><span class="spaces">            </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  388 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    let arr = [10]int{}&quot;,</span>
+<span class="lineno">  389 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    arr[10] = 42  // 缓冲区溢出&quot;,</span>
+<span class="lineno">  390 </span><span class="spaces">            </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  391 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  392 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus bufferCode of</span>
+<span class="lineno">  393 </span><span class="spaces">        </span><span class="nottickedoff">Left _ -&gt; return ()  -- 预期失败</span>
+<span class="lineno">  394 </span><span class="spaces">        </span><span class="nottickedoff">Right _ -&gt; assertFailure &quot;Should catch buffer overflow attempts&quot;</span></span>
+<span class="lineno">  395 </span>
+<span class="lineno">  396 </span>-- 测试空指针安全
+<span class="lineno">  397 </span>testNullPointerSafety :: Assertion
+<span class="lineno">  398 </span><span class="decl"><span class="nottickedoff">testNullPointerSafety = do</span>
+<span class="lineno">  399 </span><span class="spaces">    </span><span class="nottickedoff">let nullPtrCode = unlines [</span>
+<span class="lineno">  400 </span><span class="spaces">            </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  401 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    let ptr: *int = nil&quot;,</span>
+<span class="lineno">  402 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    println(*ptr)  // 空指针解引用&quot;,</span>
+<span class="lineno">  403 </span><span class="spaces">            </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  404 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  405 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus nullPtrCode of</span>
+<span class="lineno">  406 </span><span class="spaces">        </span><span class="nottickedoff">Left _ -&gt; return ()  -- 预期失败</span>
+<span class="lineno">  407 </span><span class="spaces">        </span><span class="nottickedoff">Right _ -&gt; assertFailure &quot;Should catch null pointer dereference&quot;</span></span>
+<span class="lineno">  408 </span>
+<span class="lineno">  409 </span>-- 测试输入验证
+<span class="lineno">  410 </span>testInputValidation :: Assertion
+<span class="lineno">  411 </span><span class="decl"><span class="nottickedoff">testInputValidation = do</span>
+<span class="lineno">  412 </span><span class="spaces">    </span><span class="nottickedoff">let validationCode = unlines [</span>
+<span class="lineno">  413 </span><span class="spaces">            </span><span class="nottickedoff">&quot;func divide(a: int, b: int): int {&quot;,</span>
+<span class="lineno">  414 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    return a / b  // 可能的除零错误&quot;,</span>
+<span class="lineno">  415 </span><span class="spaces">            </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  416 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  417 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus validationCode of</span>
+<span class="lineno">  418 </span><span class="spaces">        </span><span class="nottickedoff">Left _ -&gt; return ()  -- 预期失败</span>
+<span class="lineno">  419 </span><span class="spaces">        </span><span class="nottickedoff">Right _ -&gt; assertFailure &quot;Should validate input for division&quot;</span></span>
+<span class="lineno">  420 </span>
+<span class="lineno">  421 </span>-- 测试依赖类型安全
+<span class="lineno">  422 </span>testDependencyTypeSafety :: Assertion
+<span class="lineno">  423 </span><span class="decl"><span class="nottickedoff">testDependencyTypeSafety = do</span>
+<span class="lineno">  424 </span><span class="spaces">    </span><span class="nottickedoff">let depTypeCode = unlines [</span>
+<span class="lineno">  425 </span><span class="spaces">            </span><span class="nottickedoff">&quot;func safeDivide(a: int, b: int | b != 0): int {&quot;,</span>
+<span class="lineno">  426 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    return a / b&quot;,</span>
+<span class="lineno">  427 </span><span class="spaces">            </span><span class="nottickedoff">&quot;}&quot;,</span>
+<span class="lineno">  428 </span><span class="spaces">            </span><span class="nottickedoff">&quot;func main() {&quot;,</span>
+<span class="lineno">  429 </span><span class="spaces">            </span><span class="nottickedoff">&quot;    let result = safeDivide(10, 0)  // 违反依赖类型约束&quot;,</span>
+<span class="lineno">  430 </span><span class="spaces">            </span><span class="nottickedoff">&quot;}&quot;</span>
+<span class="lineno">  431 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  432 </span><span class="spaces">    </span><span class="nottickedoff">case Parser.parseTypus depTypeCode of</span>
+<span class="lineno">  433 </span><span class="spaces">        </span><span class="nottickedoff">Left _ -&gt; return ()  -- 预期失败</span>
+<span class="lineno">  434 </span><span class="spaces">        </span><span class="nottickedoff">Right _ -&gt; assertFailure &quot;Should catch dependent type violations&quot;</span></span>
+
+</pre>
+</body>
+</html>

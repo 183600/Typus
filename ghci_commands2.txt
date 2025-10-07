@@ -1,0 +1,7 @@
+:set prompt "> "
+content <- readFile "test_input.txt"
+putStrLn "Original content:"
+putStrLn content
+putStrLn "Cleaned content:"
+putStrLn (cleanCodeBlocks content)
+:q

@@ -1,0 +1,452 @@
+package main
+
+// 内存管理测试文件
+
+import (
+    "fmt"
+    "runtime"
+    "sync"
+    "time"
+    "unsafe"
+)
+
+func main() {
+    fmt.Println("=== Memory Management Tests ===")
+    
+    // 测试1: 基本内存分配和释放
+    basicMemoryAllocation()
+    
+    // 测试2: 切片内存管理
+    sliceMemoryManagement()
+    
+    // 测试3: Map内存管理
+    mapMemoryManagement()
+    
+    // 测试4: 结构体内存对齐
+    structMemoryAlignment()
+    
+    // 测试5: 指针和引用
+    pointerAndReferences()
+    
+    // 测试6: 内存池模式
+    memoryPoolPattern()
+    
+    // 测试7: 垃圾回收行为
+    garbageCollectionBehavior()
+    
+    // 测试8: 内存泄漏检测
+    memoryLeakDetection()
+    
+    // 测试9: 大对象分配
+    largeObjectAllocation()
+    
+    // 测试10: 并发内存访问
+    concurrentMemoryAccess()
+    
+    // 测试11: 内存碎片测试
+    memoryFragmentation()
+    
+    // 测试12: 栈和堆分配
+    stackAndHeapAllocation()
+    
+    fmt.Println("Memory management tests completed")
+}
+
+func basicMemoryAllocation() {
+    fmt.Println("\n--- Basic Memory Allocation ---")
+    
+    printMemoryStats("Before allocation")
+    
+    // 分配一些内存
+    data := make([]int, 1000)
+    for i := range data {
+        data[i] = i * i
+    }
+    
+    printMemoryStats("After allocation")
+    
+    // 释放内存
+    data = nil
+    runtime.GC()
+    
+    printMemoryStats("After deallocation")
+}
+
+func sliceMemoryManagement() {
+    fmt.Println("\n--- Slice Memory Management ---")
+    
+    // 测试切片增长
+    var slice []int
+    printMemoryStats("Empty slice")
+    
+    for i := 0; i < 10000; i++ {
+        slice = append(slice, i)
+        if i%1000 == 0 {
+            printMemoryStats(fmt.Sprintf("Slice size: %d", len(slice)))
+        }
+    }
+    
+    // 切片截取
+    slice2 := slice[1000:2000]
+    printMemoryStats("After slicing")
+    
+    // 复制切片
+    slice3 := make([]int, len(slice2))
+    copy(slice3, slice2)
+    printMemoryStats("After copying")
+    
+    // 释放原始切片
+    slice = nil
+    runtime.GC()
+    printMemoryStats("After releasing original slice")
+}
+
+func mapMemoryManagement() {
+    fmt.Println("\n--- Map Memory Management ---")
+    
+    // 创建map并添加元素
+    m := make(map[string][]int)
+    
+    for i := 0; i < 1000; i++ {
+        key := fmt.Sprintf("key_%d", i)
+        value := make([]int, 100)
+        for j := range value {
+            value[j] = j
+        }
+        m[key] = value
+    }
+    
+    printMemoryStats("Map with 1000 entries")
+    
+    // 删除一些元素
+    for i := 0; i < 500; i++ {
+        key := fmt.Sprintf("key_%d", i)
+        delete(m, key)
+    }
+    
+    printMemoryStats("After deleting 500 entries")
+    
+    // 清空map
+    for k := range m {
+        delete(m, k)
+    }
+    
+    printMemoryStats("After clearing map")
+}
+
+func structMemoryAlignment() {
+    fmt.Println("\n--- Struct Memory Alignment ---")
+    
+    type SmallStruct struct {
+        a int8
+        b int16
+        c int32
+    }
+    
+    type LargeStruct struct {
+        a int64
+        b int32
+        c int16
+        d int8
+        e []int
+        f map[string]int
+    }
+    
+    type PaddedStruct struct {
+        a int8    // 1 byte
+        // 7 bytes padding
+        b int64   // 8 bytes
+        c int32   // 4 bytes
+        // 4 bytes padding
+        d int64   // 8 bytes
+    }
+    
+    small := SmallStruct{a: 1, b: 2, c: 3}
+    large := LargeStruct{
+        a: 1, b: 2, c: 3, d: 4,
+        e: []int{1, 2, 3},
+        f: map[string]int{"x": 1},
+    }
+    padded := PaddedStruct{a: 1, b: 2, c: 3, d: 4}
+    
+    fmt.Printf("SmallStruct size: %d bytes\n", unsafe.Sizeof(small))
+    fmt.Printf("LargeStruct size: %d bytes\n", unsafe.Sizeof(large))
+    fmt.Printf("PaddedStruct size: %d bytes\n", unsafe.Sizeof(padded))
+    
+    printMemoryStats("After struct creation")
+}
+
+func pointerAndReferences() {
+    fmt.Println("\n--- Pointer and References ---")
+    
+    // 值类型 vs 引用类型
+    value1 := 42
+    value2 := value1
+    value2 = 100
+    
+    fmt.Printf("Value1: %d, Value2: %d\n", value1, value2)
+    
+    // 指针
+    ptr1 := &value1
+    ptr2 := ptr1
+    *ptr2 = 200
+    
+    fmt.Printf("Value1 via pointer: %d\n", *ptr1)
+    
+    // 切片（引用类型）
+    slice1 := []int{1, 2, 3}
+    slice2 := slice1
+    slice2[0] = 999
+    
+    fmt.Printf("Slice1[0]: %d, Slice2[0]: %d\n", slice1[0], slice2[0])
+    
+    // Map（引用类型）
+    map1 := map[string]int{"x": 1}
+    map2 := map1
+    map2["x"] = 888
+    
+    fmt.Printf("Map1[\"x\"]: %d, Map2[\"x\"]: %d\n", map1["x"], map2["x"])
+}
+
+func memoryPoolPattern() {
+    fmt.Println("\n--- Memory Pool Pattern ---")
+    
+    type ObjectPool struct {
+        pool chan *LargeObject
+    }
+    
+    type LargeObject struct {
+        Data [1024]int
+    }
+    
+    pool := &ObjectPool{
+        pool: make(chan *LargeObject, 100),
+    }
+    
+    // 预分配对象
+    for i := 0; i < 100; i++ {
+        pool.pool <- &LargeObject{}
+    }
+    
+    printMemoryStats("After pool creation")
+    
+    // 使用对象池
+    for i := 0; i < 1000; i++ {
+        obj := <-pool.pool
+        // 使用对象
+        for j := range obj.Data {
+            obj.Data[j] = j
+        }
+        // 归还对象
+        pool.pool <- obj
+    }
+    
+    printMemoryStats("After pool usage")
+}
+
+func garbageCollectionBehavior() {
+    fmt.Println("\n--- Garbage Collection Behavior ---")
+    
+    // 强制垃圾回收
+    runtime.GC()
+    printMemoryStats("After forced GC")
+    
+    // 创建大量临时对象
+    for i := 0; i < 1000; i++ {
+        temp := make([]int, 1000)
+        for j := range temp {
+            temp[j] = j
+        }
+        // temp在这里超出作用域，可以被GC
+    }
+    
+    runtime.GC()
+    printMemoryStats("After temporary objects cleanup")
+    
+    // 设置GC百分比
+    oldPercent := runtime.SetGCPercent(50)
+    fmt.Printf("Old GC percent: %d, New GC percent: 50\n", oldPercent)
+    
+    // 恢复原始设置
+    runtime.SetGCPercent(oldPercent)
+}
+
+func memoryLeakDetection() {
+    fmt.Println("\n--- Memory Leak Detection ---")
+    
+    initialMemory := getMemoryUsage()
+    
+    // 模拟内存泄漏
+    leakySlice := make([][]int, 0)
+    
+    for i := 0; i < 100; i++ {
+        largeData := make([]int, 10000)
+        for j := range largeData {
+            largeData[j] = j
+        }
+        leakySlice = append(leakySlice, largeData)
+        
+        if i%20 == 0 {
+            currentMemory := getMemoryUsage()
+            fmt.Printf("Iteration %d: Memory usage: %d KB\n", i, currentMemory)
+        }
+    }
+    
+    finalMemory := getMemoryUsage()
+    fmt.Printf("Memory increase: %d KB\n", finalMemory-initialMemory)
+    
+    // 清理（注释掉以模拟真正的内存泄漏）
+    // leakySlice = nil
+    // runtime.GC()
+}
+
+func largeObjectAllocation() {
+    fmt.Println("\n--- Large Object Allocation ---")
+    
+    sizes := []int{1000000, 10000000, 50000000} // 1M, 10M, 50M 元素
+    
+    for _, size := range sizes {
+        printMemoryStats(fmt.Sprintf("Before allocating %d elements", size))
+        
+        start := time.Now()
+        largeArray := make([]int, size)
+        for i := range largeArray {
+            largeArray[i] = i
+        }
+        elapsed := time.Since(start)
+        
+        printMemoryStats(fmt.Sprintf("After allocating %d elements", size))
+        
+        fmt.Printf("Allocation time: %v\n", elapsed)
+        
+        // 释放内存
+        largeArray = nil
+        runtime.GC()
+        
+        printMemoryStats("After deallocation")
+    }
+}
+
+func concurrentMemoryAccess() {
+    fmt.Println("\n--- Concurrent Memory Access ---")
+    
+    sharedData := make([]int, 1000)
+    var mu sync.Mutex
+    var wg sync.WaitGroup
+    
+    workers := 10
+    operationsPerWorker := 10000
+    
+    start := time.Now()
+    
+    for w := 0; w < workers; w++ {
+        wg.Add(1)
+        go func(workerID int) {
+            defer wg.Done()
+            
+            for i := 0; i < operationsPerWorker; i++ {
+                index := (workerID + i) % len(sharedData)
+                
+                // 有锁访问
+                mu.Lock()
+                sharedData[index]++
+                mu.Unlock()
+            }
+        }(w)
+    }
+    
+    wg.Wait()
+    elapsed := time.Since(start)
+    
+    fmt.Printf("Workers: %d, Operations per worker: %d, Total time: %v\n", 
+        workers, operationsPerWorker, elapsed)
+    
+    // 验证结果
+    total := 0
+    for _, v := range sharedData {
+        total += v
+    }
+    fmt.Printf("Total operations: %d (expected: %d)\n", total, workers*operationsPerWorker)
+}
+
+func memoryFragmentation() {
+    fmt.Println("\n--- Memory Fragmentation ---")
+    
+    printMemoryStats("Initial state")
+    
+    // 分配不同大小的对象
+    objects := make([]interface{}, 0)
+    
+    // 小对象
+    for i := 0; i < 1000; i++ {
+        objects = append(objects, make([]int, 10))
+    }
+    
+    // 中等对象
+    for i := 0; i < 100; i++ {
+        objects = append(objects, make([]int, 1000))
+    }
+    
+    // 大对象
+    for i := 0; i < 10; i++ {
+        objects = append(objects, make([]int, 100000))
+    }
+    
+    printMemoryStats("After mixed allocation")
+    
+    // 释放部分对象（创建碎片）
+    for i := 0; i < len(objects); i += 2 {
+        objects[i] = nil
+    }
+    
+    runtime.GC()
+    printMemoryStats("After partial deallocation")
+    
+    // 重新分配
+    for i := 0; i < len(objects); i += 2 {
+        objects[i] = make([]int, 50) // 中等大小
+    }
+    
+    printMemoryStats("After reallocation")
+}
+
+func stackAndHeapAllocation() {
+    fmt.Println("\n--- Stack and Heap Allocation ---")
+    
+    // 栈分配（小对象）
+    stackVar := 42
+    stackArray := [100]int{}
+    
+    // 堆分配（大对象或逃逸的对象）
+    heapSlice := make([]int, 1000)
+    heapMap := make(map[int]string)
+    
+    // 检查变量是否逃逸到堆
+    escapeAnalysis := func() *int {
+        localVar := 100
+        return &localVar // 这会逃逸到堆
+    }
+    
+    escapedVar := escapeAnalysis()
+    
+    fmt.Printf("Stack variable address: %p\n", &stackVar)
+    fmt.Printf("Stack array address: %p\n", &stackArray)
+    fmt.Printf("Heap slice address: %p\n", heapSlice)
+    fmt.Printf("Escaped variable address: %p\n", escapedVar)
+    
+    printMemoryStats("After stack/heap allocation")
+}
+
+func printMemoryStats(label string) {
+    var m runtime.MemStats
+    runtime.ReadMemStats(&m)
+    
+    fmt.Printf("%s - Alloc: %d KB, TotalAlloc: %d KB, Sys: %d KB, GC: %d\n",
+        label, m.Alloc/1024, m.TotalAlloc/1024, m.Sys/1024, m.NumGC)
+}
+
+func getMemoryUsage() int {
+    var m runtime.MemStats
+    runtime.ReadMemStats(&m)
+    return int(m.Alloc / 1024)
+}

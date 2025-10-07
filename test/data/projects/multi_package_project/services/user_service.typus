@@ -1,0 +1,57 @@
+package services
+
+import (
+    "errors"
+    "multi_package_project/models"
+)
+
+type UserService struct {
+    users map[string]*models.User
+}
+
+func NewUserService() *UserService {
+    return &UserService{
+        users: make(map[string]*models.User),
+    }
+}
+
+func (us *UserService) CreateUser(username, email string) (*models.User, error) {
+    if _, exists := us.users[username]; exists {
+        return nil, errors.New("user already exists")
+    }
+
+    user := models.NewUser(username, email)
+    us.users[username] = user
+
+    // Move ownership to caller
+    return user, nil
+}
+
+func (us *UserService) GetUser(username string) (*models.User, error) {
+    user, exists := us.users[username]
+    if !exists {
+        return nil, errors.New("user not found")
+    }
+
+    // Return reference without moving ownership
+    return user, nil
+}
+
+func (us *UserService) UpdateUser(user *models.User) error {
+    if _, exists := us.users[user.Name]; !exists {
+        return errors.New("user not found")
+    }
+
+    // Update user in storage
+    us.users[user.Name] = user
+    return nil
+}
+
+// Function to test complex ownership patterns
+func TransferUserData(source *models.User, target *models.User) {
+    // Move data from source to target
+    target.Email = source.Email
+    target.Active = source.Active
+
+    // source data is now conceptually moved
+}

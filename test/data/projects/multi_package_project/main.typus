@@ -1,0 +1,36 @@
+package main
+
+import (
+    "multi_package_project/services"
+    "multi_package_project/utils"
+    "fmt"
+)
+
+func main() {
+    // Test service functionality
+    userService := services.NewUserService()
+    user, err := userService.CreateUser("john_doe", "john@example.com")
+    if err != nil {
+        fmt.Printf("Error creating user: %v\n", err)
+        return
+    }
+
+    // Test utility functions
+    formattedName := utils.FormatUserName(user.Name)
+    isValid := utils.ValidateEmail(user.Email)
+
+    fmt.Printf("Created user: %s\n", formattedName)
+    fmt.Printf("Email valid: %t\n", isValid)
+
+    // Test ownership patterns
+    movedUser := transferOwnership(user)
+    fmt.Printf("Transferred user: %s\n", movedUser.Name)
+}
+
+// Function to test ownership transfer
+func transferOwnership(user *services.User) *services.User {
+    // Move ownership of user
+    newUser := user
+    // user is now moved and cannot be used
+    return newUser
+}

@@ -1,0 +1,18 @@
+package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("Hello from Typus!")
+    
+    // Simple dependent type test
+    vec := make([]int, 3)
+    vec[0] = 1
+    vec[1] = 2
+    vec[2] = 3
+    
+    fmt.Printf("Vector length: %d\n", len(vec))
+    fmt.Printf("First element: %d\n", vec[0])
+    
+    fmt.Println("Dependent type test completed")
+}

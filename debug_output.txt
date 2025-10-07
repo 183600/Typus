@@ -1,0 +1,24 @@
+Parsing completed for: debug_test_minimal.typus
+Generated Go code (408 characters):
+----------------------------------------
+package main
+import (
+    "fmt"
+    "math"
+)
+// Dependent types runtime support
+/*
+ * Note: Dependent types are not natively supported in Go.
+ * Runtime checks would be needed to enforce constraints.
+ * Example functions for constraint validation would go here.
+ */
+}
+func mathExample() {
+	fmt.Printf("Pi: %.6f\n", math.Pi)
+	fmt.Printf("Sin(Pi/2): %.6f\n", math.Sin(math.Pi/2))
+func main() {
+	mathExample()
+
+
+----------------------------------------
+Converted: debug_test_minimal.typus -> debug_test_minimal.go

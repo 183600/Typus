@@ -1,0 +1,619 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+	"sync"
+	"errors"
+)
+
+// Constants and variables
+const (
+	MAX_SIZE = 100
+	PI       = 3.14159
+	VERSION  = "1.0.0"
+)
+
+var (
+	globalCounter int
+	globalMap     map[string]int
+	globalSlice   []string
+)
+
+// Type definitions
+type Person struct {
+	Name    string
+	Age     int
+	Email   string
+	private string
+}
+
+type Calculator interface {
+	Add(a, b int) int
+	Subtract(a, b int) int
+	Multiply(a, b int) int
+	Divide(a, b int) (int, error)
+}
+
+type MathCalc struct{}
+
+func (m MathCalc) Add(a, b int) int {
+	return a + b
+}
+
+func (m MathCalc) Subtract(a, b int) int {
+	return a - b
+}
+
+func (m MathCalc) Multiply(a, b int) int {
+	return a * b
+}
+
+func (m MathCalc) Divide(a, b int) (int, error) {
+	if b == 0 {
+		return 0, errors.New("division by zero")
+	}
+	return a / b, nil
+}
+
+type StringProcessor func(string) string
+
+// Generic types
+type Stack[T any] struct {
+	items []T
+}
+
+func (s *Stack[T]) Push(item T) {
+	s.items = append(s.items, item)
+}
+
+func (s *Stack[T]) Pop() (T, bool) {
+	if len(s.items) == 0 {
+		var zero T
+		return zero, false
+	}
+	item := s.items[len(s.items)-1]
+	s.items = s.items[:len(s.items)-1]
+	return item, true
+}
+
+// Functions with various features
+func basicFunction(x int) int {
+	return x * 2
+}
+
+func multipleReturns(x int) (int, string, error) {
+	if x < 0 {
+		return 0, "", errors.New("negative value")
+	}
+	return x * 2, fmt.Sprintf("doubled: %d", x*2), nil
+}
+
+func namedReturns(x, y int) (sum int, product int) {
+	sum = x + y
+	product = x * y
+	return
+}
+
+func variadicFunction(nums ...int) int {
+	sum := 0
+	for _, num := range nums {
+		sum += num
+	}
+	return sum
+}
+
+func functionWithClosure() func() int {
+	counter := 0
+	return func() int {
+		counter++
+		return counter
+	}
+}
+
+func functionWithDefer() {
+	fmt.Println("Start")
+	defer fmt.Println("Deferred 1")
+	defer fmt.Println("Deferred 2")
+	fmt.Println("Middle")
+}
+
+func functionWithPanic() (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("recovered from panic: %v", r)
+		}
+	}()
+	
+	fmt.Println("About to panic")
+	panic("something went wrong")
+}
+
+// Control structures
+func testControlStructures() {
+	// If statements
+	x := 10
+	if x > 5 {
+		fmt.Println("x is greater than 5")
+	} else if x == 5 {
+		fmt.Println("x equals 5")
+	} else {
+		fmt.Println("x is less than 5")
+	}
+	
+	// Switch statements
+	switch day := time.Now().Weekday(); day {
+	case time.Saturday, time.Sunday:
+		fmt.Println("Weekend")
+	case time.Monday:
+		fmt.Println("Monday blues")
+	default:
+		fmt.Println("Weekday")
+	}
+	
+	// Type switch
+	var i interface{} = "hello"
+	switch v := i.(type) {
+	case int:
+		fmt.Printf("Integer: %d\n", v)
+	case string:
+		fmt.Printf("String: %s\n", v)
+	default:
+		fmt.Printf("Unknown type: %T\n", v)
+	}
+	
+	// For loops
+	for i := 0; i < 5; i++ {
+		fmt.Printf("Loop %d\n", i)
+	}
+	
+	// While-style loop
+	count := 0
+	for count < 3 {
+		fmt.Printf("Count: %d\n", count)
+		count++
+	}
+	
+	// Infinite loop with break
+	for {
+		if count >= 5 {
+			break
+		}
+		fmt.Printf("Infinite count: %d\n", count)
+		count++
+	}
+	
+	// Range over slice
+	numbers := []int{1, 2, 3, 4, 5}
+	for index, value := range numbers {
+		fmt.Printf("Index: %d, Value: %d\n", index, value)
+	}
+	
+	// Range over map
+	ages := map[string]int{"Alice": 30, "Bob": 25}
+	for name, age := range ages {
+		fmt.Printf("%s is %d years old\n", name, age)
+	}
+	
+	// Range over string
+	for i, ch := range "Hello" {
+		fmt.Printf("Position %d: %c\n", i, ch)
+	}
+	
+	// Range over channel
+	ch := make(chan int, 3)
+	ch <- 1
+	ch <- 2
+	ch <- 3
+	close(ch)
+	
+	for value := range ch {
+		fmt.Printf("Channel value: %d\n", value)
+	}
+}
+
+// Goroutines and channels
+func producer(ch chan<- int, id int) {
+	for i := 0; i < 5; i++ {
+		ch <- id*10 + i
+		time.Sleep(time.Millisecond * 100)
+	}
+}
+
+func consumer(ch <-chan int, done chan<- bool) {
+	for value := range ch {
+		fmt.Printf("Consumed: %d\n", value)
+	}
+	done <- true
+}
+
+func testConcurrency() {
+	ch := make(chan int, 10)
+	done := make(chan bool)
+	
+	go producer(ch, 1)
+	go producer(ch, 2)
+	go consumer(ch, done)
+	
+	// Wait for completion
+	<-done
+}
+
+// Mutex and sync
+func testSynchronization() {
+	var mu sync.Mutex
+	var counter int
+	var wg sync.WaitGroup
+	
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			mu.Lock()
+			counter++
+			fmt.Printf("Goroutine %d: counter = %d\n", id, counter)
+			mu.Unlock()
+		}(i)
+	}
+	
+	wg.Wait()
+	fmt.Printf("Final counter: %d\n", counter)
+}
+
+// Error handling
+func testErrorHandling() {
+	// Basic error
+	result, err := divide(10, 2)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	} else {
+		fmt.Printf("Result: %d\n", result)
+	}
+	
+	// Error that should occur
+	_, err = divide(10, 0)
+	if err != nil {
+		fmt.Printf("Expected error: %v\n", err)
+	}
+	
+	// Custom error
+	err = validateAge(-5)
+	if err != nil {
+		fmt.Printf("Validation error: %v\n", err)
+	}
+}
+
+func divide(a, b int) (int, error) {
+	if b == 0 {
+		return 0, fmt.Errorf("cannot divide %d by zero", a)
+	}
+	return a / b, nil
+}
+
+func validateAge(age int) error {
+	if age < 0 {
+		return &ValidationError{Field: "age", Value: age, Message: "age cannot be negative"}
+	}
+	if age > 150 {
+		return &ValidationError{Field: "age", Value: age, Message: "age seems unrealistic"}
+	}
+	return nil
+}
+
+type ValidationError struct {
+	Field   string
+	Value   int
+	Message string
+}
+
+func (e *ValidationError) Error() string {
+	return fmt.Sprintf("validation error for field '%s' with value %d: %s", e.Field, e.Value, e.Message)
+}
+
+// Slice operations
+func testSlices() {
+	// Create slices
+	var slice1 []int
+	slice2 := []int{1, 2, 3}
+	slice3 := make([]int, 5, 10)
+	
+	fmt.Printf("slice1: %v (len=%d, cap=%d)\n", slice1, len(slice1), cap(slice1))
+	fmt.Printf("slice2: %v (len=%d, cap=%d)\n", slice2, len(slice2), cap(slice2))
+	fmt.Printf("slice3: %v (len=%d, cap=%d)\n", slice3, len(slice3), cap(slice3))
+	
+	// Append
+	slice2 = append(slice2, 4, 5)
+	fmt.Printf("After append: %v\n", slice2)
+	
+	// Slice operations
+	subslice := slice2[1:4]
+	fmt.Printf("Subslice [1:4]: %v\n", subslice)
+	
+	// Copy
+	slice4 := make([]int, len(slice2))
+	copy(slice4, slice2)
+	fmt.Printf("Copied slice: %v\n", slice4)
+	
+	// 2D slice
+	matrix := [][]int{
+		{1, 2, 3},
+		{4, 5, 6},
+		{7, 8, 9},
+	}
+	fmt.Printf("Matrix: %v\n", matrix)
+}
+
+// Map operations
+func testMaps() {
+	// Create maps
+	map1 := make(map[string]int)
+	map2 := map[string]string{
+		"hello": "world",
+		"foo":   "bar",
+	}
+	
+	// Operations
+	map1["one"] = 1
+	map1["two"] = 2
+	
+	value, exists := map1["one"]
+	if exists {
+		fmt.Printf("Value for 'one': %d\n", value)
+	}
+	
+	// Delete
+	delete(map1, "two")
+	
+	// Iterate
+	for key, value := range map2 {
+		fmt.Printf("%s -> %s\n", key, value)
+	}
+	
+	// Map of slices
+	mapOfSlices := make(map[string][]int)
+	mapOfSlices["even"] = []int{2, 4, 6}
+	mapOfSlices["odd"] = []int{1, 3, 5}
+	
+	for key, slice := range mapOfSlices {
+		fmt.Printf("%s: %v\n", key, slice)
+	}
+}
+
+// Struct methods and interfaces
+func testStructsAndInterfaces() {
+	person := Person{
+		Name:  "Alice",
+		Age:   30,
+		Email: "alice@example.com",
+	}
+	
+	fmt.Printf("Person: %+v\n", person)
+	fmt.Printf("Person details: %s\n", person.GetDetails())
+	
+	// Interface usage
+	var calc Calculator = MathCalc{}
+	fmt.Printf("5 + 3 = %d\n", calc.Add(5, 3))
+	result, _ := calc.Divide(10, 2)
+	fmt.Printf("10 / 2 = %d\n", result)
+	
+	// Interface with error
+	result, err := calc.Divide(10, 0)
+	if err != nil {
+		fmt.Printf("Division error: %v\n", err)
+	} else {
+		fmt.Printf("Result: %d\n", result)
+	}
+	
+	// Generic stack usage
+	intStack := &Stack[int]{}
+	intStack.Push(1)
+	intStack.Push(2)
+	intStack.Push(3)
+	
+	for {
+		if item, ok := intStack.Pop(); ok {
+			fmt.Printf("Popped: %d\n", item)
+		} else {
+			break
+		}
+	}
+	
+	stringStack := &Stack[string]{}
+	stringStack.Push("hello")
+	stringStack.Push("world")
+	
+	for {
+		if item, ok := stringStack.Pop(); ok {
+			fmt.Printf("Popped: %s\n", item)
+		} else {
+			break
+		}
+	}
+}
+
+func (p Person) GetDetails() string {
+	return fmt.Sprintf("Name: %s, Age: %d, Email: %s", p.Name, p.Age, p.Email)
+}
+
+func (p *Person) Birthday() {
+	p.Age++
+}
+
+// String processing
+func testStringProcessing() {
+	text := "Hello, World! This is a test string."
+	
+	// Basic operations
+	fmt.Printf("Length: %d\n", len(text))
+	fmt.Printf("Upper: %s\n", strings.ToUpper(text))
+	fmt.Printf("Lower: %s\n", strings.ToLower(text))
+	
+	// Contains and indexing
+	fmt.Printf("Contains 'World': %t\n", strings.Contains(text, "World"))
+	fmt.Printf("Index of 'World': %d\n", strings.Index(text, "World"))
+	
+	// Split and join
+	words := strings.Fields(text)
+	fmt.Printf("Words: %v\n", words)
+	joined := strings.Join(words, "-")
+	fmt.Printf("Joined: %s\n", joined)
+	
+	// Replacing
+	replaced := strings.ReplaceAll(text, "test", "sample")
+	fmt.Printf("Replaced: %s\n", replaced)
+	
+	// Trimming
+	trimmed := strings.TrimSpace("  hello world  ")
+	fmt.Printf("Trimmed: '%s'\n", trimmed)
+	
+	// String conversion
+	numStr := "42"
+	num, err := strconv.Atoi(numStr)
+	if err != nil {
+		fmt.Printf("Conversion error: %v\n", err)
+	} else {
+		fmt.Printf("Converted number: %d\n", num)
+	}
+	
+	// Formatting
+	formatted := fmt.Sprintf("Name: %s, Age: %d, Score: %.2f", "Alice", 30, 95.67)
+	fmt.Printf("Formatted: %s\n", formatted)
+}
+
+// File operations
+func testFileOperations() {
+	// Create a temporary file
+	content := "This is test content\nLine 2\nLine 3"
+	err := os.WriteFile("test_file.txt", []byte(content), 0644)
+	if err != nil {
+		fmt.Printf("Error writing file: %v\n", err)
+		return
+	}
+	
+	// Read the file
+	data, err := os.ReadFile("test_file.txt")
+	if err != nil {
+		fmt.Printf("Error reading file: %v\n", err)
+		return
+	}
+	fmt.Printf("File content:\n%s\n", string(data))
+	
+	// Clean up
+	err = os.Remove("test_file.txt")
+	if err != nil {
+		fmt.Printf("Error removing file: %v\n", err)
+	}
+}
+
+// Function types and higher-order functions
+func testFunctionTypes() {
+	// Function variable
+	var processor StringProcessor = func(s string) string {
+		return strings.ToUpper(s)
+	}
+	
+	result := processor("hello world")
+	fmt.Printf("Processed: %s\n", result)
+	
+	// Higher-order function
+	numbers := []int{1, 2, 3, 4, 5}
+	doubled := mapSlice(numbers, func(x int) int { return x * 2 })
+	fmt.Printf("Doubled: %v\n", doubled)
+	
+	// Filter function
+	evens := filterSlice(numbers, func(x int) bool { return x%2 == 0 })
+	fmt.Printf("Evens: %v\n", evens)
+	
+	// Reduce function
+	sum := reduceSlice(numbers, func(acc, x int) int { return acc + x }, 0)
+	fmt.Printf("Sum: %d\n", sum)
+}
+
+func mapSlice[T, U any](slice []T, mapper func(T) U) []U {
+	result := make([]U, len(slice))
+	for i, item := range slice {
+		result[i] = mapper(item)
+	}
+	return result
+}
+
+func filterSlice[T any](slice []T, predicate func(T) bool) []T {
+	var result []T
+	for _, item := range slice {
+		if predicate(item) {
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+func reduceSlice[T, U any](slice []T, reducer func(U, T) U, initial U) U {
+	result := initial
+	for _, item := range slice {
+		result = reducer(result, item)
+	}
+	return result
+}
+
+// Main function to test everything
+func main() {
+	fmt.Println("=== Comprehensive Go Syntax Test ===")
+	
+	fmt.Println("\n--- Basic Functions ---")
+	fmt.Printf("basicFunction(5) = %d\n", basicFunction(5))
+	
+	result, str, err := multipleReturns(10)
+	fmt.Printf("multipleReturns(10) = (%d, %s, %v)\n", result, str, err)
+	
+	sum, product := namedReturns(3, 4)
+	fmt.Printf("namedReturns(3, 4) = (%d, %d)\n", sum, product)
+	
+	fmt.Printf("variadicFunction(1, 2, 3, 4, 5) = %d\n", variadicFunction(1, 2, 3, 4, 5))
+	
+	fmt.Println("\n--- Closures ---")
+	counter := functionWithClosure()
+	fmt.Printf("Closure counter: %d, %d, %d\n", counter(), counter(), counter())
+	
+	fmt.Println("\n--- Defer and Panic ---")
+	functionWithDefer()
+	
+	err = functionWithPanic()
+	if err != nil {
+		fmt.Printf("Recovered from panic: %v\n", err)
+	}
+	
+	fmt.Println("\n--- Control Structures ---")
+	testControlStructures()
+	
+	fmt.Println("\n--- Concurrency ---")
+	testConcurrency()
+	
+	fmt.Println("\n--- Synchronization ---")
+	testSynchronization()
+	
+	fmt.Println("\n--- Error Handling ---")
+	testErrorHandling()
+	
+	fmt.Println("\n--- Slices ---")
+	testSlices()
+	
+	fmt.Println("\n--- Maps ---")
+	testMaps()
+	
+	fmt.Println("\n--- Structs and Interfaces ---")
+	testStructsAndInterfaces()
+	
+	fmt.Println("\n--- String Processing ---")
+	testStringProcessing()
+	
+	fmt.Println("\n--- File Operations ---")
+	testFileOperations()
+	
+	fmt.Println("\n--- Function Types ---")
+	testFunctionTypes()
+	
+	fmt.Println("\n=== Test Completed ===")
+}

@@ -1,0 +1,46 @@
+//! dependent_types: on
+//! ownership: on
+
+// Type errors
+
+// Undefined type
+var x: UndefinedType
+
+// Wrong arity
+type List<T>
+var y: List<int, string>
+
+// Invalid constraint
+type Invalid where x > x
+
+// Type mismatch
+func mismatch(x: int): string {
+    return x  // Error: returning int where string expected
+}
+
+// Ownership errors
+
+// Use after move
+func useAfterMove() {
+    data := []int{1, 2, 3}
+    moved := data
+    fmt.Println(data)  // Error: use after move
+}
+
+// Double move
+func doubleMove() {
+    x := []int{1, 2, 3}
+    y := x
+    z := x  // Error: double move
+}
+
+// Constraint violations
+
+// Invalid range
+type BadRange where min > max
+
+// Negative size
+type BadSize where length < 0
+
+// Unsatisfiable constraints
+type Impossible where x > 10, x < 5

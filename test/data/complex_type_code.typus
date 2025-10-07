@@ -1,0 +1,12 @@
+package main
+
+type ComplexStruct struct {
+    field1 int
+    field2 string
+    field3 []float64
+}
+
+func main() {
+    var cs ComplexStruct
+    cs.field1 = 42
+}

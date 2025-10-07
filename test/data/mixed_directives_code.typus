@@ -1,0 +1,16 @@
+//! ownership: on
+
+package main
+
+func main() {
+    {//! dependent_types: on
+        type NonEmptySlice<T> where T.size > 0 struct {
+            data []T
+        }
+    }
+    
+    {//! constraints: on
+        // Constraint block
+        value := 42
+    }
+}
