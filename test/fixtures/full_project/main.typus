@@ -1,0 +1,12 @@
+package main
+
+import "fmt"
+
+//go:embed assets/hello.txt
+var hello string
+
+func main() {
+    sum := Add(2, 3)
+    fmt.Println("Sum:", sum)
+    fmt.Println("Embedded:", hello)
+}

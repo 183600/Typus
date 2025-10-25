@@ -1,0 +1,7 @@
+//! dependent_types: on
+
+package main
+
+type Dep struct {
+    X int
+}

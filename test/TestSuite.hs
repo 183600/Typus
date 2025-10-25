@@ -23,6 +23,7 @@ import CLICommandTests (runCLICommandTests)
 import DirectiveParsingTests (runDirectiveParsingTests)
 import DependentTypesAndVectorTests (runDependentTypesAndVectorTests)
 import OwnershipTransferTests (runOwnershipTransferTests)
+import Integration.BuildSpec (runFullProjectBuildIntegrationTest)
 
 main :: IO ()
 main = do
@@ -115,6 +116,17 @@ main = do
                                                 Right () -> do
                                                     putStrLn "=== CLI Command Tests Passed ==="
                                                     putStrLn ""
+
+                                                    -- Additional: Run Full Project Build Integration Test
+                                                    putStrLn "=== Running Full Project Build Integration Test ==="
+                                                    fpResult <- try runFullProjectBuildIntegrationTest :: IO (Either SomeException ())
+                                                    case fpResult of
+                                                        Left ex -> do
+                                                            putStrLn $ "ERROR: Full project build integration test failed with exception: " ++ show ex
+                                                            exitFailure
+                                                        Right () -> do
+                                                            putStrLn "=== Full Project Build Integration Test Passed ==="
+                                                            putStrLn ""
                                                     
                                                     -- Phase 6: Run directive parsing tests
                                                     putStrLn "=== Running Directive Parsing Tests ==="
