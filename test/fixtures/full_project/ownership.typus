@@ -1,0 +1,10 @@
+//! ownership: on
+
+package main
+
+func ownershipDemo() {
+    s1 := "hello"
+    s2 := s1
+    _ = s2
+    println(s1)
+}

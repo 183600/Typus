@@ -9,6 +9,8 @@ maintainer:    dev@typus.example.com
 category:      Compilers, Language
 build-type:    Simple
 extra-doc-files: ChangeLog.md
+extra-source-files:
+    test/fixtures/**
 
 source-repository head
   type: git
@@ -227,7 +229,8 @@ test-suite typus-test
         RunEnhancedPreciseTypeTests,
         EnhancedOwnershipTests,
         EnhancedStackTest,
-        RunEnhancedOwnershipTests
+        RunEnhancedOwnershipTests,
+        Integration.BuildSpec
     build-depends:
         base >=4.7 && <5,
         typus,
