@@ -491,7 +491,9 @@ updateFileDirective fd key value = do
     case key of
         "ownership" -> Right fd { fdOwnership = Just boolValue }
         "dependent_types" -> Right fd { fdDependentTypes = Just boolValue }
-        "constraints" -> Right fd { fdConstraints = Just boolValue }
+        -- Treat "constraints" as an alias for dependent_types at file level
+        "constraints" -> Right fd { fdConstraints = Just boolValue
+                                   , fdDependentTypes = Just boolValue }
         _ -> Left $ "Unknown file directive: " ++ key
 
 parseBlockDirectives :: [(String, String)] -> Either String BlockDirectives
@@ -512,7 +514,9 @@ updateBlockDirective bd (key, value) = do
     case key of
         "ownership" -> Right bd { bdOwnership = boolValue }
         "dependent_types" -> Right bd { bdDependentTypes = boolValue }
-        "constraints" -> Right bd { bdConstraints = boolValue }
+        -- Treat "constraints" as an alias for dependent_types at block level too
+        "constraints" -> Right bd { bdConstraints = boolValue
+                                   , bdDependentTypes = boolValue }
         _ -> Left $ "Unknown block directive: " ++ key
 
 parseBool :: String -> Either String Bool

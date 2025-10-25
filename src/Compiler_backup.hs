@@ -3,7 +3,7 @@
 module Compiler (compile) where
 
 import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
-import qualified Ownership (analyzeOwnership)
+import qualified Ownership (analyzeOwnership, formatOwnershipErrors)
 import Data.List (intercalate, isInfixOf, isPrefixOf)
 import Data.Char (isSpace)
 
@@ -24,9 +24,9 @@ compile typusFile =
 -- Check for ownership errors (TEMPORARILY DISABLED)
 checkOwnership :: TypusFile -> Either String ()
 checkOwnership typusFile = 
-  -- TODO: Fix ownership analysis - currently causing infinite loops
-  -- For now, skip ownership check
-  Right ()
+  let content = intercalate "\n" $ map cbContent (tfBlocks typusFile)
+      errs = Ownership.analyzeOwnership content
+  in if null errs then Right () else Left (Ownership.formatOwnershipErrors errs)
 
 -- Basic syntax checks
 hasMalformedSyntax :: TypusFile -> Bool

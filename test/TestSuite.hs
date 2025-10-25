@@ -172,7 +172,7 @@ main = do
                                 threshold = maybe 70 read coverageThresholdEnv
                             mtix <- readTix "typus-test.tix"
                             case mtix of
-                              Nothing -> putStrLn "WARNING: Coverage .tix file not found; run with '--flag typus:coverage --coverage' to enforce."
+                              Nothing -> putStrLn "WARNING: Coverage .tix file not found; run with '--flag typus:coverage' (or 'stack test --coverage') to enforce."
                               Just (Tix mods) -> do
                                 let moduleEntries = [ boxes | TixModule name _ _ boxes <- mods, not ("Test" `isPrefixOf` name) ]
                                     totalTicks = sum (map length moduleEntries)

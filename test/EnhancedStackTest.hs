@@ -5,20 +5,20 @@ module EnhancedStackTest where
 
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck ()
 import System.Directory
 import System.FilePath
 import System.Process
 import System.Exit
-import Control.Exception
+-- import Control.Exception
 import Control.Monad
 import Data.List
-import Data.Maybe
+-- import Data.Maybe
 import System.IO.Temp
 import System.IO
 import Data.Time
-import qualified Data.Text as T
-import Data.Either (isRight)
+-- import qualified Data.Text as T
+-- import Data.Either (isRight)
 import EnhancedOwnershipTests (enhancedOwnershipTests)
 
 -- 增强的Stack测试套件

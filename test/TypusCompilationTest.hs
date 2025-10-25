@@ -16,10 +16,9 @@ import System.Directory (doesFileExist, getCurrentDirectory)
 import System.FilePath ((</>), takeBaseName, takeExtension, takeFileName)
 import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..))
-import System.IO (stderr, stdout)
 import Control.Exception (try, SomeException)
 import System.IO.Temp (withSystemTempDirectory)
-import Control.Monad (when, unless, forM_, mapM_)
+-- import Control.Monad (when)
 import Data.List (isPrefixOf, isInfixOf)
 import Test.Tasty (defaultMain, testGroup, TestTree)
 import Test.Tasty.HUnit (testCase, assertBool, assertFailure)
@@ -67,9 +66,13 @@ runComprehensiveCompilationTests = do
     -- Test each file
     results <- mapM testTypusFileForCompilation filteredFiles
 
+    -- Expectation-based compile outcome checks (files that must fail/pass)
+    putStrLn "Running expectation-based compile outcome checks..."
+    expChecks <- expectedOutcomeChecks
+
     -- Check overall results
-    let passedFiles = length $ filter id results
-    let failedFiles = length $ filter (not . id) results
+    let passedFiles = length (filter id results) + length (filter id expChecks)
+    let failedFiles = length (filter (not . id) results) + length (filter (not . id) expChecks)
 
     putStrLn ""
     putStrLn "=== Test Results ==="
@@ -101,6 +104,41 @@ isValidTypusFile file =
     isInHiddenDirectory path = any (`isInfixOf` path) ["/.", "./", "\\.\\"]
     isInTempDirectory path = any (`isInfixOf` path) ["tmp", "temp", "TMP", "TEMP"]
     isTypusFile path = takeExtension path == ".typus"
+
+-- Expected outcome checker: ensure specific Typus files fail/succeed as intended
+data ExpectedOutcome = ExpectSuccess | ExpectFailure deriving (Eq, Show)
+
+expectedOutcomeChecks :: IO [Bool]
+expectedOutcomeChecks = do
+    let cases =
+            [ ("test_ownership_error.typus", ExpectFailure)
+            , ("test_ownership_valid.typus", ExpectSuccess)
+            ]
+    mapM (uncurry checkCase) cases
+  where
+    checkCase :: FilePath -> ExpectedOutcome -> IO Bool
+    checkCase fp outcome = do
+        exists <- doesFileExist fp
+        if not exists
+            then do
+                putStrLn $ "[SKIP] File not found: " ++ fp
+                return True  -- don't punish CI when sample files are absent
+            else do
+                putStrLn $ "[CHECK] Compiling (expect " ++ show outcome ++ "): " ++ fp
+                (ec, _out, err) <- readProcessWithExitCode "stack" ["exec","--","typus","convert", fp, "-o", "-"] ""
+                case (outcome, ec) of
+                  (ExpectSuccess, ExitSuccess) -> do
+                      putStrLn "  -> OK (compiled successfully)"
+                      return True
+                  (ExpectSuccess, ExitFailure code) -> do
+                      putStrLn $ "  -> FAIL: expected success but got exit code " ++ show code ++ ", stderr: " ++ err
+                      return False
+                  (ExpectFailure, ExitFailure _) -> do
+                      putStrLn "  -> OK (failed as expected)"
+                      return True
+                  (ExpectFailure, ExitSuccess) -> do
+                      putStrLn "  -> FAIL: expected failure but compilation succeeded"
+                      return False
 
 -- Create a test case for a single Typus file
 createFileTest :: FilePath -> IO TestTree

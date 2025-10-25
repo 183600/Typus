@@ -6,20 +6,24 @@ module CLICommandTests (
 import Test.Tasty
 import Test.Tasty.HUnit as HU
 import System.Exit (ExitCode(..))
-import System.Directory (doesFileExist, removeFile, createDirectoryIfMissing)
+import System.Directory (doesFileExist, removeFile, createDirectoryIfMissing, findExecutable)
 import System.FilePath ((</>))
 import System.Process (readProcessWithExitCode)
 import Control.Exception (try, SomeException, throwIO)
 import Control.Monad (when)
-import System.IO (hPutStrLn, stderr)
-import qualified System.IO as IO
+import System.Environment (withArgs, getArgs, lookupEnv)
+-- Removed unused IO imports
 
 -- Main test function
 runCLICommandTests :: IO ()
 runCLICommandTests = do
     putStrLn "=== Running CLI Command Tests ==="
     putStrLn "[DEBUG] Starting CLI command tests..."
-    result <- try (defaultMain cliCommandTestSuite) :: IO (Either SomeException ())
+    args <- getArgs
+    putStrLn $ "[DEBUG] Process args: " ++ show args
+    breakpointIfRequested
+    -- Reset args so tasty doesn't choke on repo-level flags like --skip=performance
+    result <- try (withArgs [] (defaultMain cliCommandTestSuite)) :: IO (Either SomeException ())
     case result of
         Left ex -> do
             putStrLn $ "[DEBUG] CLI command tests failed with exception: " ++ show ex
@@ -174,9 +178,9 @@ testBuildCommand = do
     putStrLn $ "[DEBUG] Created test file: " ++ mainFile
     
     -- Test build command (this should convert to Go and then call go build)
-    putStrLn "[DEBUG] Running: stack exec -- typus build"
+    putStrLn "[DEBUG] Running: stack exec -- typus build test_temp_project"
     (exitCode, stdout', stderr') <- readProcessWithExitCode "stack" 
-        ["exec", "--", "typus", "build"] ""
+        ["exec", "--", "typus", "build", "test_temp_project"] ""
     
     putStrLn $ "[DEBUG] Build command exit code: " ++ show exitCode
     putStrLn $ "[DEBUG] Build command stdout: " ++ stdout'
@@ -185,15 +189,12 @@ testBuildCommand = do
     -- Clean up
     removeFile mainFile
     
-    -- Note: Build command might not be fully implemented, so we'll just check it doesn't crash
-    case exitCode of
-        ExitSuccess -> do
-            putStrLn "[DEBUG] Build command succeeded"
-            return () -- Build succeeded
-        ExitFailure code -> do
-            -- For now, we'll accept that build might not be fully implemented
-            putStrLn $ "[DEBUG] Build command failed with exit code: " ++ show code
-            putStrLn $ "Note: typus build returned exit code " ++ show code ++ " (may not be fully implemented)"
+    -- If Go is available, build should succeed; otherwise, skip expectation
+    goAvail <- isGoAvailable
+    case (goAvail, exitCode) of
+        (True, ExitSuccess) -> putStrLn "[DEBUG] Build command succeeded"
+        (True, ExitFailure code) -> HU.assertFailure $ "typus build failed with exit code: " ++ show code ++ " while Go is available"
+        (False, _) -> putStrLn "[DEBUG] Go toolchain not found; skipping strict assertion for build"
 
 -- Test run command
 testRunCommand :: IO ()
@@ -217,12 +218,12 @@ testRunCommand = do
     -- Clean up
     removeFile tempFile
     
-    case exitCode of
-        ExitSuccess -> do
+    goAvail <- isGoAvailable
+    case (goAvail, exitCode) of
+        (True, ExitSuccess) -> do
             assertBool "Run should produce output" (not (null stdout'))
-        ExitFailure code -> 
-            -- For now, we'll accept that run might not be fully implemented
-            putStrLn $ "Note: typus run returned exit code " ++ show code ++ " (may not be fully implemented)"
+        (True, ExitFailure code) -> HU.assertFailure $ "typus run failed with exit code: " ++ show code
+        (False, _) -> putStrLn "[DEBUG] Go toolchain not found; skipping strict assertion for run"
 
 -- Helper function for substring checking
 isInfixOf :: String -> String -> Bool
@@ -235,3 +236,20 @@ isSubsequenceOf _ [] = False
 isSubsequenceOf (n:ns) (h:hs) 
     | n == h = isSubsequenceOf ns hs
     | otherwise = isSubsequenceOf (n:ns) hs
+
+-- Optional CLI breakpoint controlled via env var
+breakpointIfRequested :: IO ()
+breakpointIfRequested = do
+    m <- lookupEnv "TYPUS_CLI_DEBUG_WAIT"
+    case m of
+        Just v | v == "1" || v == "true" || v == "TRUE" -> do
+            putStrLn "[BREAKPOINT] CLICommandTests: press Enter to continue..."
+            _ <- getLine
+            return ()
+        _ -> return ()
+
+-- Detect if Go toolchain is available in PATH
+isGoAvailable :: IO Bool
+isGoAvailable = do
+    m <- findExecutable "go"
+    return (m /= Nothing)

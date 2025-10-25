@@ -6,13 +6,8 @@ module DirectiveParsingTests (
 import Test.Tasty
 import Test.Tasty.HUnit as HU
 import System.Exit (ExitCode(..))
-import System.Directory (doesFileExist, removeFile, createDirectoryIfMissing)
-import System.FilePath ((</>))
+import System.Directory (removeFile)
 import System.Process (readProcessWithExitCode)
-import Control.Exception (try, SomeException)
-import Control.Monad (when)
-import System.IO (hPutStrLn, stderr)
-import qualified System.IO as IO
 
 -- Main test function
 runDirectiveParsingTests :: IO ()

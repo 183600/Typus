@@ -2,21 +2,20 @@
 {-# OPTIONS_GHC -Wno-monomorphism-restriction #-}
 
 
-module RunEnhancedOwnershipTests where
+module RunEnhancedOwnershipTests (runEnhancedOwnershipTests) where
 
 import Test.Tasty
-import Test.Tasty.HUnit
-import Test.Tasty.Ingredients
-import Test.Tasty.Ingredients.ConsoleReporter
+import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
+import Test.Tasty.Ingredients.ConsoleReporter (consoleTestReporter)
 import System.Exit (exitFailure, exitSuccess, ExitCode(..))
 import System.IO
 import Data.Time (getCurrentTime, diffUTCTime)
 import Control.Exception (try, SomeException, fromException)
-import Data.Maybe (fromMaybe)
-import Data.List (isInfixOf)
-import Data.Char (toLower)
+-- import Data.Maybe (fromMaybe)
+-- import Data.List (isInfixOf)
+-- import Data.Char (toLower)
 import qualified Ownership as Own
-import qualified OwnershipAdvanced as OwnAdv
+-- import qualified OwnershipAdvanced as OwnAdv
 
 -- 导入增强的所有权测试
 import EnhancedOwnershipTests (enhancedOwnershipTests)

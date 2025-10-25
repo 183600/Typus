@@ -4,17 +4,17 @@ module EndToEndTests (
     E2EConfig(..)
 ) where
 
-import Test.Tasty
-import Test.Tasty.HUnit as HU
+import Test.Tasty ()
+import Test.Tasty.HUnit ()
 import System.Exit (exitFailure, ExitCode(..))
 import System.Directory (doesFileExist, removeFile, doesDirectoryExist, createDirectoryIfMissing)
 import System.FilePath ((</>), takeFileName, takeDirectory, takeBaseName)
-import System.Process (readProcessWithExitCode, spawnProcess, waitForProcess)
+import System.Process (readProcessWithExitCode)
 import Control.Exception (try, SomeException)
-import System.IO (hPutStrLn, stderr)
-import Control.Exception (evaluate, try)
-import Data.Time (getCurrentTime, UTCTime, diffUTCTime)
-import Data.List (lines, takeWhile)
+import System.IO ()
+import Control.Exception ()
+import Data.Time (getCurrentTime, diffUTCTime)
+import Data.List ()
 import Debug (debugLog, debugBreakpoint)
 
 -- Simple timing function to replace System.TimeIt
@@ -155,16 +155,6 @@ runSingleE2ETest config (inputFile, expectedOutputFile) = do
                     return False
 
 -- Helper function to run a command with timeout
-runCommandWithTimeout :: String -> [String] -> Int -> IO (ExitCode, String, String)
-runCommandWithTimeout cmd args timeout = do
-    process <- spawnProcess cmd args
-    result <- try (waitForProcess process :: IO ExitCode) :: IO (Either SomeException ExitCode)
-    case result of
-        Left (ex) -> do
-            return (ExitFailure 1, "", "Command execution failed: " ++ show ex)
-        Right exitCode -> do
-            -- In a real implementation, we'd capture stdout/stderr
-            return (exitCode, "", "Command completed")
 
 -- Test for error recovery
 errorRecoveryTest :: E2EConfig -> IO Bool
@@ -177,7 +167,7 @@ errorRecoveryTest config = do
     debugLog "E2E" "Testing error recovery with malformed input"
     debugBreakpoint "E2E" "Before error recovery test"
 
-    (exitCode, stdout, stderrOutput) <- readProcessWithExitCode "stack" ["run", "--", "compile", invalidInputFile, "-o", outputPath] ""
+    (exitCode, _stdout, _stderrOutput) <- readProcessWithExitCode "stack" ["run", "typus", "--", "convert", invalidInputFile, "-o", outputPath] ""
 
     case exitCode of
         ExitFailure 1 -> do
@@ -272,7 +262,7 @@ runGoBuildTest config inputFile = do
             return False
   where
     isPrefixOf prefix str = take (length prefix) str == prefix
-    takeBaseName = reverse . takeWhile (/= '/') . reverse
+    -- takeBaseName removed
     replaceExtension path newExt =
         let base = takeWhile (/= '.') path
         in base ++ "." ++ newExt

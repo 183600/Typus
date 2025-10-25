@@ -5,15 +5,15 @@ module EnhancedPreciseTypeTests (enhancedPreciseTypeTests) where
 
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck () -- instances only
 import qualified Dependencies as Dep
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import Control.Monad.State
-import Control.Monad.Except
-import qualified Data.Text as T
-import Data.List (nub, sort, intercalate)
-import Data.Maybe (isJust, fromJust)
+-- import qualified Data.Map.Strict as Map
+-- import qualified Data.Set as Set
+import Control.Monad.State (runState, execState)
+-- import Control.Monad.Except
+-- import qualified Data.Text as T
+import Data.List (nub, sort, intercalate) -- used
+-- import Data.Maybe (isJust, fromJust)
 
 -- ============================================================================
 -- 增强的精确类型测试套件
@@ -622,13 +622,13 @@ generateLargeProgram n = unlines $
 -- 生成复杂约束
 generateComplexConstraints :: Int -> [Dep.TypeConstraint]
 generateComplexConstraints n = take n $
-  [ Dep.Equal (Dep.TVVar $ "t" ++ show i) (Dep.TVCon $ if even i then "int" else "string") | i <- [1..] ]
+  [ Dep.Equal (Dep.TVVar $ "t" ++ show (i::Int)) (Dep.TVCon (if even i then "int" else "string")) | i <- [1..100] ]
 
 -- 生成内存密集型程序
 generateMemoryIntensiveProgram :: Int -> String
 generateMemoryIntensiveProgram n = unlines $
   ["package main"] ++
-  ["type Type" ++ show i ++ "<" ++ intercalate ", " ["T" ++ show j | j <- [1..10]] ++ ">" | i <- [1..n]] ++
+  ["type Type" ++ show (i::Int) ++ "<" ++ intercalate ", " ["T" ++ show (j::Int) | j <- [1..10]] ++ ">" | i <- [1..n]] ++
   ["func main() { println(\"memory intensive\") }"]
 
 -- 生成中等程序

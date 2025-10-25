@@ -1,6 +1,6 @@
 # Makefile for Typus project
 
-.PHONY: build test clean help install coverage coverage-report
+.PHONY: build test clean help install coverage coverage-report stack-test
 
 # Default target
 help:
@@ -9,6 +9,7 @@ help:
 	@echo "Available targets:"
 	@echo "  build            - Build the project"
 	@echo "  test             - Run all tests"
+	@echo "  stack-test       - Run all tests via Stack (uses flags in stack.yaml)"
 	@echo "  test-quick       - Run quick tests without performance tests"
 	@echo "  test-unit        - Run only unit tests"
 	@echo "  test-performance - Run only performance tests"
@@ -28,6 +29,11 @@ build:
 test:
 	cabal test --test-show-details=always
 	@echo "All tests passed!"
+
+# Run all tests via Stack (production-grade flags set in stack.yaml)
+stack-test:
+	stack test --test-arguments="--hide-successes"
+ 	@echo "Stack tests completed!"
 
 # Run quick tests (without performance tests)
 test-quick:

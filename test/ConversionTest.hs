@@ -1,11 +1,10 @@
 module ConversionTest (runConversionTests, conversionTestSuite) where
 
 import System.Directory (doesDirectoryExist, doesFileExist, listDirectory, removeDirectoryRecursive)
-import System.FilePath ((</>), takeFileName, takeExtension, dropExtension, (<.>))
+import System.FilePath ((</>), takeFileName, dropExtension, (<.>))
 import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..))
 import System.IO (hPutStrLn, stderr)
-import qualified System.IO as IO
 import Control.Monad (when, forM_, forM)
 import Data.List (isSuffixOf, isInfixOf)
 import Text.Printf (printf)
@@ -25,14 +24,14 @@ runConversionTests = do
     -- Check if input directory exists
     inputExists <- doesDirectoryExist inputDir
     when (not inputExists) $ do
-        hPutStrLn IO.stderr $ "ERROR: Input directory " ++ inputDir ++ " does not exist"
+        hPutStrLn stderr $ "ERROR: Input directory " ++ inputDir ++ " does not exist"
         fail "Input directory not found"
 
     -- Step 1: Test typus convert command
     putStrLn "Step 1: Testing typus convert command..."
     convertSuccess <- testTypusConvert inputDir outputDir
     when (not convertSuccess) $ do
-        hPutStrLn IO.stderr "ERROR: typus convert command failed"
+        hPutStrLn stderr "ERROR: typus convert command failed"
         fail "typus convert failed"
     putStrLn "✓ typus convert command completed successfully"
     putStrLn ""
@@ -81,9 +80,9 @@ testTypusConvert inputDir outputDir = do
             putStrLn $ "Output: " ++ take 200 stdout
             return True
         ExitFailure code -> do
-            hPutStrLn IO.stderr $ "typus convert failed with exit code " ++ show code
-            hPutStrLn IO.stderr $ "STDOUT: " ++ take 500 stdout
-            hPutStrLn IO.stderr $ "STDERR: " ++ take 500 stdErr
+            hPutStrLn stderr $ "typus convert failed with exit code " ++ show code
+            hPutStrLn stderr $ "STDOUT: " ++ take 500 stdout
+            hPutStrLn stderr $ "STDERR: " ++ take 500 stdErr
             return False
 
 -- Get list of typus files in directory
@@ -111,7 +110,7 @@ testConvertedFiles outputDir typusFiles = do
     outputExists <- doesDirectoryExist outputDir
     if not outputExists
         then do
-            hPutStrLn IO.stderr $ "ERROR: Output directory " ++ outputDir ++ " does not exist"
+            hPutStrLn stderr $ "ERROR: Output directory " ++ outputDir ++ " does not exist"
             return []
         else do
             results <- forM typusFiles $ \typusFile -> do
@@ -121,7 +120,7 @@ testConvertedFiles outputDir typusFiles = do
                 goExists <- doesFileExist goFile
                 if not goExists
                     then do
-                        hPutStrLn IO.stderr $ "ERROR: Go file not found: " ++ goFile
+                        hPutStrLn stderr $ "ERROR: Go file not found: " ++ goFile
                         return False
                     else do
                         putStrLn $ "Testing Go file: " ++ takeFileName goFile
@@ -174,7 +173,7 @@ conversionTestSuite = testGroup "Conversion Tests" [
     testCase "Simple Conversion Test" $ do
         -- Basic test to verify conversion functionality exists
         let inputDir = "examples/go250923"
-        let outputDir = "examples/go250923output"
+        let _outputDir = "examples/go250923output" -- renamed to avoid unused warning
 
         inputExists <- doesDirectoryExist inputDir
         when (not inputExists) $ assertFailure $ "Input directory does not exist: " ++ inputDir

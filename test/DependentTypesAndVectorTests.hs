@@ -6,13 +6,9 @@ module DependentTypesAndVectorTests (
 import Test.Tasty
 import Test.Tasty.HUnit as HU
 import System.Exit (ExitCode(..))
-import System.Directory (doesFileExist, removeFile, createDirectoryIfMissing)
-import System.FilePath ((</>))
+import System.Directory (doesFileExist, removeFile)
 import System.Process (readProcessWithExitCode)
-import Control.Exception (try, SomeException)
 import Control.Monad (when)
-import System.IO (hPutStrLn, stderr)
-import qualified System.IO as IO
 
 -- Main test function
 runDependentTypesAndVectorTests :: IO ()
@@ -67,7 +63,7 @@ testVectorLengthParameterization = do
     writeFile tempFile content
     
     -- Test that the file can be parsed and converted successfully
-    (exitCode, stdout, stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_vector_output.go"] ""
+    (exitCode, _stdout, _stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_vector_output.go"] ""
     
     -- Check if output file was created
     outputExists <- doesFileExist "test_vector_output.go"
@@ -110,7 +106,7 @@ testSafeDivideFunction = do
     writeFile tempFile content
     
     -- Test that the file can be parsed and converted successfully
-    (exitCode, stdout, stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_safe_divide_output.go"] ""
+    (exitCode, _stdout, _stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_safe_divide_output.go"] ""
     
     -- Check if output file was created
     outputExists <- doesFileExist "test_safe_divide_output.go"
@@ -163,7 +159,7 @@ testVectorGetMethod = do
     writeFile tempFile content
     
     -- Test that the file can be parsed and converted successfully
-    (exitCode, stdout, stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_vector_get_output.go"] ""
+    (exitCode, _stdout, _stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_vector_get_output.go"] ""
     
     -- Check if output file was created
     outputExists <- doesFileExist "test_vector_get_output.go"
@@ -209,7 +205,7 @@ testTypeInferenceWithDependentTypes = do
     writeFile tempFile content
     
     -- Test that the file can be parsed and converted successfully
-    (exitCode, stdout, stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_type_inference_output.go"] ""
+    (exitCode, _stdout, _stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_type_inference_output.go"] ""
     
     -- Check if output file was created
     outputExists <- doesFileExist "test_type_inference_output.go"
@@ -259,7 +255,7 @@ testVectorMismatchedLengths = do
     writeFile tempFile content
     
     -- Test that the file can be parsed and converted successfully
-    (exitCode, stdout, stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_vector_mismatch_output.go"] ""
+    (exitCode, _stdout, _stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_vector_mismatch_output.go"] ""
     
     -- Check if output file was created
     outputExists <- doesFileExist "test_vector_mismatch_output.go"
@@ -302,7 +298,7 @@ testSafeDivideWithZero = do
     writeFile tempFile content
     
     -- Test that the file can be parsed and converted successfully
-    (exitCode, stdout, stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_safe_divide_zero_output.go"] ""
+    (exitCode, _stdout, _stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_safe_divide_zero_output.go"] ""
     
     -- Check if output file was created
     outputExists <- doesFileExist "test_safe_divide_zero_output.go"
@@ -360,7 +356,7 @@ testVectorGetOutOfBounds = do
     writeFile tempFile content
     
     -- Test that the file can be parsed and converted successfully
-    (exitCode, stdout, stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_vector_out_of_bounds_output.go"] ""
+    (exitCode, _stdout, _stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_vector_out_of_bounds_output.go"] ""
     
     -- Check if output file was created
     outputExists <- doesFileExist "test_vector_out_of_bounds_output.go"

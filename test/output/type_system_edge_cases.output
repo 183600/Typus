@@ -1,0 +1,110 @@
+package main
+
+import (
+    "fmt"
+)
+
+type Level1[T any]
+type Level2[T any]
+type Level3[T any]
+type Tree[T any] where left: Tree<T>, right: Tree<T>
+type SelfRef where value > value
+type EmptyConstraint where
+type ManyParams[A any] B, C, D, E, F, G, H>
+type Nested[T any] U, V> where T == List<U>, U == Maybe<V>
+type Constrained[T any] where T > 0, T < 100
+type Mixed[T any] N> where T == int, N > 0, N < 1000
+type 类型[参数 any]
+type VeryLongTypeNameThatExceedsNormalExpectationsForIdentifierLength
+type MinValue where x == -2147483648
+type MaxValue where x == 2147483647
+type ZeroSized where size == 0
+type Conditional[T any] where if T == int then result == int else result == string
+
+
+// Edge cases for type system
+
+// Very deep nesting
+var deepNest: Level1[Level2<Level3<int>>]
+
+// Recursive types
+
+// Self-referential constraints
+
+// Empty constraints
+
+// Many type parameters
+
+// Complex generic nesting
+
+// Function with many parameters
+func manyParams(a: int, b: string, c: bool, d: float64, e: []int, f: map[string]int): void
+
+// Higher-order functions
+func apply(f: func(func(T): U): V, g: func(T): U, x: T): V
+
+// Constraints on type parameters
+
+// Mixed constraints
+
+// Unicode identifiers (if supported)
+func 函数(x: int): int {
+    return x
+}
+
+// Very long type names
+
+// Empty function body
+func empty() {
+}
+
+// Nested scopes
+func outer() {
+    {
+        {
+            {
+                x := 42
+            }
+        }
+    }
+}
+
+// Complex ownership patterns
+func complexOwnership() {
+    a := []int{1}
+    {
+        b := a
+        {
+            c := &b
+            fmt.Println(*c)
+        }
+    }
+}
+
+// Shadowing with same name
+func shadowing() {
+    x := 1
+    {
+        x := 2
+        {
+            x := 3
+            fmt.Println(x)
+        }
+    }
+}
+
+// Type inference edge cases
+func inferComplex() {
+    var x  // Should infer type
+    x = 42
+    
+    y := func() int {
+        return 10
+    }
+}
+
+// Boundary values
+
+// Zero-sized types
+
+// Conditional types (if supported)

@@ -1,10 +1,13 @@
 package main
 
-
-type NonEmptySlice<T> where T.size > 0 struct {
+type NonEmptySlice[T any] where T.size > 0 struct {
     data []T
 }
 
+
+
+
 func main() {
-    var slice NonEmptySlice<int>
+    var slice NonEmptySlice[int]
+    _ = slice
 }

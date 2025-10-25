@@ -1,6 +1,6 @@
 cabal-version: 2.2
 name:          typus
-version:       0.1.0
+version:       0.9.0
 synopsis:      Typus compiler with dependent types and ownership analysis
 description:   A compiler for the Typus language with support for dependent types and ownership analysis
 license:       MIT
@@ -86,7 +86,7 @@ executable typus
 -- Fast/Full test flags
 flag fast
     description: Run only fast tests by default
-    default:     True
+    default:     False
 
 flag full
     description: Include slow/integration/perf tests
@@ -95,11 +95,11 @@ flag full
 -- Production testing flags
 flag production
     description: Enable production-grade testing with strict requirements
-    default:     False
+    default:     True
 
 flag coverage
     description: Enable test coverage generation
-    default:     False
+    default:     True
 
 flag werror
     description: Treat warnings as errors
@@ -204,6 +204,7 @@ test-suite typus-test
     type:             exitcode-stdio-1.0
     main-is:          TestSuite.hs
     hs-source-dirs:   test
+    default-extensions: NoMonomorphismRestriction
     other-modules:
         TestParser,
         TestCompiler,
@@ -253,7 +254,7 @@ test-suite typus-test
         text >= 1.2.0 && <3,
         hpc >= 0.7
     default-language: Haskell2010
-    ghc-options:      -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-M4G
+    ghc-options:      -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-M4G -Wno-unused-top-binds -Wno-unused-local-binds -Wno-unused-matches
     if flag(fast)
         cpp-options:   -DFAST_TESTS
     if flag(full)
@@ -298,7 +299,7 @@ test-suite enhanced-ownership-tests
         temporary >= 1.2 && <2,
         text >= 1.2.0 && <3
     default-language: Haskell2010
-    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+    ghc-options:      -threaded -rtsopts -with-rtsopts=-N -Wwarn -Wno-unused-top-binds -Wno-unused-local-binds -Wno-monomorphism-restriction -Wno-unused-matches
     if flag(fast)
         cpp-options:   -DFAST_TESTS
     if flag(full)
