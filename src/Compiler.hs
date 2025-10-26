@@ -5,7 +5,7 @@ module Compiler (compile, hasTypeErrors, extractDeclarations, extractFunctionCal
 import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
 import DependentTypesParser (DependentTypeError(..), runDependentTypesParser, parserErrors)
 import Ownership (analyzeOwnership, formatOwnershipErrors, OwnershipError(..))
-import Data.List (intercalate, isInfixOf, isPrefixOf, foldl')
+import Data.List (intercalate, isInfixOf, isPrefixOf)
 import qualified Data.IntMap.Strict as IntMap
 import Data.Char (isSpace)
 
@@ -584,10 +584,10 @@ convertTypusGenerics content = unlines $ map convertLine (lines content)
 fixUnusedVarsGeneral :: String -> String
 fixUnusedVarsGeneral content =
   let ls = lines content
-      indexedLines = zip [0..] ls
+      indexedLines = zip [0 :: Int ..] ls
 
-      braceDelta s = count '{' s - count '}' s
-        where count c = length (filter (== c) s)
+      braceDelta s = countChar '{' - countChar '}'
+        where countChar c = length (filter (== c) s)
 
       -- Identify candidate local variable declarations within blocks (depth > 0)
       collectCandidates :: Int -> Int -> Int -> [String] -> [(Int, String, String)] -> [(Int, String, String)]

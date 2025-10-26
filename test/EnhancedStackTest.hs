@@ -537,11 +537,19 @@ securityAndValidationTests = testGroup "Security and Validation Tests"
 
 -- 辅助函数
 compileTypusFile :: FilePath -> IO (Either String String)
-compileTypusFile filePath = do
-    (exitCode, stdout, stderr) <- readProcessWithExitCode "typus" ["convert", filePath, "-o", "-"] ""
+compileTypusFile filePath = withSystemTempFile "typus_output.go" $ \outPath handle -> do
+    hClose handle
+    (exitCode, stdout, stderr) <- readProcessWithExitCode "typus" ["convert", filePath, "-o", outPath] ""
     case exitCode of
-        ExitSuccess -> return $ Right stdout
-        ExitFailure _ -> return $ Left $ if null stderr then "Compilation failed" else stderr
+        ExitSuccess -> do
+            exists <- doesFileExist outPath
+            if exists
+                then do
+                    goCode <- readFile outPath
+                    return $ Right goCode
+                else return $ Right stdout
+        ExitFailure _ ->
+            return $ Left $ if null stderr then "Compilation failed" else stderr
 
 runEnhancedStackTests :: IO ()
 runEnhancedStackTests = do
