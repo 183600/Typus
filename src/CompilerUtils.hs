@@ -1,5 +1,10 @@
 module CompilerUtils (
-    convertFile, batchConvert, batchCheck, runGoCommand, runGoCommandInDir
+    convertFile,
+    batchConvert,
+    batchCheck,
+    checkHaskellEnvironment,
+    runGoCommand,
+    runGoCommandInDir
 ) where
 
 import Compiler (compile)
@@ -27,7 +32,7 @@ import System.Exit (ExitCode(..))
 import System.Info (os)
 import Data.Either (partitionEithers)
 import System.Environment (lookupEnv)
-import Data.Char (toLower)
+import Data.Char (toLower, isSpace)
 
 type IOResult a = ExceptT String IO a
 
@@ -133,6 +138,44 @@ batchCheck inputDir = do
     if null failures
         then liftIO $ putStrLn $ "\nCheck Summary: " ++ show (length files) ++ " files OK."
         else throwError $ show (length failures) ++ " file(s) failed syntax check."
+
+-- 检查 Haskell 环境和 stack test 命令
+checkHaskellEnvironment :: IOResult ()
+checkHaskellEnvironment = do
+    liftIO $ putStrLn "Checking Haskell toolchain environment..."
+    stackPath <- ensureExecutable "stack" "Stack is not installed or not in PATH. Please install Stack to run 'stack test'."
+    liftIO $ putStrLn $ "  ✓ stack found at: " ++ stackPath
+
+    (stackVersionExit, stackVersionOut, stackVersionErr) <- runProc "stack" ["--numeric-version"]
+    case stackVersionExit of
+        ExitSuccess -> do
+            let versionInfo = trim stackVersionOut
+            if null versionInfo
+                then liftIO $ putStrLn "  ✓ stack responded to '--numeric-version'."
+                else liftIO $ putStrLn $ "  ✓ stack version: " ++ versionInfo
+        ExitFailure code ->
+            throwError $ "'stack --numeric-version' failed with exit code " ++ show code ++ ".\nStdout: " ++ stackVersionOut ++ "\nStderr: " ++ stackVersionErr
+
+    (stackTestHelpExit, stackTestHelpOut, stackTestHelpErr) <- runProc "stack" ["help", "test"]
+    case stackTestHelpExit of
+        ExitSuccess -> liftIO $ putStrLn "  ✓ 'stack test' command is available."
+        ExitFailure code ->
+            throwError $ "'stack help test' failed with exit code " ++ show code ++ ".\nStdout: " ++ stackTestHelpOut ++ "\nStderr: " ++ stackTestHelpErr
+
+    liftIO $ putStrLn "Haskell environment looks good! You can run 'stack test'."
+  where
+    ensureExecutable :: String -> String -> IOResult FilePath
+    ensureExecutable name errMsg = do
+        mexe <- liftIO $ findExecutable name
+        case mexe of
+            Nothing   -> throwError errMsg
+            Just path -> return path
+
+    runProc :: String -> [String] -> IOResult (ExitCode, String, String)
+    runProc name args = liftIO $ readCreateProcessWithExitCode (proc name args) ""
+
+    trim :: String -> String
+    trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
 
 -- 检查单个文件：Typus 语法、编译为 Go、go build 语法验证
 checkSingleFile :: FilePath -> IOResult ()

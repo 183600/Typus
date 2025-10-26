@@ -37,6 +37,7 @@ cliCommandTestSuite :: TestTree
 cliCommandTestSuite = testGroup "CLI Command Tests"
     [ testCase "Test typus --version command" testVersionCommand
     , testCase "Test typus -v command" testShortVersionCommand
+    , testCase "Test typus check-haskell-env command" testCheckHaskellEnvCommand
     , testCase "Test typus check command with valid file" testCheckValidFile
     , testCase "Test typus check command with invalid file" testCheckInvalidFile
     , testCase "Test typus convert command" testConvertCommand
@@ -65,6 +66,15 @@ testShortVersionCommand = do
             assertBool "Version output should contain version number" (any (`elem` stdout') ['0'..'9'])
         ExitFailure code -> 
             assertFailure $ "typus -v failed with exit code: " ++ show code
+
+-- Test check-haskell-env command
+testCheckHaskellEnvCommand :: IO ()
+testCheckHaskellEnvCommand = do
+    (exitCode, stdout', stderr') <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check-haskell-env"] ""
+    case exitCode of
+        ExitSuccess -> return ()
+        ExitFailure code ->
+            assertFailure $ "typus check-haskell-env failed with exit code: " ++ show code ++ "\nStdout: " ++ stdout' ++ "\nStderr: " ++ stderr'
 
 -- Test check command with valid file
 testCheckValidFile :: IO ()

@@ -7,6 +7,7 @@ data Args
     | Check FilePath
     | Build [String]
     | Run [String]
+    | CheckHaskellEnv
     | Version
     deriving (Show)
 
@@ -27,6 +28,9 @@ runOptions :: Parser Args
 runOptions = Run
     <$> many (argument str (metavar "FILE [ARGS...]"))
 
+checkHaskellEnvOptions :: Parser Args
+checkHaskellEnvOptions = pure CheckHaskellEnv
+
 versionOption :: Parser Args
 versionOption = flag' Version
     (long "version" <> short 'v' <> help "Show version information")
@@ -37,6 +41,7 @@ argsParser = subparser
    <> command "check" (info checkOptions (progDesc "Check Typus syntax"))
    <> command "build" (info buildOptions (progDesc "Build a Typus project (calls go build)"))
    <> command "run" (info runOptions (progDesc "Run a Typus project (calls go run)"))
+   <> command "check-haskell-env" (info checkHaskellEnvOptions (progDesc "Check Haskell toolchain availability (stack test)"))
     ) <|> versionOption
 
 parseArgs :: IO Args

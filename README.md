@@ -54,6 +54,11 @@ make install
    # 或
    typus -v
    ```
+
+7. **检查 Haskell 环境（Stack 是否可用）**：
+   ```bash
+   typus check-haskell-env
+   ```
 ```
 
 ## 文件级指令

@@ -232,6 +232,8 @@ dispatch (Run runArgs) = do
                     Left err -> putStrLn ("Error: " ++ err) >> exitFailure
                     Right _ -> return ()
 
+dispatch CheckHaskellEnv = checkHaskellEnvironment
+
 dispatch Version = do
     liftIO $ putStrLn "typus version 0.1.0"
 
