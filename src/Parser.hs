@@ -360,20 +360,20 @@ parseFileDirectivesFromLines :: [String] -> Either String (FileDirectives, [Stri
 parseFileDirectivesFromLines = go defaultFileDirectives []
   where
     go :: FileDirectives -> [String] -> [String] -> Either String (FileDirectives, [String], [String])
-    go acc buildTags [] = Right (acc, buildTags, [])
-    go acc buildTags (l:ls) =
+    go acc buildTagsRev [] = Right (acc, reverse buildTagsRev, [])
+    go acc buildTagsRev (l:ls) =
         let t = trim l
         in if t == ""
-            then go acc buildTags ls
+            then go acc buildTagsRev ls
             else if isPrefixOf "//!" t
                 then do
                     (k, v) <- parseFileDirectiveLine t
                     acc' <- updateFileDirective acc k v
-                    go acc' buildTags ls
+                    go acc' buildTagsRev ls
             else if isBuildTagLine t
                 then -- Preserve build tags by keeping them in the buildTags list
-                     go acc (buildTags ++ [l]) ls
-                else Right (acc, buildTags, l:ls)
+                     go acc (l:buildTagsRev) ls
+                else Right (acc, reverse buildTagsRev, l:ls)
     
     isBuildTagLine line = 
         isPrefixOf "//go:build" line || isPrefixOf "// +build" line
@@ -386,33 +386,39 @@ parseFileDirectivesFromLines = go defaultFileDirectives []
 parseBlocksFromLines :: [String] -> Either String [CodeBlock]
 parseBlocksFromLines = go [] []
   where
-    -- go accBlocks accCodeBuf remainingLines
+    -- accRev stores blocks in reverse order; codeBufRev stores lines in reverse order
     go :: [CodeBlock] -> [String] -> [String] -> Either String [CodeBlock]
-    go acc blocksBuf [] =
-        let finalBlocks = acc ++ flushCodeBuf blocksBuf
-        in Right finalBlocks
-    go acc blocksBuf (l:ls) =
+    go accRev codeBufRev [] =
+        let accRev' = flushCodeBufToAcc accRev codeBufRev
+        in Right (reverse accRev')
+    go accRev codeBufRev (l:ls) =
         let t = trim l
         in if startsWithBlockDirective t
-            then do
-                -- Flush any pending normal code into a default block
-                let acc' = acc ++ flushCodeBuf blocksBuf
-                -- Parse block directives
-                kvs <- parseBlockDirectiveLine t
-                bd <- parseBlockDirectives kvs
-                -- Capture block content until the directive-closing '}'
-                (blockLines, rest) <- captureDirectiveBlock ls
-                let codeTxt = unlines blockLines
-                let blk = CodeBlock bd codeTxt
-                go (acc' ++ [blk]) [] rest
-            else
-                -- Accumulate normal code
-                go acc (blocksBuf ++ [l]) ls
+           then do
+             -- Flush any pending normal code into a default block
+             let accRev' = flushCodeBufToAcc accRev codeBufRev
+             -- Parse block directives
+             kvs <- parseBlockDirectiveLine t
+             bd <- parseBlockDirectives kvs
+             -- Capture block content until the directive-closing '}'
+             (blockLines, rest) <- captureDirectiveBlock ls
+             let codeTxt = unlines blockLines
+             let blk = CodeBlock bd codeTxt
+             go (blk : accRev') [] rest
+           else
+             -- Accumulate normal code
+             go accRev (l:codeBufRev) ls
 
-    flushCodeBuf :: [String] -> [CodeBlock]
-    flushCodeBuf buf =
-        let codeTxt = trimRight (unlines buf)
-        in if codeTxt == "" then [] else [CodeBlock defaultBlockDirectives codeTxt]
+    flushCodeBufToAcc :: [CodeBlock] -> [String] -> [CodeBlock]
+    flushCodeBufToAcc accRev codeBufRev =
+        case flushCodeBuf codeBufRev of
+          Nothing -> accRev
+          Just blk -> blk : accRev
+
+    flushCodeBuf :: [String] -> Maybe CodeBlock
+    flushCodeBuf bufRev =
+        let codeTxt = trimRight (unlines (reverse bufRev))
+        in if codeTxt == "" then Nothing else Just (CodeBlock defaultBlockDirectives codeTxt)
 
     startsWithBlockDirective :: String -> Bool
     startsWithBlockDirective s = isPrefixOf "{//!" (dropWhile isSpace s)
@@ -424,36 +430,35 @@ captureDirectiveBlock :: [String] -> Either String ([String], [String])
 captureDirectiveBlock = go 0 []
   where
     go :: Int -> [String] -> [String] -> Either String ([String], [String])
-    go _ _acc [] = Left "Unclosed directive block: missing closing '}'"
-    go depth acc (l:ls) =
-        let d = curlyDelta l
-            newDepth = depth + d
+    go _ _ [] = Left "Unclosed directive block: missing closing '}'"
+    go depth accRev (l:ls) =
+        let newDepth = depth + curlyDelta l
         in if newDepth < 0
-            then -- The last line l is the directive-closing '}', do not include it
-                 Right (acc, ls)
-            else go newDepth (acc ++ [l]) ls
+           then -- The last line l is the directive-closing '}', do not include it
+                Right (reverse accRev, ls)
+           else go newDepth (l:accRev) ls
 
 -- Compute net curly-brace delta for a line, ignoring braces inside strings and line-comments.
 -- Strings: "..." with support for escaping \" inside (approx).
 -- Line comments: // ... (ignored).
 curlyDelta :: String -> Int
-curlyDelta = go False False 0 0
+curlyDelta = go False False 0
   where
-    go :: Bool -> Bool -> Int -> Int -> String -> Int
-    go _ _ acc _ [] = acc
-    go inStr _esc acc _ ('/':'/':_) | not inStr = acc  -- comment starts, ignore rest
-    go inStr _esc acc _prev (c:cs)
+    go :: Bool -> Bool -> Int -> String -> Int
+    go _ _ acc [] = acc
+    go inStr esc acc ('/':'/':_) | not inStr = acc  -- comment starts, ignore rest
+    go inStr esc acc (c:cs)
         | inStr =
             case c of
-                '"' | not _esc -> go False False acc (fromEnum c) cs
-                '\\' -> go True True acc (fromEnum c) cs
-                _    -> go True False acc (fromEnum c) cs
+                '"' | not esc -> go False False acc cs
+                '\\'         -> go True True acc cs
+                _              -> go True False acc cs
         | otherwise =
             case c of
-                '"'  -> go True False acc (fromEnum c) cs
-                '{'  -> go False False (acc + 1) (fromEnum c) cs
-                '}'  -> go False False (acc - 1) (fromEnum c) cs
-                _    -> go False False acc (fromEnum c) cs
+                '"' -> go True False acc cs
+                '{' -> go False False (acc + 1) cs
+                '}' -> go False False (acc - 1) cs
+                _   -> go False False acc cs
 
 -- ============================================================================
 -- Directive Parsing
