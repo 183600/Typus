@@ -103,10 +103,11 @@ parseWithTracking input sourceLines = do
 addLocationInfo :: [CodeBlock] -> [String] -> ParserM [LocatedCodeBlock]
 addLocationInfo blocks sourceLines = do
     let totalLines = length sourceLines
-    foldM (processBlock totalLines sourceLines) [] (zip [1..] blocks)
+    rev <- foldM (processBlock totalLines sourceLines) [] (zip [1..] blocks)
+    return (reverse rev)
   where
     processBlock :: Int -> [String] -> [LocatedCodeBlock] -> (Int, CodeBlock) -> ParserM [LocatedCodeBlock]
-    processBlock totalLines srcLines acc (idx, block) = do
+    processBlock totalLines srcLines accRev (_idx, block) = do
         let contentLines = lines (cbContent block)
             lineCount = length contentLines
             
@@ -128,7 +129,7 @@ addLocationInfo blocks sourceLines = do
                 , lcbLineEnd = endLine
                 }
         
-        return $ acc ++ [located]
+        return (located : accRev)
 
 -- ============================================================================
 -- Structure Validation with Location Tracking

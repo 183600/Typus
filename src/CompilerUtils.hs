@@ -4,7 +4,7 @@ module CompilerUtils (
 
 import Compiler (compile)
 import qualified Parser as P
-import Control.Monad (forM, forM_, unless)
+import Control.Monad (forM, forM_, unless, when)
 import Control.Monad.Except
 import Control.Monad.IO.Class (liftIO)
 import System.Directory
@@ -26,6 +26,8 @@ import System.IO.Temp (withSystemTempDirectory)
 import System.Exit (ExitCode(..))
 import System.Info (os)
 import Data.Either (partitionEithers)
+import System.Environment (lookupEnv)
+import Data.Char (toLower)
 
 type IOResult a = ExceptT String IO a
 
@@ -49,22 +51,32 @@ convertFile input output = do
                 Right file -> return file
 
             -- Integrated analysis and compilation
-            liftIO $ putStrLn $ "Parsing completed for: " ++ input
-            liftIO $ putStrLn $ "Running integrated analysis..."
+            debug <- liftIO $ do
+                m <- lookupEnv "TYPUS_DEBUG"
+                return $ case fmap (map toLower) m of
+                  Just "1"     -> True
+                  Just "true"  -> True
+                  Just "yes"   -> True
+                  Just "on"    -> True
+                  _             -> False
+            when debug $ liftIO $ putStrLn $ "Parsing completed for: " ++ input
+            when debug $ liftIO $ putStrLn $ "Running integrated analysis..."
 
             -- Compile to Go code with enhanced analysis
             case compile typusFile of
                 Left err   -> throwError $ "Compilation error: " ++ err
                 Right code -> do
                     liftIO $ putStrLn $ "Compilation successful"
+                    -- Only print full generated code in debug mode to avoid excessive I/O
+                    when debug $ do
+                        let codeLength = length code
+                        liftIO $ putStrLn $ "Generated Go code (" ++ show codeLength ++ " characters):"
+                        liftIO $ putStrLn $ "----------------------------------------"
+                        liftIO $ putStrLn code
+                        liftIO $ putStrLn $ "----------------------------------------"
                     return code
 
-    -- 打印完整生成代码，便于调试
-    let codeLength = length goCode
-    liftIO $ putStrLn $ "Generated Go code (" ++ show codeLength ++ " characters):"
-    liftIO $ putStrLn $ "----------------------------------------"
-    liftIO $ putStrLn goCode
-    liftIO $ putStrLn $ "----------------------------------------"
+    -- 调试模式下可通过设置环境变量 TYPUS_DEBUG=1 查看完整生成代码
 
     -- 确保输出目录存在并写入
     let parentDir = takeDirectory output
