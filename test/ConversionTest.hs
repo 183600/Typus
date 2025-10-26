@@ -1,6 +1,6 @@
 module ConversionTest (runConversionTests, conversionTestSuite) where
 
-import System.Directory (doesDirectoryExist, doesFileExist, listDirectory, removeDirectoryRecursive)
+import System.Directory (doesDirectoryExist, doesFileExist, listDirectory, removeDirectoryRecursive, findExecutable)
 import System.FilePath ((</>), takeFileName, dropExtension, (<.>))
 import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..))
@@ -17,51 +17,57 @@ runConversionTests = do
     putStrLn "=== Typus Conversion and Execution Test ==="
     putStrLn ""
 
-    -- Test configuration
-    let inputDir = "examples/go250923"
-    let outputDir = "examples/go250923output"
+    maybeGoPath <- findExecutable "go"
+    case maybeGoPath of
+        Nothing -> do
+            putStrLn "WARNING: Go compiler not found; skipping conversion tests."
+            return ()
+        Just goPath -> do
+            -- Test configuration
+            let inputDir = "examples/go250923"
+            let outputDir = "examples/go250923output"
 
-    -- Check if input directory exists
-    inputExists <- doesDirectoryExist inputDir
-    when (not inputExists) $ do
-        hPutStrLn stderr $ "ERROR: Input directory " ++ inputDir ++ " does not exist"
-        fail "Input directory not found"
+            -- Check if input directory exists
+            inputExists <- doesDirectoryExist inputDir
+            when (not inputExists) $ do
+                hPutStrLn stderr $ "ERROR: Input directory " ++ inputDir ++ " does not exist"
+                fail "Input directory not found"
 
-    -- Step 1: Test typus convert command
-    putStrLn "Step 1: Testing typus convert command..."
-    convertSuccess <- testTypusConvert inputDir outputDir
-    when (not convertSuccess) $ do
-        hPutStrLn stderr "ERROR: typus convert command failed"
-        fail "typus convert failed"
-    putStrLn "✓ typus convert command completed successfully"
-    putStrLn ""
+            -- Step 1: Test typus convert command
+            putStrLn "Step 1: Testing typus convert command..."
+            convertSuccess <- testTypusConvert inputDir outputDir
+            when (not convertSuccess) $ do
+                hPutStrLn stderr "ERROR: typus convert command failed"
+                fail "typus convert failed"
+            putStrLn "✓ typus convert command completed successfully"
+            putStrLn ""
 
-    -- Step 2: Get list of typus files
-    putStrLn "Step 2: Getting list of typus files..."
-    typusFiles <- getTypusFiles inputDir
-    printf "Found %d typus files\n" (length typusFiles)
-    putStrLn ""
+            -- Step 2: Get list of typus files
+            putStrLn "Step 2: Getting list of typus files..."
+            typusFiles <- getTypusFiles inputDir
+            printf "Found %d typus files\n" (length typusFiles)
+            putStrLn ""
 
-    -- Step 3: Test running original typus files (expected to fail)
-    putStrLn "Step 3: Testing original typus files (expected to fail)..."
-    testOriginalFiles typusFiles
-    putStrLn ""
+            -- Step 3: Test running original typus files (expected to fail)
+            putStrLn "Step 3: Testing original typus files (expected to fail)..."
+            testOriginalFiles goPath typusFiles
+            putStrLn ""
 
-    -- Step 4: Test running converted Go files
-    putStrLn "Step 4: Testing converted Go files..."
-    testResults <- testConvertedFiles outputDir typusFiles
-    putStrLn ""
+            -- Step 4: Test running converted Go files
+            putStrLn "Step 4: Testing converted Go files..."
+            testResults <- testConvertedFiles goPath outputDir typusFiles
+            putStrLn ""
 
-    -- Step 5: Summary
-    putStrLn "=== Test Summary ==="
-    putStrLn $ "Total typus files: " ++ show (length typusFiles)
-    putStrLn $ "Go files that run without error: " ++ show (length $ filter id testResults)
-    let successCount = length $ filter id testResults
-    if successCount == length typusFiles
-        then putStrLn "✓ All tests passed!"
-        else do
-            putStrLn "✗ Some tests failed!"
-            printf "Successful: %d/%d\n" successCount (length typusFiles)
+            -- Step 5: Summary
+            putStrLn "=== Test Summary ==="
+            putStrLn $ "Total typus files: " ++ show (length typusFiles)
+            putStrLn $ "Go files that run without error: " ++ show (length $ filter id testResults)
+            let successCount = length $ filter id testResults
+            if successCount == length typusFiles
+                then putStrLn "✓ All tests passed!"
+                else do
+                    putStrLn "✗ Some tests failed!"
+                    printf "Successful: %d/%d\n" successCount (length typusFiles)
 
 -- Test that typus convert command
 testTypusConvert :: FilePath -> FilePath -> IO Bool
@@ -93,11 +99,11 @@ getTypusFiles dir = do
     return $ map (dir </>) typusFiles
 
 -- Test running original typus files (expected to fail)
-testOriginalFiles :: [FilePath] -> IO ()
-testOriginalFiles files = do
+testOriginalFiles :: FilePath -> [FilePath] -> IO ()
+testOriginalFiles goPath files = do
     forM_ files $ \file -> do
         putStrLn $ "Testing original file: " ++ takeFileName file
-        (exitCode, _, _) <- readProcessWithExitCode "go" ["run", file] ""
+        (exitCode, _, _) <- readProcessWithExitCode goPath ["run", file] ""
         case exitCode of
             ExitSuccess -> do
                 putStrLn $ "  ⚠ Unexpected success (typus file ran directly)"
@@ -105,8 +111,8 @@ testOriginalFiles files = do
                 putStrLn $ "  ✓ Expected failure (Go cannot run .typus files directly)"
 
 -- Test running converted Go files
-testConvertedFiles :: FilePath -> [FilePath] -> IO [Bool]
-testConvertedFiles outputDir typusFiles = do
+testConvertedFiles :: FilePath -> FilePath -> [FilePath] -> IO [Bool]
+testConvertedFiles goPath outputDir typusFiles = do
     outputExists <- doesDirectoryExist outputDir
     if not outputExists
         then do
@@ -126,7 +132,7 @@ testConvertedFiles outputDir typusFiles = do
                         putStrLn $ "Testing Go file: " ++ takeFileName goFile
 
                         -- Try to run Go file with timeout
-                        (exitCode, stdout, stdErr) <- readProcessWithExitCode "timeout" ["10s", "go", "run", goFile] ""
+                        (exitCode, stdout, stdErr) <- readProcessWithExitCode "timeout" ["10s", goPath, "run", goFile] ""
                         let actualExitCode = if exitCode == ExitFailure 124
                                             then ExitFailure 1  -- Timeout
                                             else exitCode

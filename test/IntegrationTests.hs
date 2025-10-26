@@ -12,7 +12,7 @@ import qualified Ownership (analyzeOwnership, OwnershipError(..))
 import qualified DependentTypesParser ()
 import qualified SyntaxValidator (validateSyntax)
 import qualified AnalyzerIntegration ()
-import System.Directory (doesFileExist, createDirectoryIfMissing)
+import System.Directory (doesFileExist, createDirectoryIfMissing, findExecutable)
 import System.FilePath ((</>))
 import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..))
@@ -83,31 +83,33 @@ testEndToEndCompilation config = testCase "End-to-End Compilation" $ do
                     -- 尝试编译生成的 Go 代码
                     let tempGoFile = tempDir config </> "test_output.go"
                     writeFile tempGoFile goCode
-                    
-                    -- 使用 Go 编译器编译
-                    (exitCode, _stdout, stderr) <- readProcessWithExitCode 
-                        (goCompilerPath config) 
-                        ["build", "-o", tempDir config </> "test_output", tempGoFile] 
-                        ""
-                    
-                    case exitCode of
-                        ExitSuccess -> do
-                            -- 尝试运行生成的可执行文件
-                            (exitCode', _stdout', _stderr') <- readProcessWithExitCode 
-                                (tempDir config </> "test_output") 
-                                [] 
+
+                    mGoPath <- findExecutable (goCompilerPath config)
+                    case mGoPath of
+                        Nothing -> do
+                            putStrLn "WARNING: Go compiler not found, skipping compilation test"
+                            return ()
+                        Just goPath -> do
+                            -- 使用 Go 编译器编译
+                            (exitCode, _stdout, stderr) <- readProcessWithExitCode
+                                goPath
+                                ["build", "-o", tempDir config </> "test_output", tempGoFile]
                                 ""
-                            
-                            case exitCode' of
-                                ExitSuccess -> return ()
-                                ExitFailure c -> assertFailure $ "Generated program failed with exit code " ++ show c
-                        
-                        ExitFailure c -> do
-                            if "command not found" `isInfixOf` stderr
-                                then do
-                                    putStrLn "WARNING: Go compiler not found, skipping compilation test"
-                                    return ()
-                                else assertFailure $ "Go compilation failed with exit code " ++ show c ++ ": " ++ stderr
+
+                            case exitCode of
+                                ExitSuccess -> do
+                                    -- 尝试运行生成的可执行文件
+                                    (exitCode', _stdout', _stderr') <- readProcessWithExitCode
+                                        (tempDir config </> "test_output")
+                                        []
+                                        ""
+
+                                    case exitCode' of
+                                        ExitSuccess -> return ()
+                                        ExitFailure c -> assertFailure $ "Generated program failed with exit code " ++ show c
+
+                                ExitFailure c ->
+                                    assertFailure $ "Go compilation failed with exit code " ++ show c ++ ": " ++ stderr
 
 -- 测试Typus特定功能编译
 testTypusSpecificCompilation :: TestConfig -> TestTree
@@ -140,21 +142,23 @@ testTypusSpecificCompilation config = testCase "Typus Specific Compilation" $ do
                     -- 尝试编译生成的 Go 代码
                     let tempGoFile = tempDir config </> "typus_test_output.go"
                     writeFile tempGoFile goCode
-                    
-                    -- 使用 Go 编译器编译
-                    (exitCode, _stdout, stderr) <- readProcessWithExitCode 
-                        (goCompilerPath config) 
-                        ["build", "-o", tempDir config </> "typus_test_output", tempGoFile] 
-                        ""
-                    
-                    case exitCode of
-                        ExitSuccess -> return ()
-                        ExitFailure c -> do
-                            if "command not found" `isInfixOf` stderr
-                                then do
-                                    putStrLn "WARNING: Go compiler not found, skipping compilation test"
-                                    return ()
-                                else assertFailure $ "Go compilation failed with exit code " ++ show c ++ ": " ++ stderr
+
+                    mGoPath <- findExecutable (goCompilerPath config)
+                    case mGoPath of
+                        Nothing -> do
+                            putStrLn "WARNING: Go compiler not found, skipping compilation test"
+                            return ()
+                        Just goPath -> do
+                            -- 使用 Go 编译器编译
+                            (exitCode, _stdout, stderr) <- readProcessWithExitCode
+                                goPath
+                                ["build", "-o", tempDir config </> "typus_test_output", tempGoFile]
+                                ""
+
+                            case exitCode of
+                                ExitSuccess -> return ()
+                                ExitFailure c ->
+                                    assertFailure $ "Go compilation failed with exit code " ++ show c ++ ": " ++ stderr
 
 -- 测试加密功能导入检测
 testCryptoImportDetection :: TestConfig -> TestTree

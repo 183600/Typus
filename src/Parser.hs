@@ -446,7 +446,7 @@ curlyDelta = go False False 0
   where
     go :: Bool -> Bool -> Int -> String -> Int
     go _ _ acc [] = acc
-    go inStr esc acc ('/':'/':_) | not inStr = acc  -- comment starts, ignore rest
+    go inStr _ acc ('/':'/':_) | not inStr = acc  -- comment starts, ignore rest
     go inStr esc acc (c:cs)
         | inStr =
             case c of
