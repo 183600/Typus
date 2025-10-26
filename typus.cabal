@@ -10,7 +10,8 @@ category:      Compilers, Language
 build-type:    Simple
 extra-doc-files: ChangeLog.md
 extra-source-files:
-    test/fixtures/**
+    test/fixtures/full_project/*.typus
+    test/fixtures/full_project/assets/hello.txt
 
 source-repository head
   type: git
