@@ -10,6 +10,8 @@ import qualified Dependencies as Dep
 -- import qualified Data.Map.Strict as Map
 -- import qualified Data.Set as Set
 import Control.Monad.State (runState, execState)
+import Compiler (checkDependentTypes)
+import Parser (parseTypus, TypusFile)
 -- import Control.Monad.Except
 -- import qualified Data.Text as T
 
@@ -28,6 +30,7 @@ preciseTypeTests = testGroup "Precise Type Tests"
   , typeLevelComputationTests
   , advancedPolymorphismTests
   , errorDetectionTests
+  , compilerIntegrationTests
   , basicPropertyTests
   ]
 
@@ -347,8 +350,55 @@ errorDetectionTests = testGroup "Precise Error Detection"
   ]
 
 -- ============================================================================
--- 基础属性测试
+-- 精确类型编译器集成测试
 -- ============================================================================
+
+compilerIntegrationTests :: TestTree
+compilerIntegrationTests = testGroup "Compiler Integration"
+  [ testCase "Reports duplicate dependent type definitions" $ do
+      let invalidProgram = unlines
+            [ "package main"
+            , ""
+            , "{//! dependent_types: on}"
+            , "type Example struct {"
+            , "    Value: int"
+            , "}"
+            , "type Example struct {"
+            , "    Value: int"
+            , "}"
+            , "}"
+            ]
+          expectedError = "Dependent type errors: Invalid type syntax: 重复定义: Example"
+      typusFile <- parseTypusOrFail invalidProgram
+      case checkDependentTypes typusFile of
+        Left msg -> assertEqual "Expected duplicate definition error" expectedError msg
+        Right _ -> assertFailure "Expected dependent type error for duplicate definitions"
+
+  , testCase "Succeeds for valid dependent type block" $ do
+      let validProgram = unlines
+            [ "package main"
+            , ""
+            , "{//! dependent_types: on}"
+            , "type Positive struct {"
+            , "    Value: int"
+            , "} where Value >= 0"
+            , "}"
+            ]
+      typusFile <- parseTypusOrFail validProgram
+      case checkDependentTypes typusFile of
+        Left msg -> assertFailure ("Unexpected dependent type error: " ++ msg)
+        Right _ -> pure ()
+  ]
+
+parseTypusOrFail :: String -> IO TypusFile
+parseTypusOrFail source =
+  case parseTypus source of
+    Left err -> assertFailure ("Failed to parse Typus source: " ++ err)
+    Right tf -> pure tf
+
+-- ============================================================================
+-- 基础属性测试
+
 
 basicPropertyTests :: TestTree
 basicPropertyTests = testGroup "Property Tests"
