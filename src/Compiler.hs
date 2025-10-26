@@ -5,7 +5,8 @@ module Compiler (compile, hasTypeErrors, extractDeclarations, extractFunctionCal
 import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
 import DependentTypesParser (DependentTypeError(..), runDependentTypesParser, parserErrors)
 import Ownership (analyzeOwnership, formatOwnershipErrors, OwnershipError(..))
-import Data.List (intercalate, isInfixOf, isPrefixOf)
+import Data.List (intercalate, isInfixOf, isPrefixOf, foldl')
+import qualified Data.IntMap.Strict as IntMap
 import Data.Char (isSpace)
 
 -- Compile function that takes a TypusFile and generates Go code
@@ -583,57 +584,62 @@ convertTypusGenerics content = unlines $ map convertLine (lines content)
 fixUnusedVarsGeneral :: String -> String
 fixUnusedVarsGeneral content =
   let ls = lines content
+      indexedLines = zip [0..] ls
+
+      braceDelta s = count '{' s - count '}' s
+        where count c = length (filter (== c) s)
+
       -- Identify candidate local variable declarations within blocks (depth > 0)
-      candidates :: [(Int, String, String)] -- (index, name, indent)
-      candidates =
-        let go :: Int -> Int -> [(Int, String, String)] -> [(Int, String, String)]
-            go _ _ acc | length acc > 2000 = acc  -- safety cap
-            go _ _ acc | null ls = acc
-            go i depth acc
-              | i >= length ls = acc
-              | otherwise =
-                  let l = ls !! i
-                      t = trim l
-                      indent = takeWhile isSpace l
-                      add acc' name = (i, name, indent) : acc'
-                  in if depth <= 0
-                        then go (i+1) (depth + delta l) acc
-                        else
-                          case () of
-                            _ | "var " `isPrefixOf` t ->
-                                  let rest = drop 4 t
-                                      name = takeWhile (\c -> not (isSpace c) && c /= ':' && c /= '=') rest
-                                  in if null name then go (i+1) (depth + delta l) acc else go (i+1) (depth + delta l) (add acc name)
-                              | ":=" `isInfixOf` t ->
-                                  let (lhs, _) = break (== ':') t
-                                      lhs' = trim lhs
-                                  in if ',' `elem` lhs' || null lhs' || any (\c -> isSpace c) lhs'
-                                        then go (i+1) (depth + delta l) acc
-                                        else go (i+1) (depth + delta l) (add acc lhs')
-                              | otherwise -> go (i+1) (depth + delta l) acc
-            delta s = count '{' s - count '}' s
-            count c = length . filter (== c)
-        in go 0 0 []
+      collectCandidates :: Int -> Int -> Int -> [String] -> [(Int, String, String)] -> [(Int, String, String)]
+      collectCandidates _ _ _ [] acc = reverse acc
+      collectCandidates _ _ countSoFar _ acc | countSoFar > 2000 = reverse acc
+      collectCandidates idx depth countSoFar (line:rest) acc =
+        let t = trim line
+            indent = takeWhile isSpace line
+            delta = braceDelta line
+            depthNext = depth + delta
+            continue count' acc' = collectCandidates (idx + 1) depthNext count' rest acc'
+        in if depth <= 0
+             then continue countSoFar acc
+             else case () of
+                    _ | "var " `isPrefixOf` t ->
+                          let restDecl = drop 4 t
+                              name = takeWhile (\c -> not (isSpace c) && c /= ':' && c /= '=') restDecl
+                          in if null name
+                                then continue countSoFar acc
+                                else continue (countSoFar + 1) ((idx, name, indent) : acc)
+                      | ":=" `isInfixOf` t ->
+                          let (lhs, _) = break (== ':') t
+                              lhs' = trim lhs
+                          in if ',' `elem` lhs' || null lhs' || any isSpace lhs'
+                                then continue countSoFar acc
+                                else continue (countSoFar + 1) ((idx, lhs', indent) : acc)
+                      | otherwise -> continue countSoFar acc
+
+      candidates = collectCandidates 0 0 0 ls []
 
       isUsedElsewhere :: Int -> String -> Bool
-      isUsedElsewhere idx name = any id
-        [ name `isInfixOf` l | (j,l) <- zip [0..] ls, j /= idx ]
+      isUsedElsewhere idx name =
+        any (\(j, line) -> j /= idx && name `isInfixOf` line) indexedLines
 
-      toInsert = [ (i, indent, name)
-                 | (i, name, indent) <- candidates
-                 , not (isUsedElsewhere i name)
-                 ]
+      toInsert =
+        [ (idx, indent, name)
+        | (idx, name, indent) <- candidates
+        , not (isUsedElsewhere idx name)
+        ]
 
-      -- Build new lines inserting `_ = name` right after the declaration line
-      newLines =
-        let m = foldr (\(i, indent, name) acc -> acc ++ [(i, indent ++ "_ = " ++ name)]) [] toInsert
-            indexMap = m
-        in concat [ if null [s | (k,s) <- indexMap, k == i]
-                    then [ls !! i]
-                    else let extra = [s | (k,s) <- indexMap, k == i]
-                         in (ls !! i) : extra
-                  | i <- [0..length ls - 1] ]
-  in unlines newLines
+      insertMap =
+        foldl' (\acc (idx, indent, name) ->
+                  IntMap.insertWith (flip (++)) idx [indent ++ "_ = " ++ name] acc)
+               IntMap.empty
+               toInsert
+
+      buildOutput :: Int -> [String] -> [String]
+      buildOutput _ [] = []
+      buildOutput idx (line:rest) =
+        let extras = IntMap.findWithDefault [] idx insertMap
+        in line : extras ++ buildOutput (idx + 1) rest
+  in unlines (buildOutput 0 ls)
 
 -- Extract variable and function declarations from code
 extractDeclarations :: String -> [String]
