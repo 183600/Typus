@@ -106,12 +106,19 @@ isValidTypusFile file =
     isTypusFile path = takeExtension path == ".typus"
 
 -- Expected outcome checker: ensure specific Typus files fail/succeed as intended
-data ExpectedOutcome = ExpectSuccess | ExpectFailure deriving (Eq, Show)
+data ExpectedOutcome = ExpectSuccess | ExpectFailure [String] deriving (Eq, Show)
 
 expectedOutcomeChecks :: IO [Bool]
 expectedOutcomeChecks = do
-    let cases =
-            [ ("test_ownership_error.typus", ExpectFailure)
+    let ownershipErrorMessages =
+            [ "Ownership errors:"
+            , "Use after move: data"
+            , "Double move: data to data"
+            , "Borrow while moved: data"
+            , "Mutable borrow while borrowed: data"
+            ]
+        cases =
+            [ ("test_ownership_error.typus", ExpectFailure ("Error: Compilation error:" : ownershipErrorMessages))
             , ("test_ownership_valid.typus", ExpectSuccess)
             ]
     mapM (uncurry checkCase) cases
@@ -122,23 +129,74 @@ expectedOutcomeChecks = do
         if not exists
             then do
                 putStrLn $ "[SKIP] File not found: " ++ fp
-                return True  -- don't punish CI when sample files are absent
-            else do
+                return True
+            else withSystemTempDirectory "typus_expected_output" $ \tmpDir -> do
                 putStrLn $ "[CHECK] Compiling (expect " ++ show outcome ++ "): " ++ fp
-                (ec, _out, err) <- readProcessWithExitCode "stack" ["exec","--","typus","convert", fp, "-o", "-"] ""
-                case (outcome, ec) of
-                  (ExpectSuccess, ExitSuccess) -> do
-                      putStrLn "  -> OK (compiled successfully)"
-                      return True
-                  (ExpectSuccess, ExitFailure code) -> do
-                      putStrLn $ "  -> FAIL: expected success but got exit code " ++ show code ++ ", stderr: " ++ err
+                let outPath = tmpDir </> "out.go"
+                    runArgs = ["convert", fp, "-o", outPath]
+                runResult <- runTypusCommand runArgs
+                case runResult of
+                  Left errMsg -> do
+                      putStrLn $ "  -> FAIL: unable to run typus: " ++ errMsg
                       return False
-                  (ExpectFailure, ExitFailure _) -> do
-                      putStrLn "  -> OK (failed as expected)"
-                      return True
-                  (ExpectFailure, ExitSuccess) -> do
-                      putStrLn "  -> FAIL: expected failure but compilation succeeded"
-                      return False
+                  Right (ec, outStd, errStd) -> do
+                      let combined = outStd ++ errStd
+                      outExists <- doesFileExist outPath
+                      case outcome of
+                        ExpectSuccess ->
+                          case ec of
+                            ExitSuccess -> do
+                                if not outExists
+                                  then do
+                                    putStrLn "  -> FAIL: expected output file was not created"
+                                    putStrLn $ "     CLI output:\n" ++ combined
+                                    return False
+                                  else if any (`isInfixOf` combined) ["Error:", "Ownership errors:"]
+                                    then do
+                                      putStrLn "  -> FAIL: unexpected error output despite success status"
+                                      putStrLn $ "     CLI output:\n" ++ combined
+                                      return False
+                                    else do
+                                      putStrLn "  -> OK (compiled successfully)"
+                                      return True
+                            ExitFailure code -> do
+                                putStrLn $ "  -> FAIL: expected success but got exit code " ++ show code
+                                putStrLn $ "     CLI output:\n" ++ combined
+                                return False
+                        ExpectFailure expectedMessages ->
+                          case ec of
+                            ExitFailure _ -> do
+                                let missing = filter (not . (`isInfixOf` combined)) expectedMessages
+                                if not (null missing)
+                                  then do
+                                    putStrLn "  -> FAIL: missing expected ownership error details"
+                                    mapM_ (\m -> putStrLn $ "     missing: " ++ m) missing
+                                    putStrLn $ "     CLI output:\n" ++ combined
+                                    return False
+                                  else if outExists
+                                    then do
+                                      putStrLn "  -> FAIL: output file was created despite expected failure"
+                                      putStrLn $ "     CLI output:\n" ++ combined
+                                      return False
+                                    else do
+                                      putStrLn "  -> OK (failed with accurate ownership errors)"
+                                      return True
+                            ExitSuccess -> do
+                                putStrLn "  -> FAIL: expected failure but compilation succeeded"
+                                putStrLn $ "     CLI output:\n" ++ combined
+                                return False
+
+    runTypusCommand :: [String] -> IO (Either String (ExitCode, String, String))
+    runTypusCommand args = do
+        primary <- try (readProcessWithExitCode "typus" args "") :: IO (Either SomeException (ExitCode, String, String))
+        case primary of
+          Right res -> return $ Right res
+          Left e1 -> do
+            fallback <- try (readProcessWithExitCode "stack" ("exec" : "--" : "typus" : args) "") :: IO (Either SomeException (ExitCode, String, String))
+            case fallback of
+              Right res -> return $ Right res
+              Left e2 ->
+                return $ Left $ "primary error: " ++ show e1 ++ "; fallback error: " ++ show e2
 
 -- Create a test case for a single Typus file
 createFileTest :: FilePath -> IO TestTree
