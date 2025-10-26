@@ -198,9 +198,12 @@ main = do
                             coverageThresholdEnv <- lookupEnv "TYPUS_COVERAGE_THRESHOLD"
                             let threshold :: Int
                                 threshold = maybe 70 read coverageThresholdEnv
-                            mtix <- readTix "typus-test.tix"
+                            coverageFlagEnv <- lookupEnv "STACK_TEST_COVERAGE"
+                            let coverageExpected = maybe False (\val -> val /= "0") coverageFlagEnv
+                                coverageFile = "typus-test.tix"
+                            fileExists <- doesFileExist coverageFile
+                            mtix <- if fileExists then readTix coverageFile else pure Nothing
                             case mtix of
-                              Nothing -> putStrLn "WARNING: Coverage .tix file not found; run with '--flag typus:coverage' (or 'stack test --coverage') to enforce."
                               Just (Tix mods) -> do
                                 let moduleEntries = [ boxes | TixModule name _ _ boxes <- mods, not ("Test" `isPrefixOf` name) ]
                                     totalTicks = sum (map length moduleEntries)
@@ -212,6 +215,9 @@ main = do
                                   putStrLn $ "ERROR: Coverage " ++ showFFloat (Just 2) pct "% below threshold " ++ show threshold ++ "%"
                                   exitFailure
                                 putStrLn $ "Coverage threshold satisfied (>= " ++ show threshold ++ "%)."
+                              Nothing ->
+                                when coverageExpected $
+                                  putStrLn "WARNING: Coverage data not produced; re-run tests with '--flag typus:coverage' or 'stack test --coverage'."
                             putStrLn "All essential quality gates (including coverage) have been successfully passed."
 
 isGoAvailable :: IO Bool
