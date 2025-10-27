@@ -130,6 +130,57 @@ comprehensiveUnitTestSuite = testGroup "Comprehensive Unit Tests"
                     HU.assertBool "stderr should not contain compilation errors" (not ("Compilation error" `isInfixOf` (out ++ err)))
                   ExitFailure code ->
                     HU.assertFailure $ "unexpected failure converting valid dependent types with exit code " ++ show code ++ ": " ++ out ++ err
+      , HU.testCase "typus convert reports ownership errors for use-after-move code" $ do
+            withSystemTempFile "ownership_use_after_move.typus" $ \inputPath inputHandle -> do
+              let invalidProgram = unlines
+                    [ "//! ownership: on"
+                    , "package main"
+                    , ""
+                    , "func main() {"
+                    , "    data := []int{1, 2, 3}"
+                    , "    moved := data"
+                    , "    println(moved)"
+                    , "    println(data)"
+                    , "}"
+                    ]
+              hPutStr inputHandle invalidProgram
+              hClose inputHandle
+              withSystemTempFile "ownership_use_after_move.go" $ \outputPath outputHandle -> do
+                hClose outputHandle
+                (ec, out, err) <- readProcessWithExitCode "typus" ["convert", inputPath, "-o", outputPath] ""
+                case ec of
+                  ExitFailure _ -> do
+                    let combined = out ++ err
+                    HU.assertBool "should mention compilation error" ("Compilation error" `isInfixOf` combined)
+                    HU.assertBool "should report ownership use-after-move" ("Ownership errors: Use after move: data" `isInfixOf` combined)
+                    HU.assertBool "should include Error prefix" ("Error:" `isInfixOf` combined)
+                  ExitSuccess ->
+                    HU.assertFailure "expected typus convert to fail for ownership violations"
+      , HU.testCase "typus convert succeeds for ownership enabled code without violations" $ do
+            withSystemTempFile "ownership_valid.typus" $ \inputPath inputHandle -> do
+              let validProgram = unlines
+                    [ "//! ownership: on"
+                    , "package main"
+                    , ""
+                    , "func main() {"
+                    , "    data := []int{1, 2, 3}"
+                    , "    println(len(data))"
+                    , "}"
+                    ]
+              hPutStr inputHandle validProgram
+              hClose inputHandle
+              withSystemTempFile "ownership_valid.go" $ \outputPath outputHandle -> do
+                hClose outputHandle
+                (ec, out, err) <- readProcessWithExitCode "typus" ["convert", inputPath, "-o", outputPath] ""
+                case ec of
+                  ExitSuccess -> do
+                    goCode <- readFile outputPath
+                    HU.assertBool "Go output should include package main" ("package main" `isInfixOf` goCode)
+                    HU.assertBool "stdout should mention successful compilation" ("Compilation successful" `isInfixOf` out)
+                    HU.assertBool "stdout should confirm conversion" ("Converted:" `isInfixOf` out)
+                    HU.assertBool "stderr should not mention ownership errors" (not ("Ownership errors" `isInfixOf` (out ++ err)))
+                  ExitFailure code ->
+                    HU.assertFailure $ "unexpected failure converting valid ownership code with exit code " ++ show code ++ ": " ++ out ++ err
       ]
 
     , typusCompilationTestSuite
