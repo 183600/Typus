@@ -32,6 +32,7 @@ enhancedStackTestSuite = testGroup "Enhanced Stack Tests"
     , fileIONetworkTests
     , unicodeAndEncodingTests
     , securityAndValidationTests
+    , ownershipCompilerTests
     , enhancedOwnershipTests  -- 新增的所有权测试
     ]
 
@@ -46,6 +47,7 @@ basicEnhancedStackTestSuite = testGroup "Enhanced Stack Tests (Basic)"
     , fileIONetworkTests
     , unicodeAndEncodingTests
     , securityAndValidationTests
+    , ownershipCompilerTests
     ]
 
 -- 错误处理测试
@@ -533,6 +535,61 @@ securityAndValidationTests = testGroup "Security and Validation Tests"
                 Right goCode -> do
                     assertBool "Should generate validation code" $
                         "regexp.MustCompile" `isInfixOf` goCode
+    ]
+
+-- 所有权编译器集成测试
+ownershipCompilerTests :: TestTree
+ownershipCompilerTests = testGroup "Ownership Compiler Integration Tests"
+    [ testCase "Ownership violation triggers error with accurate message" $ do
+        withSystemTempFile "ownership_error.typus" $ \typusPath typusHandle -> do
+            hPutStr typusHandle $ unlines
+                [ "//! ownership: on"
+                , "package main"
+                , ""
+                , "func main() {"
+                , "    data := []int{1, 2, 3}"
+                , "    moved := data"
+                , "    println(moved)"
+                , "    println(data)"
+                , "}"
+                ]
+            hClose typusHandle
+            withSystemTempFile "ownership_error.go" $ \outPath outHandle -> do
+                hClose outHandle
+                (exitCode, stdout, stderr) <- readProcessWithExitCode "typus" ["convert", typusPath, "-o", outPath] ""
+                case exitCode of
+                    ExitSuccess ->
+                        assertFailure "Expected ownership violation to fail compilation"
+                    ExitFailure _ -> do
+                        let combinedOutput = stdout ++ stderr
+                        assertBool ("Ownership error message missing. Output:\n" ++ combinedOutput)
+                            ("Ownership errors: Use after move: data" `isInfixOf` combinedOutput)
+                        assertBool "Should report error prefix" ("Error:" `isInfixOf` combinedOutput)
+    , testCase "Ownership-enabled file without violations compiles successfully" $ do
+        withSystemTempFile "ownership_ok.typus" $ \typusPath typusHandle -> do
+            hPutStr typusHandle $ unlines
+                [ "//! ownership: on"
+                , "package main"
+                , ""
+                , "func main() {"
+                , "    data := []int{1, 2, 3}"
+                , "    println(len(data))"
+                , "}"
+                ]
+            hClose typusHandle
+            withSystemTempFile "ownership_ok.go" $ \outPath outHandle -> do
+                hClose outHandle
+                (exitCode, stdout, stderr) <- readProcessWithExitCode "typus" ["convert", typusPath, "-o", outPath] ""
+                case exitCode of
+                    ExitFailure _ ->
+                        assertFailure $ "Expected compilation to succeed, but failed with output:\n" ++ stdout ++ stderr
+                    ExitSuccess -> do
+                        let combinedOutput = stdout ++ stderr
+                        assertBool "Should not report errors when compilation succeeds" (not ("Error:" `isInfixOf` combinedOutput))
+                        outputExists <- doesFileExist outPath
+                        assertBool "Generated Go file should exist after successful compilation" outputExists
+                        goCode <- readFile outPath
+                        assertBool "Generated Go code should include package declaration" ("package main" `isInfixOf` goCode)
     ]
 
 -- 辅助函数
