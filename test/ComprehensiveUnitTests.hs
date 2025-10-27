@@ -17,7 +17,9 @@ import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..))
 import Data.List (isInfixOf)
 
-import System.IO.Temp (withSystemTempFile)
+import System.Directory (doesFileExist)
+import System.FilePath ((</>))
+import System.IO.Temp (withSystemTempFile, withSystemTempDirectory)
 import System.IO (hPutStr, hPutStrLn, hClose)
 import EnhancedStackTest (basicEnhancedStackTestSuite)
 
@@ -100,6 +102,38 @@ comprehensiveUnitTestSuite = testGroup "Comprehensive Unit Tests"
                     HU.assertBool "stderr should not contain compilation errors" (not ("Compilation error" `isInfixOf` (out ++ err)))
                   ExitFailure code ->
                     HU.assertFailure $ "unexpected failure converting valid dependent types with exit code " ++ show code ++ ": " ++ out ++ err
+      , HU.testCase "typus convert reports ownership violations with accurate message" $ do
+            let sourcePath = "test/data/borrow_while_moved_code.typus"
+            withSystemTempDirectory "typus_ownership_err" $ \tmpDir -> do
+              let outputPath = tmpDir </> "ownership_error.go"
+              (ec, out, err) <- readProcessWithExitCode "typus" ["convert", sourcePath, "-o", outputPath] ""
+              let combined = out ++ err
+              case ec of
+                ExitFailure _ -> do
+                  HU.assertBool "should mention compilation error" ("Error: Compilation error:" `isInfixOf` combined)
+                  HU.assertBool "should mention ownership errors" ("Ownership errors:" `isInfixOf` combined)
+                  HU.assertBool "should mention borrow while moved details" ("Borrow while moved: s1" `isInfixOf` combined)
+                  outputExists <- doesFileExist outputPath
+                  HU.assertBool "output Go file should not be produced on failure" (not outputExists)
+                ExitSuccess ->
+                  HU.assertFailure $ "expected ownership errors but compilation succeeded with output:\n" ++ combined
+      , HU.testCase "typus convert succeeds when ownership rules are satisfied" $ do
+            let sourcePath = "test/data/no_violations_code.typus"
+            withSystemTempDirectory "typus_ownership_ok" $ \tmpDir -> do
+              let outputPath = tmpDir </> "ownership_valid.go"
+              (ec, out, err) <- readProcessWithExitCode "typus" ["convert", sourcePath, "-o", outputPath] ""
+              let combined = out ++ err
+              case ec of
+                ExitSuccess -> do
+                  outputExists <- doesFileExist outputPath
+                  if outputExists
+                    then do
+                      goCode <- readFile outputPath
+                      HU.assertBool "Go output should contain main function" ("func main" `isInfixOf` goCode)
+                    else HU.assertFailure "expected generated Go file but it was missing"
+                  HU.assertBool "should not report ownership errors" (not ("Ownership errors:" `isInfixOf` combined))
+                ExitFailure code ->
+                  HU.assertFailure $ "ownership-safe program should succeed, but failed with exit code " ++ show code ++ " and message:\n" ++ combined
       ]
 
     , typusCompilationTestSuite
