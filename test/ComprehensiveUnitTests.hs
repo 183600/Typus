@@ -72,6 +72,35 @@ comprehensiveUnitTestSuite = testGroup "Comprehensive Unit Tests"
                     HU.assertBool "should report duplicate definition" ("Dependent type errors: Invalid type syntax: 重复定义: Example" `isInfixOf` combined)
                   ExitSuccess ->
                     HU.assertFailure "expected typus convert to fail for duplicate type definitions"
+      , HU.testCase "typus convert reports precise type syntax errors for malformed block" $ do
+            withSystemTempFile "invalid_precise.typus" $ \inputPath inputHandle -> do
+              let invalidProgram = unlines
+                    [ "package main"
+                    , ""
+                    , "{//! dependent_types: on}"
+                    , "type BrokenPreciseType {"
+                    , "    Value: int"
+                    , "}"
+                    , "}"
+                    , ""
+                    , "func main() {"
+                    , "    println(\"broken\")"
+                    , "}"
+                    ]
+              hPutStr inputHandle invalidProgram
+              hClose inputHandle
+              withSystemTempFile "invalid_precise.go" $ \outputPath outputHandle -> do
+                hClose outputHandle
+                (ec, out, err) <- readProcessWithExitCode "typus" ["convert", inputPath, "-o", outputPath] ""
+                case ec of
+                  ExitFailure _ -> do
+                    let combined = out ++ err
+                    HU.assertBool "should mention compilation error" ("Compilation error" `isInfixOf` combined)
+                    HU.assertBool "should mention dependent type errors" ("Dependent type errors" `isInfixOf` combined)
+                    HU.assertBool "should include syntax error details" ("Syntax error" `isInfixOf` combined)
+                    HU.assertBool "should include Error prefix" ("Error:" `isInfixOf` combined)
+                  ExitSuccess ->
+                    HU.assertFailure "expected typus convert to fail for malformed precise type block"
       , HU.testCase "typus convert succeeds with valid precise types" $ do
             withSystemTempFile "valid_dependent.typus" $ \inputPath inputHandle -> do
               let validProgram = unlines
@@ -96,6 +125,7 @@ comprehensiveUnitTestSuite = testGroup "Comprehensive Unit Tests"
                   ExitSuccess -> do
                     goCode <- readFile outputPath
                     HU.assertBool "Go output should include Positive struct" ("type Positive struct" `isInfixOf` goCode)
+                    HU.assertBool "stdout should mention successful compilation" ("Compilation successful" `isInfixOf` out)
                     HU.assertBool "stdout should confirm conversion" ("Converted:" `isInfixOf` out)
                     HU.assertBool "stderr should not contain compilation errors" (not ("Compilation error" `isInfixOf` (out ++ err)))
                   ExitFailure code ->
