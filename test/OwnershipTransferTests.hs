@@ -11,6 +11,12 @@ import System.Directory (doesFileExist, removeFile)
 import System.Process (readProcessWithExitCode)
 -- import Control.Exception (try, SomeException)
 import Control.Monad (when)
+
+runTypusConvert :: FilePath -> FilePath -> IO ExitCode
+runTypusConvert inputPath outputPath = do
+    (exitCode, _, _) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", inputPath, "-o", outputPath] ""
+    pure exitCode
+
 -- import System.IO (hPutStrLn, stderr)
 -- import qualified System.IO as IO
 
@@ -79,7 +85,7 @@ testBasicOwnershipTransfer = do
     writeFile tempFile content
     
     -- Test that the file can be parsed and converted successfully
-    (exitCode, stdoutConv, stderrConv) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_ownership_basic_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_basic_output.go"
     
     -- Check if output file was created
     outputExists <- doesFileExist "test_ownership_basic_output.go"
@@ -133,7 +139,7 @@ testOwnershipTransferInFunction = do
     writeFile tempFile content
     
     -- Test that the file can be parsed and converted successfully
-    (exitCode, stdoutConv, stderrConv) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_ownership_function_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_function_output.go"
     
     -- Check if output file was created
     outputExists <- doesFileExist "test_ownership_function_output.go"
@@ -192,7 +198,7 @@ testOwnershipTransferWithStructMethods = do
     writeFile tempFile content
     
     -- Test that the file can be parsed and converted successfully
-    (exitCode, stdoutConv, stderrConv) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_ownership_methods_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_methods_output.go"
     
     -- Check if output file was created
     outputExists <- doesFileExist "test_ownership_methods_output.go"
@@ -246,7 +252,7 @@ testMultipleOwnershipTransfers = do
     writeFile tempFile content
     
     -- Test that the file can be parsed and converted successfully
-    (exitCode, stdoutConv, stderrConv) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_ownership_multiple_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_multiple_output.go"
     
     -- Check if output file was created
     outputExists <- doesFileExist "test_ownership_multiple_output.go"
@@ -300,7 +306,7 @@ testOwnershipTransferInLoop = do
     writeFile tempFile content
     
     -- Test that the file can be parsed and converted successfully
-    (exitCode, stdoutConv, stderrConv) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_ownership_loop_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_loop_output.go"
     
     -- Check if output file was created
     outputExists <- doesFileExist "test_ownership_loop_output.go"
@@ -357,7 +363,7 @@ testOwnershipTransferWithConditional = do
     writeFile tempFile content
     
     -- Test that the file can be parsed and converted successfully
-    (exitCode, stdoutConv, stderrConv) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_ownership_conditional_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_conditional_output.go"
     
     -- Check if output file was created
     outputExists <- doesFileExist "test_ownership_conditional_output.go"
@@ -417,7 +423,7 @@ testOwnershipTransferWithGC = do
     writeFile tempFile content
     
     -- Test that the file can be parsed and converted successfully
-    (exitCode, stdoutConv, stderrConv) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", tempFile, "-o", "test_ownership_gc_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_gc_output.go"
     
     -- Check if output file was created
     outputExists <- doesFileExist "test_ownership_gc_output.go"
@@ -447,7 +453,7 @@ testOwnershipViolationDetection = do
             , "}"
             ]
     writeFile tempFile content
-    (exitCode, _stdoutConv, _stderrConv) <- readProcessWithExitCode "stack" ["exec","--","typus","convert", tempFile, "-o","test_ownership_violation_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_violation_output.go"
     outputExists <- doesFileExist "test_ownership_violation_output.go"
     when outputExists $ removeFile "test_ownership_violation_output.go"
     removeFile tempFile
@@ -470,7 +476,7 @@ testOwnershipWithClosures = do
             , "}"
             ]
     writeFile tempFile content
-    (exitCode, _stdoutConv, _stderrConv) <- readProcessWithExitCode "stack" ["exec","--","typus","convert", tempFile, "-o","test_ownership_closures_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_closures_output.go"
     outputExists <- doesFileExist "test_ownership_closures_output.go"
     when outputExists $ removeFile "test_ownership_closures_output.go"
     removeFile tempFile
@@ -495,7 +501,7 @@ testOwnershipWithChannels = do
             , "}"
             ]
     writeFile tempFile content
-    (exitCode, _stdoutConv, _stderrConv) <- readProcessWithExitCode "stack" ["exec","--","typus","convert", tempFile, "-o","test_ownership_channels_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_channels_output.go"
     outputExists <- doesFileExist "test_ownership_channels_output.go"
     when outputExists $ removeFile "test_ownership_channels_output.go"
     removeFile tempFile
@@ -519,7 +525,7 @@ testOwnershipWithInterfaces = do
             , "}"
             ]
     writeFile tempFile content
-    (exitCode, _stdoutConv, _stderrConv) <- readProcessWithExitCode "stack" ["exec","--","typus","convert", tempFile, "-o","test_ownership_interfaces_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_interfaces_output.go"
     outputExists <- doesFileExist "test_ownership_interfaces_output.go"
     when outputExists $ removeFile "test_ownership_interfaces_output.go"
     removeFile tempFile
@@ -541,7 +547,7 @@ testOwnershipWithGenerics = do
             , "}"
             ]
     writeFile tempFile content
-    (exitCode, _stdoutConv, _stderrConv) <- readProcessWithExitCode "stack" ["exec","--","typus","convert", tempFile, "-o","test_ownership_generics_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_generics_output.go"
     outputExists <- doesFileExist "test_ownership_generics_output.go"
     when outputExists $ removeFile "test_ownership_generics_output.go"
     removeFile tempFile
@@ -566,7 +572,7 @@ testOwnershipWithSlicesAndMaps = do
             , "}"
             ]
     writeFile tempFile content
-    (exitCode, _stdoutConv, _stderrConv) <- readProcessWithExitCode "stack" ["exec","--","typus","convert", tempFile, "-o","test_ownership_slices_maps_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_slices_maps_output.go"
     outputExists <- doesFileExist "test_ownership_slices_maps_output.go"
     when outputExists $ removeFile "test_ownership_slices_maps_output.go"
     removeFile tempFile
@@ -589,7 +595,7 @@ testOwnershipWithDeferStatements = do
             , "}"
             ]
     writeFile tempFile content
-    (exitCode, _stdoutConv, _stderrConv) <- readProcessWithExitCode "stack" ["exec","--","typus","convert", tempFile, "-o","test_ownership_defer_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_defer_output.go"
     outputExists <- doesFileExist "test_ownership_defer_output.go"
     when outputExists $ removeFile "test_ownership_defer_output.go"
     removeFile tempFile
@@ -613,7 +619,7 @@ testOwnershipWithErrorHandling = do
             , "}"
             ]
     writeFile tempFile content
-    (exitCode, _stdoutConv, _stderrConv) <- readProcessWithExitCode "stack" ["exec","--","typus","convert", tempFile, "-o","test_ownership_error_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_error_output.go"
     outputExists <- doesFileExist "test_ownership_error_output.go"
     when outputExists $ removeFile "test_ownership_error_output.go"
     removeFile tempFile
@@ -638,7 +644,7 @@ testOwnershipWithNestedScopes = do
             , "}"
             ]
     writeFile tempFile content
-    (exitCode, _stdoutConv, _stderrConv) <- readProcessWithExitCode "stack" ["exec","--","typus","convert", tempFile, "-o","test_ownership_nested_scopes_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_nested_scopes_output.go"
     outputExists <- doesFileExist "test_ownership_nested_scopes_output.go"
     when outputExists $ removeFile "test_ownership_nested_scopes_output.go"
     removeFile tempFile
@@ -662,7 +668,7 @@ testOwnershipWithMultipleReturns = do
             , "}"
             ]
     writeFile tempFile content
-    (exitCode, _stdoutConv, _stderrConv) <- readProcessWithExitCode "stack" ["exec","--","typus","convert", tempFile, "-o","test_ownership_multiple_returns_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_multiple_returns_output.go"
     outputExists <- doesFileExist "test_ownership_multiple_returns_output.go"
     when outputExists $ removeFile "test_ownership_multiple_returns_output.go"
     removeFile tempFile
@@ -685,7 +691,7 @@ testOwnershipWithPointers = do
             , "}"
             ]
     writeFile tempFile content
-    (exitCode, _stdoutConv, _stderrConv) <- readProcessWithExitCode "stack" ["exec","--","typus","convert", tempFile, "-o","test_ownership_pointers_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_pointers_output.go"
     outputExists <- doesFileExist "test_ownership_pointers_output.go"
     when outputExists $ removeFile "test_ownership_pointers_output.go"
     removeFile tempFile
@@ -708,7 +714,7 @@ testOwnershipWithStructEmbedding = do
             , "}"
             ]
     writeFile tempFile content
-    (exitCode, _stdoutConv, _stderrConv) <- readProcessWithExitCode "stack" ["exec","--","typus","convert", tempFile, "-o","test_ownership_embedding_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_embedding_output.go"
     outputExists <- doesFileExist "test_ownership_embedding_output.go"
     when outputExists $ removeFile "test_ownership_embedding_output.go"
     removeFile tempFile
@@ -730,7 +736,7 @@ testOwnershipWithReflection = do
             , "}"
             ]
     writeFile tempFile content
-    (exitCode, _stdoutConv, _stderrConv) <- readProcessWithExitCode "stack" ["exec","--","typus","convert", tempFile, "-o","test_ownership_reflection_output.go"] ""
+    exitCode <- runTypusConvert tempFile "test_ownership_reflection_output.go"
     outputExists <- doesFileExist "test_ownership_reflection_output.go"
     when outputExists $ removeFile "test_ownership_reflection_output.go"
     removeFile tempFile

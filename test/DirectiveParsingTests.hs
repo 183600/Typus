@@ -9,6 +9,11 @@ import System.Exit (ExitCode(..))
 import System.Directory (removeFile)
 import System.Process (readProcessWithExitCode)
 
+runTypusCheck :: FilePath -> IO ExitCode
+runTypusCheck path = do
+    (exitCode, _, _) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check", path] ""
+    pure exitCode
+
 -- Main test function
 runDirectiveParsingTests :: IO ()
 runDirectiveParsingTests = do
@@ -54,7 +59,7 @@ testFileLevelOwnershipDirective = do
     writeFile tempFile content
     
     -- Test that the file can be parsed/converted
-    (exitCode, stdout, stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check", tempFile] ""
+    exitCode <- runTypusCheck tempFile
     
     removeFile tempFile
     
@@ -94,7 +99,7 @@ testFileLevelConstraintsDirective = do
     writeFile tempFile content
     
     -- Test that the file can be parsed/converted
-    (exitCode, stdout, stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check", tempFile] ""
+    exitCode <- runTypusCheck tempFile
     
     removeFile tempFile
     
@@ -134,7 +139,7 @@ testFileLevelDependentTypesDirective = do
     writeFile tempFile content
     
     -- Test that the file can be parsed/converted
-    (exitCode, stdout, stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check", tempFile] ""
+    exitCode <- runTypusCheck tempFile
     
     removeFile tempFile
     
@@ -175,7 +180,7 @@ testBlockLevelOwnershipDirective = do
     writeFile tempFile content
     
     -- Test that the file can be parsed/converted
-    (exitCode, stdout, stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check", tempFile] ""
+    exitCode <- runTypusCheck tempFile
     
     removeFile tempFile
     
@@ -220,7 +225,7 @@ testBlockLevelConstraintsDirective = do
     writeFile tempFile content
     
     -- Test that the file can be parsed/converted
-    (exitCode, stdout, stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check", tempFile] ""
+    exitCode <- runTypusCheck tempFile
     
     removeFile tempFile
     
@@ -265,7 +270,7 @@ testBlockLevelDependentTypesDirective = do
     writeFile tempFile content
     
     -- Test that the file can be parsed/converted
-    (exitCode, stdout, stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check", tempFile] ""
+    exitCode <- runTypusCheck tempFile
     
     removeFile tempFile
     
@@ -322,7 +327,7 @@ testCombinedDirectivesInBlock = do
     writeFile tempFile content
     
     -- Test that the file can be parsed/converted
-    (exitCode, stdout, stderr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check", tempFile] ""
+    exitCode <- runTypusCheck tempFile
     
     removeFile tempFile
     

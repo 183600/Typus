@@ -14,10 +14,10 @@ main = do
 
     -- Run shell script
     result <- try (do
-        (exitCode, stdout, stderr) <- readProcessWithExitCode "./test_typus_comprehensive.sh" [] ""
+        (exitCode, stdoutText, stderrText) <- readProcessWithExitCode "./test_typus_comprehensive.sh" [] ""
 
-        putStrLn stdout
-        unless (null stderr) $ hPutStrLn stdout stderr
+        putStrLn stdoutText
+        unless (null stderrText) $ hPutStrLn stdout stderrText
 
         return exitCode
     ) `catch` (\(e :: SomeException) -> do
