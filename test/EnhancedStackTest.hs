@@ -32,6 +32,7 @@ enhancedStackTestSuite = testGroup "Enhanced Stack Tests"
     , fileIONetworkTests
     , unicodeAndEncodingTests
     , securityAndValidationTests
+    , preciseTypeCompilerTests
     , ownershipCompilerTests
     , enhancedOwnershipTests  -- 新增的所有权测试
     ]
@@ -47,6 +48,7 @@ basicEnhancedStackTestSuite = testGroup "Enhanced Stack Tests (Basic)"
     , fileIONetworkTests
     , unicodeAndEncodingTests
     , securityAndValidationTests
+    , preciseTypeCompilerTests
     , ownershipCompilerTests
     ]
 
@@ -535,6 +537,83 @@ securityAndValidationTests = testGroup "Security and Validation Tests"
                 Right goCode -> do
                     assertBool "Should generate validation code" $
                         "regexp.MustCompile" `isInfixOf` goCode
+    ]
+
+-- 精确类型编译器集成测试
+preciseTypeCompilerTests :: TestTree
+preciseTypeCompilerTests = testGroup "Precise Type Compiler Integration Tests"
+    [ testCase "Duplicate precise type definitions trigger accurate compiler error" $ do
+        withSystemTempFile "precise_duplicate.typus" $ \typusPath typusHandle -> do
+            hPutStr typusHandle $ unlines
+                [ "package main"
+                , ""
+                , "{//! dependent_types: on}"
+                , "type Example struct {"
+                , "    Value: int"
+                , "}"
+                , ""
+                , "type Example struct {"
+                , "    Value: int"
+                , "}"
+                , "}"
+                , ""
+                , "func main() {"
+                , "    println(\"oops\")"
+                , "}"
+                ]
+            hClose typusHandle
+            withSystemTempFile "precise_duplicate.go" $ \outPath outHandle -> do
+                hClose outHandle
+                (exitCode, stdout, stderr) <- readProcessWithExitCode "typus" ["convert", typusPath, "-o", outPath] ""
+                case exitCode of
+                    ExitSuccess ->
+                        assertFailure "Expected duplicate precise type definitions to fail compilation"
+                    ExitFailure _ -> do
+                        let combinedOutput = stdout ++ stderr
+                        assertBool ("Compiler output should mention compilation error:\n" ++ combinedOutput)
+                            ("Compilation error" `isInfixOf` combinedOutput)
+                        assertBool "Should report duplicate precise type definition" $
+                            "Dependent type errors: Invalid type syntax: 重复定义: Example" `isInfixOf` combinedOutput
+                        assertBool "Should include Error prefix for precise type failures" $
+                            "Error:" `isInfixOf` combinedOutput
+    , testCase "Valid precise type program compiles without errors" $ do
+        withSystemTempFile "precise_valid.typus" $ \typusPath typusHandle -> do
+            hPutStr typusHandle $ unlines
+                [ "package main"
+                , ""
+                , "{//! dependent_types: on}"
+                , "type Positive struct {"
+                , "    Value: int"
+                , "} where Value >= 0"
+                , "}"
+                , ""
+                , "func main() {"
+                , "    println(\"ok\")"
+                , "}"
+                ]
+            hClose typusHandle
+            withSystemTempFile "precise_valid.go" $ \outPath outHandle -> do
+                hClose outHandle
+                (exitCode, stdout, stderr) <- readProcessWithExitCode "typus" ["convert", typusPath, "-o", outPath] ""
+                case exitCode of
+                    ExitFailure code ->
+                        assertFailure $ "Expected precise type program to compile successfully, but failed with exit code "
+                            ++ show code ++ " and output:\n" ++ stdout ++ stderr
+                    ExitSuccess -> do
+                        let combinedOutput = stdout ++ stderr
+                        assertBool "Should mention successful compilation" $
+                            "Compilation successful" `isInfixOf` combinedOutput
+                        assertBool "Should confirm conversion output" $
+                            "Converted:" `isInfixOf` combinedOutput
+                        assertBool "Should not report dependent type errors on success" $
+                            not ("Dependent type errors" `isInfixOf` combinedOutput)
+                        assertBool "Should not mention compilation error on success" $
+                            not ("Compilation error" `isInfixOf` combinedOutput)
+                        outputExists <- doesFileExist outPath
+                        assertBool "Generated Go output should exist" outputExists
+                        goCode <- readFile outPath
+                        assertBool "Generated Go code should include precise type struct" $
+                            "type Positive struct" `isInfixOf` goCode
     ]
 
 -- 所有权编译器集成测试
