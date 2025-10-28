@@ -47,7 +47,7 @@ cliCommandTestSuite = testGroup "CLI Command Tests"
 -- Test version command
 testVersionCommand :: IO ()
 testVersionCommand = do
-    (exitCode, stdout', stderr') <- readProcessWithExitCode "stack" ["exec", "--", "typus", "--version"] ""
+    (exitCode, stdout', _) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "--version"] ""
     case exitCode of
         ExitSuccess -> do
             assertBool "Version output should contain 'typus'" ("typus" `isInfixOf` stdout')
@@ -58,7 +58,7 @@ testVersionCommand = do
 -- Test short version command
 testShortVersionCommand :: IO ()
 testShortVersionCommand = do
-    (exitCode, stdout', stderr') <- readProcessWithExitCode "stack" ["exec", "--", "typus", "-v"] ""
+    (exitCode, stdout', _) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "-v"] ""
     case exitCode of
         ExitSuccess -> do
             assertBool "Version output should contain 'typus'" ("typus" `isInfixOf` stdout')
@@ -83,7 +83,7 @@ testCheckValidFile = do
     writeFile tempFile validContent
     
     -- Test check command
-    (exitCode, stdout', stderr') <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check", tempFile] ""
+    (exitCode, _, _) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check", tempFile] ""
     
     -- Clean up
     removeFile tempFile
@@ -110,7 +110,7 @@ testCheckInvalidFile = do
     writeFile tempFile invalidContent
     
     -- Test check command
-    (exitCode, stdout', stderr') <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check", tempFile] ""
+    (exitCode, _, _) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check", tempFile] ""
     
     -- Clean up
     removeFile tempFile
@@ -141,7 +141,7 @@ testConvertCommand = do
     
     -- Test convert command (convert single file to single output file)
     let outputFile = "test_temp_output" </> "simple.go"
-    (exitCode, stdout', stderr') <- readProcessWithExitCode "stack" 
+    (exitCode, _, _) <- readProcessWithExitCode "stack" 
         ["exec", "--", "typus", "convert", inputFile, "-o", outputFile] ""
     
     -- Check if output file was created
@@ -212,7 +212,7 @@ testRunCommand = do
     writeFile tempFile typusContent
     
     -- Test run command
-    (exitCode, stdout', stderr') <- readProcessWithExitCode "stack" 
+    (exitCode, stdout', _) <- readProcessWithExitCode "stack" 
         ["exec", "--", "typus", "run", tempFile] ""
     
     -- Clean up

@@ -1,0 +1,58 @@
+[1mdiff --git a/test/CLICommandTests.hs b/test/CLICommandTests.hs[m
+[1mindex 568ffd5..9b63579 100644[m
+[1m--- a/test/CLICommandTests.hs[m
+[1m+++ b/test/CLICommandTests.hs[m
+[36m@@ -47,7 +47,7 @@[m [mcliCommandTestSuite = testGroup "CLI Command Tests"[m
+ -- Test version command[m
+ testVersionCommand :: IO ()[m
+ testVersionCommand = do[m
+[31m-    (exitCode, stdout', stderr') <- readProcessWithExitCode "stack" ["exec", "--", "typus", "--version"] ""[m
+[32m+[m[32m    (exitCode, stdout', _) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "--version"] ""[m
+     case exitCode of[m
+         ExitSuccess -> do[m
+             assertBool "Version output should contain 'typus'" ("typus" `isInfixOf` stdout')[m
+[36m@@ -58,7 +58,7 @@[m [mtestVersionCommand = do[m
+ -- Test short version command[m
+ testShortVersionCommand :: IO ()[m
+ testShortVersionCommand = do[m
+[31m-    (exitCode, stdout', stderr') <- readProcessWithExitCode "stack" ["exec", "--", "typus", "-v"] ""[m
+[32m+[m[32m    (exitCode, stdout', _) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "-v"] ""[m
+     case exitCode of[m
+         ExitSuccess -> do[m
+             assertBool "Version output should contain 'typus'" ("typus" `isInfixOf` stdout')[m
+[36m@@ -83,7 +83,7 @@[m [mtestCheckValidFile = do[m
+     writeFile tempFile validContent[m
+     [m
+     -- Test check command[m
+[31m-    (exitCode, stdout', stderr') <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check", tempFile] ""[m
+[32m+[m[32m    (exitCode, _, _) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check", tempFile] ""[m
+     [m
+     -- Clean up[m
+     removeFile tempFile[m
+[36m@@ -110,7 +110,7 @@[m [mtestCheckInvalidFile = do[m
+     writeFile tempFile invalidContent[m
+     [m
+     -- Test check command[m
+[31m-    (exitCode, stdout', stderr') <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check", tempFile] ""[m
+[32m+[m[32m    (exitCode, _, _) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "check", tempFile] ""[m
+     [m
+     -- Clean up[m
+     removeFile tempFile[m
+[36m@@ -141,7 +141,7 @@[m [mtestConvertCommand = do[m
+     [m
+     -- Test convert command (convert single file to single output file)[m
+     let outputFile = "test_temp_output" </> "simple.go"[m
+[31m-    (exitCode, stdout', stderr') <- readProcessWithExitCode "stack" [m
+[32m+[m[32m    (exitCode, _, _) <- readProcessWithExitCode "stack"[m[41m [m
+         ["exec", "--", "typus", "convert", inputFile, "-o", outputFile] ""[m
+     [m
+     -- Check if output file was created[m
+[36m@@ -212,7 +212,7 @@[m [mtestRunCommand = do[m
+     writeFile tempFile typusContent[m
+     [m
+     -- Test run command[m
+[31m-    (exitCode, stdout', stderr') <- readProcessWithExitCode "stack" [m
+[32m+[m[32m    (exitCode, stdout', _) <- readProcessWithExitCode "stack"[m[41m [m
+         ["exec", "--", "typus", "run", tempFile] ""[m
+     [m
+     -- Clean up[m
