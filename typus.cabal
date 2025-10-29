@@ -209,29 +209,11 @@ test-suite typus-test
     hs-source-dirs:   test
     default-extensions: NoMonomorphismRestriction
     other-modules:
-        TestParser,
-        TestCompiler,
-        TestOwnership,
-        ComprehensiveTestSuite,
-        PerformanceTests,
-        IntegrationTests,
-        ProductionTests,
-        BenchmarkTests,
-        ConversionTest,
-        TypusCompilationTest,
-        ComprehensiveUnitTests,
-        EndToEndTests,
-        CLICommandTests,
-        DirectiveParsingTests,
-        DependentTypesAndVectorTests,
-        OwnershipTransferTests,
-        PreciseTypeTests,
-        EnhancedPreciseTypeTests,
-        RunEnhancedPreciseTypeTests,
-        EnhancedOwnershipTests,
-        EnhancedStackTest,
-        RunEnhancedOwnershipTests,
-        Integration.BuildSpec
+        ParserSpec,
+        OwnershipSpec,
+        DependentTypesSpec,
+        CompilerSpec,
+        CLISpec
     build-depends:
         base >=4.7 && <5,
         typus,
