@@ -12,17 +12,14 @@
 module Main where
 
 import System.FilePath.Glob (glob)
-import System.Directory (doesFileExist, doesDirectoryExist, createDirectoryIfMissing, getCurrentDirectory)
-import System.FilePath ((</>), takeBaseName, takeExtension)
-import System.Process (readProcessWithExitCode, CreateProcess(..), StdStream(..))
+import System.Directory (doesFileExist, getCurrentDirectory)
+import System.FilePath ((</>), takeBaseName)
+import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..), exitFailure, exitSuccess)
-import System.IO (hPutStr, hPutStrLn, stderr, stdout)
-import Control.Exception (try, SomeException, bracket)
+import Control.Exception (try, SomeException)
 import System.IO.Temp (withSystemTempDirectory)
-import System.IO (hClose, openTempFile)
-import Control.Monad (when, unless, forM_, filterM)
-import Data.List (isSuffixOf, isPrefixOf)
-import Data.Maybe (isJust, fromJust)
+import Control.Monad (unless)
+import Data.List (isInfixOf, isPrefixOf)
 
 main :: IO ()
 main = do
@@ -113,9 +110,6 @@ testTypusFile typusFile = do
 testCompilation :: FilePath -> IO (Either String String)
 testCompilation typusFile = do
     try $ do
-        -- Read the Typus file
-        content <- readFile typusFile
-
         -- Use the typus compiler to convert it
         (exitCode, _, err) <- readProcessWithExitCode "typus" ["convert", typusFile, "/dev/stdout"] ""
 

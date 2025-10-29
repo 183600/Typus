@@ -2,15 +2,13 @@
 module Main where
 
 import System.Exit (ExitCode(..), exitFailure, exitSuccess)
-import System.Directory (doesFileExist, getCurrentDirectory, createDirectoryIfMissing)
-import System.FilePath ((</>), takeBaseName, takeExtension)
+import System.Directory (doesFileExist, getCurrentDirectory)
+import System.FilePath ((</>), takeBaseName)
 import System.Process (readProcessWithExitCode)
 import Control.Exception (try, SomeException, catch)
 import Control.Monad (unless)
 import System.IO.Temp (withSystemTempDirectory)
-import System.IO (hPutStrLn, stdout, stderr)
-import Control.Monad (when, forM_, filterM)
-import Data.List (isInfixOf, isSuffixOf, isPrefixOf)
+import Data.List (isInfixOf, isPrefixOf)
 import System.FilePath.Glob (glob)
 
 main :: IO ()
@@ -99,18 +97,18 @@ testTypusFile typusFile = do
 testCompilation :: FilePath -> IO (Either String String)
 testCompilation typusFile = try $ do
     -- Use the typus compiler to convert the file
-    (exitCode, stdout, stderr) <- readProcessWithExitCode "typus" ["convert", typusFile, "-"] ""
+    (exitCode, stdoutText, stderrText) <- readProcessWithExitCode "typus" ["convert", typusFile, "-"] ""
 
     case exitCode of
         ExitSuccess -> do
             -- Check if there's any output
-            if null stdout && null stderr
+            if null stdoutText && null stderrText
                 then return ""  -- Some compilers might not output to stdout
-                else return $ if null stdout then stderr else stdout
+                else return $ if null stdoutText then stderrText else stdoutText
         ExitFailure code -> do
-            let errorMsg = if null stderr
+            let errorMsg = if null stderrText
                            then "Compilation failed with exit code " ++ show code
-                           else "Compilation failed: " ++ stderr
+                           else "Compilation failed: " ++ stderrText
             Left errorMsg
     `catch` (\(e :: SomeException) -> return $ Left $ "Exception during compilation: " ++ show e)
 
