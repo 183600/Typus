@@ -17,8 +17,9 @@ import System.FilePath ((</>))
 import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..))
 import Data.List (isInfixOf)
-import Control.Monad ()
+import Control.Monad (when)
 
+import TestSupport.Verbosity (Verbosity(..), whenVerbose)
 
 -- 测试配置
 data TestConfig = TestConfig
@@ -40,10 +41,11 @@ setupTestEnvironment config = do
     createDirectoryIfMissing True (tempDir config)
 
 -- 清理临时目录
-cleanupTestEnvironment :: TestConfig -> IO ()
-cleanupTestEnvironment config = do
-    -- 这里应该删除临时文件，但为了安全起见，我们只打印信息
-    putStrLn $ "Test environment cleanup: " ++ tempDir config
+cleanupTestEnvironment :: Verbosity -> TestConfig -> IO ()
+cleanupTestEnvironment verbosity config = do
+    -- 这里应该删除临时文件，但为了安全起见，我们只在需要时打印信息
+    whenVerbose verbosity $
+        putStrLn $ "Test environment cleanup: " ++ tempDir config
 
 -- 从测试数据目录加载测试用例
 loadTestData :: FilePath -> IO String
@@ -279,29 +281,32 @@ integrationTestSuite config = testGroup "Integration Tests" [
     ]
 
 -- 运行集成测试并生成报告
-runIntegrationTests :: TestConfig -> IO ()
-runIntegrationTests config = do
-    putStrLn "Running integration test suite for Typus compiler..."
-    putStrLn "================================================"
-    putStrLn $ "Test configuration:"
-    putStrLn $ "  Temporary directory: " ++ tempDir config
-    putStrLn $ "  Go compiler path: " ++ goCompilerPath config
-    putStrLn $ "  Timeout: " ++ show (timeoutSeconds config) ++ " seconds"
-    putStrLn ""
-    
+runIntegrationTests :: Verbosity -> TestConfig -> IO ()
+runIntegrationTests verbosity config = do
+    whenVerbose verbosity $ do
+        putStrLn "Running integration test suite for Typus compiler..."
+        putStrLn "================================================"
+        putStrLn "Test configuration:"
+        putStrLn $ "  Temporary directory: " ++ tempDir config
+        putStrLn $ "  Go compiler path: " ++ goCompilerPath config
+        putStrLn $ "  Timeout: " ++ show (timeoutSeconds config) ++ " seconds"
+        putStrLn ""
+
     setupTestEnvironment config
     
     -- 使用 Tasty 运行集成测试
     let ingredients = [consoleTestReporter]
     case tryIngredients ingredients mempty (integrationTestSuite config) of
-        Nothing -> do
+        Nothing ->
             putStrLn "ERROR: No suitable ingredient found to run integration tests"
         Just runTest -> do
             success <- runTest
             if success
                 then do
-                    cleanupTestEnvironment config
-                    putStrLn "SUCCESS: All integration tests passed. The project is ready for production."
-                else do
-                    putStrLn "ERROR: Some integration tests failed."
+                    cleanupTestEnvironment verbosity config
+                    when (verbosity == Quiet) $
+                        putStrLn "Integration tests passed."
+                    whenVerbose verbosity $
+                        putStrLn "SUCCESS: All integration tests passed. The project is ready for production."
+                else putStrLn "ERROR: Some integration tests failed."
     return ()

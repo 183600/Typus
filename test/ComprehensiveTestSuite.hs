@@ -18,6 +18,7 @@ import Control.Monad (when)
 import System.Exit (exitFailure)
 import Data.Time (getCurrentTime, diffUTCTime)
 
+import TestSupport.Verbosity (Verbosity(..), getVerbosity, whenVerbose)
 
 
 -- 导入现有的测试模块
@@ -167,11 +168,13 @@ compilerOutputValidity code =
 -- 运行所有测试并生成报告
 runComprehensiveTests :: IO ()
 runComprehensiveTests = do
-    putStrLn "Running comprehensive test suite for Typus compiler..."
-    putStrLn "================================================"
-    
+    verbosity <- getVerbosity
+    whenVerbose verbosity $ do
+        putStrLn "Running comprehensive test suite for Typus compiler..."
+        putStrLn "================================================"
+        putStrLn "Phase 1: Running complete test suite..."
+
     -- 1. 运行完整的测试套件（包括生产环境测试）
-    putStrLn "Phase 1: Running complete test suite..."
     let ingredients = [consoleTestReporter]
     case tryIngredients ingredients mempty comprehensiveTestSuite of
         Nothing -> do
