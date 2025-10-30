@@ -49,7 +49,7 @@ tests =
                 assertBool "block content should include println call" ("println(\"inside\")" `elem` lines content)
 
     , testCase "ignores trailing whitespace-only files" $ do
-        let source = "\n   \n\n"
+        let source :: String; source = "\n   \n\n"
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> tfBlocks typusFile @?= []
