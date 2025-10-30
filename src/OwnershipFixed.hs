@@ -19,53 +19,20 @@ import Data.List (intercalate)
 import Control.Monad.State
 import Control.Monad (zipWithM_)
 
---------------------------------------------------------------------------------
--- 1) 数据类型与错误类型
---------------------------------------------------------------------------------
-
--- 所有权类型（示意）
-data OwnershipType
-  = Owned String      -- 拥有所有权（变量名）
-  | Borrowed String   -- 不可变借用（借自谁）
-  | MutBorrowed String -- 可变借用（借自谁）
-  deriving (Show, Eq)
-
--- 所有权错误类型
-data OwnershipError
-  = UseAfterMove String             -- 使用已移动的值
-  | DoubleMove String String        -- 重复移动（源→目标）
-  | BorrowWhileMoved String         -- 在被移动后借用
-  | MutBorrowWhileBorrowed String   -- 已有不可变借用时进行可变借用
-  | BorrowWhileMutBorrowed String   -- 已有可变借用时进行不可变借用
-  | MultipleMutBorrows String       -- 多个可变借用
-  | UseWhileMutBorrowed String      -- 可变借用期间使用原值
-  | OutOfScope String               -- 变量越界使用/未声明
-  | BorrowError String              -- 借用错误
-  | ParseError String               -- 解析错误
-  | CrossFunctionMove String String -- 跨函数移动错误
-  | ParameterMoveMismatch String    -- 参数移动不匹配
-  deriving (Show, Eq)
-
--- 分析器句柄（占位，保留外部接口）
-newtype OwnershipAnalyzer = OwnershipAnalyzer () deriving (Show, Eq)
-
-newOwnershipAnalyzer :: OwnershipAnalyzer
-newOwnershipAnalyzer = OwnershipAnalyzer ()
+import Ownership.Common.Types
+import Ownership.Common.Lexer (Pos(..), Token(..), TokenKind(..), LexerSpec(..), lexWithSpec)
 
 --------------------------------------------------------------------------------
--- 2) 词法分析器（Lexer）
--- - 负责把源码切分为 Token
--- - 处理字符串/字符字面量、单行与多行注释
--- - 产生 Newline token，利于简单的“行终结”判断
--- - 忽略注释中的符号，不影响块/括号嵌套
+-- 1) 关键字、符号与词法配置
 --------------------------------------------------------------------------------
 
-data Pos = Pos { pLine :: !Int, pCol :: !Int } deriving (Eq, Show)
+-- Shared ownership data types are imported from Ownership.Common.Types. This
+-- module retains its own lexical surface tailored for the "fixed" analyzer.
 
 data Keyword
   = KwVar | KwLet | KwFunc | KwReturn | KwIf | KwElse | KwFor
   | KwPackage | KwImport | KwType | KwStruct | KwInterface | KwConst
-  | KwMut
+  | KwMut | KwTrue | KwFalse
   deriving (Eq, Show)
 
 data Sym
@@ -74,19 +41,7 @@ data Sym
   | SNewline
   deriving (Eq, Show)
 
-data TokenKind
-  = TId String
-  | TKw Keyword
-  | TSym Sym
-  | TString String
-  | TNum String
-  | TComment String Bool  -- 内容, 是否单行注释
-  deriving (Eq, Show)
-
-data Token = Token
-  { tkKind :: !TokenKind
-  , tkPos  :: !Pos
-  } deriving (Eq, Show)
+type OwnershipToken = Token Keyword Sym
 
 -- 关键字表
 kwFromStr :: String -> Maybe Keyword
@@ -105,123 +60,39 @@ kwFromStr s = case s of
   "interface"->Just KwInterface
   "const"   -> Just KwConst
   "mut"     -> Just KwMut
+  "true"    -> Just KwTrue
+  "false"   -> Just KwFalse
   _         -> Nothing
 
+ownershipLexerSpec :: LexerSpec Keyword Sym
+ownershipLexerSpec = LexerSpec
+  { specKeywords = kwFromStr
+  , specMultiSymbols =
+      [ (":=", SWalrus)
+      ]
+  , specSingleSymbols =
+      [ ('=', SAssign)
+      , ('{', SLBrace)
+      , ('}', SRBrace)
+      , ('(', SLParen)
+      , (')', SRParen)
+      , ('[', SLBracket)
+      , (']', SRBracket)
+      , (';', SSemicolon)
+      , (',', SComma)
+      , (':', SColon)
+      , ('&', SAmp)
+      , ('.', SDot)
+      ]
+  , specNewlineSymbol = SNewline
+  , specIsNumChar = \x -> isDigit x || x == '.' || x == '_'
+  , specIsIdentStart = \x -> x == '_' || isAlpha x
+  , specIsIdentChar = \x -> x == '_' || isAlpha x || isDigit x
+  }
+
 -- 词法分析入口
-lexAll :: String -> [Token]
-lexAll = go (Pos 1 1)
-  where
-    go :: Pos -> String -> [Token]
-    go _ [] = []
-    go pos s@(c:cs)
-      -- 换行
-      | c == '\n' =
-          Token (TSym SNewline) pos : go (Pos (pLine pos + 1) 1) cs
-      -- 空白
-      | c == ' ' || c == '\t' || c == '\r' =
-          go (bump pos 1) cs
-      -- 注释：//...
-      | startsWith "//" s =
-          let (comment, rest, consumedNL, newPos) = readLineComment pos s
-          in Token (TComment comment True) pos : case consumedNL of
-                True  -> Token (TSym SNewline) newPos : go newPos rest
-                False -> go newPos rest
-      -- 注释：/* ... */
-      | startsWith "/*" s =
-          let (comment, rest, newPos) = readBlockComment pos s
-          in Token (TComment comment False) pos : go newPos rest
-      -- 字符串
-      | c == '"' =
-          let (str, rest, newPos) = readString pos cs
-          in Token (TString str) pos : go newPos rest
-      -- 字符字面量（简化处理）
-      | c == '\'' =
-          let (ch, rest, newPos) = readChar pos cs
-          in Token (TString ch) pos : go newPos rest
-      -- 两字符操作符 := 先于 =
-      | startsWith ":=" s =
-          Token (TSym SWalrus) pos : go (bump pos 2) (drop 2 s)
-      -- 单字符符号
-      | c == '=' = Token (TSym SAssign)  pos : go (bump pos 1) cs
-      | c == '{' = Token (TSym SLBrace)  pos : go (bump pos 1) cs
-      | c == '}' = Token (TSym SRBrace)  pos : go (bump pos 1) cs
-      | c == '(' = Token (TSym SLParen)  pos : go (bump pos 1) cs
-      | c == ')' = Token (TSym SRParen)  pos : go (bump pos 1) cs
-      | c == '[' = Token (TSym SLBracket)pos : go (bump pos 1) cs
-      | c == ']' = Token (TSym SRBracket)pos : go (bump pos 1) cs
-      | c == ';' = Token (TSym SSemicolon)pos: go (bump pos 1) cs
-      | c == ',' = Token (TSym SComma)    pos: go (bump pos 1) cs
-      | c == ':' = Token (TSym SColon)    pos: go (bump pos 1) cs
-      | c == '&' = Token (TSym SAmp)      pos: go (bump pos 1) cs
-      | c == '.' = Token (TSym SDot)      pos: go (bump pos 1) cs
-      -- 数字
-      | isDigit c =
-          let (num, rest) = span isNumChar s
-              newPos = bump pos (length num)
-          in Token (TNum num) pos : go newPos rest
-      -- 标识符/关键字
-      | isIdentStart c =
-          let (ident, rest) = span isIdentChar s
-              newPos = bump pos (length ident)
-              tk = case kwFromStr ident of
-                     Just kw -> TKw kw
-                     Nothing -> TId ident
-          in Token tk pos : go newPos rest
-      -- 其它（未识别的字符，直接跳过）
-      | otherwise = go (bump pos 1) cs
-
-    bump (Pos l c) n = Pos l (c + n)
-    startsWith pref xs = pref == take (length pref) xs
-
-    isNumChar x = isDigit x || x == '.' || x == '_'
-    isIdentStart x = x == '_' || isAlpha x
-    isIdentChar x = isIdentStart x || isDigit x
-
-    readString :: Pos -> String -> (String, String, Pos)
-    readString p s = goStr [] p s
-      where
-        goStr acc posN [] = (reverse acc, [], posN)  -- 不完整也尽量收集
-        goStr acc posN (x:xs)
-          | x == '\\' = case xs of
-              (y:ys) -> goStr (y:'\\':acc) (bump posN 2) ys
-              []     -> (reverse ('\\':acc), [], bump posN 1)
-          | x == '"'  = (reverse acc, xs, bump posN 1)
-          | x == '\n' = -- 字符串中断行，仍推进行列
-              goStr ('\n':acc) (Pos (pLine posN + 1) 1) xs
-          | otherwise = goStr (x:acc) (bump posN 1) xs
-
-    readChar :: Pos -> String -> (String, String, Pos)
-    readChar p s = goChr [] p s
-      where
-        goChr acc posN [] = (reverse acc, [], posN)
-        goChr acc posN (x:xs)
-          | x == '\\' = case xs of
-              (y:ys) -> goChr (y:'\\':acc) (bump posN 2) ys
-              []     -> (reverse ('\\':acc), [], bump posN 1)
-          | x == '\'' = (reverse acc, xs, bump posN 1)
-          | x == '\n' = goChr ('\n':acc) (Pos (pLine posN + 1) 1) xs
-          | otherwise = goChr (x:acc) (bump posN 1) xs
-
-    readLineComment :: Pos -> String -> (String, String, Bool, Pos)
-    readLineComment pos0 xs0 =
-      let (_sl, rest0) = splitAt 2 xs0  -- //
-          (content, rest) = break (== '\n') rest0
-          newPos = bump pos0 (2 + length content)
-      in (content, dropWhile (== '\n') rest, not (null rest), if null rest
-            then newPos
-            else Pos (pLine pos0 + 1) 1)
-
-    readBlockComment :: Pos -> String -> (String, String, Pos)
-    readBlockComment pos0 xs0 =
-      let (_op, rest0) = splitAt 2 xs0   -- /*
-      in goBC [] pos0 rest0
-      where
-        goBC acc posN [] = (reverse acc, [], posN)
-        goBC acc posN (x:xs)
-          | x == '*' && take 1 xs == "/" =
-              (reverse acc, drop 2 xs, bump posN 2)
-          | x == '\n' = goBC ('\n':acc) (Pos (pLine posN + 1) 1) xs
-          | otherwise = goBC (x:acc) (bump posN 1) xs
+lexAll :: String -> [OwnershipToken]
+lexAll = lexWithSpec ownershipLexerSpec
 
 --------------------------------------------------------------------------------
 -- 3) 语法分析器（Parser）
@@ -244,7 +115,7 @@ data Expr
   | EUnary UnaryOp Expr Pos
   | ELitStr String Pos
   | ELitNum String Pos
-  | EUnknown [Token] Pos
+  | EUnknown [OwnershipToken] Pos
   deriving (Eq, Show)
 
 getExprPos :: Expr -> Pos
@@ -270,38 +141,38 @@ data Stmt
 data Program = Program [Stmt] deriving (Eq, Show)
 
 -- 解析入口
-parseProgram :: [Token] -> Program
+parseProgram :: [OwnershipToken] -> Program
 parseProgram toks = Program (parseManyTop toks)
 
 -- 跳过多余分隔符
-skipNL :: [Token] -> [Token]
+skipNL :: [OwnershipToken] -> [OwnershipToken]
 skipNL (Token (TSym SNewline) _:xs)   = skipNL xs
 skipNL (Token (TSym SSemicolon) _:xs) = skipNL xs
 skipNL xs = xs
 
 
-isSym :: Sym -> Token -> Bool
+isSym :: Sym -> OwnershipToken -> Bool
 isSym s (Token (TSym s') _) = s == s'
 isSym _ _ = False
 
-isKw :: Keyword -> Token -> Bool
+isKw :: Keyword -> OwnershipToken -> Bool
 isKw k (Token (TKw k') _) = k == k'
 isKw _ _ = False
 
-tokId :: Token -> Maybe (String, Pos)
+tokId :: OwnershipToken -> Maybe (String, Pos)
 tokId (Token (TId s) p) = Just (s, p)
 tokId _ = Nothing
 
 
-tokComment :: Token -> Maybe (String, Bool, Pos)
+tokComment :: OwnershipToken -> Maybe (String, Bool, Pos)
 tokComment (Token (TComment s isLine) p) = Just (s, isLine, p)
 tokComment _ = Nothing
 
 -- 解析若干顶层语句，直到 EOF
-parseManyTop :: [Token] -> [Stmt]
+parseManyTop :: [OwnershipToken] -> [Stmt]
 parseManyTop = go 0
   where
-    go :: Int -> [Token] -> [Stmt]
+    go :: Int -> [OwnershipToken] -> [Stmt]
     go depth xs = case skipNL xs of
       [] -> []
       ts ->
@@ -311,7 +182,7 @@ parseManyTop = go 0
              in st : go (depth + 1) rest
 
 -- 解析一般语句
-parseStmt :: [Token] -> (Stmt, [Token])
+parseStmt :: [OwnershipToken] -> (Stmt, [OwnershipToken])
 parseStmt xs0 =
   let xs = skipNL xs0
   in case xs of
@@ -388,10 +259,10 @@ parseStmt xs0 =
       in (SExpr e p, rest)
 
 -- 解析块体直到匹配的 }
-parseBlockBody :: [Token] -> ([Stmt], [Token])
+parseBlockBody :: [OwnershipToken] -> ([Stmt], [OwnershipToken])
 parseBlockBody xs = go [] xs 0
   where
-    go :: [Stmt] -> [Token] -> Int -> ([Stmt], [Token])
+    go :: [Stmt] -> [OwnershipToken] -> Int -> ([Stmt], [OwnershipToken])
     go acc ts depth = case skipNL ts of
       (t:rest) | isSym SRBrace t -> (reverse acc, rest)
       [] -> (reverse acc, []) -- 容忍缺失
@@ -402,7 +273,7 @@ parseBlockBody xs = go [] xs 0
              in go (st:acc) rest' (depth + 1)
 
 -- 函数签名部分跳过直到 {
-consumeUntilLBrace :: [Token] -> ([Token], [Token])
+consumeUntilLBrace :: [OwnershipToken] -> ([OwnershipToken], [OwnershipToken])
 consumeUntilLBrace xs = go [] xs
   where
     go acc (t:rest)
@@ -411,7 +282,7 @@ consumeUntilLBrace xs = go [] xs
     go acc [] = (reverse acc, [])
 
 -- 可选：块起始处的指令 { //! ... } ，指令必须紧跟在 { 之后（允许空行）
-parseOptionalLeadingDirective :: [Token] -> (Maybe Directive, [Token])
+parseOptionalLeadingDirective :: [OwnershipToken] -> (Maybe Directive, [OwnershipToken])
 parseOptionalLeadingDirective xs0 =
   let xs = skipNL xs0
   in case xs of
@@ -421,7 +292,7 @@ parseOptionalLeadingDirective xs0 =
      _ -> (Nothing, xs0)
 
 -- 解析 [= expr]，允许没有初始化
-parseOptionalInit :: [Token] -> (Maybe Expr, [Token])
+parseOptionalInit :: [OwnershipToken] -> (Maybe Expr, [OwnershipToken])
 parseOptionalInit xs0 =
   let xs = skipNL xs0
   in case xs of
@@ -431,7 +302,7 @@ parseOptionalInit xs0 =
       _ -> (Nothing, xs0)
 
 -- 解析 var 声明，支持可选的类型注释：var name [type] [= expr]
-parseVarDeclWithOptionalType :: [Token] -> (Maybe Expr, [Token])
+parseVarDeclWithOptionalType :: [OwnershipToken] -> (Maybe Expr, [OwnershipToken])
 parseVarDeclWithOptionalType xs0 =
   let xs = skipNL xs0
   in case xs of
@@ -453,13 +324,13 @@ parseVarDeclWithOptionalType xs0 =
       _ -> (Nothing, xs0) -- No type and no init
 
 -- 表达式：收集到行/分号/右括号/右中括号/右大括号为止（在最外层）
-parseExprUntilEnd :: [Token] -> (Expr, [Token])
+parseExprUntilEnd :: [OwnershipToken] -> (Expr, [OwnershipToken])
 parseExprUntilEnd xs =
   let (ts, rest) = takeExprTokens xs
   in (tokensToExpr ts, rest)
 
 -- 收集表达式 token
-takeExprTokens :: [Token] -> ([Token], [Token])
+takeExprTokens :: [OwnershipToken] -> ([OwnershipToken], [OwnershipToken])
 takeExprTokens = go (0 :: Int) (0 :: Int) []
   where
     stopTok t
@@ -468,7 +339,7 @@ takeExprTokens = go (0 :: Int) (0 :: Int) []
       | isSym SRBrace t    = True
       | otherwise          = False
 
-    go :: Int -> Int -> [Token] -> [Token] -> ([Token], [Token])
+    go :: Int -> Int -> [OwnershipToken] -> [OwnershipToken] -> ([OwnershipToken], [OwnershipToken])
     go _ _ acc [] = (reverse acc, [])
     go paren bracket acc ts@(t:rest)
       | stopTok t && paren == 0 && bracket == 0
@@ -480,7 +351,7 @@ takeExprTokens = go (0 :: Int) (0 :: Int) []
       | otherwise          = go paren bracket (t:acc) rest
 
 -- 由 token 列表构造简化表达式
-tokensToExpr :: [Token] -> Expr
+tokensToExpr :: [OwnershipToken] -> Expr
 tokensToExpr [] = EUnknown [] (Pos 0 0)
 tokensToExpr (t:ts) =
   -- &mut ident
@@ -506,10 +377,10 @@ tokensToExpr (t:ts) =
     _ -> EUnknown (t:ts) (tkPos t)
 
 -- 按顶层逗号分割实参列表，要求最后一个 token 是 )
-splitTopLevelArgs :: [Token] -> Maybe ([[Token]], [Token])
+splitTopLevelArgs :: [OwnershipToken] -> Maybe ([[OwnershipToken]], [OwnershipToken])
 splitTopLevelArgs ts = go [] [] (0 :: Int) (0 :: Int) ts
   where
-    go :: [[Token]] -> [Token] -> Int -> Int -> [Token] -> Maybe ([[Token]], [Token])
+    go :: [[OwnershipToken]] -> [OwnershipToken] -> Int -> Int -> [OwnershipToken] -> Maybe ([[OwnershipToken]], [OwnershipToken])
     go acc cur paren bracket xs = case xs of
       [] -> Nothing
       (t:rest)
@@ -954,10 +825,10 @@ analyzeExprUse e = case e of
   _ -> pure ()
 
 -- 在 Unknown 表达式中扫描可能的标识符使用（保守，不做移动）
-scanUnknownAsUse :: [Token] -> State AState ()
+scanUnknownAsUse :: [OwnershipToken] -> State AState ()
 scanUnknownAsUse ts = mapM_ (\x -> useVar x) (collectPlainIdents ts)
 
-collectPlainIdents :: [Token] -> [Name]
+collectPlainIdents :: [OwnershipToken] -> [Name]
 collectPlainIdents = mapMaybe f
   where
     f (Token (TId s) _) = Just s
