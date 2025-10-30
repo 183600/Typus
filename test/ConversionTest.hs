@@ -1,27 +1,34 @@
 module ConversionTest (runConversionTests, conversionTestSuite) where
 
-import System.Directory (doesDirectoryExist, doesFileExist, listDirectory, removeDirectoryRecursive, findExecutable)
-import System.FilePath ((</>), takeFileName, dropExtension, (<.>))
+import System.Directory
+    ( doesDirectoryExist
+    , doesFileExist
+    , findExecutable
+    , listDirectory
+    , removeDirectoryRecursive
+    )
+import System.FilePath ((</>), (<.>), dropExtension, takeFileName)
 import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..))
 import System.IO (hPutStrLn, stderr)
-import Control.Monad (when, forM_, forM)
-import Data.List (isSuffixOf, isInfixOf)
+import Control.Monad (forM, forM_, unless, when)
+import Data.List (isInfixOf, isSuffixOf)
 import Text.Printf (printf)
 import Test.Tasty
 import Test.Tasty.HUnit as HU
 
+import TestSupport.Verbosity (Verbosity(..), getVerbosity, logVerbose, whenVerbose)
+
 -- Main test function
 runConversionTests :: IO ()
 runConversionTests = do
-    putStrLn "=== Typus Conversion and Execution Test ==="
-    putStrLn ""
+    verbosity <- getVerbosity
+    whenVerbose verbosity $ putStrLn "=== Typus Conversion and Execution Test ==="
 
     maybeGoPath <- findExecutable "go"
     case maybeGoPath of
-        Nothing -> do
+        Nothing ->
             putStrLn "WARNING: Go compiler not found; skipping conversion tests."
-            return ()
         Just goPath -> do
             -- Test configuration
             let inputDir = "examples/go250923"
@@ -34,156 +41,160 @@ runConversionTests = do
                 fail "Input directory not found"
 
             -- Step 1: Test typus convert command
-            putStrLn "Step 1: Testing typus convert command..."
-            convertSuccess <- testTypusConvert inputDir outputDir
+            whenVerbose verbosity $ putStrLn "Step 1: Testing typus convert command..."
+            convertSuccess <- testTypusConvert verbosity inputDir outputDir
             when (not convertSuccess) $ do
                 hPutStrLn stderr "ERROR: typus convert command failed"
                 fail "typus convert failed"
-            putStrLn "✓ typus convert command completed successfully"
-            putStrLn ""
 
             -- Step 2: Get list of typus files
-            putStrLn "Step 2: Getting list of typus files..."
+            whenVerbose verbosity $ putStrLn "Step 2: Getting list of typus files..."
             typusFiles <- getTypusFiles inputDir
-            printf "Found %d typus files\n" (length typusFiles)
-            putStrLn ""
+            whenVerbose verbosity $ putStrLn $ "Found " ++ show (length typusFiles) ++ " typus files"
+            when (null typusFiles) $ do
+                hPutStrLn stderr "ERROR: No typus files found for conversion tests"
+                fail "no typus files available"
 
             -- Step 3: Test running original typus files (expected to fail)
-            putStrLn "Step 3: Testing original typus files (expected to fail)..."
-            testOriginalFiles goPath typusFiles
-            putStrLn ""
+            whenVerbose verbosity $ putStrLn "Step 3: Testing original typus files (expected to fail)..."
+            testOriginalFiles verbosity goPath typusFiles
 
             -- Step 4: Test running converted Go files
-            putStrLn "Step 4: Testing converted Go files..."
-            testResults <- testConvertedFiles goPath outputDir typusFiles
-            putStrLn ""
+            whenVerbose verbosity $ putStrLn "Step 4: Testing converted Go files..."
+            results <- testConvertedFiles verbosity goPath outputDir typusFiles
 
-            -- Step 5: Summary
-            putStrLn "=== Test Summary ==="
-            putStrLn $ "Total typus files: " ++ show (length typusFiles)
-            putStrLn $ "Go files that run without error: " ++ show (length $ filter id testResults)
-            let successCount = length $ filter id testResults
-            if successCount == length typusFiles
-                then putStrLn "✓ All tests passed!"
-                else do
-                    putStrLn "✗ Some tests failed!"
-                    printf "Successful: %d/%d\n" successCount (length typusFiles)
+            let total = length results
+                successCount = length (filter id results)
+
+            case total of
+                0 -> putStrLn "Conversion tests skipped (no Go files were executed)."
+                _ -> do
+                    if successCount == total
+                        then putStrLn "Conversion tests passed."
+                        else printf "Conversion tests passed for %d/%d files.\n" successCount total
+
+                    whenVerbose verbosity $ do
+                        putStrLn "=== Test Summary ==="
+                        putStrLn $ "Total typus files: " ++ show (length typusFiles)
+                        putStrLn $ "Go files that run without error: " ++ show successCount
 
 -- Test that typus convert command
-testTypusConvert :: FilePath -> FilePath -> IO Bool
-testTypusConvert inputDir outputDir = do
+testTypusConvert :: Verbosity -> FilePath -> FilePath -> IO Bool
+testTypusConvert verbosity inputDir outputDir = do
     -- Clean up previous output
     outputExists <- doesDirectoryExist outputDir
     when outputExists $ removeDirectoryRecursive outputDir
 
-    -- Run typus convert command
-    putStrLn $ "Running: stack exec -- typus convert " ++ inputDir ++ " -o " ++ outputDir
-    (exitCode, stdout, stdErr) <- readProcessWithExitCode "stack" ["exec", "--", "typus", "convert", inputDir, "-o", outputDir] ""
+    logVerbose verbosity $ "Running: stack exec -- typus convert " ++ inputDir ++ " -o " ++ outputDir
+    (exitCode, stdout, stdErr) <- readProcessWithExitCode "stack"
+        ["exec", "--", "typus", "convert", inputDir, "-o", outputDir] ""
 
     case exitCode of
         ExitSuccess -> do
-            putStrLn $ "Conversion completed successfully"
-            putStrLn $ "Output: " ++ take 200 stdout
-            return True
+            logVerbose verbosity "Conversion completed successfully"
+            whenVerbose verbosity $
+                unless (null stdout) $
+                    putStrLn $ "Output: " ++ take 200 stdout
+            pure True
         ExitFailure code -> do
             hPutStrLn stderr $ "typus convert failed with exit code " ++ show code
             hPutStrLn stderr $ "STDOUT: " ++ take 500 stdout
             hPutStrLn stderr $ "STDERR: " ++ take 500 stdErr
-            return False
+            pure False
 
 -- Get list of typus files in directory
 getTypusFiles :: FilePath -> IO [FilePath]
 getTypusFiles dir = do
     allFiles <- listDirectory dir
-    let typusFiles = filter (isSuffixOf ".typus") allFiles
-    return $ map (dir </>) typusFiles
+    let typusFiles = filter (".typus" `isSuffixOf`) allFiles
+    pure $ map (dir </>) typusFiles
 
 -- Test running original typus files (expected to fail)
-testOriginalFiles :: FilePath -> [FilePath] -> IO ()
-testOriginalFiles goPath files = do
+testOriginalFiles :: Verbosity -> FilePath -> [FilePath] -> IO ()
+testOriginalFiles verbosity goPath files =
     forM_ files $ \file -> do
-        putStrLn $ "Testing original file: " ++ takeFileName file
+        whenVerbose verbosity $ putStrLn $ "Testing original file: " ++ takeFileName file
         (exitCode, _, _) <- readProcessWithExitCode goPath ["run", file] ""
         case exitCode of
-            ExitSuccess -> do
-                putStrLn $ "  ⚠ Unexpected success (typus file ran directly)"
-            ExitFailure _ -> do
-                putStrLn $ "  ✓ Expected failure (Go cannot run .typus files directly)"
+            ExitSuccess ->
+                hPutStrLn stderr $ "WARNING: Unexpected success when running Typus file directly: " ++ takeFileName file
+            ExitFailure _ ->
+                whenVerbose verbosity $ putStrLn "  ✓ Expected failure (Go cannot run .typus files directly)"
 
 -- Test running converted Go files
-testConvertedFiles :: FilePath -> FilePath -> [FilePath] -> IO [Bool]
-testConvertedFiles goPath outputDir typusFiles = do
+testConvertedFiles :: Verbosity -> FilePath -> FilePath -> [FilePath] -> IO [Bool]
+testConvertedFiles verbosity goPath outputDir typusFiles = do
     outputExists <- doesDirectoryExist outputDir
     if not outputExists
         then do
             hPutStrLn stderr $ "ERROR: Output directory " ++ outputDir ++ " does not exist"
-            return []
-        else do
-            results <- forM typusFiles $ \typusFile -> do
-                let baseName = takeFileName typusFile
-                let goFile = outputDir </> dropExtension baseName <.> "go"
+            pure []
+        else forM typusFiles $ \typusFile -> do
+            let baseName = takeFileName typusFile
+                goFile = outputDir </> dropExtension baseName <.> "go"
 
-                goExists <- doesFileExist goFile
-                if not goExists
-                    then do
-                        hPutStrLn stderr $ "ERROR: Go file not found: " ++ goFile
-                        return False
-                    else do
-                        putStrLn $ "Testing Go file: " ++ takeFileName goFile
+            goExists <- doesFileExist goFile
+            if not goExists
+                then do
+                    hPutStrLn stderr $ "ERROR: Go file not found: " ++ goFile
+                    pure False
+                else do
+                    whenVerbose verbosity $ putStrLn $ "Testing Go file: " ++ takeFileName goFile
 
-                        -- Try to run Go file with timeout
-                        (exitCode, stdout, stdErr) <- readProcessWithExitCode "timeout" ["10s", goPath, "run", goFile] ""
-                        let actualExitCode = if exitCode == ExitFailure 124
-                                            then ExitFailure 1  -- Timeout
-                                            else exitCode
+                    (exitCode, stdout, stdErr) <- readProcessWithExitCode "timeout" ["10s", goPath, "run", goFile] ""
+                    let actualExitCode = if exitCode == ExitFailure 124 then ExitFailure 1 else exitCode
 
-                        case actualExitCode of
-                            ExitSuccess -> do
-                                putStrLn $ "  ✓ Go file executed successfully"
-                                when (not $ null stdout) $ do
-                                    putStrLn $ "    Output: " ++ take 200 stdout
-                                    -- Check for expected output patterns
-                                    checkExpectedOutput baseName stdout
-                                return True
-                            ExitFailure _ -> do
-                                putStrLn $ "  ✗ Go file execution failed"
-                                when (not $ null stdErr) $
-                                    putStrLn $ "    Error: " ++ take 200 stdErr
-                                return False
-            return results
+                    case actualExitCode of
+                        ExitSuccess -> do
+                            whenVerbose verbosity $ putStrLn "  ✓ Go file executed successfully"
+                            whenVerbose verbosity $
+                                unless (null stdout) $
+                                    putStrLn $ "    Output (truncated): " ++ take 200 stdout
+                            checkExpectedOutput verbosity baseName stdout
+                            pure True
+                        ExitFailure _ -> do
+                            hPutStrLn stderr $ "Go file execution failed: " ++ takeFileName goFile
+                            when (not $ null stdErr) $
+                                hPutStrLn stderr $ "    Error: " ++ take 200 stdErr
+                            pure False
 
 -- Check if the output matches expected patterns for known files
-checkExpectedOutput :: FilePath -> String -> IO ()
-checkExpectedOutput filename output
-    | "hello" `isInfixOf` filename =
-        if "Hello" `isInfixOf` output
-            then putStrLn $ "    ✓ Expected 'Hello' in output"
-            else putStrLn $ "    ⚠ Expected 'Hello' in output"
-    | "calculator" `isInfixOf` filename =
-        if "10 + 20 = 30" `isInfixOf` output
-            then putStrLn $ "    ✓ Expected calculator result in output"
-            else putStrLn $ "    ⚠ Expected calculator result in output"
-    | "algorithms" `isInfixOf` filename =
-        if ("Original array:" `isInfixOf` output && "Sorted array:" `isInfixOf` output)
-            then putStrLn $ "    ✓ Expected algorithm output patterns found"
-            else putStrLn $ "    ⚠ Expected algorithm output patterns not found"
-    | "data_structures" `isInfixOf` filename =
-        if "Linked List contents:" `isInfixOf` output
-            then putStrLn $ "    ✓ Expected data structures output found"
-            else putStrLn $ "    ⚠ Expected data structures output not found"
-    | otherwise = putStrLn $ "    (No specific output pattern to check for this file)"
+checkExpectedOutput :: Verbosity -> FilePath -> String -> IO ()
+checkExpectedOutput verbosity filename output =
+    case expectation of
+        Nothing ->
+            whenVerbose verbosity $
+                putStrLn "    (No specific output pattern to check for this file)"
+        Just (description, predicate) ->
+            if predicate output
+                then whenVerbose verbosity $
+                    putStrLn $ "    ✓ " ++ description
+                else do
+                    whenVerbose verbosity $
+                        putStrLn $ "    ⚠ " ++ description
+                    hPutStrLn stderr $ "WARNING: Expected " ++ description ++ " for " ++ filename
+  where
+    expectation
+        | "hello" `isInfixOf` filename =
+            Just ("Expected 'Hello' in output", ("Hello" `isInfixOf`))
+        | "calculator" `isInfixOf` filename =
+            Just ("Expected calculator result in output", ("10 + 20 = 30" `isInfixOf`))
+        | "algorithms" `isInfixOf` filename =
+            Just
+                ( "Expected algorithm output patterns"
+                , \out -> "Original array:" `isInfixOf` out && "Sorted array:" `isInfixOf` out
+                )
+        | "data_structures" `isInfixOf` filename =
+            Just ("Expected data structures output", ("Linked List contents:" `isInfixOf`))
+        | otherwise = Nothing
 
 -- Tasty test suite for integration with comprehensive tests
 conversionTestSuite :: TestTree
-conversionTestSuite = testGroup "Conversion Tests" [
-    testCase "Simple Conversion Test" $ do
-        -- Basic test to verify conversion functionality exists
+conversionTestSuite = testGroup "Conversion Tests"
+    [ testCase "Simple Conversion Test" $ do
         let inputDir = "examples/go250923"
         let _outputDir = "examples/go250923output" -- renamed to avoid unused warning
 
         inputExists <- doesDirectoryExist inputDir
         when (not inputExists) $ assertFailure $ "Input directory does not exist: " ++ inputDir
-
-        putStrLn "Basic conversion test completed successfully"
-
     ]

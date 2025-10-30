@@ -14,7 +14,9 @@ import System.FilePath ((</>))
 import Control.Exception (evaluate)
 import Data.Time (getCurrentTime, diffUTCTime)
 import Control.DeepSeq ()
+import Control.Monad (when)
 
+import TestSupport.Verbosity (Verbosity(..), whenVerbose)
 
 -- 性能测试配置
 data PerformanceConfig = PerformanceConfig
@@ -145,25 +147,30 @@ performanceTestSuite config = testGroup "Performance Tests" [
     ]
 
 -- 运行性能测试并生成报告
-runPerformanceTests :: PerformanceConfig -> IO ()
-runPerformanceTests config = do
-    putStrLn "Running performance test suite for Typus compiler..."
-    putStrLn "================================================"
-    putStrLn $ "Performance thresholds:"
-    putStrLn $ "  Max parse time: " ++ show (maxParseTime config) ++ " seconds"
-    putStrLn $ "  Max compile time: " ++ show (maxCompileTime config) ++ " seconds"
-    putStrLn $ "  Max ownership time: " ++ show (maxOwnershipTime config) ++ " seconds"
-    putStrLn $ "  Max memory usage: " ++ show (maxMemoryUsage config) ++ " MB"
-    putStrLn ""
-    
+runPerformanceTests :: Verbosity -> PerformanceConfig -> IO ()
+runPerformanceTests verbosity config = do
+    whenVerbose verbosity $ do
+        putStrLn "Running performance test suite for Typus compiler..."
+        putStrLn "================================================"
+        putStrLn "Performance thresholds:"
+        putStrLn $ "  Max parse time: " ++ show (maxParseTime config) ++ " seconds"
+        putStrLn $ "  Max compile time: " ++ show (maxCompileTime config) ++ " seconds"
+        putStrLn $ "  Max ownership time: " ++ show (maxOwnershipTime config) ++ " seconds"
+        putStrLn $ "  Max memory usage: " ++ show (maxMemoryUsage config) ++ " MB"
+        putStrLn ""
+
     -- 使用 Tasty 运行性能测试
     let ingredients = [consoleTestReporter]
     case tryIngredients ingredients mempty (performanceTestSuite config) of
-        Nothing -> do
+        Nothing ->
             putStrLn "ERROR: No suitable ingredient found to run performance tests"
         Just runTest -> do
             success <- runTest
             if success
-                then putStrLn "SUCCESS: All performance tests passed. The project meets production requirements."
+                then do
+                    when (verbosity == Quiet) $
+                        putStrLn "Performance tests passed."
+                    whenVerbose verbosity $
+                        putStrLn "SUCCESS: All performance tests passed. The project meets production requirements."
                 else putStrLn "ERROR: Some performance tests failed."
-    return ()
+    pure ()
