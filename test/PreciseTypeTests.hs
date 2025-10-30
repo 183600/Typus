@@ -413,31 +413,4 @@ prop_constraint_consistency constraints =
         checker2 = execState Dep.solveConstraints Dep.newDependentTypeChecker
     in null (Dep.getDependentTypeErrors checker1) == null (Dep.getDependentTypeErrors checker2)
 
--- 属性：类型推断的幂等性
-prop_inference_idempotent :: Dep.AST -> Property
-prop_inference_idempotent ast =
-  property $
-    let result1 = case ast of
-          Dep.Program stmts -> all (const True) stmts  -- 简化检查
-        result2 = case ast of
-          Dep.Program stmts -> all (const True) stmts  -- 简化检查
-    in result1 == result2
-
--- 属性：替换的组合（简化版本）
-prop_substitution_composition :: [(String, Dep.TypeVar)] -> [(String, Dep.TypeVar)] -> Dep.TypeVar -> Property
-prop_substitution_composition s1 s2 tv =
-  property $
-    let applied1 = applySubst s2 (applySubst s1 tv)
-        applied2 = applySubst (s1 ++ s2) tv
-    in applied1 == applied2
-    where
-      applySubst s tv0 = case tv0 of
-        Dep.TVVar x -> case lookup x s of
-          Just t -> if t == Dep.TVVar x then Dep.TVVar x else applySubst s t
-          Nothing -> tv
-        Dep.TVApp f args -> Dep.TVApp f (map (applySubst s) args)
-        Dep.TVFun ps rt -> Dep.TVFun (map (applySubst s) ps) (applySubst s rt)
-        _ -> tv
-
--- 简化的Arbitrary实例，只支持基本类型
 

@@ -253,7 +253,7 @@ polymorphicTests = testGroup "Polymorphic Types"
         Right _ -> return ()
 
   , testCase "Polymorphic constraint" $ do
-      let source = "func equal<T>(a: T, b: T): bool"
+      let source :: String; source = "func equal<T>(a: T, b: T): bool"
       case Dep.runParser source of
         Left err -> assertFailure $ "Parse failed: " ++ err
         Right (Dep.Program [stmt]) -> do
@@ -341,7 +341,7 @@ hindleyMilnerTests = testGroup "Hindley-Milner Algorithm"
             Right _ -> return ()
 
   , testCase "Type reconstruction" $ do
-      let source = "func compose(f: func(B): C, g: func(A): B, x: A): C"
+      let source :: String; source = "func compose(f: func(B): C, g: func(A): B, x: A): C"
       case Dep.runParser source of
         Left err -> assertFailure $ "Parse failed: " ++ err
         Right (Dep.Program [stmt]) -> do
