@@ -134,3 +134,31 @@ dmypy.json
 # Haskell HPC coverage artifacts
 typus-test.tix
 .hpc/
+
+# Haskell build artifacts
+dist-newstyle/
+.stack-work/
+cabal.project.local
+cabal.project.local~
+*.hi
+*.hi-boot
+*.dyn_hi
+*.dyn_o
+*.hie
+*.hp
+*.prof
+*.eventlog
+
+# Go build artifacts
+*.test
+*.bench
+*.pprof
+*.coverprofile
+go.work
+go.work.sum
+
+# Temporary databases and local files
+*.db
+*.sqlite
+*.sqlite-journal
+*.sqlite3
