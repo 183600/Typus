@@ -1,5 +1,6 @@
 import qualified OwnershipComprehensive
 import System.IO
+import qualified Ownership as OwnershipComprehensive
 
 testCases :: [(String, String, Int -> [OwnershipComprehensive.OwnershipError] -> Bool)]
 testCases =

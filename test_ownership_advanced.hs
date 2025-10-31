@@ -1,5 +1,6 @@
 import qualified OwnershipAdvanced
 import System.IO
+import qualified Ownership as OwnershipAdvanced
 
 main :: IO ()
 main = do

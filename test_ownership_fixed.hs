@@ -1,5 +1,6 @@
 import qualified OwnershipFixed
 import System.IO
+import qualified Ownership as OwnershipFixed
 
 main :: IO ()
 main = do
