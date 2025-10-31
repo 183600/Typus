@@ -8,7 +8,6 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 import qualified Ownership as Own
-import qualified OwnershipAdvanced as OwnAdv
 import Data.List (isInfixOf)
 import System.IO.Temp
 import System.IO

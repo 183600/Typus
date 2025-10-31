@@ -4,8 +4,8 @@ import System.Environment (getArgs)
 import System.Exit (exitFailure, exitSuccess)
 import Data.List (intercalate)
 
--- Import our enhanced control flow ownership analyzer
-import OwnershipControlFlowEnhanced
+-- Import the canonical ownership analyzer
+import Ownership
 
 main :: IO ()
 main = do

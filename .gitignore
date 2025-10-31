@@ -125,6 +125,36 @@ dmypy.json
 *.dylib
 *.exe
 
+# Repository-specific generated binaries
+/250919_final_go
+/250921
+/250921_generated
+/comprehensive_go_syntax_final_v3
+/comprehensive_go_syntax_final_v4
+/comprehensive_go_syntax_go
+/comprehensive_go_syntax_go_fixed
+/comprehensive_go_syntax_typus_fixed_go
+/comprehensive_go_syntax_typus_go
+/go_syntax_minimal_output
+/go_syntax_official
+/simple_test_go
+/stack_concurrent_program
+/test-suite
+/test_debug
+/test_parse
+/test_parse_simple
+/test_orig_case
+/test_simple
+/test_simple_expr
+/test_slice
+/test_string_escaping
+/test_tokens
+/debug-example
+test/debug_ownership_file_directive
+test/debug_ownership_package
+test/debug_ownership_minimal
+test/debug_ownership_simple_test
+
 # IDE files
 .vscode/
 .idea/
