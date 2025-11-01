@@ -114,6 +114,48 @@ listGoFiles dir = do
         if isDir then listGoFiles p else return [p]
     return [ p | p <- concat paths, takeExtension p == ".go" ]
 
+goModContents :: String
+goModContents = "module temp\n\ngo 1.21\n"
+
+withTemporaryGoProject :: String -> (FilePath -> IOResult a) -> IOResult a
+withTemporaryGoProject prefix action =
+    ExceptT $
+        withSystemTempDirectory prefix $ \tempDir ->
+            runExceptT $ do
+                writeGoModule tempDir
+                action tempDir
+
+writeGoModule :: FilePath -> IOResult ()
+writeGoModule dir = liftIO $ writeFile (dir </> "go.mod") goModContents
+
+safeBaseName :: FilePath -> String
+safeBaseName path =
+    let baseName = takeBaseName path
+    in if "test" `isInfixOf` baseName
+          then replace "test" "exec" baseName
+          else baseName
+
+temporaryGoFileFor :: FilePath -> FilePath -> FilePath
+temporaryGoFileFor tempDir sourcePath = tempDir </> (safeBaseName sourcePath ++ ".go")
+
+prepareSingleFileProject :: FilePath -> FilePath -> IOResult FilePath
+prepareSingleFileProject sourcePath tempDir = do
+    let tempGoPath = temporaryGoFileFor tempDir sourcePath
+    convertFile sourcePath tempGoPath
+    mirrorEmbeddedResources sourcePath tempDir tempGoPath
+    return tempGoPath
+
+mirrorEmbeddedResources :: FilePath -> FilePath -> FilePath -> IOResult ()
+mirrorEmbeddedResources sourcePath tempDir tempGoPath = do
+    content <- liftIO $ readFile tempGoPath
+    let srcDir = takeDirectory sourcePath
+    liftIO $ copyEmbeddedFiles srcDir tempDir content
+
+prepareDirectoryProject :: FilePath -> FilePath -> IOResult ()
+prepareDirectoryProject sourceRoot tempDir = do
+    batchConvert sourceRoot tempDir
+    liftIO $ copyEmbeddedForBuild sourceRoot tempDir
+
 main :: IO ()
 main = do
     cliArgs <- parseArgs  -- 重命名为 cliArgs
@@ -133,28 +175,11 @@ dispatch (Check inputPath) = do
     isDir <- liftIO $ doesDirectoryExist inputPath
     if isDir
     then batchCheck inputPath
-    else do
-        -- Convert file to temp directory and check
-        liftIO $ withSystemTempDirectory "typus_check" $ \tempDir -> do
-            result <- runExceptT $ do
-                -- Generate a safe filename that doesn't contain "test"
-                let baseName = takeBaseName inputPath
-                    safeName = if "test" `isInfixOf` baseName 
-                               then replace "test" "exec" baseName 
-                               else baseName
-                    tempGoPath = tempDir </> (safeName ++ ".go")
-                
-                convertFile inputPath tempGoPath
-                -- Create go.mod for proper Go module support
-                liftIO $ writeFile (tempDir </> "go.mod") "module temp\ngo 1.21\n"
-                -- Try to build the generated Go code
-                runGoCommandInDir ["build", tempGoPath] tempDir
-                liftIO $ putStrLn $ "Typus syntax and compilation OK: " ++ inputPath
-            case result of
-                Left err -> do
-                    putStrLn ("Error: Compilation error: " ++ err)
-                    exitFailure
-                Right _ -> return ()
+    else
+        withTemporaryGoProject "typus_check" $ \tempDir -> do
+            tempGoPath <- prepareSingleFileProject inputPath tempDir
+            runGoCommandInDir ["build", tempGoPath] tempDir
+            liftIO $ putStrLn $ "Typus syntax and compilation OK: " ++ inputPath
 
 dispatch (Build buildArgs) = do
     -- Support optional first arg as project path; remaining are passed to `go build`
@@ -164,37 +189,13 @@ dispatch (Build buildArgs) = do
     isDir <- liftIO $ doesDirectoryExist targetPath
     isFile <- liftIO $ doesFileExist targetPath
     if isDir
-      then liftIO $ withSystemTempDirectory "typus_build" $ \tempDir -> do
-            result <- runExceptT $ do
-                -- Convert entire directory preserving structure
-                batchConvert targetPath tempDir
-                -- Mirror embedded resources referenced by generated Go files
-                liftIO $ copyEmbeddedForBuild targetPath tempDir
-                -- Create minimal go.mod
-                liftIO $ writeFile (tempDir </> "go.mod") "module temp\n\ngo 1.21\n"
-                -- Run go build inside temp dir with any extra args
-                runGoCommandInDir ("build" : goArgs) tempDir
-            case result of
-                Left err -> putStrLn ("Error: " ++ err) >> exitFailure
-                Right _  -> return ()
+      then withTemporaryGoProject "typus_build" $ \tempDir -> do
+             prepareDirectoryProject targetPath tempDir
+             runGoCommandInDir ("build" : goArgs) tempDir
       else if isFile
-        then liftIO $ withSystemTempDirectory "typus_build_single" $ \tempDir -> do
-            result <- runExceptT $ do
-                -- Convert single file to temp dir root
-                let baseName = takeBaseName targetPath
-                    safeName = if "test" `isInfixOf` baseName then replace "test" "exec" baseName else baseName
-                    outGo = tempDir </> (safeName ++ ".go")
-                convertFile targetPath outGo
-                -- Copy embedded assets relative to source file
-                srcContent <- liftIO $ readFile outGo
-                let srcDir = takeDirectory targetPath
-                liftIO $ copyEmbeddedFiles srcDir tempDir srcContent
-                -- Create minimal go.mod
-                liftIO $ writeFile (tempDir </> "go.mod") "module temp\n\ngo 1.21\n"
-                runGoCommandInDir ("build" : goArgs) tempDir
-            case result of
-                Left err -> putStrLn ("Error: " ++ err) >> exitFailure
-                Right _  -> return ()
+        then withTemporaryGoProject "typus_build_single" $ \tempDir -> do
+             _ <- prepareSingleFileProject targetPath tempDir
+             runGoCommandInDir ("build" : goArgs) tempDir
         else throwError $ "Path does not exist: " ++ targetPath
 
 dispatch (Run runArgs) = do
@@ -203,34 +204,10 @@ dispatch (Run runArgs) = do
         (inputFile:restArgs) -> do
             exists <- liftIO $ doesFileExist inputFile
             unless exists $ throwError $ "Input file does not exist: " ++ inputFile
-            
-            liftIO $ withSystemTempDirectory "typus_run" $ \tempDir -> do
-                result <- runExceptT $ do
-                    -- Generate a safe filename that doesn't contain "test"
-                    let baseName = takeBaseName inputFile
-                        safeName = if "test" `isInfixOf` baseName 
-                                   then replace "test" "exec" baseName 
-                                   else baseName
-                        tempGoPath = tempDir </> (safeName ++ ".go")
-                    
-                    -- Convert file
-                    convertFile inputFile tempGoPath
-                    
-                    -- Read generated Go to find embedded files and mirror from source tree
-                    sourceContent <- liftIO $ readFile tempGoPath
-                    let srcDir = takeDirectory inputFile
-                    liftIO $ copyEmbeddedFiles srcDir tempDir sourceContent
-                    
-                    -- Create go.mod
-                    liftIO $ writeFile (tempDir </> "go.mod") "module temp\n\ngo 1.21\n"
-                    
-                    -- Run the generated Go file
-                    let goArgs = "run" : [takeFileName tempGoPath] ++ restArgs
-                    runGoCommandInDir goArgs tempDir
-                
-                case result of
-                    Left err -> putStrLn ("Error: " ++ err) >> exitFailure
-                    Right _ -> return ()
+            withTemporaryGoProject "typus_run" $ \tempDir -> do
+                tempGoPath <- prepareSingleFileProject inputFile tempDir
+                let goArgs = "run" : takeFileName tempGoPath : restArgs
+                runGoCommandInDir goArgs tempDir
 
 dispatch Version = do
     liftIO $ putStrLn "typus version 0.1.0"
