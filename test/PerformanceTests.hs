@@ -7,7 +7,7 @@ import Test.Tasty
 import Test.Tasty.HUnit
 
 import qualified Parser (parseTypus)
-import qualified Compiler (compile)
+import qualified Compiler (compile, renderCompilationError)
 import qualified Ownership (analyzeOwnership)
 import System.Directory (doesFileExist)
 import System.FilePath ((</>))
@@ -78,7 +78,7 @@ testCompilePerformance config = testCase "Compile Performance" $ do
                 compileTime = realToFrac $ diffUTCTime end start
             
             case result of
-                Left err -> assertFailure $ "Compilation failed: " ++ err
+                Left err -> assertFailure $ "Compilation failed: " ++ Compiler.renderCompilationError err
                 Right _ -> do
                     assertBool ("Compilation should complete within " ++ show (maxCompileTime config) ++ " seconds")
                         (compileTime <= maxCompileTime config)
