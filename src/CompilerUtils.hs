@@ -2,7 +2,7 @@ module CompilerUtils (
     convertFile, batchConvert, batchCheck, runGoCommand, runGoCommandInDir
 ) where
 
-import Compiler (compile)
+import Compiler (compile, renderCompilationError)
 import qualified Parser as P
 import Control.Monad (forM, forM_, unless, when)
 import Control.Monad.Except
@@ -64,7 +64,7 @@ convertFile input output = do
 
             -- Compile to Go code with enhanced analysis
             case compile typusFile of
-                Left err   -> throwError $ "Compilation error: " ++ err
+                Left err   -> throwError $ "Compilation error: " ++ renderCompilationError err
                 Right code -> do
                     liftIO $ putStrLn $ "Compilation successful"
                     -- Only print full generated code in debug mode to avoid excessive I/O
@@ -150,7 +150,7 @@ checkSingleFile file = do
     -- 2. 编译为 Go
     liftIO $ putStrLn "  2. Compiling to Go..."
     goCode <- case compile parsed of
-        Left err -> throwError err
+        Left err -> throwError (renderCompilationError err)
         Right c  -> return c
     liftIO $ putStrLn "     ✓ Compilation successful"
 

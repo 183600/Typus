@@ -5,7 +5,7 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 import qualified Parser (parseTypus)
-import qualified Compiler (compile)
+import qualified Compiler (compile, renderCompilationError)
 import qualified Ownership (analyzeOwnership)
 import Data.List (isInfixOf)
 import Data.Char (toLower)
@@ -76,7 +76,7 @@ testCompilerOutput = do
         Left err -> assertFailure $ "Parser failed: " ++ err
         Right typusFile -> do
             case Compiler.compile typusFile of
-                Left err -> assertFailure $ "Compilation failed: " ++ err
+                Left err -> assertFailure $ "Compilation failed: " ++ Compiler.renderCompilationError err
                 Right goCode -> do
                     assertBool "Generated Go code should contain package declaration" 
                         ("package main" `isInfixOf` goCode)
@@ -138,7 +138,7 @@ testCompilationPerformance = do
         Right typusFile -> do
             start <- getCurrentTime
             case Compiler.compile typusFile of
-                Left err -> assertFailure $ "Compilation failed: " ++ err
+                Left err -> assertFailure $ "Compilation failed: " ++ Compiler.renderCompilationError err
                 Right _ -> do
                     end <- getCurrentTime
                     let compileTime :: Double = realToFrac $ diffUTCTime end start
