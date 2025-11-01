@@ -5,8 +5,8 @@ import Options.Applicative
 data Args
     = Convert FilePath FilePath
     | Check FilePath
-    | Build [String]
-    | Run [String]
+    | Build Bool [String]
+    | Run Bool [String]
     | Version
     deriving (Show)
 
@@ -19,13 +19,20 @@ checkOptions :: Parser Args
 checkOptions = Check
     <$> argument str (metavar "INPUT" <> help "Input file or directory")
 
+strictEmbedSwitch :: Parser Bool
+strictEmbedSwitch = switch
+    ( long "strict-embed"
+   <> help "Fail when embedded files referenced via //go:embed cannot be located" )
+
 buildOptions :: Parser Args
 buildOptions = Build
-    <$> many (argument str (metavar "GO_ARGS..."))
+    <$> strictEmbedSwitch
+    <*> many (argument str (metavar "GO_ARGS..."))
 
 runOptions :: Parser Args
 runOptions = Run
-    <$> many (argument str (metavar "FILE [ARGS...]"))
+    <$> strictEmbedSwitch
+    <*> many (argument str (metavar "FILE [ARGS...]"))
 
 versionOption :: Parser Args
 versionOption = flag' Version
