@@ -3,9 +3,15 @@ module TestParser (parserTestSuite) where
 
 import Test.Tasty
 import Test.Tasty.HUnit as TH
-import qualified Parser (parseTypus, tfDirectives, tfBlocks, FileDirectives(..))
+import qualified Parser (parseTypus, tfDirectives, tfBlocks, FileDirectives(..), fdOwnership, fdDependentTypes)
+import SourceLocation (Located, locatedValue)
 
 -- Enhanced comprehensive parser test suite for production readiness
+
+directiveValue :: Maybe (Located a) -> Maybe a
+directiveValue = fmap locatedValue
+
+
 parserTestSuite :: TestTree
 parserTestSuite = testGroup "Parser Tests" [
     basicParserTests,
@@ -82,7 +88,7 @@ directiveParserTests = testGroup "Directive Parser Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 let directives = Parser.tfDirectives typusFile
-                TH.assertEqual "Ownership should be enabled" (Just True) (Parser.fdOwnership directives),
+                TH.assertEqual "Ownership should be enabled" (Just True) (directiveValue (Parser.fdOwnership directives)),
 
     TH.testCase "Parser File Directives - Dependent Types" $ do
         let code = unlines [
@@ -96,7 +102,7 @@ directiveParserTests = testGroup "Directive Parser Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 let directives = Parser.tfDirectives typusFile
-                TH.assertEqual "Dependent types should be enabled" (Just True) (Parser.fdDependentTypes directives),
+                TH.assertEqual "Dependent types should be enabled" (Just True) (directiveValue (Parser.fdDependentTypes directives)),
 
     TH.testCase "Parser File Directives - Both Enabled" $ do
         let code = unlines [
@@ -111,8 +117,8 @@ directiveParserTests = testGroup "Directive Parser Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 let directives = Parser.tfDirectives typusFile
-                TH.assertEqual "Ownership should be enabled" (Just True) (Parser.fdOwnership directives)
-                TH.assertEqual "Dependent types should be enabled" (Just True) (Parser.fdDependentTypes directives),
+                TH.assertEqual "Ownership should be enabled" (Just True) (directiveValue (Parser.fdOwnership directives))
+                TH.assertEqual "Dependent types should be enabled" (Just True) (directiveValue (Parser.fdDependentTypes directives)),
 
     TH.testCase "Parser File Directives - Constraints Alias" $ do
         let code = unlines [
@@ -126,7 +132,7 @@ directiveParserTests = testGroup "Directive Parser Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 let directives = Parser.tfDirectives typusFile
-                TH.assertEqual "Constraints (dependent types) should be enabled" (Just True) (Parser.fdDependentTypes directives)
+                TH.assertEqual "Constraints (dependent types) should be enabled" (Just True) (directiveValue (Parser.fdDependentTypes directives))
     ]
 
 -- Edge case tests

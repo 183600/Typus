@@ -1,6 +1,5 @@
-module Main where
-
 import Parser
+import SourceLocation (locatedValue)
 
 main :: IO ()
 main = do
@@ -20,5 +19,8 @@ main = do
         Right ast -> do
             putStrLn "Parsed successfully!"
             print ast
-            putStrLn $ "Ownership directive: " ++ show (fdOwnership (tfDirectives ast))
-            putStrLn $ "Dependent types directive: " ++ show (fdDependentTypes (tfDirectives ast))
+            let dirs = tfDirectives ast
+                ownershipVal = fmap locatedValue (fdOwnership dirs)
+                dependentVal = fmap locatedValue (fdDependentTypes dirs)
+            putStrLn $ "Ownership directive: " ++ show ownershipVal
+            putStrLn $ "Dependent types directive: " ++ show dependentVal

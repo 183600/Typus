@@ -1,7 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
 import Parser
+import SourceLocation (Located, locatedValue)
+
+directiveValue :: Maybe (Located a) -> Maybe a
+directiveValue = fmap locatedValue
 
 main :: IO ()
 main = do
@@ -21,4 +24,5 @@ main = do
         Right ast -> do
             putStrLn "Parsed successfully!"
             print ast
-            putStrLn $ "Ownership directive: " ++ show (fdOwnership (tfDirectives ast))
+            let dirs = tfDirectives ast
+            putStrLn $ "Ownership directive: " ++ show (directiveValue (fdOwnership dirs))

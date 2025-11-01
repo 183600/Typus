@@ -1,33 +1,55 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
-module Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), defaultFileDirectives, defaultBlockDirectives) where
+module Parser
+  ( parseTypus
+  , FileDirectives(..)
+  , BlockDirectives(..)
+  , CodeBlock(..)
+  , TypusFile(..)
+  , defaultFileDirectives
+  , defaultBlockDirectives
+  ) where
 
+import Control.Monad (foldM)
 import Data.Char (isSpace)
+import Data.Maybe (fromMaybe)
+import Data.Void (Void)
+import SourceLocation
+  ( Located(..)
+  , SourcePos(..)
+  , SourceSpan(..)
+  , locatedWithSpan
+  , spanEnd
+  , spanStart
+  )
+import qualified Text.Megaparsec as MP
+import Text.Megaparsec (Parsec, errorBundlePretty)
 
 -- ============================================================================
 -- Data Types
 -- ============================================================================
 
 data FileDirectives = FileDirectives
-    { fdOwnership :: Maybe Bool
-    , fdDependentTypes :: Maybe Bool
-    , fdConstraints :: Maybe Bool
+    { fdOwnership :: Maybe (Located Bool)
+    , fdDependentTypes :: Maybe (Located Bool)
+    , fdConstraints :: Maybe (Located Bool)
     } deriving (Show, Eq)
 
 data BlockDirectives = BlockDirectives
-    { bdOwnership :: Bool
-    , bdDependentTypes :: Bool
-    , bdConstraints :: Bool
-} deriving (Show, Eq)
+    { bdOwnership :: Maybe (Located Bool)
+    , bdDependentTypes :: Maybe (Located Bool)
+    , bdConstraints :: Maybe (Located Bool)
+    } deriving (Show, Eq)
 
 data CodeBlock = CodeBlock
     { cbDirectives :: BlockDirectives
     , cbContent :: String
+    , cbSpan :: SourceSpan
     } deriving (Show, Eq)
 
 data TypusFile = TypusFile
     { tfDirectives :: FileDirectives
-    , tfBuildTags :: [String]  -- Go build tags like //go:build and // +build
+    , tfBuildTags :: [Located String]
     , tfBlocks :: [CodeBlock]
     } deriving (Show, Eq)
 
@@ -36,197 +58,240 @@ defaultFileDirectives :: FileDirectives
 defaultFileDirectives = FileDirectives Nothing Nothing Nothing
 
 defaultBlockDirectives :: BlockDirectives
-defaultBlockDirectives = BlockDirectives False False False
-
-
--- Legacy tokenizer implementation moved to documentation for reference.
--- See docs/parser-history.md for details about the design evolution.
+defaultBlockDirectives = BlockDirectives Nothing Nothing Nothing
 
 -- ============================================================================
--- Parser (robust, line-based parsing for directives and blocks)
+-- Parser entry point
 -- ============================================================================
 
--- Public API
+type MegaParser = Parsec Void String
 
--- High-level parser that works line-by-line to handle directives and blocks.
 parseTypus :: String -> Either String TypusFile
 parseTypus input = do
-    let ls = map stripCR (lines input)
-    (fileDirs, buildTags, rest) <- parseFileDirectivesFromLines ls
-    blocks <- parseBlocksFromLines rest
-    return $ TypusFile fileDirs buildTags blocks
+    parsedLines <- case MP.runParser parseDocument "<input>" input of
+      Left bundle -> Left (errorBundlePretty bundle)
+      Right ls    -> Right ls
+    buildTypusFile parsedLines
 
--- Parse file-level directives at the very top of file.
--- It skips leading blank lines, and accepts consecutive "//! key: value" lines.
--- Also preserves Go build tags (//go:build and // +build) at the very top.
--- Stops at the first non-blank non-file-directive non-build-tag line.
-parseFileDirectivesFromLines :: [String] -> Either String (FileDirectives, [String], [String])
-parseFileDirectivesFromLines = go defaultFileDirectives []
+-- ============================================================================
+-- Megaparsec-backed line capture
+-- ============================================================================
+
+data ParsedLine = ParsedLine
+    { plText :: String
+    , plEnding :: String
+    , plSpan :: SourceSpan
+    }
+
+parseDocument :: MegaParser [ParsedLine]
+parseDocument = MP.manyTill parseLine MP.eof
+
+parseLine :: MegaParser ParsedLine
+parseLine = do
+    MP.notFollowedBy MP.eof
+    startPos <- MP.getSourcePos
+    startOffset <- MP.getOffset
+    content <- MP.takeWhileP (Just "line content") (`notElem` ['\n', '\r'])
+    lineEnding <- MP.optional . MP.try $ MP.string "\r\n"
+    ending <- case lineEnding of
+      Just crlf -> pure crlf
+      Nothing   -> fromMaybe "" <$> MP.optional (MP.string "\n" MP.<|> MP.string "\r")
+    endPos <- MP.getSourcePos
+    endOffset <- MP.getOffset
+    let span = SourceSpan (toSourcePos startPos startOffset) (toSourcePos endPos endOffset)
+    pure ParsedLine
+      { plText = content
+      , plEnding = ending
+      , plSpan = span
+      }
+
+-- Convert Megaparsec SourcePos to project SourcePos
+toSourcePos :: MP.SourcePos -> Int -> SourcePos
+toSourcePos pos offset = SourcePos
+    { posLine = MP.unPos (MP.sourcePosLine pos)
+    , posColumn = MP.unPos (MP.sourcePosColumn pos)
+    , posOffset = offset
+    }
+
+-- ============================================================================
+-- High-level assembly
+-- ============================================================================
+
+buildTypusFile :: [ParsedLine] -> Either String TypusFile
+buildTypusFile lines0 = do
+    (fileDirs, buildTags, rest) <- parseFileDirectivesFromParsedLines lines0
+    blocks <- parseBlocksFromParsedLines rest
+    pure TypusFile
+      { tfDirectives = fileDirs
+      , tfBuildTags = buildTags
+      , tfBlocks = blocks
+      }
+
+-- ============================================================================
+-- File directive parsing (top-of-file)
+-- ============================================================================
+
+parseFileDirectivesFromParsedLines
+  :: [ParsedLine]
+  -> Either String (FileDirectives, [Located String], [ParsedLine])
+parseFileDirectivesFromParsedLines = go defaultFileDirectives []
   where
-    go :: FileDirectives -> [String] -> [String] -> Either String (FileDirectives, [String], [String])
     go acc buildTagsRev [] = Right (acc, reverse buildTagsRev, [])
-    go acc buildTagsRev (l:ls) =
-        let t = trim l
-        in if t == ""
-            then go acc buildTagsRev ls
-            else if isPrefixOf "//!" t
-                then do
-                    (k, v) <- parseFileDirectiveLine t
-                    acc' <- updateFileDirective acc k v
-                    go acc' buildTagsRev ls
-            else if isBuildTagLine t
-                then -- Preserve build tags by keeping them in the buildTags list
-                     go acc (l:buildTagsRev) ls
-                else Right (acc, reverse buildTagsRev, l:ls)
-    
-    isBuildTagLine line = 
-        isPrefixOf "//go:build" line || isPrefixOf "// +build" line
+    go acc buildTagsRev (line:rest) =
+      let trimmed = trim (plText line)
+      in if trimmed == ""
+           then go acc buildTagsRev rest
+           else if isPrefixOf "//!" trimmed
+             then do
+               (key, val) <- parseFileDirectiveLine line
+               acc' <- updateFileDirective acc key val
+               go acc' buildTagsRev rest
+           else if isBuildTagLine trimmed
+             then let tag = locatedWithSpan (plSpan line) (plText line)
+                  in go acc (tag : buildTagsRev) rest
+             else Right (acc, reverse buildTagsRev, line:rest)
 
--- Parse blocks:
--- - Normal code is accumulated as a default block (if non-empty).
--- - "{//! ...}" starts a directive block; we gather lines until the "extra }"
---   that closes the directive block. Any inner code braces are balanced and
---   do not end the directive block prematurely.
-parseBlocksFromLines :: [String] -> Either String [CodeBlock]
-parseBlocksFromLines = go [] []
+    isBuildTagLine t =
+      isPrefixOf "//go:build" t || isPrefixOf "// +build" t
+
+parseFileDirectiveLine :: ParsedLine -> Either String (String, Located Bool)
+parseFileDirectiveLine ParsedLine{..} = do
+    let stripped = dropWhile isSpace plText
+    if not (isPrefixOf "//!" stripped)
+      then Left $ "Invalid file directive format: " ++ plText
+      else do
+        let directivePart = trim (drop 3 stripped)
+        case break (== ':') directivePart of
+          (keyRaw, ':' : valueRaw) -> do
+            boolValue <- parseBool valueRaw
+            let key = trim keyRaw
+            pure (key, locatedWithSpan plSpan boolValue)
+          _ -> Left $ "Invalid file directive format: " ++ plText
+
+updateFileDirective :: FileDirectives -> String -> Located Bool -> Either String FileDirectives
+updateFileDirective fd key value = case key of
+    "ownership" -> Right fd { fdOwnership = Just value }
+    "dependent_types" -> Right fd { fdDependentTypes = Just value }
+    "constraints" -> Right fd { fdConstraints = Just value
+                                , fdDependentTypes = Just value }
+    _ -> Left $ "Unknown file directive: " ++ key
+
+-- ============================================================================
+-- Block parsing
+-- ============================================================================
+
+parseBlocksFromParsedLines :: [ParsedLine] -> Either String [CodeBlock]
+parseBlocksFromParsedLines = go [] []
   where
-    -- accRev stores blocks in reverse order; codeBufRev stores lines in reverse order
-    go :: [CodeBlock] -> [String] -> [String] -> Either String [CodeBlock]
     go accRev codeBufRev [] =
-        let accRev' = flushCodeBufToAcc accRev codeBufRev
-        in Right (reverse accRev')
-    go accRev codeBufRev (l:ls) =
-        let t = trim l
-        in if startsWithBlockDirective t
+      let accRev' = flushCodeBufToAcc accRev codeBufRev
+      in Right (reverse accRev')
+    go accRev codeBufRev (line:rest) =
+      let trimmed = trim (plText line)
+      in if startsWithBlockDirective trimmed
            then do
-             -- Flush any pending normal code into a default block
-             let accRev' = flushCodeBufToAcc accRev codeBufRev
-             -- Parse block directives
-             kvs <- parseBlockDirectiveLine t
-             bd <- parseBlockDirectives kvs
-             -- Capture block content until the directive-closing '}'
-             (blockLines, rest) <- captureDirectiveBlock ls
-             let codeTxt = unlines blockLines
-             let blk = CodeBlock bd codeTxt
-             go (blk : accRev') [] rest
-           else
-             -- Accumulate normal code
-             go accRev (l:codeBufRev) ls
+             let accWithCode = flushCodeBufToAcc accRev codeBufRev
+             directivesPairs <- parseBlockDirectiveLine line
+             directives <- parseBlockDirectives directivesPairs
+             (blockLines, blockSpan, remaining) <- captureDirectiveBlock (plSpan line) rest
+             let content = buildBlockContent blockLines
+             let block = CodeBlock
+                   { cbDirectives = directives
+                   , cbContent = content
+                   , cbSpan = blockSpan
+                   }
+             go (block : accWithCode) [] remaining
+           else go accRev (line : codeBufRev) rest
 
-    flushCodeBufToAcc :: [CodeBlock] -> [String] -> [CodeBlock]
     flushCodeBufToAcc accRev codeBufRev =
-        case flushCodeBuf codeBufRev of
-          Nothing -> accRev
-          Just blk -> blk : accRev
+      case flushCodeBuf codeBufRev of
+        Nothing -> accRev
+        Just blk -> blk : accRev
 
-    flushCodeBuf :: [String] -> Maybe CodeBlock
-    flushCodeBuf bufRev =
-        let codeTxt = trimRight (unlines (reverse bufRev))
-        in if codeTxt == "" then Nothing else Just (CodeBlock defaultBlockDirectives codeTxt)
+flushCodeBuf :: [ParsedLine] -> Maybe CodeBlock
+flushCodeBuf [] = Nothing
+flushCodeBuf linesRev =
+    let lines = reverse linesRev
+        contentRaw = concatMap lineTextWithEnding lines
+        content = trimRight contentRaw
+    in if content == ""
+         then Nothing
+         else let spanStart' = spanStart (plSpan (head lines))
+                  spanEnd'   = spanEnd (plSpan (last lines))
+                  blockSpan = SourceSpan spanStart' spanEnd'
+               in Just CodeBlock
+                    { cbDirectives = defaultBlockDirectives
+                    , cbContent = content
+                    , cbSpan = blockSpan
+                    }
 
-    startsWithBlockDirective :: String -> Bool
-    startsWithBlockDirective s = isPrefixOf "{//!" (dropWhile isSpace s)
+lineTextWithEnding :: ParsedLine -> String
+lineTextWithEnding ParsedLine{..} = plText ++ plEnding
 
--- Capture lines of a directive block until we see the "extra }" that closes it.
--- We keep a brace-depth over code to avoid stopping at function's }.
--- The closing '}' for the directive block will make the depth go from 0 to -1.
-captureDirectiveBlock :: [String] -> Either String ([String], [String])
-captureDirectiveBlock = go 0 []
+startsWithBlockDirective :: String -> Bool
+startsWithBlockDirective s = isPrefixOf "{//!" (dropWhile isSpace s)
+
+parseBlockDirectiveLine :: ParsedLine -> Either String [(String, Located Bool)]
+parseBlockDirectiveLine ParsedLine{..} = do
+    let tline = dropWhile isSpace plText
+    if not (isPrefixOf "{//!" tline)
+      then Left $ "Invalid block directive line (missing {//!): " ++ plText
+      else do
+        let afterPrefix = trim (drop 4 tline)
+            content = takeWhile (/= '}') afterPrefix
+        if null (trim content)
+          then Right []
+          else mapM (parseKeyValue plSpan) (splitOn ',' content)
   where
-    go :: Int -> [String] -> [String] -> Either String ([String], [String])
-    go _ _ [] = Left "Unclosed directive block: missing closing '}'"
-    go depth accRev (l:ls) =
-        let newDepth = depth + curlyDelta l
-        in if newDepth < 0
-           then -- The last line l is the directive-closing '}', do not include it
-                Right (reverse accRev, ls)
-           else go newDepth (l:accRev) ls
-
--- Compute net curly-brace delta for a line, ignoring braces inside strings and line-comments.
--- Strings: "..." with support for escaping \" inside (approx).
--- Line comments: // ... (ignored).
-curlyDelta :: String -> Int
-curlyDelta = go False False 0
-  where
-    go :: Bool -> Bool -> Int -> String -> Int
-    go _ _ acc [] = acc
-    go inStr _ acc ('/':'/':_) | not inStr = acc  -- comment starts, ignore rest
-    go inStr esc acc (c:cs)
-        | inStr =
-            case c of
-                '"' | not esc -> go False False acc cs
-                '\\'         -> go True True acc cs
-                _              -> go True False acc cs
-        | otherwise =
-            case c of
-                '"' -> go True False acc cs
-                '{' -> go False False (acc + 1) cs
-                '}' -> go False False (acc - 1) cs
-                _   -> go False False acc cs
-
--- ============================================================================
--- Directive Parsing
--- ============================================================================
-
-parseFileDirectiveLine :: String -> Either String (String, String)
-parseFileDirectiveLine line =
-    let directivePart = trim (drop 3 (dropWhile isSpace line))  -- Drop "//!"
-    in case break (== ':') directivePart of
-        (key, ':':value) -> Right (trim key, trim value)
-        _ -> Left $ "Invalid file directive format: " ++ line
-
-parseBlockDirectiveLine :: String -> Either String [(String, String)]
-parseBlockDirectiveLine line = do
-    -- Expect a line like: {//! ownership: off, constraints: on}
-    let tline = dropWhile isSpace line
-    if not ("{//!" `isPrefixOf` tline)
-       then Left $ "Invalid block directive line (missing {//!): " ++ line
-       else do
-           -- Extract content between {//! and the matching }
-           let afterPrefix = trim (drop 4 tline)  -- drop "{//!"
-           let content = takeWhile (/= '}') afterPrefix
-           if null (trim content)
-           then Right []
-           else mapM parseKeyValue $ splitOn ',' content
-  where
-    parseKeyValue :: String -> Either String (String, String)
-    parseKeyValue s = case break (== ':') (trim s) of
-        (key, ':':value) -> Right (trim key, trim value)
+    parseKeyValue :: SourceSpan -> String -> Either String (String, Located Bool)
+    parseKeyValue span s =
+      case break (== ':') (trim s) of
+        (keyRaw, ':' : valueRaw) -> do
+          boolValue <- parseBool valueRaw
+          let key = trim keyRaw
+          pure (key, locatedWithSpan span boolValue)
         _ -> Left $ "Invalid key:value format: " ++ s
 
-updateFileDirective :: FileDirectives -> String -> String -> Either String FileDirectives
-updateFileDirective fd key value = do
-    boolValue <- parseBool value
-    case key of
-        "ownership" -> Right fd { fdOwnership = Just boolValue }
-        "dependent_types" -> Right fd { fdDependentTypes = Just boolValue }
-        -- Treat "constraints" as an alias for dependent_types at file level
-        "constraints" -> Right fd { fdConstraints = Just boolValue
-                                   , fdDependentTypes = Just boolValue }
-        _ -> Left $ "Unknown file directive: " ++ key
+parseBlockDirectives :: [(String, Located Bool)] -> Either String BlockDirectives
+parseBlockDirectives pairs = foldM updateDirective defaultBlockDirectives pairs
+  where
+    updateDirective bd (key, value) = case key of
+      "ownership" -> Right bd { bdOwnership = Just value }
+      "dependent_types" -> Right bd { bdDependentTypes = Just value }
+      "constraints" -> Right bd { bdConstraints = Just value
+                                  , bdDependentTypes = Just value }
+      _ -> Left $ "Unknown block directive: " ++ key
 
-parseBlockDirectives :: [(String, String)] -> Either String BlockDirectives
-parseBlockDirectives [] = Right defaultBlockDirectives
-parseBlockDirectives ((key, value):kvs) = do
-    bd <- updateBlockDirective defaultBlockDirectives (key, value)
-    parseBlockDirectives' bd kvs
+captureDirectiveBlock
+  :: SourceSpan
+  -> [ParsedLine]
+  -> Either String ([ParsedLine], SourceSpan, [ParsedLine])
+captureDirectiveBlock directiveSpan = go 0 []
+  where
+    go _ _ [] = Left "Unclosed directive block: missing closing '}'"
+    go depth accRev (line:rest) =
+      let newDepth = depth + curlyDelta (plText line)
+      in if newDepth < 0
+           then let blockLines = reverse accRev
+                    blockSpan = computeBlockSpan directiveSpan (plSpan line) blockLines
+                in Right (blockLines, blockSpan, rest)
+           else go newDepth (line:accRev) rest
 
-parseBlockDirectives' :: BlockDirectives -> [(String, String)] -> Either String BlockDirectives
-parseBlockDirectives' bd [] = Right bd
-parseBlockDirectives' bd ((key, value):kvs) = do
-    bd' <- updateBlockDirective bd (key, value)
-    parseBlockDirectives' bd' kvs
+computeBlockSpan :: SourceSpan -> SourceSpan -> [ParsedLine] -> SourceSpan
+computeBlockSpan directiveSpan closingSpan blockLines =
+    case blockLines of
+      [] -> SourceSpan (spanEnd directiveSpan) (spanStart closingSpan)
+      _  -> SourceSpan (spanStart (plSpan (head blockLines)))
+                       (spanEnd (plSpan (last blockLines)))
 
-updateBlockDirective :: BlockDirectives -> (String, String) -> Either String BlockDirectives
-updateBlockDirective bd (key, value) = do
-    boolValue <- parseBool value
-    case key of
-        "ownership" -> Right bd { bdOwnership = boolValue }
-        "dependent_types" -> Right bd { bdDependentTypes = boolValue }
-        -- Treat "constraints" as an alias for dependent_types at block level too
-        "constraints" -> Right bd { bdConstraints = boolValue
-                                   , bdDependentTypes = boolValue }
-        _ -> Left $ "Unknown block directive: " ++ key
+buildBlockContent :: [ParsedLine] -> String
+buildBlockContent blockLines =
+    let texts = map plText blockLines
+    in unlines texts
+
+-- ============================================================================
+-- Directive helpers
+-- ============================================================================
 
 parseBool :: String -> Either String Bool
 parseBool s = case trim s of
@@ -247,36 +312,33 @@ trim = f . f
 trimRight :: String -> String
 trimRight = reverse . dropWhile (`elem` "\r\n") . reverse
 
-{-
-breakOn :: String -> String -> (String, String)
-breakOn delimiter str = go str
-  where
-    go [] = ("", "")
-    go s@(x:xs)
-        | delimiter `isPrefixOf` s = ("", s)
-        | otherwise = let (before, after) = go xs in (x:before, after)
--}
-
 splitOn :: Char -> String -> [String]
 splitOn _ [] = []
 splitOn delim str = case break (== delim) str of
     (before, []) -> [before]
-    (before, _:after) -> before : splitOn delim after
+    (before, _ : after) -> before : splitOn delim after
 
 isPrefixOf :: String -> String -> Bool
 isPrefixOf [] _ = True
 isPrefixOf _ [] = False
 isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
 
-{-
-isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
+-- Compute net curly-brace delta for a line, ignoring braces inside strings and line-comments.
+curlyDelta :: String -> Int
+curlyDelta = go False False 0
   where
-    tails [] = [[]]
-    tails xs@(_:xs') = xs : tails xs'
--}
-
-stripCR :: String -> String
-stripCR = reverse . dropWhile (== '\r') . reverse
-
--- Additional historical parser APIs are archived in docs/parser-history.md.
+    go :: Bool -> Bool -> Int -> String -> Int
+    go _ _ acc [] = acc
+    go inStr _ acc ('/' : '/' : _) | not inStr = acc
+    go inStr esc acc (c:cs)
+        | inStr =
+            case c of
+                '"' | not esc -> go False False acc cs
+                '\\'         -> go True True acc cs
+                _              -> go True False acc cs
+        | otherwise =
+            case c of
+                '"' -> go True False acc cs
+                '{' -> go False False (acc + 1) cs
+                '}' -> go False False (acc - 1) cs
+                _   -> go False False acc cs
