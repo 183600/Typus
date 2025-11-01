@@ -7,23 +7,15 @@ import Control.Monad.Except
 import Control.Monad.IO.Class (liftIO)
 import System.Directory (doesFileExist, doesDirectoryExist, copyFile, createDirectoryIfMissing, listDirectory)
 import System.FilePath
-import System.IO.Temp (withSystemTempDirectory)
+import System.IO.Temp (withSystemTempDirectory, openTempFile)
+import System.IO (hClose)
 import System.Exit (exitFailure)
-import Data.List (isInfixOf, isPrefixOf)
+import Data.List (isPrefixOf)
 import Data.Char (isSpace)
 import System.FilePath.Glob (glob)
 
 -- Define the IOResult type alias
 type IOResult = ExceptT String IO
-
--- Helper function to replace substrings
-replace :: String -> String -> String -> String
-replace old new = go
-  where
-    go [] = []
-    go str
-      | old `isPrefixOf` str = new ++ go (drop (length old) str)
-      | (x:xs) <- str = x : go xs
 
 -- Extract embedded file patterns from Go code
 -- Extract raw patterns from //go:embed directives (supports multiple patterns per line)
@@ -128,19 +120,18 @@ withTemporaryGoProject prefix action =
 writeGoModule :: FilePath -> IOResult ()
 writeGoModule dir = liftIO $ writeFile (dir </> "go.mod") goModContents
 
-safeBaseName :: FilePath -> String
-safeBaseName path =
-    let baseName = takeBaseName path
-    in if "test" `isInfixOf` baseName
-          then replace "test" "exec" baseName
-          else baseName
-
-temporaryGoFileFor :: FilePath -> FilePath -> FilePath
-temporaryGoFileFor tempDir sourcePath = tempDir </> (safeBaseName sourcePath ++ ".go")
+createTempGoFile :: FilePath -> FilePath -> IOResult FilePath
+createTempGoFile sourcePath tempDir = do
+    let baseName = takeBaseName sourcePath
+        prefix = if null baseName then "typus" else baseName
+        template = prefix ++ "-XXXXXX.go"
+    (tempPath, handle) <- liftIO $ openTempFile tempDir template
+    liftIO $ hClose handle
+    return tempPath
 
 prepareSingleFileProject :: FilePath -> FilePath -> IOResult FilePath
 prepareSingleFileProject sourcePath tempDir = do
-    let tempGoPath = temporaryGoFileFor tempDir sourcePath
+    tempGoPath <- createTempGoFile sourcePath tempDir
     convertFile sourcePath tempGoPath
     mirrorEmbeddedResources sourcePath tempDir tempGoPath
     return tempGoPath
