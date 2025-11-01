@@ -12,6 +12,7 @@ import Test.Tasty.HUnit (assertBool, assertFailure, (@?=), testCase)
 import qualified Compiler
 import qualified Ownership
 import qualified Parser
+import SourceLocation (locatedValue)
 
 fixturePath :: FilePath
 fixturePath = "test" </> "data"
@@ -62,6 +63,7 @@ tests =
 
     , testCase "dependent type directives propagate from fixture" $ do
         typusFile <- parseFixture "code_with_dependent_types.typus"
-        let Parser.FileDirectives { Parser.fdDependentTypes = dtEnabled } = Parser.tfDirectives typusFile
+        let Parser.FileDirectives { Parser.fdDependentTypes = dtFlag } = Parser.tfDirectives typusFile
+            dtEnabled = fmap locatedValue dtFlag
         dtEnabled @?= Just True
     ]

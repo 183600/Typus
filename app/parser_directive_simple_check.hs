@@ -1,6 +1,8 @@
-module Main where
-
 import Parser
+import SourceLocation (Located, locatedValue)
+
+directiveValue :: Maybe (Located a) -> Maybe a
+directiveValue = fmap locatedValue
 
 main :: IO ()
 main = do
@@ -24,10 +26,12 @@ main = do
         Right ast -> do
             putStrLn "Parsed successfully!"
             let dirs = tfDirectives ast
-            putStrLn $ "Ownership directive: " ++ show (fdOwnership dirs)
-            putStrLn $ "Dependent types directive: " ++ show (fdDependentTypes dirs)
+                ownershipVal = directiveValue (fdOwnership dirs)
+                dependentVal = directiveValue (fdDependentTypes dirs)
+            putStrLn $ "Ownership directive: " ++ show ownershipVal
+            putStrLn $ "Dependent types directive: " ++ show dependentVal
             
             -- 验证指令是否正确解析
-            case (fdOwnership dirs, fdDependentTypes dirs) of
+            case (ownershipVal, dependentVal) of
                 (Just True, Just False) -> putStrLn "✓ File directives parsed correctly!"
                 _ -> putStrLn "✗ File directives not parsed correctly"

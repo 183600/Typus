@@ -7,9 +7,10 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 import Test.Tasty.Ingredients
-import qualified Parser (parseTypus, tfDirectives, tfBlocks, FileDirectives(..))
+import qualified Parser (parseTypus, tfDirectives, tfBlocks, FileDirectives(..), fdOwnership, fdDependentTypes)
 import qualified Compiler (compile)
 import qualified Ownership (analyzeOwnership)
+import SourceLocation (locatedValue)
 import qualified SyntaxValidator ()
 import Data.List (isInfixOf)
 import System.Directory (doesFileExist)
@@ -94,8 +95,10 @@ testEdgeCases = testCase "Edge Cases" $ do
         Left err -> assertFailure $ "Parser failed on directive-only code: " ++ err
         Right typusFile -> do
             let directives = Parser.tfDirectives typusFile
-            assertEqual "Ownership should be enabled" (Just True) (Parser.fdOwnership directives)
-            assertEqual "Dependent types should be enabled" (Just True) (Parser.fdDependentTypes directives)
+                ownership = fmap locatedValue (Parser.fdOwnership directives)
+                dependent = fmap locatedValue (Parser.fdDependentTypes directives)
+            assertEqual "Ownership should be enabled" (Just True) ownership
+            assertEqual "Dependent types should be enabled" (Just True) dependent
 
 -- 错误处理测试
 testErrorHandling :: TestTree

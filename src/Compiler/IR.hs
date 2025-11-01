@@ -14,6 +14,7 @@ module Compiler.IR (
 import Parser (TypusFile(..), CodeBlock(..))
 import Compiler.Error
 import Compiler.GoAst
+import SourceLocation (locatedValue)
 
 import Data.Char (isSpace)
 import Data.Function (on)
@@ -66,10 +67,11 @@ moduleFromTypus typusFile = do
     parsed <- case parseGoModule (lines rawSource) of
         Left err -> Left $ mkCompilationError GoGenerationErrorKind ("Failed to parse Go module: " ++ err) []
         Right goMod -> Right goMod
-    let module0 = parsed { gmBuildTags = if null (tfBuildTags typusFile)
+    let buildTags = tfBuildTags typusFile
+        module0 = parsed { gmBuildTags = if null buildTags
                                          then gmBuildTags parsed
-                                         else tfBuildTags typusFile
-                         }
+                                         else map locatedValue buildTags
+                          }
         module1 = applyGenerics module0
         module2 = ensurePackageDecl module1
         module3 = ensureMainFunction module2

@@ -22,10 +22,18 @@ import Ownership (analyzeOwnership, formatOwnershipErrors, OwnershipError(..))
 import Compiler.GoAst
 import qualified Compiler.IR as IR
 import Compiler.Error
+import SourceLocation (locatedValue)
 
 import Data.Char (isSpace)
 import Data.List (intercalate, isInfixOf, isPrefixOf)
 import Data.Maybe (catMaybes)
+
+--------------------------------------------------------------------------------
+-- Helpers for directive flags
+--------------------------------------------------------------------------------
+
+directiveEnabled :: Maybe (Located Bool) -> Bool
+directiveEnabled = maybe False locatedValue
 
 --------------------------------------------------------------------------------
 -- Public API
@@ -59,10 +67,10 @@ ensureSourceIR typusFile =
 
 checkDependentTypes :: TypusFile -> Either CompilationError ()
 checkDependentTypes typusFile =
-  let fileEnabled = case fdDependentTypes (tfDirectives typusFile) of
-        Just True -> True
-        _ -> False
-      blockEnabled = any (bdDependentTypes . cbDirectives) (tfBlocks typusFile)
+  let directives = tfDirectives typusFile
+      blocks = tfBlocks typusFile
+      fileEnabled = directiveEnabled (fdDependentTypes directives)
+      blockEnabled = any (directiveEnabled . bdDependentTypes . cbDirectives) blocks
       shouldCheck = fileEnabled || blockEnabled
   in if shouldCheck
         then case extractDependentTypeContent typusFile of
@@ -80,7 +88,7 @@ checkDependentTypes typusFile =
 
 extractDependentTypeContent :: TypusFile -> String
 extractDependentTypeContent typusFile =
-  let dependentBlocks = filter (bdDependentTypes . cbDirectives) (tfBlocks typusFile)
+  let dependentBlocks = filter (directiveEnabled . bdDependentTypes . cbDirectives) (tfBlocks typusFile)
   in concatMap cbContent dependentBlocks
 
 formatDependentTypeErrors :: [DependentTypeError] -> (String, [SourceLocation])
@@ -106,12 +114,12 @@ formatDependentTypeErrors errs =
 
 checkOwnership :: TypusFile -> Either CompilationError ()
 checkOwnership typusFile =
-  let fileEnabled = case fdOwnership (tfDirectives typusFile) of
-        Just True -> True
-        _ -> False
-      blockEnabled = any (bdOwnership . cbDirectives) (tfBlocks typusFile)
+  let directives = tfDirectives typusFile
+      blocks = tfBlocks typusFile
+      fileEnabled = directiveEnabled (fdOwnership directives)
+      blockEnabled = any (directiveEnabled . bdOwnership . cbDirectives) blocks
       shouldCheck = fileEnabled || blockEnabled
-      fullContent = intercalate "\n" $ map cbContent (tfBlocks typusFile)
+      fullContent = intercalate "\n" $ map cbContent blocks
       contentToCheck = if fileEnabled then fullContent else extractOwnershipContent typusFile
   in if shouldCheck
         then case contentToCheck of
@@ -127,7 +135,7 @@ checkOwnership typusFile =
 
 extractOwnershipContent :: TypusFile -> String
 extractOwnershipContent typusFile =
-  let ownershipBlocks = filter (bdOwnership . cbDirectives) (tfBlocks typusFile)
+  let ownershipBlocks = filter (directiveEnabled . bdOwnership . cbDirectives) (tfBlocks typusFile)
   in concatMap cbContent ownershipBlocks
 
 extractValueCopyVars :: String -> [String]
