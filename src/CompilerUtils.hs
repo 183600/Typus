@@ -28,8 +28,47 @@ import System.Info (os)
 import Data.Either (partitionEithers)
 import System.Environment (lookupEnv)
 import Data.Char (toLower)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import System.IO.Unsafe (unsafePerformIO)
 
 type IOResult a = ExceptT String IO a
+
+{-# NOINLINE goCheckCache #-}
+goCheckCache :: IORef (Maybe (Either String ()))
+goCheckCache = unsafePerformIO (newIORef Nothing)
+
+isEnvVarEnabled :: String -> IO Bool
+isEnvVarEnabled name = do
+    value <- lookupEnv name
+    pure $ case fmap (map toLower) value of
+        Just "1"    -> True
+        Just "true" -> True
+        Just "yes"  -> True
+        Just "on"   -> True
+        _            -> False
+
+shouldSkipGoToolchain :: IO Bool
+shouldSkipGoToolchain = isEnvVarEnabled "TYPUS_SKIP_GO_BUILD"
+
+ensureGoAvailable :: IOResult ()
+ensureGoAvailable = do
+    cached <- liftIO $ readIORef goCheckCache
+    case cached of
+        Just (Left err) -> throwError err
+        Just (Right ()) -> return ()
+        Nothing -> do
+            result <- liftIO $ do
+                found <- findExecutable "go"
+                let r =
+                        maybe
+                            (Left "Go is not installed or not in PATH. Please install Go.")
+                            (const (Right ()))
+                            found
+                writeIORef goCheckCache (Just r)
+                pure r
+            case result of
+                Left err -> throwError err
+                Right () -> return ()
 
 -- 单文件转换：Typus -> Go 或 Go -> Go
 convertFile :: FilePath -> FilePath -> IOResult ()
@@ -51,14 +90,7 @@ convertFile input output = do
                 Right file -> return file
 
             -- Integrated analysis and compilation
-            debug <- liftIO $ do
-                m <- lookupEnv "TYPUS_DEBUG"
-                return $ case fmap (map toLower) m of
-                  Just "1"     -> True
-                  Just "true"  -> True
-                  Just "yes"   -> True
-                  Just "on"    -> True
-                  _             -> False
+            debug <- liftIO $ isEnvVarEnabled "TYPUS_DEBUG"
             when debug $ liftIO $ putStrLn $ "Parsing completed for: " ++ input
             when debug $ liftIO $ putStrLn $ "Running integrated analysis..."
 
@@ -155,22 +187,26 @@ checkSingleFile file = do
     liftIO $ putStrLn "     ✓ Compilation successful"
 
     -- 3. 调用 Go 编译器做语法检查（在临时目录构建）
-    liftIO $ putStrLn "  3. Checking Go syntax..."
-    goCheckResult <- liftIO $ withSystemTempDirectory "typus_check" $ \tempDir -> do
-        let tempGoPath = tempDir </> "main.go"
-        writeFile tempGoPath goCode
-        writeFile (tempDir </> "go.mod") "module temp\n\ngo 1.21\n"
+    skipGo <- liftIO shouldSkipGoToolchain
+    if skipGo
+        then liftIO $ putStrLn "  3. Skipping Go syntax check (TYPUS_SKIP_GO_BUILD is enabled)."
+        else do
+            liftIO $ putStrLn "  3. Checking Go syntax..."
+            goCheckResult <- liftIO $ withSystemTempDirectory "typus_check" $ \tempDir -> do
+                let tempGoPath = tempDir </> "main.go"
+                writeFile tempGoPath goCode
+                writeFile (tempDir </> "go.mod") "module temp\n\ngo 1.21\n"
 
-        -- 平台相关的空设备
-        let nullOutput = if os == "mingw32" then "NUL" else "/dev/null"
-        let goArgs = ["build", "-o", nullOutput, "main.go"]
+                -- 平台相关的空设备
+                let nullOutput = if os == "mingw32" then "NUL" else "/dev/null"
+                let goArgs = ["build", "-o", nullOutput, "main.go"]
 
-        -- 在 IO 中运行 ExceptT，返回 IO (Either String ())
-        runExceptT $ runGoCommandInDir goArgs tempDir
+                -- 在 IO 中运行 ExceptT，返回 IO (Either String ())
+                runExceptT $ runGoCommandInDir goArgs tempDir
 
-    case goCheckResult of
-        Left err -> throwError err
-        Right _  -> liftIO $ putStrLn "     ✓ Go syntax OK"
+            case goCheckResult of
+                Left err -> throwError err
+                Right _  -> liftIO $ putStrLn "     ✓ Go syntax OK"
 
 -- 运行 go 命令（当前目录）
 runGoCommand :: [String] -> IOResult ()
@@ -179,20 +215,20 @@ runGoCommand args = runGoCommandInDir args "."
 -- 运行 go 命令（指定目录）
 runGoCommandInDir :: [String] -> FilePath -> IOResult ()
 runGoCommandInDir args dir = do
-    -- 确认 go 可执行文件存在
-    goCheck <- liftIO $ findExecutable "go"
-    case goCheck of
-        Nothing -> throwError "Go is not installed or not in PATH. Please install Go."
-        Just _  -> return ()
+    skipGo <- liftIO shouldSkipGoToolchain
+    if skipGo
+        then liftIO $ putStrLn $ "Skipping Go command: go " ++ unwords args ++ " (TYPUS_SKIP_GO_BUILD is enabled)."
+        else do
+            ensureGoAvailable
 
-    let processSpec = (proc "go" args) { cwd = Just dir }
-    (exitCode, stdout, stderr) <- liftIO $ readCreateProcessWithExitCode processSpec ""
+            let processSpec = (proc "go" args) { cwd = Just dir }
+            (exitCode, stdout, stderr) <- liftIO $ readCreateProcessWithExitCode processSpec ""
 
-    case exitCode of
-        ExitSuccess ->
-            if not (null stdout)
-                then liftIO $ putStr stdout
-                else return ()
-        ExitFailure code -> do
-            let cmd = "go " ++ unwords args
-            throwError $ cmd ++ " failed with exit code " ++ show code ++ ".\nStdout: " ++ stdout ++ "\nStderr: " ++ stderr
+            case exitCode of
+                ExitSuccess ->
+                    if not (null stdout)
+                        then liftIO $ putStr stdout
+                        else return ()
+                ExitFailure code -> do
+                    let cmd = "go " ++ unwords args
+                    throwError $ cmd ++ " failed with exit code " ++ show code ++ ".\nStdout: " ++ stdout ++ "\nStderr: " ++ stderr
