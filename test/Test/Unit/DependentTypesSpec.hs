@@ -1,4 +1,4 @@
-module DependentTypesSpec (tests) where
+module Test.Unit.DependentTypesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ( (@?=), assertBool, assertFailure, testCase )

@@ -1,4 +1,4 @@
-module CompilerSpec (tests) where
+module Test.Unit.CompilerSpec (tests) where
 
 import Data.List (isInfixOf)
 import Test.Tasty (TestTree, testGroup)

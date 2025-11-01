@@ -32,15 +32,12 @@ stack test
 
 ### 测试类型
 
-| 测试类型 | 数量 | 用途 |
+| 测试类型 | 位置 | 用途 |
 |---------|------|------|
-| 单元测试 | 55+ | 测试单个函数和模块 |
-| 集成测试 | 8 | 测试模块间协作 |
-| 端到端测试 | 50+ | 测试完整工作流 |
-| CLI测试 | 7 | 测试命令行接口 |
-| 性能测试 | 5 | 验证性能阈值 |
-| 属性测试 | 300+ | QuickCheck自动生成 |
-| **总计** | **425+** | |
+| 单元测试 | `test/unit` | 纯库级校验，可在 `--fast` 模式下快速执行 |
+| 集成测试 | `test/integration` | 覆盖 Typus 到 Go 的端到端转换与外部工具链 |
+| Golden 测试 | `test/golden` | 对生成产物做回归比对，保证输出稳定 |
+| 基准测试 | `test/BenchmarkRunner.hs` | 维持性能基线，使用 `stack bench` 运行 |
 
 ### 覆盖的核心模块
 
@@ -130,9 +127,10 @@ stack test --coverage
 ### 添加新的单元测试
 
 1. **选择合适的测试文件**：
-   - Parser测试 → `test/TestParser.hs`
-   - Compiler测试 → `test/TestCompiler.hs`
-   - Ownership测试 → `test/TestOwnership.hs`
+   - Parser 测试 → `test/unit/ParserSpec.hs`
+   - Compiler 测试 → `test/unit/CompilerSpec.hs`
+   - Ownership 测试 → `test/unit/OwnershipSpec.hs`
+   - CLI 参数解析测试 → `test/unit/CLISpec.hs`
 
 2. **添加测试用例**：
 
@@ -152,7 +150,8 @@ stack test
 
 ### 添加新的集成测试
 
-在 `test/IntegrationTests.hs` 或 `test/EndToEndTests.hs` 中添加：
+在 `test/integration` 目录中新建或扩展文件（例如 `PipelineSpec.hs`），并在
+`test/integration/Tests.hs` 中注册：
 
 ```haskell
 TH.testCase "集成测试描述" $ do

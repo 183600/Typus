@@ -154,6 +154,8 @@ test/debug_ownership_file_directive
 test/debug_ownership_package
 test/debug_ownership_minimal
 test/debug_ownership_simple_test
+examples/generated/
+test/fixtures/debug_ownership_*
 
 # IDE files
 .vscode/

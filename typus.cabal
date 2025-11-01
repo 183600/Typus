@@ -199,15 +199,20 @@ benchmark typus-bench
 test-suite typus-test
     import:           warnings
     type:             exitcode-stdio-1.0
-    main-is:          TestSuite.hs
+    main-is:          Main.hs
     hs-source-dirs:   test
     default-extensions: NoMonomorphismRestriction
     other-modules:
-        ParserSpec,
-        OwnershipSpec,
-        DependentTypesSpec,
-        CompilerSpec,
-        CLISpec
+        Test.Golden,
+        Test.Golden.CompilerSpec,
+        Test.Integration,
+        Test.Integration.PipelineSpec,
+        Test.Unit,
+        Test.Unit.CLISpec,
+        Test.Unit.CompilerSpec,
+        Test.Unit.DependentTypesSpec,
+        Test.Unit.OwnershipSpec,
+        Test.Unit.ParserSpec
     build-depends:
         base >=4.7 && <5,
         typus,
@@ -247,42 +252,3 @@ test-suite typus-test
     if flag(coverage)
         ghc-options:   -fhpc -fno-warn-unused-imports -fno-warn-unused-matches -fno-warn-unused-binds -fno-warn-unused-top-binds -fno-warn-unused-type-patterns
 
--- Enhanced Ownership Test Suite
-test-suite enhanced-ownership-tests
-    import:           warnings
-    type:             exitcode-stdio-1.0
-    main-is:          RunEnhancedOwnershipTestsMain.hs
-    hs-source-dirs:   test
-    other-modules:
-        EnhancedOwnershipTests,
-        EnhancedStackTest,
-        RunEnhancedOwnershipTests,
-        TestOwnership,
-        OwnershipAnalysisTests
-    build-depends:
-        base >=4.7 && <5,
-        typus,
-        containers,
-        mtl,
-        parsec >= 3.1.0,
-        directory >= 1.3.0,
-        filepath >= 1.4.0,
-        process >= 1.6.0,
-        HUnit >= 1.6.0,
-        deepseq >= 1.4.0,
-        time >= 1.8.0,
-        tasty >= 1.4,
-        tasty-hunit >= 0.10,
-        tasty-golden >= 2.3,
-        tasty-quickcheck >= 0.10,
-        QuickCheck >= 2.14,
-        temporary >= 1.2 && <2,
-        text >= 1.2.0 && <3
-    default-language: Haskell2010
-    ghc-options:      -threaded -rtsopts -with-rtsopts=-N -Wwarn -Wno-unused-top-binds -Wno-unused-local-binds -Wno-monomorphism-restriction -Wno-unused-matches
-    if flag(fast)
-        cpp-options:   -DFAST_TESTS
-    if flag(full)
-        buildable: True
-    else
-        buildable: False
