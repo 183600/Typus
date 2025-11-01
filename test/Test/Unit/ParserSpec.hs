@@ -1,4 +1,4 @@
-module ParserSpec (tests) where
+module Test.Unit.ParserSpec (tests) where
 
 import Data.List (find)
 import Test.Tasty (TestTree, testGroup)

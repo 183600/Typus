@@ -1,4 +1,4 @@
-module CLISpec (tests) where
+module Test.Unit.CLISpec (tests) where
 
 import System.Environment (withArgs)
 import Test.Tasty (TestTree, testGroup)

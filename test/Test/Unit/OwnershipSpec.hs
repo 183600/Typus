@@ -1,4 +1,4 @@
-module OwnershipSpec (tests) where
+module Test.Unit.OwnershipSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ( (@?=), assertBool, assertFailure, testCase )
