@@ -56,6 +56,10 @@ make install
    ```
 ```
 
+## 环境变量
+
+- `TYPUS_SKIP_GO_BUILD`: 设置为 `1`、`true`、`yes` 或 `on` 时会跳过所有 Go 工具链调用，仅执行 Typus -> Go 的转换，适合无法使用系统 Go 编译器或需要纯编译模式的场景。
+
 ## 文件级指令
 
 ```go
