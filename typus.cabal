@@ -41,8 +41,17 @@ library
         Debug,
         CommandLineDebug,
         DebugIntegration
+    other-modules:
+        Compiler.Error,
+        Compiler.GoAst,
+        Compiler.IR,
+        ErrorHandler,
+        Ownership.Common.Lexer,
+        Ownership.Common.Types,
+        SourceLocation
     build-depends:
         base >=4.7 && <5,
+        aeson >= 2.2 && <3,
         containers >= 0.6 && <1,
         mtl >= 2.2 && <3,
         parsec >= 3.1.0 && <3.2,

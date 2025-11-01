@@ -67,17 +67,15 @@ module ErrorHandler (
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (intercalate, sortBy, foldl1)
+import Data.List (intercalate, sortBy)
 import Data.Ord (comparing)
-import Data.Maybe (mapMaybe, isJust, fromJust)
+import Data.Maybe (mapMaybe)
 import Control.Monad.State
-import Control.Monad.Writer
 import GHC.Generics (Generic)
 import Data.Aeson (ToJSON, FromJSON)
 import Data.Time (getCurrentTime, formatTime, defaultTimeLocale)
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Map.Strict as Map
-import Data.Foldable (foldl')
 
 -- ============================================================================
 -- Error Severity Levels
@@ -107,11 +105,11 @@ data DetailedSeverity = DetailedSeverity
     { baseSeverity :: ErrorSeverity
     , subLevel :: ErrorSubLevel
     , customLevel :: Maybe String      -- Custom level names
-    } deriving (Show, Eq, Generic, ToJSON, FromJSON)
+    } deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 -- Convert detailed severity to basic severity
-toBasicSeverity :: DetailedSeverity -> ErrorSeverity
-toBasicSeverity = baseSeverity
+_toBasicSeverity :: DetailedSeverity -> ErrorSeverity
+_toBasicSeverity = baseSeverity
 
 -- Get priority for detailed severity
 detailedSeverityPriority :: DetailedSeverity -> Int
@@ -127,98 +125,98 @@ detailedSeverityPriority ds = severityPriority (baseSeverity ds) + subLevelPrior
 compareSeverity :: ErrorSeverity -> ErrorSeverity -> Ordering
 compareSeverity s1 s2 = compare (severityPriority s1) (severityPriority s2)
 
-compareDetailedSeverity :: DetailedSeverity -> DetailedSeverity -> Ordering
-compareDetailedSeverity d1 d2 = compare (detailedSeverityPriority d1) (detailedSeverityPriority d2)
+_compareDetailedSeverity :: DetailedSeverity -> DetailedSeverity -> Ordering
+_compareDetailedSeverity d1 d2 = compare (detailedSeverityPriority d1) (detailedSeverityPriority d2)
 
 -- Severity predicates
-isFatal :: ErrorSeverity -> Bool
-isFatal Fatal = True
-isFatal _ = False
+_isFatal :: ErrorSeverity -> Bool
+_isFatal Fatal = True
+_isFatal _ = False
 
-isError :: ErrorSeverity -> Bool
-isError Error = True
-isError _ = False
+_isError :: ErrorSeverity -> Bool
+_isError Error = True
+_isError _ = False
 
-isWarning :: ErrorSeverity -> Bool
-isWarning Warning = True
-isWarning _ = False
+_isWarning :: ErrorSeverity -> Bool
+_isWarning Warning = True
+_isWarning _ = False
 
-isInfo :: ErrorSeverity -> Bool
-isInfo Info = True
-isInfo _ = False
+_isInfo :: ErrorSeverity -> Bool
+_isInfo Info = True
+_isInfo _ = False
 
 isAtLeast :: ErrorSeverity -> ErrorSeverity -> Bool
-isAtLeast minSeverity severity = compareSeverity severity minSeverity /= LT
+isAtLeast minSeverity sev = compareSeverity sev minSeverity /= LT
 
 -- Severity level predicates for detailed severity
-isCritical :: DetailedSeverity -> Bool
-isCritical ds = subLevel ds == Critical
+_isCritical :: DetailedSeverity -> Bool
+_isCritical ds = subLevel ds == Critical
 
-isHigh :: DetailedSeverity -> Bool
-isHigh ds = subLevel ds == High
+_isHigh :: DetailedSeverity -> Bool
+_isHigh ds = subLevel ds == High
 
-isMedium :: DetailedSeverity -> Bool
-isMedium ds = subLevel ds == Medium
+_isMedium :: DetailedSeverity -> Bool
+_isMedium ds = subLevel ds == Medium
 
-isLow :: DetailedSeverity -> Bool
-isLow ds = subLevel ds == Low
+_isLow :: DetailedSeverity -> Bool
+_isLow ds = subLevel ds == Low
 
-isNotification :: DetailedSeverity -> Bool
-isNotification ds = subLevel ds == Notification
+_isNotification :: DetailedSeverity -> Bool
+_isNotification ds = subLevel ds == Notification
 
 -- Create common detailed severity levels
-criticalFatal :: DetailedSeverity
-criticalFatal = DetailedSeverity Fatal Critical Nothing
+_criticalFatal :: DetailedSeverity
+_criticalFatal = DetailedSeverity Fatal Critical Nothing
 
-highFatal :: DetailedSeverity
-highFatal = DetailedSeverity Fatal High Nothing
+_highFatal :: DetailedSeverity
+_highFatal = DetailedSeverity Fatal High Nothing
 
-mediumFatal :: DetailedSeverity
-mediumFatal = DetailedSeverity Fatal Medium Nothing
+_mediumFatal :: DetailedSeverity
+_mediumFatal = DetailedSeverity Fatal Medium Nothing
 
-highError :: DetailedSeverity
-highError = DetailedSeverity Error High Nothing
+_highError :: DetailedSeverity
+_highError = DetailedSeverity Error High Nothing
 
-mediumError :: DetailedSeverity
-mediumError = DetailedSeverity Error Medium Nothing
+_mediumError :: DetailedSeverity
+_mediumError = DetailedSeverity Error Medium Nothing
 
-lowError :: DetailedSeverity
-lowError = DetailedSeverity Error Low Nothing
+_lowError :: DetailedSeverity
+_lowError = DetailedSeverity Error Low Nothing
 
-highWarning :: DetailedSeverity
-highWarning = DetailedSeverity Warning High Nothing
+_highWarning :: DetailedSeverity
+_highWarning = DetailedSeverity Warning High Nothing
 
-mediumWarning :: DetailedSeverity
-mediumWarning = DetailedSeverity Warning Medium Nothing
+_mediumWarning :: DetailedSeverity
+_mediumWarning = DetailedSeverity Warning Medium Nothing
 
-lowWarning :: DetailedSeverity
-lowWarning = DetailedSeverity Warning Low Nothing
+_lowWarning :: DetailedSeverity
+_lowWarning = DetailedSeverity Warning Low Nothing
 
-infoNotification :: DetailedSeverity
-infoNotification = DetailedSeverity Info Notification Nothing
+_infoNotification :: DetailedSeverity
+_infoNotification = DetailedSeverity Info Notification Nothing
 
 -- Create custom detailed severity
-customDetailedSeverity :: ErrorSeverity -> ErrorSubLevel -> String -> DetailedSeverity
-customDetailedSeverity base sub customName = DetailedSeverity base sub (Just customName)
+_customDetailedSeverity :: ErrorSeverity -> ErrorSubLevel -> String -> DetailedSeverity
+_customDetailedSeverity base sub customName = DetailedSeverity base sub (Just customName)
 
 -- Severity groupings
-isRecoverable :: ErrorSeverity -> Bool
-isRecoverable Fatal = False
-isRecoverable _ = True
+_isRecoverable :: ErrorSeverity -> Bool
+_isRecoverable Fatal = False
+_isRecoverable _ = True
 
-isUserActionRequired :: ErrorSeverity -> Bool
-isUserActionRequired Fatal = True
-isUserActionRequired Error = True
-isUserActionRequired _ = False
+_isUserActionRequired :: ErrorSeverity -> Bool
+_isUserActionRequired Fatal = True
+_isUserActionRequired Error = True
+_isUserActionRequired _ = False
 
-isSystemIssue :: ErrorSeverity -> Bool
-isSystemIssue Fatal = True
-isSystemIssue Error = True
-isSystemIssue _ = False
+_isSystemIssue :: ErrorSeverity -> Bool
+_isSystemIssue Fatal = True
+_isSystemIssue Error = True
+_isSystemIssue _ = False
 
 -- Severity-based filtering
-filterBySeverityRange :: ErrorSeverity -> ErrorSeverity -> [TypeError] -> [TypeError]
-filterBySeverityRange minSeverity maxSeverity errors =
+_filterBySeverityRange :: ErrorSeverity -> ErrorSeverity -> [TypeError] -> [TypeError]
+_filterBySeverityRange minSeverity maxSeverity errors =
     filter (\e -> isAtLeast minSeverity (severity e) && not (isAtLeast (succSeverity maxSeverity) (severity e))) errors
   where
     succSeverity Fatal = Fatal  -- No higher than Fatal
@@ -226,35 +224,35 @@ filterBySeverityRange minSeverity maxSeverity errors =
     succSeverity Warning = Error
     succSeverity Info = Warning
 
-filterByDetailedPriority :: Int -> Int -> [DetailedSeverity] -> [DetailedSeverity]
-filterByDetailedPriority minPriority maxPriority =
+_filterByDetailedPriority :: Int -> Int -> [DetailedSeverity] -> [DetailedSeverity]
+_filterByDetailedPriority minPriority maxPriority =
     filter (\ds -> let p = detailedSeverityPriority ds in p >= minPriority && p <= maxPriority)
 
 -- Severity statistics
-severityDistribution :: [TypeError] -> Map.Map ErrorSeverity Int
-severityDistribution errors = Map.fromList $
+_severityDistribution :: [TypeError] -> Map.Map ErrorSeverity Int
+_severityDistribution errors = Map.fromList $
     [ (Fatal, length $ filterBySeverity Fatal errors)
     , (Error, length $ filterBySeverity Error errors)
     , (Warning, length $ filterBySeverity Warning errors)
     , (Info, length $ filterBySeverity Info errors)
     ]
 
-detailedSeverityDistribution :: [DetailedSeverity] -> Map.Map DetailedSeverity Int
-detailedSeverityDistribution severities = Map.fromListWith (+) $
+_detailedSeverityDistribution :: [DetailedSeverity] -> Map.Map DetailedSeverity Int
+_detailedSeverityDistribution severities = Map.fromListWith (+) $
     map (\s -> (s, 1)) severities
 
 -- Get most severe error
-getMostSevere :: [TypeError] -> Maybe TypeError
-getMostSevere [] = Nothing
-getMostSevere errors = Just $ maximumBy severityPriority errors
+_getMostSevere :: [TypeError] -> Maybe TypeError
+_getMostSevere [] = Nothing
+_getMostSevere errors = Just $ maximumBy (severityPriority . severity) errors
   where
     maximumBy :: Ord b => (a -> b) -> [a] -> a
     maximumBy f = foldl1 (\x y -> if f x >= f y then x else y)
 
 -- Get least severe error
-getLeastSevere :: [TypeError] -> Maybe TypeError
-getLeastSevere [] = Nothing
-getLeastSevere errors = Just $ minimumBy severityPriority errors
+_getLeastSevere :: [TypeError] -> Maybe TypeError
+_getLeastSevere [] = Nothing
+_getLeastSevere errors = Just $ minimumBy (severityPriority . severity) errors
   where
     minimumBy :: Ord b => (a -> b) -> [a] -> a
     minimumBy f = foldl1 (\x y -> if f x <= f y then x else y)
@@ -272,8 +270,8 @@ data ErrorLocation = ErrorLocation
     } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- Default location (unknown)
-unknownLocation :: ErrorLocation
-unknownLocation = ErrorLocation Nothing 0 0 Nothing Nothing
+_unknownLocation :: ErrorLocation
+_unknownLocation = ErrorLocation Nothing 0 0 Nothing Nothing
 
 -- Get current timestamp for error tracking
 getCurrentTimestamp :: String
@@ -282,16 +280,16 @@ getCurrentTimestamp = unsafePerformIO $ do
     return $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S.%3q" now
 
 -- Create location with just line and column
-atLocation :: Int -> Int -> ErrorLocation
-atLocation line col = ErrorLocation Nothing line col Nothing Nothing
+_atLocation :: Int -> Int -> ErrorLocation
+_atLocation line col = ErrorLocation Nothing line col Nothing Nothing
 
 -- Create location with file path
-atFileLocation :: String -> Int -> Int -> ErrorLocation
-atFileLocation file line col = ErrorLocation (Just file) line col Nothing Nothing
+_atFileLocation :: String -> Int -> Int -> ErrorLocation
+_atFileLocation file line col = ErrorLocation (Just file) line col Nothing Nothing
 
 -- Create location with range
-atRange :: Int -> Int -> Int -> Int -> ErrorLocation
-atRange startLine startCol endLine endCol =
+_atRange :: Int -> Int -> Int -> Int -> ErrorLocation
+_atRange startLine startCol endLine endCol =
     ErrorLocation Nothing startLine startCol (Just endLine) (Just endCol)
 
 -- ============================================================================
@@ -491,19 +489,19 @@ data ErrorCategory
 -- Error Collector Monad
 -- ============================================================================
 
-type ErrorCollector = StateT [TypeError] ()
+type ErrorCollector = State [TypeError]
 
-newErrorCollector :: ErrorCollector
+newErrorCollector :: ErrorCollector ()
 newErrorCollector = return ()
 
 -- Add errors to collector
-addError :: TypeError -> ErrorCollector
+addError :: TypeError -> ErrorCollector ()
 addError err = modify (err :)
 
-addWarning :: TypeError -> ErrorCollector
+addWarning :: TypeError -> ErrorCollector ()
 addWarning err = addError err { severity = Warning }
 
-addInfo :: TypeError -> ErrorCollector
+addInfo :: TypeError -> ErrorCollector ()
 addInfo err = addError err { severity = Info }
 
 -- Get errors from collector
@@ -677,7 +675,7 @@ errorWithSuggestions errId msg suggestionsList loc =
 
 -- Check if error has specific category
 hasCategory :: ErrorCategory -> TypeError -> Bool
-hasCategory category err = category == category err
+hasCategory cat err = cat == category err
 
 -- Filter errors by category
 filterByCategory :: ErrorCategory -> [TypeError] -> [TypeError]
@@ -685,7 +683,7 @@ filterByCategory category = filter (hasCategory category)
 
 -- Filter errors by severity
 filterBySeverity :: ErrorSeverity -> [TypeError] -> [TypeError]
-filterBySeverity severity = filter (\e -> severity e == severity)
+filterBySeverity target = filter (\e -> severity e == target)
 
 -- Get error statistics
 getErrorStatistics :: [TypeError] -> Map.Map String Int
@@ -727,7 +725,7 @@ generateErrorReport errors =
 
 -- Enhanced error recovery strategies
 createRecoveryStrategy :: Bool -> Bool -> Maybe String -> Maybe String -> ErrorRecovery
-createRecoveryStrategy canRec shouldContinue recAction recHint = RecoveryStrategy canRec shouldContinue recAction recHint
+createRecoveryStrategy canRec shouldCont recAction recHint = RecoveryStrategy canRec shouldCont recAction recHint 50 0.5
 
 -- Create fatal error
 fatalError :: String -> Text -> ErrorLocation -> TypeError
