@@ -1,0 +1,35 @@
+name: Stack Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  stack-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Haskell with Stack
+        uses: haskell/actions/setup@v2
+        with:
+          enable-stack: true
+          stack-version: 'latest'
+
+      - name: Cache Stack artifacts
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.stack
+            .stack-work
+          key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml', 'stack.yaml.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-stack-
+
+      - name: Prepare Stack environment
+        run: stack --no-terminal setup
+
+      - name: Run tests
+        run: stack --no-terminal test
