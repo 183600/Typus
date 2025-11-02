@@ -48,6 +48,7 @@ library
         Compiler.IR,
         Compiler.DependentTypeChecker,
         Compiler.OwnershipChecker,
+        Compiler.ValueAnalysis,
         Compiler.TypeChecker,
         Analyzer.Types,
         Analyzer.State,

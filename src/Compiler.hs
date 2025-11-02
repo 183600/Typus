@@ -21,7 +21,7 @@ import Compiler.GoAst (renderGoModule)
 import qualified Compiler.IR as IR
 import Compiler.Error
 import Compiler.DependentTypeChecker (checkDependentTypes)
-import Compiler.OwnershipChecker (checkOwnership)
+import Compiler.OwnershipChecker (checkOwnership, checkOwnershipWithValueInfo)
 import Compiler.TypeChecker
   ( Type(..)
   , TypeEnv(..)
@@ -37,11 +37,11 @@ import Compiler.TypeChecker
 compile :: TypusFile -> Either CompilationError String
 compile typusFile = do
   sourceIR <- ensureSourceIR typusFile
+  semanticIR <- IR.buildSemanticIR sourceIR
   let parsedFile = IR.sourceTypusFile sourceIR
   checkDependentTypes parsedFile
   ensureNoTypeErrors parsedFile
-  checkOwnership parsedFile
-  semanticIR <- IR.buildSemanticIR sourceIR
+  checkOwnershipWithValueInfo parsedFile (IR.semanticValueInfo semanticIR)
   let goArtifact = IR.emitGo semanticIR
   pure (IR.goSource goArtifact)
   where
