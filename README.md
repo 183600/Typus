@@ -65,6 +65,30 @@ make install
 项目中的测试文档较多，可以通过 [docs/TEST_DOCUMENTATION_INDEX.md](docs/TEST_DOCUMENTATION_INDEX.md)
 查看各文档的定位与用途。
 
+### 运行测试
+
+```bash
+# 运行所有测试
+cabal test
+
+# 运行快速测试（开发时使用）
+cabal test --flag typus:fast
+
+# 运行完整测试套件
+cabal test --flag typus:full
+
+# 生成覆盖率报告
+cabal test --flag typus:coverage
+
+# 运行特定测试模块
+cabal test --test-options="--pattern \"Parser\""
+```
+
+更多测试相关信息请参考:
+- [QUICK_TEST_GUIDE.md](QUICK_TEST_GUIDE.md) - 快速测试指南
+- [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md) - 测试覆盖率矩阵
+- [TEST_CONSOLIDATION.md](TEST_CONSOLIDATION.md) - 测试整合说明
+
 ## 文件级指令
 
 ```go

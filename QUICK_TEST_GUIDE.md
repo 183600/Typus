@@ -83,11 +83,13 @@ cat dist-newstyle/build/x86_64-linux/ghc-*/typus-*/t/typus-test/test/typus-*-typ
 
 ### 运行单个测试模块
 ```bash
-# 编译并运行特定测试
-cabal run parser-test
-cabal run compiler-test
-cabal run minimal-compiler-test
-cabal run typus-compilation-test
+# 使用 Tasty 的模式过滤器运行特定测试
+cabal test typus-test --test-options="--pattern \"Test.Integration\""
+
+# 运行单个测试模块示例
+cabal test typus-test --test-options="--pattern \"Parser\""      # Parser 单元测试
+cabal test typus-test --test-options="--pattern \"Compiler\""    # Compiler 单元测试
+cabal test typus-test --test-options="--pattern \"Analyzer\""    # 集成分析器测试
 ```
 
 ## 📝 添加新测试
