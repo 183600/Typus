@@ -2,7 +2,7 @@ module Main (main) where
 
 import System.Exit (exitFailure)
 import Parser (parseTypus)
-import Compiler (compile)
+import Compiler (compile, renderCompilationError)
 
 main :: IO ()
 main = do
@@ -20,7 +20,7 @@ main = do
             
             case compile typusFile of
                 Left err -> do
-                    putStrLn $ "Compilation error: " ++ err
+                    putStrLn $ "Compilation error: " ++ renderCompilationError err
                     exitFailure
                 Right goCode -> do
                     putStrLn "Compilation successful!"

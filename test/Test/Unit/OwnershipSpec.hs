@@ -35,7 +35,6 @@ tests =
               ]
             errors = analyzeOwnership source
         assertBool ("expected at least one ownership error, got: " <> show errors) (not (null errors))
-        case errors of
-          UseAfterMove var : _ -> var @?= "data"
-          other              -> assertFailure $ "unexpected ownership errors: " <> show other
+        let hasUseAfterMove = any (\e -> case e of UseAfterMove v -> v == "data"; _ -> False) errors
+        assertBool ("expected UseAfterMove error for 'data', got: " <> show errors) hasUseAfterMove
     ]

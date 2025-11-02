@@ -40,15 +40,15 @@ library
         IntegratedCompiler,
         Debug,
         CommandLineDebug,
-        DebugIntegration
+        DebugIntegration,
+        SourceLocation
     other-modules:
         Compiler.Error,
         Compiler.GoAst,
         Compiler.IR,
         ErrorHandler,
         Ownership.Common.Lexer,
-        Ownership.Common.Types,
-        SourceLocation
+        Ownership.Common.Types
     build-depends:
         base >=4.7 && <5,
         aeson >= 2.2 && <3,
@@ -213,10 +213,13 @@ test-suite typus-test
     default-extensions: NoMonomorphismRestriction
     other-modules:
         Test.Golden,
+        Test.Golden.Tests,
         Test.Golden.CompilerSpec,
         Test.Integration,
+        Test.Integration.Tests,
         Test.Integration.PipelineSpec,
         Test.Unit,
+        Test.Unit.Tests,
         Test.Unit.CLISpec,
         Test.Unit.CompilerSpec,
         Test.Unit.DependentTypesSpec,
@@ -246,7 +249,8 @@ test-suite typus-test
         temporary >= 1.2 && <2,
         time >= 1.8 && <2,
         text >= 1.2.0 && <3,
-        hpc >= 0.7
+        hpc >= 0.7,
+        bytestring >= 0.10 && <1
     default-language: Haskell2010
     ghc-options:      -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-M4G -Wno-unused-top-binds -Wno-unused-local-binds -Wno-unused-matches
     if flag(fast)

@@ -18,7 +18,7 @@ import SourceLocation (locatedValue)
 
 import Data.Char (isSpace)
 import Data.Function (on)
-import Data.List (intercalate, isInfixOf, isPrefixOf, nubBy, tails)
+import Data.List (intercalate, isInfixOf, isPrefixOf, nubBy)
 
 -- | Lightweight representation of the parsed Typus source prior to any
 -- analysis. It keeps the parsed file together with the raw Go-like source
@@ -110,7 +110,7 @@ replaceGenericAngles = go
     go [] = []
     go (c:'<':xs)
       | isIdentChar c && not (startsWithDash xs) =
-          case takeUntilMatching '>' xs 0 [] of
+          case takeUntilMatching '>' xs (0 :: Int) [] of
             (inside, rest, True) -> c : '[' : inside ++ ']' : go rest
             _                    -> c : '<' : go xs
       | otherwise = c : '<' : go xs

@@ -1,4 +1,4 @@
-module Test.Integration (tests) where
+module Test.Integration.Tests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 
