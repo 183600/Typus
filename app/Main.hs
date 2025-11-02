@@ -1,7 +1,8 @@
 module Main (main) where
 
 import Cli
-import CompilerUtils
+import CompilerUtils (CompilerContext, Logger(..), defaultLogger, newCompilerContext)
+import qualified CompilerUtils as CU
 import Control.Monad (unless, forM_, forM)
 import Control.Monad.Except
 import Control.Monad.IO.Class (liftIO)
@@ -161,10 +162,10 @@ createTempGoFile sourcePath tempDir = do
     liftIO $ hClose handle
     return tempPath
 
-prepareSingleFileProject :: Bool -> FilePath -> FilePath -> IOResult FilePath
-prepareSingleFileProject strict sourcePath tempDir = do
+prepareSingleFileProject :: CompilerContext -> Bool -> FilePath -> FilePath -> IOResult FilePath
+prepareSingleFileProject ctx strict sourcePath tempDir = do
     tempGoPath <- createTempGoFile sourcePath tempDir
-    convertFile sourcePath tempGoPath
+    CU.convertFile ctx sourcePath tempGoPath
     missing <- liftIO $ mirrorEmbeddedResources sourcePath tempDir tempGoPath
     handleMissingEmbeds strict missing
     return tempGoPath
@@ -176,38 +177,39 @@ mirrorEmbeddedResources sourcePath tempDir tempGoPath = do
         reference = sourcePath
     copyEmbeddedFiles srcDir tempDir reference content
 
-prepareDirectoryProject :: Bool -> FilePath -> FilePath -> IOResult ()
-prepareDirectoryProject strict sourceRoot tempDir = do
-    batchConvert sourceRoot tempDir
+prepareDirectoryProject :: CompilerContext -> Bool -> FilePath -> FilePath -> IOResult ()
+prepareDirectoryProject ctx strict sourceRoot tempDir = do
+    CU.batchConvert ctx sourceRoot tempDir
     missing <- liftIO $ copyEmbeddedForBuild sourceRoot tempDir
     handleMissingEmbeds strict missing
 
 main :: IO ()
 main = do
+    ctx <- newCompilerContext defaultLogger
     cliArgs <- parseArgs  -- 重命名为 cliArgs
-    result <- runExceptT (dispatch cliArgs)
+    result <- runExceptT (dispatch ctx cliArgs)
     case result of
         Left err -> putStrLn ("Error: " ++ err) >> exitFailure
         Right _  -> return ()
 
-dispatch :: Args -> IOResult ()
-dispatch (Convert inputPath outputPath) = do
+dispatch :: CompilerContext -> Args -> IOResult ()
+dispatch ctx (Convert inputPath outputPath) = do
     isDir <- liftIO $ doesDirectoryExist inputPath
     if isDir
-    then batchConvert inputPath outputPath
-    else convertFile inputPath outputPath
+    then CU.batchConvert ctx inputPath outputPath
+    else CU.convertFile ctx inputPath outputPath
 
-dispatch (Check inputPath) = do
+dispatch ctx (Check inputPath) = do
     isDir <- liftIO $ doesDirectoryExist inputPath
     if isDir
-    then batchCheck inputPath
+    then CU.batchCheck ctx inputPath
     else
         withTemporaryGoProject "typus_check" $ \tempDir -> do
-            tempGoPath <- prepareSingleFileProject False inputPath tempDir
-            runGoCommandInDir ["build", tempGoPath] tempDir
+            tempGoPath <- prepareSingleFileProject ctx False inputPath tempDir
+            CU.runGoCommandInDir ctx ["build", tempGoPath] tempDir
             liftIO $ putStrLn $ "Typus syntax and compilation OK: " ++ inputPath
 
-dispatch (Build strict buildArgs) = do
+dispatch ctx (Build strict buildArgs) = do
     -- Support optional first arg as project path; remaining are passed to `go build`
     let (targetPath, goArgs) = case buildArgs of
             (p:rest) -> (p, rest)
@@ -216,24 +218,24 @@ dispatch (Build strict buildArgs) = do
     isFile <- liftIO $ doesFileExist targetPath
     if isDir
       then withTemporaryGoProject "typus_build" $ \tempDir -> do
-             prepareDirectoryProject strict targetPath tempDir
-             runGoCommandInDir ("build" : goArgs) tempDir
+             prepareDirectoryProject ctx strict targetPath tempDir
+             CU.runGoCommandInDir ctx ("build" : goArgs) tempDir
       else if isFile
         then withTemporaryGoProject "typus_build_single" $ \tempDir -> do
-             _ <- prepareSingleFileProject strict targetPath tempDir
-             runGoCommandInDir ("build" : goArgs) tempDir
+             _ <- prepareSingleFileProject ctx strict targetPath tempDir
+             CU.runGoCommandInDir ctx ("build" : goArgs) tempDir
         else throwError $ "Path does not exist: " ++ targetPath
 
-dispatch (Run strict runArgs) = do
+dispatch ctx (Run strict runArgs) = do
     case runArgs of
         [] -> throwError "Please specify a .typus file to run"
         (inputFile:restArgs) -> do
             exists <- liftIO $ doesFileExist inputFile
             unless exists $ throwError $ "Input file does not exist: " ++ inputFile
             withTemporaryGoProject "typus_run" $ \tempDir -> do
-                tempGoPath <- prepareSingleFileProject strict inputFile tempDir
+                tempGoPath <- prepareSingleFileProject ctx strict inputFile tempDir
                 let goArgs = "run" : takeFileName tempGoPath : restArgs
-                runGoCommandInDir goArgs tempDir
+                CU.runGoCommandInDir ctx goArgs tempDir
 
-dispatch Version = do
+dispatch _ Version = do
     liftIO $ putStrLn "typus version 0.1.0"

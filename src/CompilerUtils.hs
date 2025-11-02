@@ -1,4 +1,6 @@
 module CompilerUtils (
+    Logger(..), CompilerContext(..), 
+    defaultLogger, silentLogger, newCompilerContext,
     convertFile, batchConvert, batchCheck, runGoCommand, runGoCommandInDir
 ) where
 
@@ -7,6 +9,7 @@ import qualified Parser as P
 import Control.Monad (forM, forM_, unless, when)
 import Control.Monad.Except
 import Control.Monad.IO.Class (liftIO)
+import Control.Concurrent.MVar (MVar, newMVar, modifyMVar)
 import System.Directory
     ( doesFileExist
     , doesDirectoryExist
@@ -28,14 +31,46 @@ import System.Info (os)
 import Data.Either (partitionEithers)
 import System.Environment (lookupEnv)
 import Data.Char (toLower)
-import Data.IORef (IORef, newIORef, readIORef, writeIORef)
-import System.IO.Unsafe (unsafePerformIO)
 
 type IOResult a = ExceptT String IO a
 
-{-# NOINLINE goCheckCache #-}
-goCheckCache :: IORef (Maybe (Either String ()))
-goCheckCache = unsafePerformIO (newIORef Nothing)
+-- | Logger abstraction for dependency injection
+data Logger = Logger
+    { logInfo :: String -> IO ()
+    , logDebug :: String -> IO ()
+    , logWarning :: String -> IO ()
+    }
+
+-- | Compiler context holding logger and thread-safe cache
+data CompilerContext = CompilerContext
+    { contextLogger :: Logger
+    , goAvailabilityCache :: MVar (Maybe (Either String ()))
+    }
+
+-- | Default logger that writes to stdout
+defaultLogger :: Logger
+defaultLogger = Logger
+    { logInfo = putStrLn
+    , logDebug = putStrLn
+    , logWarning = putStrLn
+    }
+
+-- | Silent logger for testing
+silentLogger :: Logger
+silentLogger = Logger
+    { logInfo = const (return ())
+    , logDebug = const (return ())
+    , logWarning = const (return ())
+    }
+
+-- | Create a new compiler context with the given logger
+newCompilerContext :: Logger -> IO CompilerContext
+newCompilerContext logger = do
+    cache <- newMVar Nothing
+    return CompilerContext
+        { contextLogger = logger
+        , goAvailabilityCache = cache
+        }
 
 isEnvVarEnabled :: String -> IO Bool
 isEnvVarEnabled name = do
@@ -50,29 +85,28 @@ isEnvVarEnabled name = do
 shouldSkipGoToolchain :: IO Bool
 shouldSkipGoToolchain = isEnvVarEnabled "TYPUS_SKIP_GO_BUILD"
 
-ensureGoAvailable :: IOResult ()
-ensureGoAvailable = do
-    cached <- liftIO $ readIORef goCheckCache
-    case cached of
-        Just (Left err) -> throwError err
-        Just (Right ()) -> return ()
-        Nothing -> do
-            result <- liftIO $ do
+-- | Check if Go is available, using thread-safe caching via MVar
+ensureGoAvailable :: CompilerContext -> IOResult ()
+ensureGoAvailable ctx = do
+    result <- liftIO $ modifyMVar (goAvailabilityCache ctx) $ \cached ->
+        case cached of
+            Just r -> return (cached, r)
+            Nothing -> do
                 found <- findExecutable "go"
-                let r =
-                        maybe
-                            (Left "Go is not installed or not in PATH. Please install Go.")
-                            (const (Right ()))
-                            found
-                writeIORef goCheckCache (Just r)
-                pure r
-            case result of
-                Left err -> throwError err
-                Right () -> return ()
+                let r = maybe
+                        (Left "Go is not installed or not in PATH. Please install Go.")
+                        (const (Right ()))
+                        found
+                return (Just r, r)
+    case result of
+        Left err -> throwError err
+        Right () -> return ()
 
 -- 单文件转换：Typus -> Go 或 Go -> Go
-convertFile :: FilePath -> FilePath -> IOResult ()
-convertFile input output = do
+convertFile :: CompilerContext -> FilePath -> FilePath -> IOResult ()
+convertFile ctx input output = do
+    let Logger { logInfo = logI, logDebug = logD } = contextLogger ctx
+
     exists <- liftIO $ doesFileExist input
     unless exists $ throwError $ "Input file does not exist: " ++ input
 
@@ -82,7 +116,7 @@ convertFile input output = do
     -- 如果是Go文件，直接使用源代码；如果是.typus文件，进行解析
     goCode <- if isGoFile
         then do
-            liftIO $ putStrLn $ "Go file detected, using original code: " ++ input
+            liftIO $ logI $ "Go file detected, using original code: " ++ input
             return source
         else do
             typusFile <- case P.parseTypus source of
@@ -91,21 +125,21 @@ convertFile input output = do
 
             -- Integrated analysis and compilation
             debug <- liftIO $ isEnvVarEnabled "TYPUS_DEBUG"
-            when debug $ liftIO $ putStrLn $ "Parsing completed for: " ++ input
-            when debug $ liftIO $ putStrLn $ "Running integrated analysis..."
+            when debug $ liftIO $ logD $ "Parsing completed for: " ++ input
+            when debug $ liftIO $ logD "Running integrated analysis..."
 
             -- Compile to Go code with enhanced analysis
             case compile typusFile of
                 Left err   -> throwError $ "Compilation error: " ++ renderCompilationError err
                 Right code -> do
-                    liftIO $ putStrLn $ "Compilation successful"
+                    liftIO $ logI "Compilation successful"
                     -- Only print full generated code in debug mode to avoid excessive I/O
                     when debug $ do
                         let codeLength = length code
-                        liftIO $ putStrLn $ "Generated Go code (" ++ show codeLength ++ " characters):"
-                        liftIO $ putStrLn $ "----------------------------------------"
-                        liftIO $ putStrLn code
-                        liftIO $ putStrLn $ "----------------------------------------"
+                        liftIO $ logD $ "Generated Go code (" ++ show codeLength ++ " characters):"
+                        liftIO $ logD "----------------------------------------"
+                        liftIO $ logD code
+                        liftIO $ logD "----------------------------------------"
                     return code
 
     -- 调试模式下可通过设置环境变量 TYPUS_DEBUG=1 查看完整生成代码
@@ -114,11 +148,11 @@ convertFile input output = do
     let parentDir = takeDirectory output
     liftIO $ createDirectoryIfMissing True parentDir
     liftIO $ writeFile output goCode
-    liftIO $ putStrLn $ "Converted: " ++ input ++ " -> " ++ output
+    liftIO $ logI $ "Converted: " ++ input ++ " -> " ++ output
 
 -- 批量转换：保持目录结构，并将 .typus 扩展名替换为 .go
-batchConvert :: FilePath -> FilePath -> IOResult ()
-batchConvert inputDir outputDir = do
+batchConvert :: CompilerContext -> FilePath -> FilePath -> IOResult ()
+batchConvert ctx inputDir outputDir = do
     isDir <- liftIO $ doesDirectoryExist inputDir
     unless isDir $ throwError $ "Input is not a directory: " ++ inputDir
 
@@ -128,7 +162,7 @@ batchConvert inputDir outputDir = do
     forM_ files $ \inputFile -> do
         let relPath    = makeRelative inputDir inputFile
             outputPath = outputDir </> replaceExtension relPath "go"
-        convertFile inputFile outputPath
+        convertFile ctx inputFile outputPath
 
 -- 递归查找 .typus 文件
 findTypusFiles :: FilePath -> IO [FilePath]
@@ -143,8 +177,10 @@ findTypusFiles dir = do
     return $ filter (\p -> takeExtension p == ".typus") (concat paths)
 
 -- 批量检查：解析、编译并用 go build 验证语法（使用临时目录）
-batchCheck :: FilePath -> IOResult ()
-batchCheck inputDir = do
+batchCheck :: CompilerContext -> FilePath -> IOResult ()
+batchCheck ctx inputDir = do
+    let Logger { logInfo = logI, logWarning = logW } = contextLogger ctx
+
     isDir <- liftIO $ doesDirectoryExist inputDir
     unless isDir $ throwError $ "Input is not a directory: " ++ inputDir
 
@@ -152,46 +188,48 @@ batchCheck inputDir = do
 
     -- 函数式地收集每个文件的检查结果
     results <- forM files $ \file -> do
-        result <- liftIO $ runExceptT $ checkSingleFile file
+        result <- liftIO $ runExceptT $ checkSingleFile ctx file
         case result of
             Right _ -> do
-                liftIO $ putStrLn $ "✓ All checks passed: " ++ file
+                liftIO $ logI $ "✓ All checks passed: " ++ file
                 return $ Right ()
             Left err -> do
-                liftIO $ putStrLn $ "✗ Check failed: " ++ file ++ " - " ++ err
+                liftIO $ logW $ "✗ Check failed: " ++ file ++ " - " ++ err
                 return $ Left (file, err)
 
     let (failures, _successes) = partitionEithers results
     if null failures
-        then liftIO $ putStrLn $ "\nCheck Summary: " ++ show (length files) ++ " files OK."
+        then liftIO $ logI $ "\nCheck Summary: " ++ show (length files) ++ " files OK."
         else throwError $ show (length failures) ++ " file(s) failed syntax check."
 
 -- 检查单个文件：Typus 语法、编译为 Go、go build 语法验证
-checkSingleFile :: FilePath -> IOResult ()
-checkSingleFile file = do
-    liftIO $ putStrLn $ "\nChecking file: " ++ file
+checkSingleFile :: CompilerContext -> FilePath -> IOResult ()
+checkSingleFile ctx file = do
+    let Logger { logInfo = logI } = contextLogger ctx
+
+    liftIO $ logI $ "\nChecking file: " ++ file
 
     -- 1. Typus 语法检查
-    liftIO $ putStrLn "  1. Checking Typus syntax..."
+    liftIO $ logI "  1. Checking Typus syntax..."
     source <- liftIO $ readFile file
     parsed <- case P.parseTypus source of
         Left err -> throwError err
         Right p  -> return p
-    liftIO $ putStrLn "     ✓ Typus syntax OK"
+    liftIO $ logI "     ✓ Typus syntax OK"
 
     -- 2. 编译为 Go
-    liftIO $ putStrLn "  2. Compiling to Go..."
+    liftIO $ logI "  2. Compiling to Go..."
     goCode <- case compile parsed of
         Left err -> throwError (renderCompilationError err)
         Right c  -> return c
-    liftIO $ putStrLn "     ✓ Compilation successful"
+    liftIO $ logI "     ✓ Compilation successful"
 
     -- 3. 调用 Go 编译器做语法检查（在临时目录构建）
     skipGo <- liftIO shouldSkipGoToolchain
     if skipGo
-        then liftIO $ putStrLn "  3. Skipping Go syntax check (TYPUS_SKIP_GO_BUILD is enabled)."
+        then liftIO $ logI "  3. Skipping Go syntax check (TYPUS_SKIP_GO_BUILD is enabled)."
         else do
-            liftIO $ putStrLn "  3. Checking Go syntax..."
+            liftIO $ logI "  3. Checking Go syntax..."
             goCheckResult <- liftIO $ withSystemTempDirectory "typus_check" $ \tempDir -> do
                 let tempGoPath = tempDir </> "main.go"
                 writeFile tempGoPath goCode
@@ -202,24 +240,26 @@ checkSingleFile file = do
                 let goArgs = ["build", "-o", nullOutput, "main.go"]
 
                 -- 在 IO 中运行 ExceptT，返回 IO (Either String ())
-                runExceptT $ runGoCommandInDir goArgs tempDir
+                runExceptT $ runGoCommandInDir ctx goArgs tempDir
 
             case goCheckResult of
                 Left err -> throwError err
-                Right _  -> liftIO $ putStrLn "     ✓ Go syntax OK"
+                Right _  -> liftIO $ logI "     ✓ Go syntax OK"
 
 -- 运行 go 命令（当前目录）
-runGoCommand :: [String] -> IOResult ()
-runGoCommand args = runGoCommandInDir args "."
+runGoCommand :: CompilerContext -> [String] -> IOResult ()
+runGoCommand ctx args = runGoCommandInDir ctx args "."
 
 -- 运行 go 命令（指定目录）
-runGoCommandInDir :: [String] -> FilePath -> IOResult ()
-runGoCommandInDir args dir = do
+runGoCommandInDir :: CompilerContext -> [String] -> FilePath -> IOResult ()
+runGoCommandInDir ctx args dir = do
+    let Logger { logInfo = logI } = contextLogger ctx
+
     skipGo <- liftIO shouldSkipGoToolchain
     if skipGo
-        then liftIO $ putStrLn $ "Skipping Go command: go " ++ unwords args ++ " (TYPUS_SKIP_GO_BUILD is enabled)."
+        then liftIO $ logI $ "Skipping Go command: go " ++ unwords args ++ " (TYPUS_SKIP_GO_BUILD is enabled)."
         else do
-            ensureGoAvailable
+            ensureGoAvailable ctx
 
             let processSpec = (proc "go" args) { cwd = Just dir }
             (exitCode, stdout, stderr) <- liftIO $ readCreateProcessWithExitCode processSpec ""
@@ -227,7 +267,7 @@ runGoCommandInDir args dir = do
             case exitCode of
                 ExitSuccess ->
                     if not (null stdout)
-                        then liftIO $ putStr stdout
+                        then liftIO $ logI stdout
                         else return ()
                 ExitFailure code -> do
                     let cmd = "go " ++ unwords args
