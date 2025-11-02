@@ -45,7 +45,6 @@ import Text.Megaparsec
   ( Parsec, (<?>)
   , MonadParsec(try, eof, lookAhead)
   , anySingle
-  , manyTill
   , withRecovery
   , runParser
   , errorBundlePretty
@@ -409,11 +408,13 @@ parseTopDecl =
 -- 同步到下一个顶层定义的开始（type/func/alias）或 EOF
 syncToNextDecl :: Parser ()
 syncToNextDecl = do
-  let starts = MP.try (lookAhead (symbol "type"))
-           MP.<|> MP.try (lookAhead (symbol "func"))
-           MP.<|> MP.try (lookAhead (symbol "alias"))
-           MP.<|> MP.try (lookAhead (symbol ""))
-  _ <- manyTill anySingle starts
+  let keyword = MP.try (symbol "type")
+           MP.<|> MP.try (symbol "func")
+           MP.<|> MP.try (symbol "alias")
+      starts = MP.try (void (lookAhead keyword))
+           MP.<|> lookAhead eof
+  void (MP.optional keyword)
+  MP.skipManyTill anySingle starts
   pure ()
 
 -- 带恢复的顶层定义解析：出错时收集错误并跳到下一个定义
@@ -431,8 +432,7 @@ parseTopDeclWithRecovery =
 parseProgram :: Parser [Either DependentTypeError DependentType]
 parseProgram = do
   sc
-  decls <- MP.many (parseTopDeclWithRecovery <* sc)
-  eof
+  decls <- MP.manyTill (parseTopDeclWithRecovery <* sc) eof
   pure decls
 
 --------------------------------------------------------------------------------
