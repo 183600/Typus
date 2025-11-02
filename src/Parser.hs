@@ -92,24 +92,24 @@ parseLine = do
     startPos <- MP.getSourcePos
     startOffset <- MP.getOffset
     content <- MP.takeWhileP (Just "line content") (`notElem` ['\n', '\r'])
-    lineEnding <- MP.optional . MP.try $ MP.string "\r\n"
+    lineEnding <- MP.optional . MP.try $ MP.chunk "\r\n"
     ending <- case lineEnding of
       Just crlf -> pure crlf
-      Nothing   -> fromMaybe "" <$> MP.optional (MP.string "\n" MP.<|> MP.string "\r")
+      Nothing   -> fromMaybe "" <$> MP.optional (MP.chunk "\n" MP.<|> MP.chunk "\r")
     endPos <- MP.getSourcePos
     endOffset <- MP.getOffset
-    let span = SourceSpan (toSourcePos startPos startOffset) (toSourcePos endPos endOffset)
+    let srcSpan = SourceSpan (toSourcePos startPos startOffset) (toSourcePos endPos endOffset)
     pure ParsedLine
       { plText = content
       , plEnding = ending
-      , plSpan = span
+      , plSpan = srcSpan
       }
 
 -- Convert Megaparsec SourcePos to project SourcePos
 toSourcePos :: MP.SourcePos -> Int -> SourcePos
 toSourcePos pos offset = SourcePos
-    { posLine = MP.unPos (MP.sourcePosLine pos)
-    , posColumn = MP.unPos (MP.sourcePosColumn pos)
+    { posLine = MP.unPos (MP.sourceLine pos)
+    , posColumn = MP.unPos (MP.sourceColumn pos)
     , posOffset = offset
     }
 
@@ -211,19 +211,26 @@ parseBlocksFromParsedLines = go [] []
 flushCodeBuf :: [ParsedLine] -> Maybe CodeBlock
 flushCodeBuf [] = Nothing
 flushCodeBuf linesRev =
-    let lines = reverse linesRev
-        contentRaw = concatMap lineTextWithEnding lines
-        content = trimRight contentRaw
-    in if content == ""
-         then Nothing
-         else let spanStart' = spanStart (plSpan (head lines))
-                  spanEnd'   = spanEnd (plSpan (last lines))
-                  blockSpan = SourceSpan spanStart' spanEnd'
-               in Just CodeBlock
-                    { cbDirectives = defaultBlockDirectives
-                    , cbContent = content
-                    , cbSpan = blockSpan
-                    }
+    case reverse linesRev of
+      [] -> Nothing
+      firstLine : restLines ->
+        let forwardLines = firstLine : restLines
+            contentRaw = concatMap lineTextWithEnding forwardLines
+            content = trimRight contentRaw
+            lastLine = foldLast firstLine restLines
+        in if null content
+             then Nothing
+             else let spanStart' = spanStart (plSpan firstLine)
+                      spanEnd'   = spanEnd (plSpan lastLine)
+                      blockSpan = SourceSpan spanStart' spanEnd'
+                  in Just CodeBlock
+                        { cbDirectives = defaultBlockDirectives
+                        , cbContent = content
+                        , cbSpan = blockSpan
+                        }
+  where
+    foldLast current [] = current
+    foldLast _ (x:xs) = foldLast x xs
 
 lineTextWithEnding :: ParsedLine -> String
 lineTextWithEnding ParsedLine{..} = plText ++ plEnding
@@ -244,12 +251,12 @@ parseBlockDirectiveLine ParsedLine{..} = do
           else mapM (parseKeyValue plSpan) (splitOn ',' content)
   where
     parseKeyValue :: SourceSpan -> String -> Either String (String, Located Bool)
-    parseKeyValue span s =
+    parseKeyValue spanLoc s =
       case break (== ':') (trim s) of
         (keyRaw, ':' : valueRaw) -> do
           boolValue <- parseBool valueRaw
           let key = trim keyRaw
-          pure (key, locatedWithSpan span boolValue)
+          pure (key, locatedWithSpan spanLoc boolValue)
         _ -> Left $ "Invalid key:value format: " ++ s
 
 parseBlockDirectives :: [(String, Located Bool)] -> Either String BlockDirectives
@@ -281,8 +288,13 @@ computeBlockSpan :: SourceSpan -> SourceSpan -> [ParsedLine] -> SourceSpan
 computeBlockSpan directiveSpan closingSpan blockLines =
     case blockLines of
       [] -> SourceSpan (spanEnd directiveSpan) (spanStart closingSpan)
-      _  -> SourceSpan (spanStart (plSpan (head blockLines)))
-                       (spanEnd (plSpan (last blockLines)))
+      (firstLine:restLines) ->
+        let lastLine = foldLastLine firstLine restLines
+        in SourceSpan (spanStart (plSpan firstLine))
+                      (spanEnd (plSpan lastLine))
+  where
+    foldLastLine current [] = current
+    foldLastLine _ (x:xs) = foldLastLine x xs
 
 buildBlockContent :: [ParsedLine] -> String
 buildBlockContent blockLines =

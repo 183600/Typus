@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveFunctor #-}
 module SourceLocation (
     -- Source location tracking
     SourcePos(..),
@@ -50,7 +51,6 @@ module SourceLocation (
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Char (isSpace)
 import Control.Monad.State
 import ErrorHandler (ErrorLocation(..))
 
@@ -86,7 +86,7 @@ posAfter _ pos = pos
 
 -- Position at specific line and column
 posAt :: Int -> Int -> SourcePos
-posAt line col = SourcePos line col 0
+posAt lineNum col = SourcePos lineNum col 0
 
 -- Position at specific line, column, and offset
 posAtLineCol :: Int -> Int -> Int -> SourcePos
@@ -126,7 +126,7 @@ mergeSpans span1 span2 = SourceSpan
 
 -- Check if span is valid (start <= end)
 isValidSpan :: SourceSpan -> Bool
-isValidSpan span = spanStart span <= spanEnd span
+isValidSpan srcSpan = spanStart srcSpan <= spanEnd srcSpan
 
 -- ============================================================================
 -- Located Values
@@ -176,7 +176,7 @@ type LocationTracker = State SourcePos
 
 -- Run location tracker
 runLocationTracker :: LocationTracker a -> a
-runLocationTracker = evalState startPos
+runLocationTracker action = evalState action startPos
 
 -- Get current position
 getCurrentPos :: LocationTracker SourcePos
@@ -210,7 +210,7 @@ advancePos = posAfter
 
 -- Advance position by multiple characters
 advancePosBy :: String -> SourcePos -> SourcePos
-advancePosBy = foldl (flip advancePos)
+advancePosBy chars pos = foldl (flip advancePos) pos chars
 
 -- Advance position by text
 advancePosByText :: Text -> SourcePos -> SourcePos
@@ -218,8 +218,8 @@ advancePosByText text = advancePosBy (T.unpack text)
 
 -- Advance position by line
 advancePosByLine :: Int -> SourcePos -> SourcePos
-advancePosByLine lines pos = pos
-    { posLine = posLine pos + lines
+advancePosByLine numLines pos = pos
+    { posLine = posLine pos + numLines
     , posColumn = 1
     }
 
@@ -239,12 +239,12 @@ toErrorLocation pos = ErrorLocation
 
 -- Convert source span to error location with range
 toErrorLocationWithSpan :: SourceSpan -> ErrorLocation
-toErrorLocationWithSpan span = ErrorLocation
+toErrorLocationWithSpan srcSpan = ErrorLocation
     { filePath = Nothing
-    , line = posLine (spanStart span)
-    , column = posColumn (spanStart span)
-    , endLine = Just (posLine (spanEnd span))
-    , endColumn = Just (posColumn (spanEnd span))
+    , line = posLine (spanStart srcSpan)
+    , column = posColumn (spanStart srcSpan)
+    , endLine = Just (posLine (spanEnd srcSpan))
+    , endColumn = Just (posColumn (spanEnd srcSpan))
     }
 
 -- ============================================================================
@@ -256,132 +256,132 @@ comparePos :: SourcePos -> SourcePos -> Ordering
 comparePos p1 p2 = compare (posOffset p1) (posOffset p2)
 
 -- Check if position is within span
-isPosInSpan :: SourcePos -> SourceSpan -> Bool
-isPosInSpan pos span = pos >= spanStart span && pos <= spanEnd span
+_isPosInSpan :: SourcePos -> SourceSpan -> Bool
+_isPosInSpan pos srcSpan = pos >= spanStart srcSpan && pos <= spanEnd srcSpan
 
 -- Check if two spans overlap
-doSpansOverlap :: SourceSpan -> SourceSpan -> Bool
-doSpansOverlap span1 span2 =
+_doSpansOverlap :: SourceSpan -> SourceSpan -> Bool
+_doSpansOverlap span1 span2 =
     spanStart span1 <= spanEnd span2 && spanEnd span1 >= spanStart span2
 
 -- Get span length (in characters)
-spanLength :: SourceSpan -> Int
-spanLength span = posOffset (spanEnd span) - posOffset (spanStart span)
+_spanLength :: SourceSpan -> Int
+_spanLength srcSpan = posOffset (spanEnd srcSpan) - posOffset (spanStart srcSpan)
 
 -- Show position as "line:column"
 showPos :: SourcePos -> String
 showPos pos = show (posLine pos) ++ ":" ++ show (posColumn pos)
 
 -- Show span as "startLine:startCol-endLine:endCol"
-showSpan :: SourceSpan -> String
-showSpan span =
-    showPos (spanStart span) ++ "-" ++ showPos (spanEnd span)
+_showSpan :: SourceSpan -> String
+_showSpan srcSpan =
+    showPos (spanStart srcSpan) ++ "-" ++ showPos (spanEnd srcSpan)
 
 -- Show position with file name
-showPosWithFile :: Maybe String -> SourcePos -> String
-showPosWithFile mfile pos = case mfile of
+_showPosWithFile :: Maybe String -> SourcePos -> String
+_showPosWithFile mfile pos = case mfile of
     Nothing -> showPos pos
     Just file -> file ++ ":" ++ showPos pos
 
 -- Show span with file name
-showSpanWithFile :: Maybe String -> SourceSpan -> String
-showSpanWithFile mfile span =
-    showPosWithFile mfile (spanStart span) ++ "-" ++ showPos (spanEnd span)
+_showSpanWithFile :: Maybe String -> SourceSpan -> String
+_showSpanWithFile mfile srcSpan =
+    _showPosWithFile mfile (spanStart srcSpan) ++ "-" ++ showPos (spanEnd srcSpan)
 
 -- Create position from line and column only (1-based)
-posFromLineCol :: Int -> Int -> SourcePos
-posFromLineCol line col = SourcePos line col 0
+_posFromLineCol :: Int -> Int -> SourcePos
+_posFromLineCol lineNum col = SourcePos lineNum col 0
 
 -- Advance position by a whole line
-advanceLine :: SourcePos -> SourcePos
-advanceLine pos = pos
+_advanceLine :: SourcePos -> SourcePos
+_advanceLine pos = pos
     { posLine = posLine pos + 1
     , posColumn = 1
     , posOffset = posOffset pos + 1
     }
 
 -- Check if position is valid
-isValidPos :: SourcePos -> Bool
-isValidPos pos = posLine pos > 0 && posColumn pos > 0 && posOffset pos >= 0
+_isValidPos :: SourcePos -> Bool
+_isValidPos pos = posLine pos > 0 && posColumn pos > 0 && posOffset pos >= 0
 
 -- Get the minimum of two positions
-minPos :: SourcePos -> SourcePos -> SourcePos
-minPos p1 p2 = if comparePos p1 p2 == LT then p1 else p2
+_minPos :: SourcePos -> SourcePos -> SourcePos
+_minPos p1 p2 = if comparePos p1 p2 == LT then p1 else p2
 
 -- Get the maximum of two positions
-maxPos :: SourcePos -> SourcePos -> SourcePos
-maxPos p1 p2 = if comparePos p1 p2 == GT then p1 else p2
+_maxPos :: SourcePos -> SourcePos -> SourcePos
+_maxPos p1 p2 = if comparePos p1 p2 == GT then p1 else p2
 
 -- Create a span that covers both positions
-spanCovering :: SourcePos -> SourcePos -> SourceSpan
-spanCovering p1 p2 = SourceSpan (minPos p1 p2) (maxPos p1 p2)
+_spanCovering :: SourcePos -> SourcePos -> SourceSpan
+_spanCovering p1 p2 = SourceSpan (_minPos p1 p2) (_maxPos p1 p2)
 
 -- Expand span by given number of characters on each side
-expandSpan :: Int -> Int -> SourceSpan -> SourceSpan
-expandSpan before after span =
-    let start = spanStart span
-        end = spanEnd span
-        newStart = posFromLineCol (posLine start) (max 1 (posColumn start - before))
-        newEnd = posFromLineCol (posLine end) (posColumn end + after)
+_expandSpan :: Int -> Int -> SourceSpan -> SourceSpan
+_expandSpan before after srcSpan =
+    let start = spanStart srcSpan
+        end = spanEnd srcSpan
+        newStart = _posFromLineCol (posLine start) (max 1 (posColumn start - before))
+        newEnd = _posFromLineCol (posLine end) (posColumn end + after)
     in SourceSpan newStart newEnd
 
 -- Check if span contains a position
-spanContains :: SourceSpan -> SourcePos -> Bool
-spanContains span pos = pos >= spanStart span && pos <= spanEnd span
+_spanContains :: SourceSpan -> SourcePos -> Bool
+_spanContains srcSpan pos = pos >= spanStart srcSpan && pos <= spanEnd srcSpan
 
 -- Check if two spans overlap
-spansOverlap :: SourceSpan -> SourceSpan -> Bool
-spansOverlap span1 span2 =
-    spanContains span1 (spanStart span2) || spanContains span1 (spanEnd span2) ||
-    spanContains span2 (spanStart span1) || spanContains span2 (spanEnd span1)
+_spansOverlap :: SourceSpan -> SourceSpan -> Bool
+_spansOverlap span1 span2 =
+    _spanContains span1 (spanStart span2) || _spanContains span1 (spanEnd span2) ||
+    _spanContains span2 (spanStart span1) || _spanContains span2 (spanEnd span1)
 
 -- Merge overlapping spans
-mergeOverlappingSpans :: [SourceSpan] -> [SourceSpan]
-mergeOverlappingSpans = foldr merge []
+_mergeOverlappingSpans :: [SourceSpan] -> [SourceSpan]
+_mergeOverlappingSpans = foldr merge []
   where
     merge current [] = [current]
     merge current (acc:rest)
-        | spansOverlap current acc = merge (spanCovering (spanStart current) (spanEnd acc)) rest
+        | _spansOverlap current acc = merge (_spanCovering (spanStart current) (spanEnd acc)) rest
         | otherwise = current : acc : rest
 
 -- Calculate the distance between two positions (in characters)
-posDistance :: SourcePos -> SourcePos -> Int
-posDistance p1 p2 = abs (posOffset p2 - posOffset p1)
+_posDistance :: SourcePos -> SourcePos -> Int
+_posDistance p1 p2 = abs (posOffset p2 - posOffset p1)
 
 -- Get the line number difference
-lineDistance :: SourcePos -> SourcePos -> Int
-lineDistance p1 p2 = abs (posLine p2 - posLine p1)
+_lineDistance :: SourcePos -> SourcePos -> Int
+_lineDistance p1 p2 = abs (posLine p2 - posLine p1)
 
 -- Create position at the beginning of a given line number
-posAtLine :: Int -> SourcePos
-posAtLine line = SourcePos line 1 0
+_posAtLine :: Int -> SourcePos
+_posAtLine lineNum = SourcePos lineNum 1 0
 
 -- Create position at the end of a given line (approximate)
-posAtLineEnd :: Int -> SourcePos
-posAtLineEnd line = SourcePos line 100000 0  -- Large column number to represent end of line
+_posAtLineEnd :: Int -> SourcePos
+_posAtLineEnd lineNum = SourcePos lineNum 100000 0  -- Large column number to represent end of line
 
 -- Convert span to human-readable range description
-spanToRangeDesc :: SourceSpan -> String
-spanToRangeDesc span =
-    let start = spanStart span
-        end = spanEnd span
+_spanToRangeDesc :: SourceSpan -> String
+_spanToRangeDesc srcSpan =
+    let start = spanStart srcSpan
+        end = spanEnd srcSpan
     in if posLine start == posLine end
        then "line " ++ show (posLine start) ++ ", columns " ++ show (posColumn start) ++ "-" ++ show (posColumn end)
        else "lines " ++ show (posLine start) ++ ":" ++ show (posColumn start) ++ " - " ++ show (posLine end) ++ ":" ++ show (posColumn end)
 
 -- Create error location from source span with optional file
-toErrorLocationWithFile :: Maybe String -> SourceSpan -> ErrorLocation
-toErrorLocationWithFile mfile span = ErrorLocation
+_toErrorLocationWithFile :: Maybe String -> SourceSpan -> ErrorLocation
+_toErrorLocationWithFile mfile srcSpan = ErrorLocation
     { filePath = mfile
-    , line = posLine (spanStart span)
-    , column = posColumn (spanStart span)
-    , endLine = Just (posLine (spanEnd span))
-    , endColumn = Just (posColumn (spanEnd span))
+    , line = posLine (spanStart srcSpan)
+    , column = posColumn (spanStart srcSpan)
+    , endLine = Just (posLine (spanEnd srcSpan))
+    , endColumn = Just (posColumn (spanEnd srcSpan))
     }
 
 -- Create error location from source position with optional file
-toErrorLocationPosWithFile :: Maybe String -> SourcePos -> ErrorLocation
-toErrorLocationPosWithFile mfile pos = ErrorLocation
+_toErrorLocationPosWithFile :: Maybe String -> SourcePos -> ErrorLocation
+_toErrorLocationPosWithFile mfile pos = ErrorLocation
     { filePath = mfile
     , line = posLine pos
     , column = posColumn pos

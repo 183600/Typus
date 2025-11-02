@@ -281,16 +281,16 @@ getCurrentTimestamp = unsafePerformIO $ do
 
 -- Create location with just line and column
 _atLocation :: Int -> Int -> ErrorLocation
-_atLocation line col = ErrorLocation Nothing line col Nothing Nothing
+_atLocation lineNum col = ErrorLocation Nothing lineNum col Nothing Nothing
 
 -- Create location with file path
 _atFileLocation :: String -> Int -> Int -> ErrorLocation
-_atFileLocation file line col = ErrorLocation (Just file) line col Nothing Nothing
+_atFileLocation file lineNum col = ErrorLocation (Just file) lineNum col Nothing Nothing
 
 -- Create location with range
 _atRange :: Int -> Int -> Int -> Int -> ErrorLocation
-_atRange startLine startCol endLine endCol =
-    ErrorLocation Nothing startLine startCol (Just endLine) (Just endCol)
+_atRange startLine startCol endLineNum endCol =
+    ErrorLocation Nothing startLine startCol (Just endLineNum) (Just endCol)
 
 -- ============================================================================
 -- Error Context Information
@@ -334,38 +334,38 @@ infoRecovery :: ErrorRecovery
 infoRecovery = RecoveryStrategy True True Nothing Nothing 0 1.0
 
 -- Create custom recovery strategy
-customRecovery :: Bool -> Bool -> Maybe String -> Maybe String -> Int -> Float -> ErrorRecovery
-customRecovery canRec shouldCont recAction recHint cost confidence = RecoveryStrategy
+_customRecovery :: Bool -> Bool -> Maybe String -> Maybe String -> Int -> Float -> ErrorRecovery
+_customRecovery canRec shouldCont recAction recHint cost confidence = RecoveryStrategy
     canRec shouldCont recAction recHint cost confidence
 
 -- Recovery strategy for specific scenarios
-retryRecovery :: Int -> ErrorRecovery
-retryRecovery maxAttempts = RecoveryStrategy
+_retryRecovery :: Int -> ErrorRecovery
+_retryRecovery maxAttempts = RecoveryStrategy
     True True (Just $ "Retry operation (max " ++ show maxAttempts ++ " attempts)")
     (Just "Consider increasing timeout or checking network connectivity")
     (20 * maxAttempts) 0.8
 
-skipRecovery :: ErrorRecovery
-skipRecovery = RecoveryStrategy
+_skipRecovery :: ErrorRecovery
+_skipRecovery = RecoveryStrategy
     True True (Just "Skip current operation")
     (Just "This operation can be safely skipped")
     5 0.95
 
-fallbackRecovery :: String -> ErrorRecovery
-fallbackRecovery fallbackMsg = RecoveryStrategy
+_fallbackRecovery :: String -> ErrorRecovery
+_fallbackRecovery fallbackMsg = RecoveryStrategy
     True True (Just $ "Use fallback: " ++ fallbackMsg)
     (Just "Using alternative implementation")
     15 0.75
 
-manualRecovery :: String -> ErrorRecovery
-manualRecovery instruction = RecoveryStrategy
+_manualRecovery :: String -> ErrorRecovery
+_manualRecovery instruction = RecoveryStrategy
     True False (Just "Manual intervention required")
     (Just instruction)
     80 0.5
 
 -- Recovery strategy combinators
-sequenceRecovery :: ErrorRecovery -> ErrorRecovery -> ErrorRecovery
-sequenceRecovery r1 r2 = RecoveryStrategy
+_sequenceRecovery :: ErrorRecovery -> ErrorRecovery -> ErrorRecovery
+_sequenceRecovery r1 r2 = RecoveryStrategy
     (canRecover r1 && canRecover r2)
     (shouldContinue r1 && shouldContinue r2)
     (case (recoveryAction r1, recoveryAction r2) of
@@ -381,9 +381,9 @@ sequenceRecovery r1 r2 = RecoveryStrategy
     (recoveryCost r1 + recoveryCost r2)
     ((recoveryConfidence r1 + recoveryConfidence r2) / 2)
 
-chooseBestRecovery :: [ErrorRecovery] -> ErrorRecovery
-chooseBestRecovery [] = fatalRecovery
-chooseBestRecovery strategies = foldl1 chooseBest strategies
+_chooseBestRecovery :: [ErrorRecovery] -> ErrorRecovery
+_chooseBestRecovery [] = fatalRecovery
+_chooseBestRecovery strategies = foldl1 chooseBest strategies
   where
     chooseBest r1 r2
         | not (canRecover r1) = r2
@@ -402,8 +402,8 @@ data RecoveryContext = RecoveryContext
     } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- Initial recovery context
-initialRecoveryContext :: Int -> RecoveryContext
-initialRecoveryContext maxAttempts = RecoveryContext
+_initialRecoveryContext :: Int -> RecoveryContext
+_initialRecoveryContext maxAttempts = RecoveryContext
     { recoveryAttempts = 0
     , maxRecoveryAttempts = maxAttempts
     , recoveryHistory = []
@@ -411,47 +411,49 @@ initialRecoveryContext maxAttempts = RecoveryContext
     }
 
 -- Add recovery attempt to context
-addRecoveryAttempt :: ErrorRecovery -> Bool -> RecoveryContext -> RecoveryContext
-addRecoveryAttempt strategy success context = context
-    { recoveryAttempts = recoveryAttempts context + 1
-    , recoveryHistory = (strategy, success) : recoveryHistory context
+_addRecoveryAttempt :: ErrorRecovery -> Bool -> RecoveryContext -> RecoveryContext
+_addRecoveryAttempt strategy success recoveryCtx = recoveryCtx
+    { recoveryAttempts = recoveryAttempts recoveryCtx + 1
+    , recoveryHistory = (strategy, success) : recoveryHistory recoveryCtx
     , currentStrategy = Just strategy
     }
 
 -- Check if more recovery attempts are allowed
-canRecoverMore :: RecoveryContext -> Bool
-canRecoverMore context = recoveryAttempts context < maxRecoveryAttempts context
+_canRecoverMore :: RecoveryContext -> Bool
+_canRecoverMore recoveryCtx = recoveryAttempts recoveryCtx < maxRecoveryAttempts recoveryCtx
 
 -- Get successful recovery strategies
-getSuccessfulRecoveries :: RecoveryContext -> [ErrorRecovery]
-getSuccessfulRecoveries context = map fst $ filter snd (recoveryHistory context)
+_getSuccessfulRecoveries :: RecoveryContext -> [ErrorRecovery]
+_getSuccessfulRecoveries recoveryCtx = map fst $ filter snd (recoveryHistory recoveryCtx)
 
 -- Get failed recovery strategies
-getFailedRecoveries :: RecoveryContext -> [ErrorRecovery]
-getFailedRecoveries context = map fst $ filter (not . snd) (recoveryHistory context)
+_getFailedRecoveries :: RecoveryContext -> [ErrorRecovery]
+_getFailedRecoveries recoveryCtx = map fst $ filter (not . snd) (recoveryHistory recoveryCtx)
 
 -- Calculate recovery success rate
-recoverySuccessRate :: RecoveryContext -> Float
-recoverySuccessRate context
+_recoverySuccessRate :: RecoveryContext -> Float
+_recoverySuccessRate recoveryCtx
     | null history = 0.0
     | otherwise = fromIntegral (length $ filter snd history) / fromIntegral (length history)
   where
-    history = recoveryHistory context
+    history = recoveryHistory recoveryCtx
 
 -- Generate recovery summary
-recoverySummary :: RecoveryContext -> String
-recoverySummary context =
-    let successRate = recoverySuccessRate context
-        successful = getSuccessfulRecoveries context
-        failed = getFailedRecoveries context
+_recoverySummary :: RecoveryContext -> String
+_recoverySummary recoveryCtx =
+    let successRate = _recoverySuccessRate recoveryCtx
+        successful = _getSuccessfulRecoveries recoveryCtx
+        failed = _getFailedRecoveries recoveryCtx
+        successPct :: Int
+        successPct = round (successRate * 100)
     in unlines $
         [ "Recovery Summary:"
         , "================="
-        , "Attempts: " ++ show (recoveryAttempts context) ++ "/" ++ show (maxRecoveryAttempts context)
-        , "Success rate: " ++ show (round (successRate * 100)) ++ "%"
+        , "Attempts: " ++ show (recoveryAttempts recoveryCtx) ++ "/" ++ show (maxRecoveryAttempts recoveryCtx)
+        , "Success rate: " ++ show successPct ++ "%"
         , "Successful strategies: " ++ show (length successful)
         , "Failed strategies: " ++ show (length failed)
-        , if canRecoverMore context then "More recovery attempts allowed" else "No more recovery attempts allowed"
+        , if _canRecoverMore recoveryCtx then "More recovery attempts allowed" else "No more recovery attempts allowed"
         ]
 
 -- ============================================================================
@@ -530,7 +532,8 @@ hasWarnings = not . null . getWarnings
 -- Format single error without location
 formatError :: TypeError -> String
 formatError err =
-    let severityStr = case severity err of
+    let severityStr :: String
+        severityStr = case severity err of
           Fatal -> "FATAL"
           Error -> "ERROR"
           Warning -> "WARNING"
@@ -625,19 +628,19 @@ errorAt errId msg loc = TypeError
 
 -- Create error with category
 errorWithCategory :: String -> ErrorCategory -> Text -> ErrorLocation -> TypeError
-errorWithCategory errId category msg loc = (errorAt errId msg loc) { category = category }
+errorWithCategory errId errCategory msg loc = (errorAt errId msg loc) { category = errCategory }
 
 warningAt :: String -> Text -> ErrorLocation -> TypeError
 warningAt errId msg loc = (errorAt errId msg loc) { severity = Warning }
 
 warningWithCategory :: String -> ErrorCategory -> Text -> ErrorLocation -> TypeError
-warningWithCategory errId category msg loc = (errorWithCategory errId category msg loc) { severity = Warning }
+warningWithCategory errId errCategory msg loc = (errorWithCategory errId errCategory msg loc) { severity = Warning }
 
 infoAt :: String -> Text -> ErrorLocation -> TypeError
 infoAt errId msg loc = (errorAt errId msg loc) { severity = Info }
 
 infoWithCategory :: String -> ErrorCategory -> Text -> ErrorLocation -> TypeError
-infoWithCategory errId category msg loc = (errorWithCategory errId category msg loc) { severity = Info }
+infoWithCategory errId errCategory msg loc = (errorWithCategory errId errCategory msg loc) { severity = Info }
 
 -- Add location to existing error
 withLocation :: TypeError -> ErrorLocation -> TypeError
@@ -679,7 +682,7 @@ hasCategory cat err = cat == category err
 
 -- Filter errors by category
 filterByCategory :: ErrorCategory -> [TypeError] -> [TypeError]
-filterByCategory category = filter (hasCategory category)
+filterByCategory errCategory = filter (hasCategory errCategory)
 
 -- Filter errors by severity
 filterBySeverity :: ErrorSeverity -> [TypeError] -> [TypeError]
@@ -736,7 +739,7 @@ fatalError errId msg loc = (errorAt errId msg loc)
 
 -- Create fatal error with category
 fatalErrorWithCategory :: String -> ErrorCategory -> Text -> ErrorLocation -> TypeError
-fatalErrorWithCategory errId category msg loc = (errorWithCategory errId category msg loc)
+fatalErrorWithCategory errId errCategory msg loc = (errorWithCategory errId errCategory msg loc)
     { severity = Fatal
     , recovery = fatalRecovery
     }
