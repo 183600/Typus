@@ -8,7 +8,7 @@ data Args
     | Build Bool [String]
     | Run Bool [String]
     | Version
-    deriving (Show)
+    deriving (Eq, Show)
 
 convertOptions :: Parser Args
 convertOptions = Convert

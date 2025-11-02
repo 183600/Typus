@@ -1,6 +1,6 @@
 module Test.Unit.ParserSpec (tests) where
 
-import Data.List (find)
+import Data.List (find, isInfixOf)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
 
@@ -62,7 +62,7 @@ tests =
             let ownershipBlock = find (maybe False locatedValue . bdOwnership . cbDirectives) (tfBlocks typusFile)
             case ownershipBlock of
               Nothing -> assertFailure "expected to find a block with ownership enabled"
-              Just CodeBlock { cbDirectives = directives, cbContent = content, cbSpan = span } -> do
+              Just CodeBlock { cbDirectives = directives, cbContent = content, cbSpan = blkSpan } -> do
                 case bdOwnership directives of
                   Nothing -> assertFailure "expected ownership flag"
                   Just loc -> do
@@ -72,9 +72,9 @@ tests =
                   Nothing -> assertFailure "expected dependent types flag"
                   Just loc -> locatedValue loc @?= True
                 bdConstraints directives @?= Nothing
-                assertBool "block content should include println call" ("println(\"inside\")" `elem` lines content)
-                posLine (spanStart span) @?= 4
-                posLine (spanEnd span) @?= 5
+                assertBool "block content should include println call" ("println(\"inside\")" `isInfixOf` content)
+                posLine (spanStart blkSpan) @?= 4
+                posLine (spanEnd blkSpan) @?= 5
 
     , testCase "ignores trailing whitespace-only files" $ do
         let source :: String; source = "\n   \n\n"

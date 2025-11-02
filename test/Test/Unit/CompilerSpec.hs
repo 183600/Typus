@@ -34,7 +34,7 @@ tests =
               ]
         typusFile <- expectParse source
         case Compiler.compile typusFile of
-          Left err -> assertBool "error should mention dependent types" ("Dependent type errors" `isInfixOf` err)
+          Left err -> assertBool "error should mention dependent types" ("Dependent type errors" `isInfixOf` Compiler.renderCompilationError err)
           Right _  -> assertFailure "expected dependent type error"
 
     , testCase "rejects malformed syntax with unbalanced braces" $ do
@@ -44,7 +44,7 @@ tests =
               ]
         typusFile <- expectParse source
         case Compiler.compile typusFile of
-          Left err -> err @?= "Malformed syntax detected"
+          Left err -> Compiler.renderCompilationError err @?= "Malformed syntax detected"
           Right _  -> assertFailure "expected malformed syntax to be rejected"
     ]
 
@@ -57,5 +57,5 @@ expectParse source =
 expectCompile :: Parser.TypusFile -> IO String
 expectCompile typusFile =
   case Compiler.compile typusFile of
-    Left err      -> assertFailure ("compile failed: " <> err)
+    Left err      -> assertFailure ("compile failed: " <> Compiler.renderCompilationError err)
     Right goCode  -> pure goCode

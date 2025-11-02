@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 module Compiler
   ( compile
   , CompilationError(..)
@@ -22,7 +23,7 @@ import Ownership (analyzeOwnership, formatOwnershipErrors, OwnershipError(..))
 import Compiler.GoAst
 import qualified Compiler.IR as IR
 import Compiler.Error
-import SourceLocation (locatedValue)
+import SourceLocation (Located(..), locatedValue)
 
 import Data.Char (isSpace)
 import Data.List (intercalate, isInfixOf, isPrefixOf)

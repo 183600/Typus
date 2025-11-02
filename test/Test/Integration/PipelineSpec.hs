@@ -51,7 +51,7 @@ tests =
     [ testCase "compiles sample program and optionally builds with Go" $ do
         typusFile <- parseFixture "simple_go_code.typus"
         goCode <- case Compiler.compile typusFile of
-          Left err -> assertFailure ("compile failed: " <> err)
+          Left err -> assertFailure ("compile failed: " <> Compiler.renderCompilationError err)
           Right goSrc -> pure goSrc
         assertBool "generated Go code should mention package main" ("package main" `isInfixOf` goCode)
         assertGoBuilds goCode

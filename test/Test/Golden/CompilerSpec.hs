@@ -26,7 +26,7 @@ compileFixture :: FilePath -> IO BL8.ByteString
 compileFixture name = do
   typusFile <- parseFixture name
   case Compiler.compile typusFile of
-    Left err -> assertFailure ("compile failed: " <> err)
+    Left err -> assertFailure ("compile failed: " <> Compiler.renderCompilationError err)
     Right goSrc -> pure (BL8.pack goSrc)
 
 tests :: TestTree

@@ -1,4 +1,4 @@
-module Test.Unit (tests) where
+module Test.Unit.Tests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 
