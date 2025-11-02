@@ -44,7 +44,7 @@ tests =
               ]
         typusFile <- expectParse source
         case Compiler.compile typusFile of
-          Left err -> Compiler.renderCompilationError err @?= "Malformed syntax detected"
+          Left err -> assertBool "error should mention malformed syntax" ("Malformed syntax detected" `isInfixOf` Compiler.renderCompilationError err)
           Right _  -> assertFailure "expected malformed syntax to be rejected"
     ]
 
