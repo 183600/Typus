@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Ownership.Common.Lexer (
     Pos(..),
     Token(..),
@@ -46,9 +48,10 @@ data LexerSpec kw sym = LexerSpec
     }
 
 -- | Lex the provided source code string according to the supplied specification.
-lexWithSpec :: LexerSpec kw sym -> String -> [Token kw sym]
+lexWithSpec :: forall kw sym. LexerSpec kw sym -> String -> [Token kw sym]
 lexWithSpec spec = go (Pos 1 1)
   where
+    newlineSym :: sym
     newlineSym = specNewlineSymbol spec
 
     go :: Pos -> String -> [Token kw sym]

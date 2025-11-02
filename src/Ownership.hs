@@ -1137,6 +1137,11 @@ formatOwnershipErrors = intercalate "; " . map formatError
     formatError (OutOfScope var) = "Out of scope: " ++ var
     formatError (BorrowError var) = "Borrow error: " ++ var
     formatError (ParseError msg) = "Parse error: " ++ msg
+    formatError (CrossFunctionMove src dest) = "Cross-function move: " ++ src ++ " to " ++ dest
+    formatError (ParameterMoveMismatch param) = "Parameter move mismatch: " ++ param
+    formatError (ControlFlowError msg) = "Control flow error: " ++ msg
+    formatError (PathSensitiveError msg) = "Path sensitive error: " ++ msg
+    formatError (LoopOwnershipError msg) = "Loop ownership error: " ++ msg
 
 -- 强制移动：忽略值语义启发式，始终按移动处理（用于函数实参）
 moveVarForce :: Name -> State AState ()

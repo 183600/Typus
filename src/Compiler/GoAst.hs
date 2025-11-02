@@ -156,7 +156,7 @@ parseDecls :: [String] -> Either String [GoDecl]
 parseDecls = go []
   where
     go acc [] = pure (reverse acc)
-    go acc ls@(line:rest)
+    go acc ls@(line:_rest)
       | isBlankLine line =
           let (blankRun, remaining) = span isBlankLine ls
           in go (GoRaw (RawBlock blankRun) : acc) remaining
@@ -213,7 +213,7 @@ consumeBracesBlock (x:xs) =
        then pure ([x], xs)
        else gather initialDepth [x] xs
   where
-    gather depth acc [] = Left "Unbalanced braces in declaration block"
+    gather _ _ [] = Left "Unbalanced braces in declaration block"
     gather depth acc (y:ys)
       | depth' <= 0 = pure (reverse (y:acc), ys)
       | otherwise   = gather depth' (y:acc) ys
@@ -380,8 +380,25 @@ parseImportSpec rawLine =
       | isQuoted path -> Just (ImportDecl Nothing (stripQuotes path))
     _ -> Nothing
   where
-    isQuoted s = not (null s) && head s == '"' && last s == '"'
-    stripQuotes s = tail (init s)
+    isQuoted ('"':xs) =
+      case unsnoc xs of
+        Just (_, '"') -> True
+        _              -> False
+    isQuoted _ = False
+
+    stripQuotes ('"':xs) =
+      case unsnoc xs of
+        Just (inner, '"') -> inner
+        _                 -> xs
+    stripQuotes s = s
+
+    unsnoc [] = Nothing
+    unsnoc (y:ys) =
+      case ys of
+        [] -> Just ([], y)
+        _  -> do
+          (rest, lastChar) <- unsnoc ys
+          pure (y:rest, lastChar)
 
 parenDelta :: String -> Int
 parenDelta line = count '(' line - count ')' line
