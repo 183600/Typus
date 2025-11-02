@@ -17,88 +17,15 @@ module Ownership
 
 
 import qualified Data.Map.Strict as Map
-import Data.Char (isSpace, isDigit, isAlpha)
+import Data.Char (isSpace)
 import Data.Maybe (isJust, mapMaybe)
 import Data.List (intercalate, isInfixOf)
 import Control.Monad.State
 import Control.Monad (when)
 
 import Ownership.Common.Types
-import Ownership.Common.Lexer (Pos(..), Token(..), TokenKind(..), LexerSpec(..), lexWithSpec)
-
---------------------------------------------------------------------------------
--- 1) 关键字、符号与词法配置
---------------------------------------------------------------------------------
-
--- OwnershipType / OwnershipError / OwnershipAnalyzer definitions now live in
--- `Ownership.Common.Types`, allowing multiple ownership analyzers to reuse the
--- same core data structures. This module only declares the surface syntax that
--- is specific to the baseline analyzer.
-
-data Keyword
-  = KwVar | KwLet | KwFunc | KwReturn | KwIf | KwElse | KwFor
-  | KwPackage | KwImport | KwType | KwStruct | KwInterface | KwConst
-  | KwMut | KwTrue | KwFalse
-  deriving (Eq, Show)
-
-data Sym
-  = SLBrace | SRBrace | SLParen | SRParen | SLBracket | SRBracket
-  | SSemicolon | SComma | SColon | SAssign | SWalrus | SAmp | SDot
-  | SNewline
-  deriving (Eq, Show)
-
-type OwnershipToken = Token Keyword Sym
-
--- 关键字表
-kwFromStr :: String -> Maybe Keyword
-kwFromStr s = case s of
-  "var"     -> Just KwVar
-  "let"     -> Just KwLet
-  "func"    -> Just KwFunc
-  "return"  -> Just KwReturn
-  "if"      -> Just KwIf
-  "else"    -> Just KwElse
-  "for"     -> Just KwFor
-  "package" -> Just KwPackage
-  "import"  -> Just KwImport
-  "type"    -> Just KwType
-  "struct"  -> Just KwStruct
-  "interface"->Just KwInterface
-  "const"   -> Just KwConst
-  "mut"     -> Just KwMut
-  "true"    -> Just KwTrue
-  "false"   -> Just KwFalse
-  _         -> Nothing
-
-ownershipLexerSpec :: LexerSpec Keyword Sym
-ownershipLexerSpec = LexerSpec
-  { specKeywords = kwFromStr
-  , specMultiSymbols =
-      [ (":=", SWalrus)
-      ]
-  , specSingleSymbols =
-      [ ('=', SAssign)
-      , ('{', SLBrace)
-      , ('}', SRBrace)
-      , ('(', SLParen)
-      , (')', SRParen)
-      , ('[', SLBracket)
-      , (']', SRBracket)
-      , (';', SSemicolon)
-      , (',', SComma)
-      , (':', SColon)
-      , ('&', SAmp)
-      , ('.', SDot)
-      ]
-  , specNewlineSymbol = SNewline
-  , specIsNumChar = \x -> isDigit x || x == '.' || x == '_'
-  , specIsIdentStart = \x -> x == '_' || isAlpha x
-  , specIsIdentChar = \x -> x == '_' || isAlpha x || isDigit x
-  }
-
--- 词法分析入口
-lexAll :: String -> [OwnershipToken]
-lexAll = lexWithSpec ownershipLexerSpec
+import Ownership.Common.Lexer (Pos(..), Token(..), TokenKind(..))
+import Ownership.Lexer (Keyword(..), Sym(..), OwnershipToken, lexAll)
 
 --------------------------------------------------------------------------------
 -- 3) 语法分析器（Parser）

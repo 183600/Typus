@@ -46,9 +46,19 @@ library
         Compiler.Error,
         Compiler.GoAst,
         Compiler.IR,
+        Compiler.DependentTypeChecker,
+        Compiler.OwnershipChecker,
+        Compiler.TypeChecker,
+        Analyzer.Types,
+        Analyzer.State,
+        Analyzer.SymbolTable,
+        Analyzer.OwnershipBridge,
+        Analyzer.DependentTypeBridge,
+        Analyzer.CrossAnalysis,
         ErrorHandler,
         Ownership.Common.Lexer,
-        Ownership.Common.Types
+        Ownership.Common.Types,
+        Ownership.Lexer
     build-depends:
         base >=4.7 && <5,
         aeson >= 2.2 && <3,
