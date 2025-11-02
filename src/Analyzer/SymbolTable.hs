@@ -1,5 +1,6 @@
 module Analyzer.SymbolTable (
     collectSymbolsAndTypes,
+    collectSymbolsFromAST,
     trim,
     isReservedName,
     extractTypeEnvironment
@@ -8,6 +9,7 @@ module Analyzer.SymbolTable (
 import Analyzer.Types
 import qualified Dependencies as Dep
 import qualified Ownership as Own
+import Compiler.GoAst (GoModule(..), GoDecl(..), FuncDecl(..), VarDecl(..), ConstDecl(..), TypeDecl(..), parseGoModule)
 
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
@@ -15,13 +17,37 @@ import Data.Char (isSpace, isAlphaNum, isDigit)
 import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
 
 type SymbolTable = Map.Map String SymbolInfo
+type SymbolCollector a = IntegratedAnalyzer a
 
 collectSymbolsAndTypes :: String -> IntegratedAnalyzer SymbolTable
 collectSymbolsAndTypes code = do
-    let linesOfCode = lines code
-    symbols <- mapM processLineForSymbols (zip [1 ..] linesOfCode)
+    case parseGoModule (lines code) of
+        Right goModule -> collectSymbolsFromAST goModule
+        Left _ -> do
+            let linesOfCode = lines code
+            symbols <- mapM processLineForSymbols (zip [1 ..] linesOfCode)
+            let combinedSymbols = foldr Map.union Map.empty symbols
+            validateSymbolTable combinedSymbols
+
+collectSymbolsFromAST :: GoModule -> IntegratedAnalyzer SymbolTable
+collectSymbolsFromAST GoModule{..} = do
+    symbols <- mapM processDecl (zip [1..] gmDecls)
     let combinedSymbols = foldr Map.union Map.empty symbols
     validateSymbolTable combinedSymbols
+  where
+    processDecl (lineNum, GoFunc (FuncDecl ls)) = case ls of
+        [] -> pure Map.empty
+        (h:_) -> processFunctionDeclaration lineNum h
+    processDecl (lineNum, GoVar (VarDecl ls _)) = do
+        varSymbols <- mapM (uncurry processVariableDeclaration) (zip [lineNum..] ls)
+        pure $ foldr Map.union Map.empty varSymbols
+    processDecl (lineNum, GoConst (ConstDecl ls _)) = do
+        constSymbols <- mapM (uncurry processConstantDeclaration) (zip [lineNum..] ls)
+        pure $ foldr Map.union Map.empty constSymbols
+    processDecl (lineNum, GoType (TypeDecl ls _)) = case ls of
+        [] -> pure Map.empty
+        (h:_) -> processTypeDeclaration lineNum h
+    processDecl _ = pure Map.empty
 
 processLineForSymbols :: (Int, String) -> IntegratedAnalyzer SymbolTable
 processLineForSymbols (lineNum, line) = do

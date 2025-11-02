@@ -14,6 +14,7 @@ module Compiler.IR (
 import Parser (TypusFile(..), CodeBlock(..))
 import Compiler.Error
 import Compiler.GoAst
+import Compiler.ValueAnalysis (ValueInfo, analyzeValueSemantics)
 import SourceLocation (locatedValue)
 
 import Data.Char (isSpace)
@@ -33,6 +34,7 @@ data SourceIR = SourceIR
 data SemanticIR = SemanticIR
     { semanticTypusFile :: TypusFile
     , semanticModule :: GoModule
+    , semanticValueInfo :: [ValueInfo]
     }
 
 -- | Final Go artefact ready to be rendered to source code.
@@ -53,6 +55,7 @@ buildSemanticIR ir = do
     pure SemanticIR
         { semanticTypusFile = sourceTypusFile ir
         , semanticModule = goMod
+        , semanticValueInfo = analyzeValueSemantics goMod
         }
 
 emitGo :: SemanticIR -> GoIR
