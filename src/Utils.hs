@@ -18,11 +18,11 @@ module Utils
   ) where
 
 import Data.Char (isSpace)
-import Data.List (dropWhileEnd, findIndex, isPrefixOf, tails)
+import qualified Data.Text as T
 
 -- | 去掉字符串两端的空白字符。
 trim :: String -> String
-trim = dropWhile isSpace . dropWhileEnd isSpace
+trim = T.unpack . T.strip . T.pack
 
 --------------------------------------------------------------------------------
 -- Split
@@ -34,12 +34,8 @@ trim = dropWhile isSpace . dropWhileEnd isSpace
 --     splitBy ',' ",a,"    == ["", "a", ""]
 --     splitBy ',' ""       == [""]
 splitBy :: Char -> String -> [String]
-splitBy _ "" = [""]
-splitBy delim s =
-  let (chunk, rest) = break (== delim) s
-  in case rest of
-       []      -> [chunk]
-       (_:xs)  -> chunk : splitBy delim xs
+splitBy delim =
+  map T.unpack . T.split (== delim) . T.pack
 
 -- | 按分隔字符切分，并折叠连续分隔符（丢弃空段）。
 --   兼容你现有的旧行为：
@@ -171,8 +167,11 @@ fixIndentation = normalizeIndentation
 --   例：
 --     breakOn "ll" "hello" == ("he", "o")
 breakOn :: String -> String -> (String, String)
-breakOn "" s  = ("", s)
 breakOn pat s =
-  case findIndex (isPrefixOf pat) (tails s) of
-    Just i  -> (take i s, drop (i + length pat) s)
-    Nothing -> (s, "")
+  let text = T.pack s
+      patText = T.pack pat
+      (before, remainder) = T.breakOn patText text
+  in case T.stripPrefix patText remainder of
+       Just after -> (T.unpack before, T.unpack after)
+       Nothing    -> (s, "")
+

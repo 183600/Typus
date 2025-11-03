@@ -16,8 +16,8 @@ import Parser (TypusFile(..))
 import Compiler.GoAst
 import qualified Compiler.IR as IR
 
-import Data.Char (isSpace)
 import Data.List (isInfixOf, isPrefixOf)
+import Utils (splitByComma, trim)
 
 data Type
     = IntType
@@ -178,12 +178,4 @@ isFunctionCall line =
         && not ("for " `isPrefixOf` t)
         && not ("switch " `isPrefixOf` t)
 
-splitByComma :: String -> [String]
-splitByComma s = case break (== ',') s of
-    (a, []) -> [trim a]
-    (a, _ : b) -> trim a : splitByComma b
 
-trim :: String -> String
-trim = f . f
-  where
-    f = reverse . dropWhile isSpace

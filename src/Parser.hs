@@ -10,10 +10,13 @@ module Parser
   , defaultBlockDirectives
   ) where
 
+import Control.Applicative (empty)
 import Control.Monad (foldM)
-import Data.Char (isSpace)
+import Data.Char (isAlphaNum)
+import Data.List (isPrefixOf)
 import Data.Maybe (fromMaybe)
 import Data.Void (Void)
+import qualified Data.Text as T
 import SourceLocation
   ( Located(..)
   , SourcePos(..)
@@ -24,6 +27,9 @@ import SourceLocation
   )
 import qualified Text.Megaparsec as MP
 import Text.Megaparsec (Parsec, errorBundlePretty)
+import qualified Text.Megaparsec.Char as MC
+import qualified Text.Megaparsec.Char.Lexer as L
+import Utils (trim)
 
 -- ============================================================================
 -- Data Types
@@ -65,6 +71,44 @@ defaultBlockDirectives = BlockDirectives Nothing Nothing Nothing
 -- ============================================================================
 
 type MegaParser = Parsec Void String
+
+type DirectiveParser = MP.Parsec Void T.Text
+
+directiveSpace :: DirectiveParser ()
+directiveSpace = L.space MC.space1 empty empty
+
+lexeme :: DirectiveParser a -> DirectiveParser a
+lexeme = L.lexeme directiveSpace
+
+symbol :: String -> DirectiveParser T.Text
+symbol = L.symbol directiveSpace . T.pack
+
+identifier :: DirectiveParser T.Text
+identifier = lexeme (T.pack <$> MP.some (MP.satisfy isIdentifierChar))
+
+isIdentifierChar :: Char -> Bool
+isIdentifierChar c = isAlphaNum c || c == '_' || c == '-'
+
+fileDirectiveParser :: DirectiveParser (T.Text, T.Text)
+fileDirectiveParser = do
+  _ <- symbol "//!"
+  key <- identifier
+  _ <- symbol ":"
+  value <- identifier
+  pure (key, value)
+
+blockDirectiveParser :: DirectiveParser [(T.Text, T.Text)]
+blockDirectiveParser = do
+  _ <- symbol "{//!"
+  pairs <- MP.sepBy directive (symbol ",")
+  _ <- symbol "}"
+  pure pairs
+  where
+    directive = do
+      key <- identifier
+      _ <- symbol ":"
+      value <- identifier
+      pure (key, value)
 
 parseTypus :: String -> Either String TypusFile
 parseTypus input = do
@@ -156,17 +200,17 @@ parseFileDirectivesFromParsedLines = go defaultFileDirectives []
 
 parseFileDirectiveLine :: ParsedLine -> Either String (String, Located Bool)
 parseFileDirectiveLine ParsedLine{..} = do
-    let stripped = dropWhile isSpace plText
-    if not (isPrefixOf "//!" stripped)
+    let stripped = T.stripStart (T.pack plText)
+        filePrefix = T.pack "//!"
+    if not (filePrefix `T.isPrefixOf` stripped)
       then Left $ "Invalid file directive format: " ++ plText
-      else do
-        let directivePart = trim (drop 3 stripped)
-        case break (== ':') directivePart of
-          (keyRaw, ':' : valueRaw) -> do
-            boolValue <- parseBool valueRaw
-            let key = trim keyRaw
-            pure (key, locatedWithSpan plSpan boolValue)
-          _ -> Left $ "Invalid file directive format: " ++ plText
+      else
+        case MP.runParser (fileDirectiveParser <* MP.eof) "<file directive>" stripped of
+          Left _ -> Left $ "Invalid file directive format: " ++ plText
+          Right (keyText, valueText) ->
+            case parseBool (T.unpack valueText) of
+              Left err      -> Left err
+              Right boolVal -> pure (T.unpack keyText, locatedWithSpan plSpan boolVal)
 
 updateFileDirective :: FileDirectives -> String -> Located Bool -> Either String FileDirectives
 updateFileDirective fd key value = case key of
@@ -236,28 +280,23 @@ lineTextWithEnding :: ParsedLine -> String
 lineTextWithEnding ParsedLine{..} = plText ++ plEnding
 
 startsWithBlockDirective :: String -> Bool
-startsWithBlockDirective s = isPrefixOf "{//!" (dropWhile isSpace s)
+startsWithBlockDirective = T.isPrefixOf (T.pack "{//!") . T.stripStart . T.pack
 
 parseBlockDirectiveLine :: ParsedLine -> Either String [(String, Located Bool)]
 parseBlockDirectiveLine ParsedLine{..} = do
-    let tline = dropWhile isSpace plText
-    if not (isPrefixOf "{//!" tline)
+    let stripped = T.stripStart (T.pack plText)
+        blockPrefix = T.pack "{//!"
+    if not (blockPrefix `T.isPrefixOf` stripped)
       then Left $ "Invalid block directive line (missing {//!): " ++ plText
-      else do
-        let afterPrefix = trim (drop 4 tline)
-            content = takeWhile (/= '}') afterPrefix
-        if null (trim content)
-          then Right []
-          else mapM (parseKeyValue plSpan) (splitOn ',' content)
+      else
+        case MP.runParser (blockDirectiveParser <* MP.eof) "<block directives>" stripped of
+          Left _ -> Left $ "Invalid block directive line: " ++ plText
+          Right pairs -> mapM convert pairs
   where
-    parseKeyValue :: SourceSpan -> String -> Either String (String, Located Bool)
-    parseKeyValue spanLoc s =
-      case break (== ':') (trim s) of
-        (keyRaw, ':' : valueRaw) -> do
-          boolValue <- parseBool valueRaw
-          let key = trim keyRaw
-          pure (key, locatedWithSpan spanLoc boolValue)
-        _ -> Left $ "Invalid key:value format: " ++ s
+    convert (keyText, valueText) =
+      case parseBool (T.unpack valueText) of
+        Left err      -> Left err
+        Right boolVal -> Right (T.unpack keyText, locatedWithSpan plSpan boolVal)
 
 parseBlockDirectives :: [(String, Located Bool)] -> Either String BlockDirectives
 parseBlockDirectives pairs = foldM updateDirective defaultBlockDirectives pairs
@@ -317,23 +356,8 @@ parseBool s = case trim s of
 -- Utility Functions
 -- ============================================================================
 
-trim :: String -> String
-trim = f . f
-  where f = reverse . dropWhile isSpace
-
 trimRight :: String -> String
-trimRight = reverse . dropWhile (`elem` "\r\n") . reverse
-
-splitOn :: Char -> String -> [String]
-splitOn _ [] = []
-splitOn delim str = case break (== delim) str of
-    (before, []) -> [before]
-    (before, _ : after) -> before : splitOn delim after
-
-isPrefixOf :: String -> String -> Bool
-isPrefixOf [] _ = True
-isPrefixOf _ [] = False
-isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+trimRight = T.unpack . T.dropWhileEnd (`elem` ['\r', '\n']) . T.pack
 
 -- Compute net curly-brace delta for a line, ignoring braces inside strings and line-comments.
 curlyDelta :: String -> Int
