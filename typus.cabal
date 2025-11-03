@@ -45,6 +45,7 @@ library
     other-modules:
         Compiler.Error,
         Compiler.GoAst,
+        Compiler.GoLexer,
         Compiler.GoParsing,
         Compiler.GoVarSpec,
         Compiler.IR,
