@@ -10,8 +10,10 @@ module Compiler.ValueAnalysis (
 ) where
 
 import Compiler.GoAst
-import Data.Char (isSpace, isDigit)
+import Data.Char (isDigit)
 import Data.List (isInfixOf, isPrefixOf)
+import qualified Data.Text as T
+import Utils (breakOn, splitByComma, trim)
 
 data ValueKind
     = ValueCopy
@@ -60,7 +62,7 @@ analyzeStmtLine lineNum line =
 parseVarDecl :: String -> Maybe ([String], String)
 parseVarDecl line =
     let afterVarRaw = drop 4 line
-        afterVar = dropWhile isSpace afterVarRaw
+        afterVar = trim afterVarRaw
     in if null afterVar || head afterVar == '('
         then Nothing
         else
@@ -78,37 +80,13 @@ parseVarDecl line =
             (n:_) -> trim n
 
 parseShortVarDecl :: String -> Maybe ([String], String)
-parseShortVarDecl line =
-    case breakOn ":=" line of
-        Nothing -> Nothing
-        Just (lhs, rhs) ->
-            let names = map trim (splitByComma lhs)
-                initExpr = trim rhs
-            in Just (filter (not . null) names, initExpr)
-
-breakOn :: String -> String -> Maybe (String, String)
-breakOn needle haystack =
-    case findIndex needle haystack of
-        Nothing -> Nothing
-        Just idx ->
-            let (before, after) = splitAt idx haystack
-                rest = drop (length needle) after
-            in Just (before, rest)
-
-findIndex :: String -> String -> Maybe Int
-findIndex needle haystack = search 0 haystack
-  where
-    search _ [] = Nothing
-    search i s
-        | needle `isPrefixOf` s = Just i
-        | otherwise = case s of
-            [] -> Nothing
-            (_:xs) -> search (i + 1) xs
-
-splitByComma :: String -> [String]
-splitByComma s = case break (== ',') s of
-    (a, []) -> [a]
-    (a, _ : b) -> a : splitByComma b
+parseShortVarDecl line
+    | ":=" `isInfixOf` line =
+        let (lhs, rhsRaw) = breakOn ":=" line
+            names = map trim (splitByComma lhs)
+            initExpr = trim rhsRaw
+        in Just (filter (not . null) names, initExpr)
+    | otherwise = Nothing
 
 determineValueKind :: String -> ValueKind
 determineValueKind expr
@@ -135,8 +113,11 @@ isReferenceInit expr =
 
 isStringLiteral :: String -> Bool
 isStringLiteral s =
-    (startsWith '"' s && endsWith '"' s)
-    || (startsWith '`' s && endsWith '`' s)
+    let text = T.pack s
+        doubleQuote = T.singleton '"'
+        backtick = T.singleton '`'
+    in (doubleQuote `T.isPrefixOf` text && doubleQuote `T.isSuffixOf` text)
+        || (backtick `T.isPrefixOf` text && backtick `T.isSuffixOf` text)
 
 isBooleanLiteral :: String -> Bool
 isBooleanLiteral s = s `elem` ["true", "false"]
@@ -179,14 +160,3 @@ extractValueCopyVars goModule =
 isValueType :: String -> Bool
 isValueType = isKnownValueType . trim
 
-trim :: String -> String
-trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
-
-startsWith :: Char -> String -> Bool
-startsWith c (x:_) = c == x
-startsWith _ _ = False
-
-endsWith :: Char -> String -> Bool
-endsWith c s = case reverse s of
-    (x:_) -> c == x
-    _ -> False
