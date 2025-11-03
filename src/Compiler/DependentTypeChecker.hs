@@ -3,18 +3,29 @@ module Compiler.DependentTypeChecker (
     extractDependentTypeContent
 ) where
 
+import qualified Data.Text as T
+
 import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
 import DependentTypesParser (DependentTypeError(..), runDependentTypesParser, parserErrors)
-import Compiler.Error
-import SourceLocation (SourceLocation, Located(..), locatedValue, sourceLocation)
-
-import Data.List (intercalate)
-import Data.Maybe (catMaybes)
+import EnhancedErrorHandler
+    ( CompilerError
+    , CompilerResult
+    , CompilationPhase(..)
+    )
+import ErrorHandler (ErrorCategory(..), ErrorSeverity(..))
+import Compiler.EnhancedErrors (mkCompilerError)
+import SourceLocation
+    ( Located(..)
+    , SourceSpan
+    , locatedValue
+    , posAt
+    , spanFrom
+    )
 
 directiveEnabled :: Maybe (Located Bool) -> Bool
 directiveEnabled = maybe False locatedValue
 
-checkDependentTypes :: TypusFile -> Either CompilationError ()
+checkDependentTypes :: TypusFile -> CompilerResult ()
 checkDependentTypes typusFile =
     let directives = tfDirectives typusFile
         blocks = tfBlocks typusFile
@@ -26,14 +37,12 @@ checkDependentTypes typusFile =
                [] -> Right ()
                content ->
                    case runDependentTypesParser content of
-                       Left err -> Left $ mkCompilationError DependentTypeErrorKind ("Dependent type parsing error: " ++ err) []
+                       Left err -> Left [parserFailure err]
                        Right (_, parser) ->
                            let errors = parserErrors parser
                            in if null errors
                                   then Right ()
-                                  else
-                                      let (msg, locs) = formatDependentTypeErrors errors
-                                      in Left $ mkCompilationError DependentTypeErrorKind ("Dependent type errors: " ++ msg) locs
+                                  else Left (map toCompilerError errors)
            else Right ()
 
 extractDependentTypeContent :: TypusFile -> String
@@ -41,19 +50,105 @@ extractDependentTypeContent typusFile =
     let dependentBlocks = filter (directiveEnabled . bdDependentTypes . cbDirectives) (tfBlocks typusFile)
     in concatMap cbContent dependentBlocks
 
-formatDependentTypeErrors :: [DependentTypeError] -> (String, [SourceLocation])
-formatDependentTypeErrors errs =
-    let formatted = map format errs
-        message = intercalate "; " (map fst formatted)
-        locations = catMaybes (map snd formatted)
-    in (message, locations)
-  where
-    format (SyntaxError msg line snippet) =
-        let base = "Syntax error at line " ++ show line ++ ": " ++ msg ++ if null snippet then "" else " (" ++ snippet ++ ")"
-            loc = if line > 0 then Just (sourceLocation Nothing (Just line) Nothing) else Nothing
-        in (base, loc)
-    format (InvalidTypeSyntax msg) = ("Invalid type syntax: " ++ msg, Nothing)
-    format (MissingConstraint msg) = ("Missing constraint: " ++ msg, Nothing)
-    format (InvalidParameter msg) = ("Invalid parameter: " ++ msg, Nothing)
-    format (ConstraintParseError msg) = ("Constraint parse error: " ++ msg, Nothing)
-    format (TypeVariableError msg) = ("Type variable error: " ++ msg, Nothing)
+parserFailure :: String -> CompilerError
+parserFailure errMsg =
+    mkCompilerError
+        "DT0000"
+        (T.pack ("Failed to parse dependent type block: " ++ errMsg))
+        DependentTypeCheckingPhase
+        Constraint
+        Error
+        Nothing
+        Nothing
+        (map T.pack
+            [ "Ensure dependent type blocks follow the documented syntax"
+            , "Check for unmatched braces or directives"
+            ])
+        []
+        Nothing
+
+toCompilerError :: DependentTypeError -> CompilerError
+toCompilerError err = case err of
+    SyntaxError msg line snippet ->
+        mkCompilerError
+            "DT0001"
+            (T.pack ("Syntax error: " ++ msg))
+            DependentTypeCheckingPhase
+            Constraint
+            Error
+            (Just (spanForLine line))
+            (nonEmpty snippet)
+            (map T.pack
+                [ "Review the syntax near the reported line"
+                , "Ensure nested constructs are properly closed"
+                ])
+            []
+            Nothing
+    InvalidTypeSyntax msg ->
+        mkCompilerError
+            "DT0002"
+            (T.pack ("Invalid type syntax: " ++ msg))
+            DependentTypeCheckingPhase
+            Constraint
+            Error
+            Nothing
+            Nothing
+            (map T.pack ["Verify type declarations inside dependent type blocks"])
+            []
+            Nothing
+    MissingConstraint msg ->
+        mkCompilerError
+            "DT0003"
+            (T.pack ("Missing constraint: " ++ msg))
+            DependentTypeCheckingPhase
+            Constraint
+            Error
+            Nothing
+            Nothing
+            (map T.pack ["Add the required constraint to the dependent type declaration"])
+            []
+            Nothing
+    InvalidParameter msg ->
+        mkCompilerError
+            "DT0004"
+            (T.pack ("Invalid parameter: " ++ msg))
+            DependentTypeCheckingPhase
+            Constraint
+            Error
+            Nothing
+            Nothing
+            (map T.pack ["Check the parameter list for the dependent type"])
+            []
+            Nothing
+    ConstraintParseError msg ->
+        mkCompilerError
+            "DT0005"
+            (T.pack ("Constraint parse error: " ++ msg))
+            DependentTypeCheckingPhase
+            Constraint
+            Error
+            Nothing
+            Nothing
+            (map T.pack ["Ensure constraints use supported operators and syntax"])
+            []
+            Nothing
+    TypeVariableError msg ->
+        mkCompilerError
+            "DT0006"
+            (T.pack ("Type variable error: " ++ msg))
+            DependentTypeCheckingPhase
+            Constraint
+            Error
+            Nothing
+            Nothing
+            (map T.pack ["Ensure type variables are declared before use"])
+            []
+            Nothing
+
+spanForLine :: Int -> SourceSpan
+spanForLine lineNumber =
+    let safeLine = max 1 lineNumber
+    in spanFrom (posAt safeLine 1)
+
+nonEmpty :: String -> Maybe String
+nonEmpty s = if null s then Nothing else Just s

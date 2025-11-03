@@ -12,7 +12,13 @@ module Compiler.IR (
 ) where
 
 import Parser (TypusFile(..), CodeBlock(..))
-import Compiler.Error
+import EnhancedErrorHandler
+    ( CompilerError
+    , CompilerResult
+    , CompilationPhase(..)
+    )
+import ErrorHandler (ErrorCategory(..), ErrorSeverity(..))
+import Compiler.EnhancedErrors (mkCompilerError)
 import Compiler.GoAst
 import Compiler.GoLexer (GoToken(..), GoTokenKind(..), tokenizeGo, isWhitespaceToken, isCommentToken)
 import Compiler.ValueAnalysis (ValueInfo, analyzeValueSemantics)
@@ -22,6 +28,7 @@ import Data.Char (isSpace)
 import Data.Function (on)
 import Data.List (intercalate, isInfixOf, isPrefixOf, nubBy)
 import qualified Data.Set as Set
+import qualified Data.Text as T
 
 -- | Lightweight representation of the parsed Typus source prior to any
 -- analysis. It keeps the parsed file together with the raw Go-like source
@@ -51,7 +58,7 @@ buildSourceIR typusFile = SourceIR
     , sourceText = rawSourceFromTypus typusFile
     }
 
-buildSemanticIR :: SourceIR -> Either CompilationError SemanticIR
+buildSemanticIR :: SourceIR -> CompilerResult SemanticIR
 buildSemanticIR ir = do
     goMod <- moduleFromTypus (sourceTypusFile ir)
     pure SemanticIR
@@ -66,22 +73,39 @@ emitGo ir = GoIR
     , goSource = renderGoModule (semanticModule ir)
     }
 
-moduleFromTypus :: TypusFile -> Either CompilationError GoModule
-moduleFromTypus typusFile = do
+moduleFromTypus :: TypusFile -> CompilerResult GoModule
+moduleFromTypus typusFile =
     let rawSource = rawSourceFromTypus typusFile
-    parsed <- case parseGoModule (lines rawSource) of
-        Left err -> Left $ mkCompilationError GoGenerationErrorKind ("Failed to parse Go module: " ++ err) []
-        Right goMod -> Right goMod
-    let buildTags = tfBuildTags typusFile
-        module0 = parsed { gmBuildTags = if null buildTags
-                                         then gmBuildTags parsed
-                                         else map locatedValue buildTags
-                          }
-        module1 = applyGenerics module0
-        module2 = ensurePackageDecl module1
-        module3 = ensureMainFunction module2
-        module4 = attachInferredImports module3
-    pure module4
+    in case parseGoModule (lines rawSource) of
+        Left err -> Left [goModuleParseError err]
+        Right parsedModule ->
+            let buildTags = tfBuildTags typusFile
+                module0 = parsedModule { gmBuildTags = if null buildTags
+                                                         then gmBuildTags parsedModule
+                                                         else map locatedValue buildTags
+                                      }
+                module1 = applyGenerics module0
+                module2 = ensurePackageDecl module1
+                module3 = ensureMainFunction module2
+                module4 = attachInferredImports module3
+            in Right module4
+
+goModuleParseError :: String -> CompilerError
+goModuleParseError errMsg =
+    mkCompilerError
+        "GO0001"
+        (T.pack ("Failed to parse generated Go module: " ++ errMsg))
+        CodeGenerationPhase
+        Integration
+        Error
+        Nothing
+        Nothing
+        (map T.pack
+            [ "Inspect the generated Go block for syntax issues"
+            , "Ensure embedded Go code in Typus files is valid"
+            ])
+        []
+        Nothing
 
 rawSourceFromTypus :: TypusFile -> String
 rawSourceFromTypus TypusFile{..} = intercalate "\n" $ map cbContent tfBlocks

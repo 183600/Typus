@@ -4,7 +4,7 @@ module TestCompiler (compilerTestSuite) where
 import Test.Tasty
 import Test.Tasty.HUnit as TH
 import qualified Parser (parseTypus)
-import qualified Compiler (compile)
+import qualified Compiler
 import Data.List (isInfixOf)
 
 -- Enhanced comprehensive compiler test suite for production readiness
@@ -17,6 +17,9 @@ compilerTestSuite = testGroup "Compiler Tests" [
     complexCompilationTests,
     outputValidityTests
     ]
+
+failCompile :: [Compiler.CompilerError] -> TH.Assertion
+failCompile errs = TH.assertFailure $ "Compilation failed: " ++ Compiler.renderCompilationError errs
 
 -- Basic compiler functionality tests
 basicCompilerTests :: TestTree
@@ -33,7 +36,7 @@ basicCompilerTests = testGroup "Basic Compiler Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 case Compiler.compile typusFile of
-                    Left err -> TH.assertFailure $ "Compilation failed: " ++ err
+                    Left err -> failCompile err
                     Right goCode -> do
                         TH.assertBool "Generated code should contain package declaration"
                             ("package main" `isInfixOf` goCode)
@@ -61,7 +64,7 @@ basicCompilerTests = testGroup "Basic Compiler Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 case Compiler.compile typusFile of
-                    Left err -> TH.assertFailure $ "Compilation failed: " ++ err
+                    Left err -> failCompile err
                     Right goCode -> do
                         TH.assertBool "Should contain function definition"
                             ("func add" `isInfixOf` goCode),
@@ -79,7 +82,7 @@ basicCompilerTests = testGroup "Basic Compiler Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 case Compiler.compile typusFile of
-                    Left err -> TH.assertFailure $ "Compilation failed: " ++ err
+                    Left err -> failCompile err
                     Right goCode -> do
                         TH.assertBool "Should contain struct definition"
                             ("type Person struct" `isInfixOf` goCode),
@@ -98,7 +101,7 @@ basicCompilerTests = testGroup "Basic Compiler Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 case Compiler.compile typusFile of
-                    Left err -> TH.assertFailure $ "Compilation failed: " ++ err
+                    Left err -> failCompile err
                     Right goCode -> do
                         TH.assertBool "Should preserve import statements"
                             ("import" `isInfixOf` goCode)
@@ -121,7 +124,7 @@ directiveCompilationTests = testGroup "Directive Compilation Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 case Compiler.compile typusFile of
-                    Left err -> TH.assertFailure $ "Compilation failed: " ++ err
+                    Left err -> failCompile err
                     Right goCode -> do
                         TH.assertBool "Should compile with ownership directive"
                             ("package main" `isInfixOf` goCode),
@@ -140,7 +143,7 @@ directiveCompilationTests = testGroup "Directive Compilation Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 case Compiler.compile typusFile of
-                    Left err -> TH.assertFailure $ "Compilation failed: " ++ err
+                    Left err -> failCompile err
                     Right goCode -> do
                         TH.assertBool "Should compile with dependent types directive"
                             ("package main" `isInfixOf` goCode),
@@ -159,7 +162,7 @@ directiveCompilationTests = testGroup "Directive Compilation Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 case Compiler.compile typusFile of
-                    Left err -> TH.assertFailure $ "Compilation failed: " ++ err
+                    Left err -> failCompile err
                     Right goCode -> do
                         TH.assertBool "Should compile with block directive"
                             ("func main" `isInfixOf` goCode)
@@ -181,7 +184,7 @@ edgeCaseCompilerTests = testGroup "Edge Case Compiler Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 case Compiler.compile typusFile of
-                    Left err -> TH.assertFailure $ "Compilation failed: " ++ err
+                    Left err -> failCompile err
                     Right goCode -> do
                         TH.assertBool "Should handle comments"
                             ("func main" `isInfixOf` goCode),
@@ -198,7 +201,7 @@ edgeCaseCompilerTests = testGroup "Edge Case Compiler Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 case Compiler.compile typusFile of
-                    Left err -> TH.assertFailure $ "Compilation failed: " ++ err
+                    Left err -> failCompile err
                     Right _ -> TH.assertBool "Should handle string escapes" True,
 
     TH.testCase "Compiler With Unicode" $ do
@@ -213,7 +216,7 @@ edgeCaseCompilerTests = testGroup "Edge Case Compiler Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 case Compiler.compile typusFile of
-                    Left err -> TH.assertFailure $ "Compilation failed: " ++ err
+                    Left err -> failCompile err
                     Right _ -> TH.assertBool "Should handle Unicode" True,
 
     TH.testCase "Compiler With Complex Expressions" $ do
@@ -228,7 +231,7 @@ edgeCaseCompilerTests = testGroup "Edge Case Compiler Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 case Compiler.compile typusFile of
-                    Left err -> TH.assertFailure $ "Compilation failed: " ++ err
+                    Left err -> failCompile err
                     Right _ -> TH.assertBool "Should handle complex expressions" True
     ]
 
@@ -287,7 +290,7 @@ complexCompilationTests = testGroup "Complex Compilation Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 case Compiler.compile typusFile of
-                    Left err -> TH.assertFailure $ "Compilation failed: " ++ err
+                    Left err -> failCompile err
                     Right goCode -> do
                         TH.assertBool "Should contain struct" ("type Person struct" `isInfixOf` goCode)
                         TH.assertBool "Should contain constructor" ("func NewPerson" `isInfixOf` goCode),
@@ -308,7 +311,7 @@ complexCompilationTests = testGroup "Complex Compilation Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 case Compiler.compile typusFile of
-                    Left err -> TH.assertFailure $ "Compilation failed: " ++ err
+                    Left err -> failCompile err
                     Right goCode -> do
                         TH.assertBool "Should contain method definition"
                             ("func (c *Counter) Increment" `isInfixOf` goCode),
@@ -325,7 +328,7 @@ complexCompilationTests = testGroup "Complex Compilation Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 case Compiler.compile typusFile of
-                    Left err -> TH.assertFailure $ "Compilation failed: " ++ err
+                    Left err -> failCompile err
                     Right goCode -> do
                         TH.assertBool "Should contain interface definition"
                             ("type Reader interface" `isInfixOf` goCode)
@@ -347,7 +350,7 @@ outputValidityTests = testGroup "Output Validity Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 case Compiler.compile typusFile of
-                    Left err -> TH.assertFailure $ "Compilation failed: " ++ err
+                    Left err -> failCompile err
                     Right goCode -> do
                         TH.assertBool "Should have package" ("package" `isInfixOf` goCode)
                         TH.assertBool "Should not be empty" (not $ null goCode),
@@ -366,7 +369,7 @@ outputValidityTests = testGroup "Output Validity Tests" [
             Left err -> TH.assertFailure $ "Parser failed: " ++ err
             Right typusFile -> do
                 case Compiler.compile typusFile of
-                    Left err -> TH.assertFailure $ "Compilation failed: " ++ err
+                    Left err -> failCompile err
                     Right goCode -> do
                         TH.assertBool "Should preserve code structure" (length goCode > 0)
     ]
