@@ -123,76 +123,27 @@ flag werror
     default:     True
     manual:      True
 
-
-
-executable parser-test
-    import:           warnings
-    main-is:          ParserTest.hs
-    hs-source-dirs:   app
-    build-depends:
-        base >=4.7 && <5,
-        typus,
-        containers,
-        mtl,
-        parsec >= 3.1.0,
-        directory >= 1.3.0,
-        filepath >= 1.4.0,
-        process >= 1.6.0
-    default-language: Haskell2010
-    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
-
-executable compiler-test
-    import:           warnings
-    main-is:          CompilerTest.hs
-    hs-source-dirs:   app
-    build-depends:
-        base >=4.7 && <5,
-        typus,
-        containers,
-        mtl,
-        parsec >= 3.1.0,
-        directory >= 1.3.0,
-        filepath >= 1.4.0,
-        process >= 1.6.0
-    default-language: Haskell2010
-    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
-
-executable minimal-compiler-test
-    import:           warnings
-    main-is:          MinimalCompilerTest.hs
-    hs-source-dirs:   app
-    build-depends:
-        base >=4.7 && <5,
-        typus,
-        containers,
-        mtl,
-        parsec >= 3.1.0,
-        directory >= 1.3.0,
-        filepath >= 1.4.0,
-        process >= 1.6.0
-    default-language: Haskell2010
-    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
-
-executable typus-compilation-test
-    import:           warnings
-    main-is:          TypusCompilationTest.hs
-    hs-source-dirs:   app
-    build-depends:
-        base >=4.7 && <5,
-        typus,
-        containers,
-        mtl,
-        parsec >= 3.1.0,
-        directory >= 1.3.0,
-        filepath >= 1.4.0,
-        process >= 1.6.0,
-        Glob >= 0.10 && <1,
-        temporary >= 1.2 && <2
-    default-language: Haskell2010
-    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
-
-
-
+-- REMOVED: Redundant test executables
+--
+-- The following executables have been removed as they are redundant with the
+-- comprehensive test-suite typus-test:
+--   - parser-test (redundant with Test.Unit.ParserSpec)
+--   - compiler-test (redundant with Test.Unit.CompilerSpec)
+--   - minimal-compiler-test (redundant with Test.Unit.CompilerSpec)
+--   - typus-compilation-test (redundant with Test.Integration.PipelineSpec)
+--
+-- All testing should now be done via:
+--   cabal test                              (run all tests)
+--   cabal test --flag typus:fast            (fast tests only)
+--   cabal test --flag typus:full            (comprehensive tests)
+--   cabal test --flag typus:production      (production-ready tests)
+--   cabal test --flag typus:coverage        (with coverage)
+--
+-- This consolidation reduces maintenance costs and ensures all tests use
+-- the same infrastructure (Tasty framework) with consistent reporting.
+--
+-- Original test files remain in app/ for historical reference but are no
+-- longer built by default.
 
 -- Benchmark suite for performance testing
 benchmark typus-bench
@@ -229,6 +180,7 @@ test-suite typus-test
         Test.Integration,
         Test.Integration.Tests,
         Test.Integration.PipelineSpec,
+        Test.Integration.AnalyzerSpec,
         Test.Unit,
         Test.Unit.Tests,
         Test.Unit.CLISpec,

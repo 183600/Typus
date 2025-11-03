@@ -11,8 +11,12 @@ of detail for their workflow.
 - [`TESTING_GUIDE.md`](../TESTING_GUIDE.md) – an in-depth overview of the test
   strategy, environment variables, and troubleshooting tips.
 
-## Coverage and historical notes
+## Coverage and consolidation
 
+- [`COVERAGE_MATRIX.md`](../COVERAGE_MATRIX.md) – **NEW**: comprehensive test
+  coverage matrix showing which components are tested, gaps, and action items.
+- [`TEST_CONSOLIDATION.md`](../TEST_CONSOLIDATION.md) – **NEW**: migration guide
+  explaining the 2024 test consolidation and how to adapt existing workflows.
 - [`TEST_COVERAGE_REPORT.md`](../TEST_COVERAGE_REPORT.md) – the latest captured
   Haskell coverage snapshot together with interpretation guidelines.
 - [`TEST_ENHANCEMENT_SUMMARY.md`](../TEST_ENHANCEMENT_SUMMARY.md) – changelog of
