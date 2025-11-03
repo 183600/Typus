@@ -14,6 +14,8 @@ module Compiler.TypeChecker (
 
 import Parser (TypusFile(..))
 import Compiler.GoAst
+import Compiler.GoParsing (consumeNames, nestingDelta, splitTopLevel, stripLineComment)
+import qualified Compiler.GoVarSpec as GoVar
 import qualified Compiler.IR as IR
 
 import Data.Char (isAlphaNum, isDigit, isSpace)
@@ -374,87 +376,27 @@ extractTypeComponent segment =
     in if null names then s else trim remainder
 
 parseVarDeclSpecs :: VarDecl -> [VarSpec]
-parseVarDeclSpecs VarDecl{..}
-    | null varLines = []
-    | varIsGroup = parseGroupedSpecs varLines
-    | otherwise = maybeToList (parseVarSpec (intercalate " " (map trim varLines)))
+parseVarDeclSpecs decl = map fromRaw (GoVar.parseVarDeclRawSpecs Nothing decl)
+  where
+    fromRaw GoVar.RawVarSpec{..} =
+        VarSpec
+            { vsNames = rvsNames
+            , vsType = fmap typeFromString rvsType
+            , vsValues = rvsValues
+            }
 
 parseConstDeclSpecs :: ConstDecl -> [VarSpec]
-parseConstDeclSpecs ConstDecl{..}
-    | null constLines = []
-    | constIsGroup = parseGroupedSpecs constLines
-    | otherwise = maybeToList (parseVarSpec (intercalate " " (map trim constLines)))
-
-parseGroupedSpecs :: [String] -> [VarSpec]
-parseGroupedSpecs lines0 =
-    let inner = drop 1 (dropWhileEnd (\line -> trim line == ")") lines0)
-        go [] current depth acc =
-            let acc' = if null (trim current) then acc else current : acc
-            in reverse acc'
-        go (ln:rest) current depth acc =
-            let stripped = trim (stripLineComment ln)
-                nextCurrent = if null current then stripped else current ++ " " ++ stripped
-                depthDelta = nestingDelta stripped
-                newDepth = depth + depthDelta
-            in if newDepth <= 0
-                then go rest "" 0 (if null (trim nextCurrent) then acc else nextCurrent : acc)
-                else go rest nextCurrent newDepth acc
-        specs = go inner "" 0 []
-    in mapMaybe parseVarSpec specs
-
-parseVarSpec :: String -> Maybe VarSpec
-parseVarSpec rawLine =
-    let line = trim (removeTrailingComma (stripLineComment rawLine))
-        withoutKeyword
-            | "var " `isPrefixOf` line = drop 4 line
-            | "const " `isPrefixOf` line = drop 6 line
-            | otherwise = line
-    in if null withoutKeyword
-        then Nothing
-        else
-            case findAssignmentIndex withoutKeyword of
-                Nothing -> do
-                    let (names, remainder) = consumeNames withoutKeyword
-                        typePart = trim remainder
-                    guard (not (null names))
-                    let mType = if null typePart then Nothing else Just (typeFromString typePart)
-                    pure VarSpec
-                        { vsNames = names
-                        , vsType = mType
-                        , vsValues = []
-                        }
-                Just idx -> do
-                    let (lhs, rhsRaw) = splitAt idx withoutKeyword
-                        rhs = trim (drop 1 rhsRaw)
-                        (names, remainder) = consumeNames lhs
-                        typePart = trim remainder
-                        values = map trim (splitTopLevel ',' rhs)
-                    guard (not (null names))
-                    let mType = if null typePart then Nothing else Just (typeFromString typePart)
-                    pure VarSpec
-                        { vsNames = names
-                        , vsType = mType
-                        , vsValues = values
-                        }
+parseConstDeclSpecs decl = map fromRaw (GoVar.parseConstDeclRawSpecs Nothing decl)
   where
-    guard True = Just ()
-    guard False = Nothing
+    fromRaw GoVar.RawVarSpec{..} =
+        VarSpec
+            { vsNames = rvsNames
+            , vsType = fmap typeFromString rvsType
+            , vsValues = rvsValues
+            }
 
-removeTrailingComma :: String -> String
-removeTrailingComma = dropWhileEnd (== ',')
 
-findAssignmentIndex :: String -> Maybe Int
-findAssignmentIndex s = go 0
-  where
-    go idx
-        | idx >= length s = Nothing
-        | otherwise =
-            let c = s !! idx
-                prev = if idx == 0 then ' ' else s !! (idx - 1)
-                next = if idx + 1 < length s then s !! (idx + 1) else ' '
-            in if c == '=' && next /= '=' && prev `notElem` "=<>!"
-                  then Just idx
-                  else go (idx + 1)
+
 
 extractVarTypes :: VarDecl -> [(String, Type)]
 extractVarTypes decl =
@@ -481,25 +423,6 @@ normalizeTypeName = collapseSpaces . trim
         | isSpace c = ' ' : collapseSpaces (dropWhile isSpace cs)
         | otherwise = c : collapseSpaces cs
 
-consumeNames :: String -> ([String], String)
-consumeNames s =
-    case parseIdentifier s of
-        Nothing -> ([], s)
-        Just (ident, rest) ->
-            let rest' = dropWhile isSpace rest
-            in if null rest'
-                then ([], s)
-                else gather rest' [ident]
-  where
-    gather text acc =
-        let text' = dropWhile isSpace text
-        in case text' of
-            [] -> (acc, text')
-            ',' : more ->
-                case parseIdentifier more of
-                    Nothing -> (acc, more)
-                    Just (nextName, afterNext) -> gather afterNext (acc ++ [nextName])
-            _ -> (acc, text')
 
 stripVariadic :: String -> (Bool, String)
 stripVariadic raw =
@@ -508,47 +431,7 @@ stripVariadic raw =
         then (True, trim (drop 3 t))
         else (False, t)
 
-parseIdentifier :: String -> Maybe (String, String)
-parseIdentifier [] = Nothing
-parseIdentifier (c:cs)
-    | isIdentStart c =
-        let (restIdent, rest) = span isIdentChar cs
-        in Just (c : restIdent, rest)
-    | otherwise = Nothing
-  where
-    isIdentStart ch = isAlphaNum ch || ch == '_' || ch == '.'
-    isIdentChar ch = isAlphaNum ch || ch == '_' || ch == '.'
 
-stripLineComment :: String -> String
-stripLineComment = go NoString False
-  where
-    data StrState = NoString | DoubleStr | SingleStr | BacktickStr deriving Eq
-
-    go _ _ [] = []
-    go state escaped (x:y:rest)
-        | state == NoString && x == '/' && y == '/' = []
-        | otherwise = x : goState state escaped y rest
-    go state escaped [x] = [x]
-
-    goState state escaped current rest =
-        case state of
-            NoString ->
-                case current of
-                    '"' -> '"' : go DoubleStr False rest
-                    '\'' -> '\'' : go SingleStr False rest
-                    '`' -> '`' : go BacktickStr False rest
-                    _ -> current : go NoString False rest
-            DoubleStr ->
-                let escaped' = if escaped then False else current == '\\'
-                    nextState = if not escaped && current == '"' then NoString else DoubleStr
-                in current : go nextState escaped' rest
-            SingleStr ->
-                let escaped' = if escaped then False else current == '\\'
-                    nextState = if not escaped && current == '\'' then NoString else SingleStr
-                in current : go nextState escaped' rest
-            BacktickStr ->
-                let nextState = if current == '`' then NoString else BacktickStr
-                in current : go nextState False rest
 
 consumeBalanced :: Char -> Char -> String -> Maybe (String, String)
 consumeBalanced open close input =
@@ -593,98 +476,7 @@ stripOuterParens s =
         | c == ')' = reverseStrip cs (c:acc) (depth - 1)
         | otherwise = reverseStrip cs (c:acc) depth
 
-splitTopLevel :: Char -> String -> [String]
-splitTopLevel delim input = reverse (finalise current acc)
-  where
-    (acc, current, _) = foldl' step ([], [], NoStringState) input
 
-    finalise cur acc' =
-        let piece = trim (reverse cur)
-        in if null piece then acc' else piece : acc'
-
-    step (pieces, cur, state) ch =
-        case updateState state ch of
-            (newState, Just action)
-                | action == SplitHere && nullInners newState ->
-                    (trim (reverse cur) : pieces, [], newState)
-            (newState, _) -> (pieces, ch : cur, newState)
-
-    nullInners s = case s of
-        NoStringState -> True
-        _ -> False
-
-    updateState st ch = case st of
-        NoStringState ->
-            case ch of
-                '"' -> (DoubleStringState False, Nothing)
-                '\'' -> (SingleStringState False, Nothing)
-                '`' -> (BacktickStringState, Nothing)
-                '(' -> (ParenState 1, Nothing)
-                '{' -> (BraceState 1, Nothing)
-                '[' -> (BracketState 1, Nothing)
-                _
-                    | ch == delim -> (NoStringState, Just SplitHere)
-                    | otherwise -> (NoStringState, Nothing)
-        DoubleStringState escaped ->
-            let escaped' = (not escaped && ch == '\\')
-                nextState = if not escaped && ch == '"' then NoStringState else DoubleStringState escaped'
-            in (nextState, Nothing)
-        SingleStringState escaped ->
-            let escaped' = (not escaped && ch == '\\')
-                nextState = if not escaped && ch == '\'' then NoStringState else SingleStringState escaped'
-            in (nextState, Nothing)
-        BacktickStringState ->
-            let nextState = if ch == '`' then NoStringState else BacktickStringState
-            in (nextState, Nothing)
-        ParenState depth ->
-            let depth' = case ch of
-                    '(' -> depth + 1
-                    ')' -> depth - 1
-                    _ -> depth
-                nextState = if depth' == 0 then NoStringState else ParenState depth'
-            in (nextState, Nothing)
-        BraceState depth ->
-            let depth' = case ch of
-                    '{' -> depth + 1
-                    '}' -> depth - 1
-                    _ -> depth
-                nextState = if depth' == 0 then NoStringState else BraceState depth'
-            in (nextState, Nothing)
-        BracketState depth ->
-            let depth' = case ch of
-                    '[' -> depth + 1
-                    ']' -> depth - 1
-                    _ -> depth
-                nextState = if depth' == 0 then NoStringState else BracketState depth'
-            in (nextState, Nothing)
-
-    data SplitState
-        = NoStringState
-        | DoubleStringState Bool
-        | SingleStringState Bool
-        | BacktickStringState
-        | ParenState Int
-        | BraceState Int
-        | BracketState Int
-        deriving (Eq)
-
-    data SplitAction = SplitHere
-
-maybeToList :: Maybe a -> [a]
-maybeToList Nothing = []
-maybeToList (Just x) = [x]
-
-nestingDelta :: String -> Int
-nestingDelta = foldl' step 0
-  where
-    step acc c = acc + delta c
-    delta '(' = 1
-    delta ')' = -1
-    delta '[' = 1
-    delta ']' = -1
-    delta '{' = 1
-    delta '}' = -1
-    delta _ = 0
 
 --------------------------------------------------------------------------------
 -- Call extraction

@@ -45,6 +45,8 @@ library
     other-modules:
         Compiler.Error,
         Compiler.GoAst,
+        Compiler.GoParsing,
+        Compiler.GoVarSpec,
         Compiler.IR,
         Compiler.DependentTypeChecker,
         Compiler.OwnershipChecker,
@@ -190,7 +192,8 @@ test-suite typus-test
         Test.Unit.CompilerSpec,
         Test.Unit.DependentTypesSpec,
         Test.Unit.OwnershipSpec,
-        Test.Unit.ParserSpec
+        Test.Unit.ParserSpec,
+        Test.Unit.ValueAnalysisSpec
     build-depends:
         base >=4.7 && <5,
         typus,
