@@ -59,7 +59,10 @@ library
         ErrorHandler,
         Ownership.Common.Lexer,
         Ownership.Common.Types,
-        Ownership.Lexer
+        Ownership.Lexer,
+        Ownership.Parser,
+        Ownership.Analyzer,
+        Ownership.Reporter
     build-depends:
         base >=4.7 && <5,
         aeson >= 2.2 && <3,
