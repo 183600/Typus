@@ -10,10 +10,13 @@ module Compiler.ValueAnalysis (
 ) where
 
 import Compiler.GoAst
-import Data.Char (isDigit)
-import Data.List (isInfixOf, isPrefixOf)
+import Compiler.GoParsing (nestingDelta, splitTopLevel, stripLineComment)
+import qualified Compiler.GoVarSpec as GoVar
+import Data.Char (isDigit, isSpace)
+import Data.List (dropWhileEnd, foldl', intercalate, isPrefixOf)
+import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
-import Utils (breakOn, splitByComma, trim)
+import Utils (trim)
 
 data ValueKind
     = ValueCopy
@@ -29,64 +32,201 @@ data ValueInfo = ValueInfo
 
 analyzeValueSemantics :: GoModule -> [ValueInfo]
 analyzeValueSemantics GoModule{..} =
-    concatMap analyzeDecl (zip [1..] gmDecls)
+    snd $ foldl' step (1, []) gmDecls
   where
-    analyzeDecl (lineNum, decl) = case decl of
-        GoVar (VarDecl ls _) -> concatMap (analyzeVarLine lineNum) ls
-        GoStatement (StatementBlock ls) -> concatMap (analyzeStmtLine lineNum) ls
-        GoFunc (FuncDecl ls) -> concatMap (analyzeStmtLine lineNum) ls
-        _ -> []
+    step (lineStart, acc) decl =
+        let infos = analyzeDecl decl lineStart
+            nextLine = lineStart + length (flattenDeclLines decl)
+        in (nextLine, acc ++ infos)
 
-analyzeVarLine :: Int -> String -> [ValueInfo]
-analyzeVarLine lineNum line =
-    let trimmed = trim line
-    in if "var " `isPrefixOf` trimmed
-        then case parseVarDecl trimmed of
-            Just (names, initExpr) ->
-                let kind = if isValueInit initExpr then ValueCopy else Unknown
-                in [ValueInfo name kind lineNum | name <- names]
-            Nothing -> []
-        else []
+analyzeDecl :: GoDecl -> Int -> [ValueInfo]
+analyzeDecl decl lineStart = case decl of
+    GoVar varDecl -> analyzeVarDecl lineStart varDecl
+    GoFunc (FuncDecl ls) -> analyzeFuncDecl lineStart ls
+    GoStatement (StatementBlock ls) -> analyzeStatementBlock lineStart ls
+    _ -> []
 
-analyzeStmtLine :: Int -> String -> [ValueInfo]
-analyzeStmtLine lineNum line =
-    let trimmed = trim line
-    in if ":=" `isInfixOf` trimmed
-        then case parseShortVarDecl trimmed of
-            Just (names, initExpr) ->
-                let kind = determineValueKind initExpr
-                in [ValueInfo name kind lineNum | name <- names]
-            Nothing -> []
-        else []
-
-parseVarDecl :: String -> Maybe ([String], String)
-parseVarDecl line =
-    let afterVarRaw = drop 4 line
-        afterVar = trim afterVarRaw
-    in if null afterVar || head afterVar == '('
-        then Nothing
-        else
-            let (lhs, rhsPart) = break (== '=') afterVar
-                names = map (trim . dropTypeAnnotation) (splitByComma lhs)
-                initExpr = case rhsPart of
-                    ('=':rest) -> trim rest
-                    _ -> ""
-            in Just (filter (not . null) names, initExpr)
+analyzeVarDecl :: Int -> VarDecl -> [ValueInfo]
+analyzeVarDecl lineStart varDecl =
+    concatMap fromSpec (GoVar.parseVarDeclRawSpecs (Just lineStart) varDecl)
   where
-    dropTypeAnnotation :: String -> String
-    dropTypeAnnotation segment =
-        case words segment of
-            [] -> ""
-            (n:_) -> trim n
+    fromSpec GoVar.RawVarSpec{..} =
+        let names = rvsNames
+            values = rvsValues
+            line = fromMaybe lineStart rvsLine
+        in [ ValueInfo name (determineValueKind (trim (selectExprForIndex names values idx))) line
+           | (name, idx) <- zip names [0 ..]
+           ]
 
-parseShortVarDecl :: String -> Maybe ([String], String)
-parseShortVarDecl line
-    | ":=" `isInfixOf` line =
-        let (lhs, rhsRaw) = breakOn ":=" line
-            names = map trim (splitByComma lhs)
-            initExpr = trim rhsRaw
-        in Just (filter (not . null) names, initExpr)
-    | otherwise = Nothing
+analyzeFuncDecl :: Int -> [String] -> [ValueInfo]
+analyzeFuncDecl _ [] = []
+analyzeFuncDecl lineStart (_header:body) =
+    analyzeShortVars (zip [lineStart + 1 ..] body)
+
+analyzeStatementBlock :: Int -> [String] -> [ValueInfo]
+analyzeStatementBlock lineStart lines0 =
+    analyzeShortVars (zip [lineStart ..] lines0)
+
+analyzeShortVars :: [(Int, String)] -> [ValueInfo]
+analyzeShortVars tuples =
+    concatMap toInfos (collectShortVarInits tuples)
+  where
+    toInfos ShortVarInit{..} =
+        [ ValueInfo name (determineValueKind (trim (selectExprForIndex sviNames sviValues idx))) sviLine
+        | (name, idx) <- zip sviNames [0 ..]
+        ]
+
+data ShortVarInit = ShortVarInit
+    { sviLine :: Int
+    , sviNames :: [String]
+    , sviValues :: [String]
+    } deriving (Eq, Show)
+
+collectShortVarInits :: [(Int, String)] -> [ShortVarInit]
+collectShortVarInits = go []
+  where
+    go acc [] = reverse acc
+    go acc ((lineNo, raw):rest) =
+        let cleaned = stripLineComment raw
+        in case findShortVarIndex cleaned of
+            Nothing -> go acc rest
+            Just idx ->
+                let names = parseShortVarNames (take idx cleaned)
+                in if null names
+                    then go acc rest
+                    else
+                        let rhsInitial = drop (idx + 2) cleaned
+                            (exprCombined, remaining) = collectExpression rhsInitial rest
+                            segment = case splitTopLevel ';' exprCombined of
+                                [] -> trim exprCombined
+                                (first:_) -> first
+                            normalizedSegment = trimBlockSuffix segment
+                            rawValues = if null normalizedSegment then [] else splitTopLevel ',' normalizedSegment
+                            values = map trim rawValues
+                            initInfo = ShortVarInit
+                                { sviLine = lineNo
+                                , sviNames = names
+                                , sviValues = values
+                                }
+                        in go (initInfo : acc) remaining
+
+collectExpression :: String -> [(Int, String)] -> (String, [(Int, String)])
+collectExpression initial rest = go [initial] (max 0 (nestingDelta initial)) rest
+  where
+    go parts depth remaining =
+        let combined = intercalate "\n" parts
+            trimmed = trim combined
+        in if endsWithBlockStart trimmed
+            then (combined, remaining)
+            else if not (shouldContinue trimmed depth)
+                then (combined, remaining)
+                else case remaining of
+                    [] -> (combined, [])
+                    ((_, nextRaw) : nextRest) ->
+                        let nextClean = stripLineComment nextRaw
+                            depth' = max 0 (depth + nestingDelta nextClean)
+                        in go (parts ++ [nextClean]) depth' nextRest
+
+endsWithBlockStart :: String -> Bool
+endsWithBlockStart txt =
+    case reverse (dropWhileEnd isSpace txt) of
+        '{' : ' ' : _ -> True
+        _ -> False
+
+shouldContinue :: String -> Int -> Bool
+shouldContinue text depth
+    | null text = True
+    | depth > 0 = True
+    | otherwise = case lastNonSpaceChar text of
+        Nothing -> True
+        Just c -> c `elem` continuationChars
+
+continuationChars :: [Char]
+continuationChars = ",+-*/.%([{&|^=<>!:"
+
+lastNonSpaceChar :: String -> Maybe Char
+lastNonSpaceChar = go . reverse
+  where
+    go [] = Nothing
+    go (c:cs)
+        | isSpace c = go cs
+        | otherwise = Just c
+
+parseShortVarNames :: String -> [String]
+parseShortVarNames lhs =
+    let stripped = stripContextPrefix lhs
+    in filter (not . null) (map trim (splitTopLevel ',' stripped))
+
+stripContextPrefix :: String -> String
+stripContextPrefix text = dropLeadingParens (foldl' (flip dropKeyword) (trim text) keywords)
+  where
+    keywords = ["if", "for", "switch", "select"]
+
+    dropKeyword keyword s
+        | keyword `isPrefixOf` s && boundary (drop (length keyword) s) =
+            dropWhile isSpace (drop (length keyword) s)
+        | otherwise = s
+
+    boundary [] = True
+    boundary (c:_) = isSpace c || c == '('
+
+    dropLeadingParens s =
+        let trimmed = dropWhile isSpace s
+        in case trimmed of
+            '(' : rest -> dropWhile isSpace rest
+            _ -> trimmed
+
+trimBlockSuffix :: String -> String
+trimBlockSuffix s =
+    let trimmed = dropWhileEnd isSpace s
+    in case reverse trimmed of
+        '{' : ' ' : rest -> dropWhileEnd isSpace (reverse rest)
+        _ -> trimmed
+
+selectExprForIndex :: [String] -> [String] -> Int -> String
+selectExprForIndex names values idx
+    | null values = ""
+    | length values == length names && idx < length values = values !! idx
+    | length values == 1 = head values
+    | idx < length values = values !! idx
+    | otherwise = intercalate ", " values
+
+findShortVarIndex :: String -> Maybe Int
+findShortVarIndex text = go 0 NoStringState
+  where
+    len = length text
+
+    go idx state
+        | idx >= len - 1 = Nothing
+        | otherwise =
+            let c = text !! idx
+                next = text !! (idx + 1)
+            in case state of
+                NoStringState ->
+                    case c of
+                        '"' -> go (idx + 1) (DoubleStringState False)
+                        '\'' -> go (idx + 1) (SingleStringState False)
+                        '`' -> go (idx + 1) BacktickState
+                        ':' | next == '=' -> Just idx
+                        _ -> go (idx + 1) NoStringState
+                DoubleStringState escaped ->
+                    let escaped' = if escaped then False else c == '\\'
+                        nextState = if not escaped && c == '"' then NoStringState else DoubleStringState escaped'
+                    in go (idx + 1) nextState
+                SingleStringState escaped ->
+                    let escaped' = if escaped then False else c == '\\'
+                        nextState = if not escaped && c == '\'' then NoStringState else SingleStringState escaped'
+                    in go (idx + 1) nextState
+                BacktickState ->
+                    let nextState = if c == '`' then NoStringState else BacktickState
+                    in go (idx + 1) nextState
+
+    data ScanState
+        = NoStringState
+        | DoubleStringState Bool
+        | SingleStringState Bool
+        | BacktickState
+        deriving (Eq)
 
 determineValueKind :: String -> ValueKind
 determineValueKind expr
@@ -143,7 +283,7 @@ isKnownValueType t =
               "bool", "byte", "rune", "string"]
 
 isArrayLiteral :: String -> Bool
-isArrayLiteral s = 
+isArrayLiteral s =
     let t = trim s
     in "[]" `isPrefixOf` t && not ("..." `isPrefixOf` drop 2 t)
 
@@ -159,4 +299,3 @@ extractValueCopyVars goModule =
 
 isValueType :: String -> Bool
 isValueType = isKnownValueType . trim
-
