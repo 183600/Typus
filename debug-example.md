@@ -7,7 +7,7 @@ This document explains how to use the debugging capabilities we've added to the 
 We've added two main debugging components:
 
 1. **Debug Module** (`src/Debug.hs`) - A comprehensive debugging library with logging and breakpoint capabilities
-2. **Debug CLI Tool** (`debug-cmd.hs`) - A command-line tool for managing debugging operations
+2. **Debug CLI Tool** (`fixtures/debug-scripts/debug-cmd.hs`) - A command-line tool for managing debugging operations
 
 ## Using the Debug Module
 
@@ -79,12 +79,12 @@ main = do
 
 ## Using the Debug CLI Tool
 
-The `debug-cmd.hs` script provides convenient command-line debugging operations.
+The `fixtures/debug-scripts/debug-cmd.hs` script provides convenient command-line debugging operations.
 
 ### Build with Debug Information
 
 ```bash
-./debug-cmd.hs build
+runhaskell fixtures/debug-scripts/debug-cmd.hs build
 ```
 
 This builds the project with debug flags enabled and includes debugging symbols.
@@ -92,7 +92,7 @@ This builds the project with debug flags enabled and includes debugging symbols.
 ### Run Tests with Debug Output
 
 ```bash
-./debug-cmd.hs test
+runhaskell fixtures/debug-scripts/debug-cmd.hs test
 ```
 
 Runs all tests with verbose debug output, making it easier to see what's happening.
@@ -101,7 +101,7 @@ Runs all tests with verbose debug output, making it easier to see what's happeni
 
 ```bash
 # Set a breakpoint in Parser.hs at line 42
-./debug-cmd.hs break src/Parser.hs 42
+runhaskell fixtures/debug-scripts/debug-cmd.hs break src/Parser.hs 42
 ```
 
 This adds a breakpoint comment to the specified location.
@@ -110,7 +110,7 @@ This adds a breakpoint comment to the specified location.
 
 ```bash
 # Add debug logging to Compiler.hs
-./debug-cmd.hs log src/Compiler.hs
+runhaskell fixtures/debug-scripts/debug-cmd.hs log src/Compiler.hs
 ```
 
 This automatically adds debug log statements to key functions in the file.
@@ -118,7 +118,7 @@ This automatically adds debug log statements to key functions in the file.
 ### Enable Tracing
 
 ```bash
-./debug-cmd.hs trace
+runhaskell fixtures/debug-scripts/debug-cmd.hs trace
 ```
 
 Shows how to add execution tracing to your code.
@@ -126,7 +126,7 @@ Shows how to add execution tracing to your code.
 ### Performance Profiling
 
 ```bash
-./debug-cmd.hs profile
+runhaskell fixtures/debug-scripts/debug-cmd.hs profile
 ```
 
 Builds the project with profiling enabled and shows how to generate performance profiles.
@@ -137,32 +137,32 @@ Builds the project with profiling enabled and shows how to generate performance 
 
 1. **Add logging** to suspect functions:
    ```bash
-   ./debug-cmd.hs log src/Parser.hs
-   ./debug-cmd.hs log src/Compiler.hs
+   runhaskell fixtures/debug-scripts/debug-cmd.hs log src/Parser.hs
+   runhaskell fixtures/debug-scripts/debug-cmd.hs log src/Compiler.hs
    ```
 
 2. **Set breakpoints** at critical points:
    ```bash
-   ./debug-cmd.hs break src/Parser.hs 156
-   ./debug-cmd.hs break src/Compiler.hs 89
+   runhaskell fixtures/debug-scripts/debug-cmd.hs break src/Parser.hs 156
+   runhaskell fixtures/debug-scripts/debug-cmd.hs break src/Compiler.hs 89
    ```
 
 3. **Build and run** with debug output:
    ```bash
-   ./debug-cmd.hs build
-   stack exec -- typus compile example.typus
+   runhaskell fixtures/debug-scripts/debug-cmd.hs build
+   stack exec -- typus compile fixtures/test-cases/example.typus
    ```
 
 ### 2. For Performance Issues
 
 1. **Enable profiling**:
    ```bash
-   ./debug-cmd.hs profile
+   runhaskell fixtures/debug-scripts/debug-cmd.hs profile
    ```
 
 2. **Run with profiling**:
    ```bash
-   stack exec -- typus -- +RTS -p compile example.typus
+   stack exec -- typus -- +RTS -p compile fixtures/test-cases/example.typus
    ```
 
 3. **Analyze the profile** report generated.
@@ -171,7 +171,7 @@ Builds the project with profiling enabled and shows how to generate performance 
 
 1. **Add comprehensive tracing**:
    ```bash
-   ./debug-cmd.hs trace
+   runhaskell fixtures/debug-scripts/debug-cmd.hs trace
    ```
 
 2. **Manually add trace statements** using the Debug module:
@@ -189,18 +189,18 @@ Let's say you have a bug in the parser where it's not correctly handling a speci
 
 ### Step 1: Add Logging
 ```bash
-./debug-cmd.hs log src/Parser.hs
+runhaskell fixtures/debug-scripts/debug-cmd.hs log src/Parser.hs
 ```
 
 ### Step 2: Set Breakpoint
 ```bash
-./debug-cmd.hs break src/Parser.hs 234
+runhaskell fixtures/debug-scripts/debug-cmd.hs break src/Parser.hs 234
 ```
 
 ### Step 3: Build and Run
 ```bash
-./debug-cmd.hs build
-stack exec -- typus parse problematic.typus
+runhaskell fixtures/debug-scripts/debug-cmd.hs build
+stack exec -- typus parse fixtures/test-cases/debug.typus
 ```
 
 ### Step 4: Analyze Output
@@ -212,7 +212,7 @@ The debug output will show:
 ### Step 5: Fix and Verify
 After fixing the issue:
 ```bash
-./debug-cmd.hs test
+runhaskell fixtures/debug-scripts/debug-cmd.hs test
 ```
 
 ## Debug Configuration

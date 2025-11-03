@@ -12,6 +12,12 @@ extra-doc-files: ChangeLog.md
 extra-source-files:
     test/fixtures/full_project/*.typus
     test/fixtures/full_project/assets/hello.txt
+    fixtures/test-cases/*.typus
+    fixtures/test-cases/*.txt
+    fixtures/debug-scripts/*.hs
+    fixtures/debug-scripts/*.txt
+    fixtures/reference-output/*.txt
+    fixtures/logs/*.txt
 
 source-repository head
   type: git

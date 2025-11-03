@@ -60,6 +60,25 @@ make install
 
 - `TYPUS_SKIP_GO_BUILD`: 设置为 `1`、`true`、`yes` 或 `on` 时会跳过所有 Go 工具链调用，仅执行 Typus -> Go 的转换，适合无法使用系统 Go 编译器或需要纯编译模式的场景。
 
+## 仓库结构
+
+```
+typus/
+├── src/                    # Haskell 编译器源代码
+├── test/                   # 单元测试和集成测试
+├── app/                    # CLI 入口点
+├── examples/               # 示例 Typus 程序
+├── fixtures/               # 测试用例和调试资源
+│   ├── test-cases/        # .typus 测试文件
+│   ├── debug-scripts/     # Haskell 调试脚本
+│   ├── reference-output/  # 参考输出
+│   └── logs/              # 测试日志
+├── docs/                   # 详细文档
+└── scripts/                # 构建和工具脚本
+```
+
+详细的测试用例说明请参见 [fixtures/README.md](fixtures/README.md)。
+
 ## 测试文档导航
 
 项目中的测试文档较多，可以通过 [docs/TEST_DOCUMENTATION_INDEX.md](docs/TEST_DOCUMENTATION_INDEX.md)
@@ -84,10 +103,62 @@ cabal test --flag typus:coverage
 cabal test --test-options="--pattern \"Parser\""
 ```
 
+### 如何运行核心测试
+
+**快速测试（开发时推荐）：**
+```bash
+# 运行快速单元测试
+cabal test
+
+# 使用 Make
+make test
+
+# 仅运行解析器测试
+cabal test --test-options="--pattern \"Parser\""
+
+# 运行特定模块测试
+cabal test --test-options="--pattern \"Ownership\""
+```
+
+**完整测试：**
+```bash
+# 运行所有测试（包括集成测试）
+cabal test --test-show-details=always
+
+# 生成覆盖率报告
+cabal test --enable-coverage
+
+# 使用 Stack
+stack test --coverage
+```
+
+**手动测试单个文件：**
+```bash
+# 测试编译单个文件
+typus convert fixtures/test-cases/simple.typus -o test_output.go
+
+# 验证语法
+typus check fixtures/test-cases/test_ownership.typus
+
+# 端到端测试（编译并运行）
+typus run fixtures/test-cases/simple_example.typus
+```
+
 更多测试相关信息请参考:
 - [QUICK_TEST_GUIDE.md](QUICK_TEST_GUIDE.md) - 快速测试指南
 - [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md) - 测试覆盖率矩阵
 - [TEST_CONSOLIDATION.md](TEST_CONSOLIDATION.md) - 测试整合说明
+- [fixtures/README.md](fixtures/README.md) - 测试用例索引
+
+## 常见错误诊断
+
+| 症状 | 排查步骤 | 深入阅读 |
+|------|-----------|-----------|
+| `go: command not found` 或 `failed to run go build` | 确认本地已安装 Go 1.21+。如仅需生成 Go 源码，可设置环境变量 `TYPUS_SKIP_GO_BUILD=1` 跳过 Go 工具链。 | [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) |
+| `OwnershipError: value has been moved`、`BorrowError` | 使用 `typus check --trace` 查看语义分析轨迹，或参考 `fixtures/test-cases/test_ownership*.typus` 比对所有权模式。 | [DEBUG_GUIDE.md](DEBUG_GUIDE.md) |
+| `Constraint failed`、`Dependent type mismatch` | 运行 `cabal test --test-options="--pattern \"Dependent\""` 聚焦依赖类型测试；对照 `test/data/code_with_dependent_types.typus`。 | [TESTING_GUIDE.md](TESTING_GUIDE.md) |
+| 解析报错 `unexpected token` | 使用 `fixtures/debug-scripts/debug_parser.hs` 重现 token 序列：`runhaskell fixtures/debug-scripts/debug_parser.hs < 文件路径>`。 | [debug-example.md](debug-example.md) |
+| CLI 调试信息不足 | 运行 `runhaskell fixtures/debug-scripts/debug-cli.hs` 启动交互式调试，或加上 `--verbose` 参数重新运行命令。 | [DEBUG_GUIDE.md](DEBUG_GUIDE.md) |
 
 ## 文件级指令
 
@@ -181,6 +252,27 @@ func createVector(n int, value float64) Vector(n) {
     return Vector{elements} // 类型自动推导为 Vector(n)
 }
 ```
+
+## 贡献指南
+
+### 添加新测试文件
+
+测试文件应放置在 `fixtures/` 目录：
+
+```bash
+# 功能测试文件
+fixtures/test-cases/test_<feature>.typus
+
+# 调试脚本
+fixtures/debug-scripts/debug_<purpose>.hs
+```
+
+运行测试以确保一切正常：
+```bash
+cabal test
+```
+
+详细信息请参阅 [fixtures/README.md](fixtures/README.md)。
 
 ## 示例 Typus 文件
 
