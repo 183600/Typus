@@ -1,213 +1,42 @@
 module Main (main) where
 
 import Cli
-import CompilerUtils (CompilerContext, Logger(..), defaultLogger, newCompilerContext)
+import CompilerUtils (CompilerContext(..), defaultLogger, newCompilerContext)
 import qualified CompilerUtils as CU
-import Control.Monad (unless, forM_, forM)
+import Control.Monad (unless)
 import Control.Monad.Except
 import Control.Monad.IO.Class (liftIO)
-import System.Directory (doesFileExist, doesDirectoryExist, copyFile, createDirectoryIfMissing, listDirectory)
-import System.FilePath
-import System.IO.Temp (withSystemTempDirectory, openTempFile)
-import System.IO (hClose)
+import EmbedAssets (copyEmbeddedForBuild, handleMissingEmbeds, mirrorEmbeddedResources)
+import GoToolchain (IOResult, createTempGoFile, withTemporaryGoProject)
+import System.Directory (doesDirectoryExist, doesFileExist)
 import System.Exit (exitFailure)
-import Data.List (isPrefixOf, nub)
-import Data.Char (isSpace)
-import System.FilePath.Glob (glob)
-
--- Define the IOResult type alias
-type IOResult = ExceptT String IO
-
-data MissingEmbed = MissingEmbed
-    { missingPattern :: String
-    , missingRoot :: FilePath
-    , missingReferencedFrom :: FilePath
-    } deriving (Eq, Ord, Show)
-
-formatMissingMessage :: [MissingEmbed] -> String
-formatMissingMessage missing =
-    let uniqueMissing = nub missing
-        header = "Missing embedded assets detected:"
-        toLine (MissingEmbed pat root ref) =
-            "  pattern \"" ++ pat ++ "\" relative to " ++ root ++ " (referenced in " ++ ref ++ ")"
-    in unlines (header : map toLine uniqueMissing)
-
-warnMissingEmbeds :: [MissingEmbed] -> IO ()
-warnMissingEmbeds missing =
-    unless (null missing) $ do
-        putStrLn (formatMissingMessage missing)
-        putStrLn "Continuing because strict embed mode is disabled."
-
-handleMissingEmbeds :: Bool -> [MissingEmbed] -> IOResult ()
-handleMissingEmbeds strict missing
-    | null missing = pure ()
-    | strict = throwError (formatMissingMessage missing)
-    | otherwise = liftIO $ warnMissingEmbeds missing
-
--- Extract embedded file patterns from Go code
--- Extract raw patterns from //go:embed directives (supports multiple patterns per line)
-extractEmbeddedPatterns :: String -> [String]
-extractEmbeddedPatterns content =
-    [ normalize token
-    | line <- lines content
-    , "//go:embed" `isPrefixOf` dropWhile isSpace line
-    , token <- words (dropWhile isSpace (drop 11 line))
-    , not (null token)
-    ]
-  where
-    normalize t =
-      case stripQuoted '"' t of
-        Just s  -> s
-        Nothing -> case stripQuoted '`' t of
-                      Just s' -> s'
-                      Nothing -> t
-    stripQuoted :: Char -> String -> Maybe String
-    stripQuoted q s = case s of
-      (c:xs) | c == q -> case unsnoc xs of
-                            Just (body, qc) | qc == q -> Just body
-                            _                          -> Nothing
-      _               -> Nothing
-    unsnoc :: [a] -> Maybe ([a], a)
-    unsnoc []       = Nothing
-    unsnoc [x]      = Just ([], x)
-    unsnoc (x:xs)   = do (ys, z) <- unsnoc xs
-                         pure (x:ys, z)
-
--- Copy embedded files to temporary directory
-copyEmbeddedFiles :: FilePath -> FilePath -> FilePath -> String -> IO [MissingEmbed]
-copyEmbeddedFiles sourceDir destDir reference sourceContent = do
-    let patterns = extractEmbeddedPatterns sourceContent
-    fmap concat $
-        forM patterns $ \pat -> do
-            let absPattern = sourceDir </> pat
-            matches <- glob absPattern
-            if not (null matches)
-              then do
-                  forM_ matches $ \src -> do
-                      let rel = makeRelative sourceDir src
-                          dest = destDir </> rel
-                      createDirectoryIfMissing True (takeDirectory dest)
-                      copyFile src dest
-                      putStrLn $ "Copied embedded file: " ++ src ++ " -> " ++ dest
-                  pure []
-              else do
-                  let asDir = sourceDir </> pat
-                  isDir <- doesDirectoryExist asDir
-                  if isDir
-                    then do
-                        files <- listFilesRecursively asDir
-                        forM_ files $ \src -> do
-                            let rel = makeRelative sourceDir src
-                                dest = destDir </> rel
-                            createDirectoryIfMissing True (takeDirectory dest)
-                            copyFile src dest
-                            putStrLn $ "Copied embedded dir file: " ++ src ++ " -> " ++ dest
-                        pure []
-                    else do
-                        putStrLn $ "Warning: No embedded files matched pattern: " ++ pat ++ " under " ++ sourceDir
-                        pure [MissingEmbed pat sourceDir reference]
-
--- Recursively list files under a directory
-listFilesRecursively :: FilePath -> IO [FilePath]
-listFilesRecursively dir = do
-    names <- listDirectory dir
-    paths <- forM names $ \n -> do
-        let p = dir </> n
-        isDir <- doesDirectoryExist p
-        if isDir then listFilesRecursively p else return [p]
-    return (concat paths)
-
--- For directory builds: scan converted Go files in temp tree and mirror embedded assets
-copyEmbeddedForBuild :: FilePath -> FilePath -> IO [MissingEmbed]
-copyEmbeddedForBuild inputRoot tempRoot = do
-    goFiles <- listGoFiles tempRoot
-    fmap concat $
-        forM goFiles $ \goOut -> do
-            content <- readFile goOut
-            let relDir = makeRelative tempRoot (takeDirectory goOut)
-                srcDir = inputRoot </> relDir
-                destDir = tempRoot  </> relDir
-                reference = makeRelative tempRoot goOut
-            copyEmbeddedFiles srcDir destDir reference content
-
-listGoFiles :: FilePath -> IO [FilePath]
-listGoFiles dir = do
-    names <- listDirectory dir
-    paths <- forM names $ \n -> do
-        let p = dir </> n
-        isDir <- doesDirectoryExist p
-        if isDir then listGoFiles p else return [p]
-    return [ p | p <- concat paths, takeExtension p == ".go" ]
-
-goModContents :: String
-goModContents = "module temp\n\ngo 1.21\n"
-
-withTemporaryGoProject :: String -> (FilePath -> IOResult a) -> IOResult a
-withTemporaryGoProject prefix action =
-    ExceptT $
-        withSystemTempDirectory prefix $ \tempDir ->
-            runExceptT $ do
-                writeGoModule tempDir
-                action tempDir
-
-writeGoModule :: FilePath -> IOResult ()
-writeGoModule dir = liftIO $ writeFile (dir </> "go.mod") goModContents
-
-createTempGoFile :: FilePath -> FilePath -> IOResult FilePath
-createTempGoFile sourcePath tempDir = do
-    let baseName = takeBaseName sourcePath
-        prefix = if null baseName then "typus" else baseName
-        template = prefix ++ "-XXXXXX.go"
-    (tempPath, handle) <- liftIO $ openTempFile tempDir template
-    liftIO $ hClose handle
-    return tempPath
-
-prepareSingleFileProject :: CompilerContext -> Bool -> FilePath -> FilePath -> IOResult FilePath
-prepareSingleFileProject ctx strict sourcePath tempDir = do
-    tempGoPath <- createTempGoFile sourcePath tempDir
-    CU.convertFile ctx sourcePath tempGoPath
-    missing <- liftIO $ mirrorEmbeddedResources sourcePath tempDir tempGoPath
-    handleMissingEmbeds strict missing
-    return tempGoPath
-
-mirrorEmbeddedResources :: FilePath -> FilePath -> FilePath -> IO [MissingEmbed]
-mirrorEmbeddedResources sourcePath tempDir tempGoPath = do
-    content <- readFile tempGoPath
-    let srcDir = takeDirectory sourcePath
-        reference = sourcePath
-    copyEmbeddedFiles srcDir tempDir reference content
-
-prepareDirectoryProject :: CompilerContext -> Bool -> FilePath -> FilePath -> IOResult ()
-prepareDirectoryProject ctx strict sourceRoot tempDir = do
-    CU.batchConvert ctx sourceRoot tempDir
-    missing <- liftIO $ copyEmbeddedForBuild sourceRoot tempDir
-    handleMissingEmbeds strict missing
+import System.FilePath (takeFileName)
 
 main :: IO ()
 main = do
     ctx <- newCompilerContext defaultLogger
-    cliArgs <- parseArgs  -- 重命名为 cliArgs
+    cliArgs <- parseArgs
     result <- runExceptT (dispatch ctx cliArgs)
     case result of
         Left err -> putStrLn ("Error: " ++ err) >> exitFailure
-        Right _  -> return ()
+        Right _  -> pure ()
 
 dispatch :: CompilerContext -> Args -> IOResult ()
 dispatch ctx (Convert inputPath outputPath) = do
     isDir <- liftIO $ doesDirectoryExist inputPath
     if isDir
-    then CU.batchConvert ctx inputPath outputPath
-    else CU.convertFile ctx inputPath outputPath
+        then CU.batchConvert ctx inputPath outputPath
+        else CU.convertFile ctx inputPath outputPath
 
 dispatch ctx (Check inputPath) = do
     isDir <- liftIO $ doesDirectoryExist inputPath
     if isDir
-    then CU.batchCheck ctx inputPath
-    else
-        withTemporaryGoProject "typus_check" $ \tempDir -> do
-            tempGoPath <- prepareSingleFileProject ctx False inputPath tempDir
-            CU.runGoCommandInDir ctx ["build", tempGoPath] tempDir
-            liftIO $ putStrLn $ "Typus syntax and compilation OK: " ++ inputPath
+        then CU.batchCheck ctx inputPath
+        else
+            withTemporaryGoProject "typus_check" $ \tempDir -> do
+                tempGoPath <- prepareSingleFileProject ctx False inputPath tempDir
+                CU.runGoCommandInDir ctx ["build", tempGoPath] tempDir
+                liftIO $ putStrLn $ "Typus syntax and compilation OK: " ++ inputPath
 
 dispatch ctx (Build strict buildArgs) = do
     -- Support optional first arg as project path; remaining are passed to `go build`
@@ -217,16 +46,16 @@ dispatch ctx (Build strict buildArgs) = do
     isDir <- liftIO $ doesDirectoryExist targetPath
     isFile <- liftIO $ doesFileExist targetPath
     if isDir
-      then withTemporaryGoProject "typus_build" $ \tempDir -> do
-             prepareDirectoryProject ctx strict targetPath tempDir
-             CU.runGoCommandInDir ctx ("build" : goArgs) tempDir
-      else if isFile
-        then withTemporaryGoProject "typus_build_single" $ \tempDir -> do
-             _ <- prepareSingleFileProject ctx strict targetPath tempDir
-             CU.runGoCommandInDir ctx ("build" : goArgs) tempDir
-        else throwError $ "Path does not exist: " ++ targetPath
+        then withTemporaryGoProject "typus_build" $ \tempDir -> do
+                prepareDirectoryProject ctx strict targetPath tempDir
+                CU.runGoCommandInDir ctx ("build" : goArgs) tempDir
+        else if isFile
+            then withTemporaryGoProject "typus_build_single" $ \tempDir -> do
+                    _ <- prepareSingleFileProject ctx strict targetPath tempDir
+                    CU.runGoCommandInDir ctx ("build" : goArgs) tempDir
+            else throwError $ "Path does not exist: " ++ targetPath
 
-dispatch ctx (Run strict runArgs) = do
+dispatch ctx (Run strict runArgs) =
     case runArgs of
         [] -> throwError "Please specify a .typus file to run"
         (inputFile:restArgs) -> do
@@ -237,5 +66,21 @@ dispatch ctx (Run strict runArgs) = do
                 let goArgs = "run" : takeFileName tempGoPath : restArgs
                 CU.runGoCommandInDir ctx goArgs tempDir
 
-dispatch _ Version = do
+dispatch _ Version =
     liftIO $ putStrLn "typus version 0.1.0"
+
+prepareSingleFileProject :: CompilerContext -> Bool -> FilePath -> FilePath -> IOResult FilePath
+prepareSingleFileProject ctx strict sourcePath tempDir = do
+    tempGoPath <- createTempGoFile sourcePath tempDir
+    CU.convertFile ctx sourcePath tempGoPath
+    let logger = contextLogger ctx
+    missing <- liftIO $ mirrorEmbeddedResources logger sourcePath tempDir tempGoPath
+    handleMissingEmbeds logger strict missing
+    pure tempGoPath
+
+prepareDirectoryProject :: CompilerContext -> Bool -> FilePath -> FilePath -> IOResult ()
+prepareDirectoryProject ctx strict sourceRoot tempDir = do
+    CU.batchConvert ctx sourceRoot tempDir
+    let logger = contextLogger ctx
+    missing <- liftIO $ copyEmbeddedForBuild logger sourceRoot tempDir
+    handleMissingEmbeds logger strict missing

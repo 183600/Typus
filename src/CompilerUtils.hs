@@ -1,6 +1,6 @@
 module CompilerUtils (
-    Logger(..), CompilerContext(..), 
-    defaultLogger, silentLogger, newCompilerContext,
+    Logger(..), CompilerContext(..),
+    defaultLogger, silentLogger, newCompilerContext, newCompilerContextWithExecutor,
     convertFile, batchConvert, batchCheck, runGoCommand, runGoCommandInDir
 ) where
 
@@ -9,13 +9,20 @@ import qualified Parser as P
 import Control.Monad (forM, forM_, unless, when)
 import Control.Monad.Except
 import Control.Monad.IO.Class (liftIO)
-import Control.Concurrent.MVar (MVar, newMVar, modifyMVar)
+import Data.Either (partitionEithers)
+import GoToolchain
+    ( IOResult
+    , GoExecutor(..)
+    , defaultGoExecutor
+    , isEnvVarEnabled
+    , nullDevice
+    , writeGoModule
+    )
 import System.Directory
     ( doesFileExist
     , doesDirectoryExist
     , listDirectory
     , createDirectoryIfMissing
-    , findExecutable
     )
 import System.FilePath
     ( (</>)
@@ -24,15 +31,7 @@ import System.FilePath
     , replaceExtension
     , makeRelative
     )
-import System.Process (readCreateProcessWithExitCode, proc, CreateProcess(cwd))
 import System.IO.Temp (withSystemTempDirectory)
-import System.Exit (ExitCode(..))
-import System.Info (os)
-import Data.Either (partitionEithers)
-import System.Environment (lookupEnv)
-import Data.Char (toLower)
-
-type IOResult a = ExceptT String IO a
 
 -- | Logger abstraction for dependency injection
 data Logger = Logger
@@ -41,10 +40,10 @@ data Logger = Logger
     , logWarning :: String -> IO ()
     }
 
--- | Compiler context holding logger and thread-safe cache
+-- | Compiler context holding logger and Go toolchain executor
 data CompilerContext = CompilerContext
     { contextLogger :: Logger
-    , goAvailabilityCache :: MVar (Maybe (Either String ()))
+    , contextGoExecutor :: GoExecutor
     }
 
 -- | Default logger that writes to stdout
@@ -66,41 +65,16 @@ silentLogger = Logger
 -- | Create a new compiler context with the given logger
 newCompilerContext :: Logger -> IO CompilerContext
 newCompilerContext logger = do
-    cache <- newMVar Nothing
-    return CompilerContext
+    executor <- defaultGoExecutor (logInfo logger)
+    newCompilerContextWithExecutor logger executor
+
+-- | Create a compiler context with a custom Go executor (useful in tests).
+newCompilerContextWithExecutor :: Logger -> GoExecutor -> IO CompilerContext
+newCompilerContextWithExecutor logger executor =
+    pure CompilerContext
         { contextLogger = logger
-        , goAvailabilityCache = cache
+        , contextGoExecutor = executor
         }
-
-isEnvVarEnabled :: String -> IO Bool
-isEnvVarEnabled name = do
-    value <- lookupEnv name
-    pure $ case fmap (map toLower) value of
-        Just "1"    -> True
-        Just "true" -> True
-        Just "yes"  -> True
-        Just "on"   -> True
-        _            -> False
-
-shouldSkipGoToolchain :: IO Bool
-shouldSkipGoToolchain = isEnvVarEnabled "TYPUS_SKIP_GO_BUILD"
-
--- | Check if Go is available, using thread-safe caching via MVar
-ensureGoAvailable :: CompilerContext -> IOResult ()
-ensureGoAvailable ctx = do
-    result <- liftIO $ modifyMVar (goAvailabilityCache ctx) $ \cached ->
-        case cached of
-            Just r -> return (cached, r)
-            Nothing -> do
-                found <- findExecutable "go"
-                let r = maybe
-                        (Left "Go is not installed or not in PATH. Please install Go.")
-                        (const (Right ()))
-                        found
-                return (Just r, r)
-    case result of
-        Left err -> throwError err
-        Right () -> return ()
 
 -- 单文件转换：Typus -> Go 或 Go -> Go
 convertFile :: CompilerContext -> FilePath -> FilePath -> IOResult ()
@@ -225,22 +199,19 @@ checkSingleFile ctx file = do
     liftIO $ logI "     ✓ Compilation successful"
 
     -- 3. 调用 Go 编译器做语法检查（在临时目录构建）
-    skipGo <- liftIO shouldSkipGoToolchain
+    let goExec = contextGoExecutor ctx
+    skipGo <- liftIO $ goShouldSkip goExec
     if skipGo
         then liftIO $ logI "  3. Skipping Go syntax check (TYPUS_SKIP_GO_BUILD is enabled)."
         else do
             liftIO $ logI "  3. Checking Go syntax..."
-            goCheckResult <- liftIO $ withSystemTempDirectory "typus_check" $ \tempDir -> do
-                let tempGoPath = tempDir </> "main.go"
-                writeFile tempGoPath goCode
-                writeFile (tempDir </> "go.mod") "module temp\n\ngo 1.21\n"
-
-                -- 平台相关的空设备
-                let nullOutput = if os == "mingw32" then "NUL" else "/dev/null"
-                let goArgs = ["build", "-o", nullOutput, "main.go"]
-
-                -- 在 IO 中运行 ExceptT，返回 IO (Either String ())
-                runExceptT $ runGoCommandInDir ctx goArgs tempDir
+            goCheckResult <- liftIO $ withSystemTempDirectory "typus_check" $ \tempDir ->
+                runExceptT $ do
+                    let tempGoPath = tempDir </> "main.go"
+                    liftIO $ writeFile tempGoPath goCode
+                    writeGoModule tempDir
+                    let goArgs = ["build", "-o", nullDevice, "main.go"]
+                    runGoCommandInDir ctx goArgs tempDir
 
             case goCheckResult of
                 Left err -> throwError err
@@ -252,23 +223,5 @@ runGoCommand ctx args = runGoCommandInDir ctx args "."
 
 -- 运行 go 命令（指定目录）
 runGoCommandInDir :: CompilerContext -> [String] -> FilePath -> IOResult ()
-runGoCommandInDir ctx args dir = do
-    let Logger { logInfo = logI } = contextLogger ctx
-
-    skipGo <- liftIO shouldSkipGoToolchain
-    if skipGo
-        then liftIO $ logI $ "Skipping Go command: go " ++ unwords args ++ " (TYPUS_SKIP_GO_BUILD is enabled)."
-        else do
-            ensureGoAvailable ctx
-
-            let processSpec = (proc "go" args) { cwd = Just dir }
-            (exitCode, stdout, stderr) <- liftIO $ readCreateProcessWithExitCode processSpec ""
-
-            case exitCode of
-                ExitSuccess ->
-                    if not (null stdout)
-                        then liftIO $ logI stdout
-                        else return ()
-                ExitFailure code -> do
-                    let cmd = "go " ++ unwords args
-                    throwError $ cmd ++ " failed with exit code " ++ show code ++ ".\nStdout: " ++ stdout ++ "\nStderr: " ++ stderr
+runGoCommandInDir ctx args dir =
+    goRunCommandInDir (contextGoExecutor ctx) args dir
