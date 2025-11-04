@@ -3,7 +3,7 @@
 module EnhancedErrorHandlerTest where
 
 import Test.Hspec
-import EnhancedErrorHandler
+import Compiler.Errors
 import SourceLocation
 import Data.Text (Text)
 import qualified Data.Text as T

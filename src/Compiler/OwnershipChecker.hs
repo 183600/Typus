@@ -9,13 +9,14 @@ import qualified Data.Text as T
 import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
 import Ownership (analyzeOwnership, OwnershipError(..))
 import Compiler.ValueAnalysis (ValueInfo(..), ValueKind(..))
-import EnhancedErrorHandler
+import Compiler.Errors
     ( CompilerError
     , CompilerResult
     , CompilationPhase(..)
+    , ErrorCategory(..)
+    , ErrorSeverity(..)
+    , mkCompilerError
     )
-import ErrorHandler (ErrorCategory(..), ErrorSeverity(..))
-import Compiler.EnhancedErrors (mkCompilerError)
 import SourceLocation (Located(..), locatedValue)
 
 import Data.Char (isSpace)
