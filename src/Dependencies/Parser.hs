@@ -18,7 +18,6 @@ import Text.Megaparsec (Parsec, (<|>), choice, many, eof, try, optional)
 import qualified Text.Megaparsec as MP
 import Text.Megaparsec.Char (alphaNumChar, letterChar, char, string, space1)
 import qualified Text.Megaparsec.Char.Lexer as L
-import Debug.Trace (trace)
 
 import Dependencies.AST
 
@@ -216,7 +215,6 @@ parseConstraint = do
               , try parseRange
               , parsePredicateExt
               ]
-  let _ = trace ("parsed constraint: " ++ show c) ()
   pure c
   where
     parseTypeClass = do
@@ -347,8 +345,8 @@ parseTypeExpr = try parseConditionalType
       tThen <- parseTypeExpr
       _ <- symbol ":"
       tElse <- parseTypeExpr
-      let _ = trace ("parsed conditional type: " ++ show (GenericT "If" [cond, tThen, tElse])) ()
-      pure (GenericT "If" [cond, tThen, tElse])
+      let result = GenericT "If" [cond, tThen, tElse]
+      pure result
 
     parseRefType = do
       _ <- symbol "&"
