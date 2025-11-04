@@ -202,8 +202,10 @@ test-suite typus-test
         Test.Unit.CLISpec,
         Test.Unit.CompilerSpec,
         Test.Unit.DependentTypesSpec,
+        Test.Unit.ErrorHandlingSpec,
         Test.Unit.OwnershipSpec,
         Test.Unit.ParserSpec,
+        Test.Unit.TypeSystemSpec,
         Test.Unit.ValueAnalysisSpec
     build-depends:
         base >=4.7 && <5,
