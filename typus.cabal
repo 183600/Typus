@@ -34,6 +34,8 @@ library
         Ownership,
         Dependencies,
         CompilerUtils,
+        GoToolchain,
+        EmbedAssets,
         AnalyzerIntegration,
         DependentTypesParser,
         Utils,
