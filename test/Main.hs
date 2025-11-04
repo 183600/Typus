@@ -3,6 +3,7 @@ module Main (main) where
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
+import Test.Dependencies.Arbitrary ()
 import qualified Test.Golden
 import qualified Test.Integration
 import qualified Test.Unit

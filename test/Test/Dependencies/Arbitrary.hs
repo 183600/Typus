@@ -1,4 +1,4 @@
-module Dependencies.Arbitrary () where
+module Test.Dependencies.Arbitrary () where
 
 import Test.QuickCheck (Arbitrary(..), oneof, elements, listOf1, choose)
 

@@ -72,6 +72,3 @@ import Dependencies.Analyzer (analyzeAST, analyzeDependentTypes, validateASTSema
 import Dependencies.Inference
 import Dependencies.Parser (grammarDefinition, parseProgram, runParser)
 import Dependencies.TypeSystem
-
--- Provide QuickCheck Arbitrary instances without leaking implementation details.
-import Dependencies.Arbitrary ()
