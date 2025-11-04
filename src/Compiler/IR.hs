@@ -12,13 +12,14 @@ module Compiler.IR (
 ) where
 
 import Parser (TypusFile(..), CodeBlock(..))
-import EnhancedErrorHandler
+import Compiler.Errors
     ( CompilerError
     , CompilerResult
     , CompilationPhase(..)
+    , ErrorCategory(..)
+    , ErrorSeverity(..)
+    , mkCompilerError
     )
-import ErrorHandler (ErrorCategory(..), ErrorSeverity(..))
-import Compiler.EnhancedErrors (mkCompilerError)
 import Compiler.GoAst
 import Compiler.GoLexer (GoToken(..), GoTokenKind(..), tokenizeGo, isWhitespaceToken, isCommentToken)
 import Compiler.ValueAnalysis (ValueInfo, analyzeValueSemantics)

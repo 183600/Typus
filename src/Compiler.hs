@@ -37,16 +37,18 @@ import Compiler.TypeChecker
   , checkTypeError
   , hasMalformedSyntax
   )
-import EnhancedErrorHandler
+import Compiler.Errors
   ( CompilerError(..)
   , CompilerResult
   , CompilationPhase(..)
+  , ErrorCategory(..)
+  , ErrorSeverity(..)
   , formatCompilerErrors
   , generateDetailedReport
   , analyzeErrors
+  , mkCompilerError
+  , defaultSpan
   )
-import ErrorHandler (ErrorCategory(..), ErrorSeverity(..))
-import Compiler.EnhancedErrors (mkCompilerError, defaultSpan)
 
 -- | Compile a parsed Typus file into Go code while producing enhanced diagnostics.
 compile :: TypusFile -> CompilerResult String

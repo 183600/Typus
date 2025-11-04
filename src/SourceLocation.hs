@@ -52,7 +52,7 @@ module SourceLocation (
 import Data.Text (Text)
 import qualified Data.Text as T
 import Control.Monad.State
-import ErrorHandler (ErrorLocation(..))
+import Compiler.Errors.Core (ErrorLocation(..))
 
 -- ============================================================================
 -- Source Position
