@@ -25,9 +25,10 @@ import System.IO (hClose)
 import System.IO.Temp (withSystemTempDirectory, openTempFile)
 import System.Info (os)
 import System.Process (CreateProcess(cwd), proc, readCreateProcessWithExitCode)
+import Tooling.Error (ToolingError(..))
 
--- | Common IO result type used across the CLI utilities.
-type IOResult a = ExceptT String IO a
+-- | Common IO result type used across the CLI utilities, returning structured tooling errors.
+type IOResult a = ExceptT ToolingError IO a
 
 -- | Abstraction over executing Go tooling. The record can be replaced with
 -- fake implementations in tests.
@@ -46,7 +47,7 @@ defaultGoExecutor logFn = do
         , goRunCommandInDir = runGoCommandImpl cache logFn
         }
   where
-    runGoCommandImpl :: MVar (Maybe (Either String ())) -> (String -> IO ()) -> [String] -> FilePath -> IOResult ()
+    runGoCommandImpl :: MVar (Maybe (Either ToolingError ())) -> (String -> IO ()) -> [String] -> FilePath -> IOResult ()
     runGoCommandImpl availabilityCache logger args dir = do
         skip <- liftIO shouldSkipGoToolchain
         if skip
@@ -58,11 +59,17 @@ defaultGoExecutor logFn = do
                 case exitCode of
                     ExitSuccess ->
                         liftIO $ unless (null stdout) (logger stdout)
-                    ExitFailure code -> do
-                        let cmd = "go " ++ unwords args
-                        throwError $ cmd ++ " failed with exit code " ++ show code ++ ".\nStdout: " ++ stdout ++ "\nStderr: " ++ stderr
+                    ExitFailure code ->
+                        throwError GoCommandFailed
+                            { teCommand = "go"
+                            , teArgs = args
+                            , teWorkingDir = dir
+                            , teExitCode = code
+                            , teStdout = stdout
+                            , teStderr = stderr
+                            }
 
-    ensureGoAvailable :: MVar (Maybe (Either String ())) -> IOResult ()
+    ensureGoAvailable :: MVar (Maybe (Either ToolingError ())) -> IOResult ()
     ensureGoAvailable availabilityCache = do
         result <- liftIO $ modifyMVar availabilityCache $ \cached ->
             case cached of
@@ -70,7 +77,7 @@ defaultGoExecutor logFn = do
                 Nothing -> do
                     found <- findExecutable "go"
                     let r = maybe
-                            (Left "Go is not installed or not in PATH. Please install Go.")
+                            (Left (GoToolchainUnavailable "Go is not installed or not in PATH. Please install Go."))
                             (const (Right ()))
                             found
                     pure (Just r, r)

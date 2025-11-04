@@ -4,7 +4,7 @@ module CompilerUtils (
     convertFile, batchConvert, batchCheck, runGoCommand, runGoCommandInDir
 ) where
 
-import Compiler (compile, renderCompilationError)
+import Compiler (compile)
 import qualified Parser as P
 import Control.Monad (forM, forM_, unless, when)
 import Control.Monad.Except
@@ -18,6 +18,7 @@ import GoToolchain
     , nullDevice
     , writeGoModule
     )
+import Tooling.Error (ToolingError(..), renderToolingError)
 import System.Directory
     ( doesFileExist
     , doesDirectoryExist
@@ -82,7 +83,7 @@ convertFile ctx input output = do
     let Logger { logInfo = logI, logDebug = logD } = contextLogger ctx
 
     exists <- liftIO $ doesFileExist input
-    unless exists $ throwError $ "Input file does not exist: " ++ input
+    unless exists $ throwError $ FileNotFound input
 
     source <- liftIO $ readFile input
     let isGoFile = takeExtension input == ".go"
@@ -94,7 +95,7 @@ convertFile ctx input output = do
             return source
         else do
             typusFile <- case P.parseTypus source of
-                Left err   -> throwError $ "Parse error in " ++ input ++ ": " ++ err
+                Left err   -> throwError $ ParserError input err
                 Right file -> return file
 
             -- Integrated analysis and compilation
@@ -104,7 +105,7 @@ convertFile ctx input output = do
 
             -- Compile to Go code with enhanced analysis
             case compile typusFile of
-                Left err   -> throwError $ "Compilation error: " ++ renderCompilationError err
+                Left errs  -> throwError $ CompilationFailed input errs
                 Right code -> do
                     liftIO $ logI "Compilation successful"
                     -- Only print full generated code in debug mode to avoid excessive I/O
@@ -128,7 +129,7 @@ convertFile ctx input output = do
 batchConvert :: CompilerContext -> FilePath -> FilePath -> IOResult ()
 batchConvert ctx inputDir outputDir = do
     isDir <- liftIO $ doesDirectoryExist inputDir
-    unless isDir $ throwError $ "Input is not a directory: " ++ inputDir
+    unless isDir $ throwError $ NotADirectory inputDir
 
     liftIO $ createDirectoryIfMissing True outputDir
     files <- liftIO $ findTypusFiles inputDir
@@ -156,7 +157,7 @@ batchCheck ctx inputDir = do
     let Logger { logInfo = logI, logWarning = logW } = contextLogger ctx
 
     isDir <- liftIO $ doesDirectoryExist inputDir
-    unless isDir $ throwError $ "Input is not a directory: " ++ inputDir
+    unless isDir $ throwError $ NotADirectory inputDir
 
     files <- liftIO $ findTypusFiles inputDir
 
@@ -168,13 +169,13 @@ batchCheck ctx inputDir = do
                 liftIO $ logI $ "✓ All checks passed: " ++ file
                 return $ Right ()
             Left err -> do
-                liftIO $ logW $ "✗ Check failed: " ++ file ++ " - " ++ err
+                liftIO $ logW $ "✗ Check failed: " ++ file ++ "\n" ++ renderToolingError err
                 return $ Left (file, err)
 
     let (failures, _successes) = partitionEithers results
     if null failures
         then liftIO $ logI $ "\nCheck Summary: " ++ show (length files) ++ " files OK."
-        else throwError $ show (length failures) ++ " file(s) failed syntax check."
+        else throwError $ BatchCheckFailures failures
 
 -- 检查单个文件：Typus 语法、编译为 Go、go build 语法验证
 checkSingleFile :: CompilerContext -> FilePath -> IOResult ()
@@ -187,15 +188,15 @@ checkSingleFile ctx file = do
     liftIO $ logI "  1. Checking Typus syntax..."
     source <- liftIO $ readFile file
     parsed <- case P.parseTypus source of
-        Left err -> throwError err
+        Left err -> throwError (ParserError file err)
         Right p  -> return p
     liftIO $ logI "     ✓ Typus syntax OK"
 
     -- 2. 编译为 Go
     liftIO $ logI "  2. Compiling to Go..."
     goCode <- case compile parsed of
-        Left err -> throwError (renderCompilationError err)
-        Right c  -> return c
+        Left errs -> throwError (CompilationFailed file errs)
+        Right c   -> return c
     liftIO $ logI "     ✓ Compilation successful"
 
     -- 3. 调用 Go 编译器做语法检查（在临时目录构建）
