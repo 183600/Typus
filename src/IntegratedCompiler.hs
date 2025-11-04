@@ -22,14 +22,11 @@ import Data.List (isPrefixOf, isInfixOf, nub)
 import Data.Char (isSpace)
 import Data.Maybe (catMaybes)
 import GHC.Generics (Generic)
+import Compiler.Errors.Core (ErrorSeverity(..))
 
 -- ============================================================================
 -- Core Types and Data Structures
 -- ============================================================================
-
--- Error severity levels
-data ErrorSeverity = Info | Warning | Error
-    deriving (Show, Eq, Ord, Generic)
 
 -- Ownership error types
 data OwnershipError = 
