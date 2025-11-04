@@ -11,6 +11,7 @@ import GoToolchain (IOResult, createTempGoFile, withTemporaryGoProject)
 import System.Directory (doesDirectoryExist, doesFileExist)
 import System.Exit (exitFailure)
 import System.FilePath (takeFileName)
+import Tooling.Error (ToolingError(..), renderToolingError)
 
 main :: IO ()
 main = do
@@ -18,7 +19,7 @@ main = do
     cliArgs <- parseArgs
     result <- runExceptT (dispatch ctx cliArgs)
     case result of
-        Left err -> putStrLn ("Error: " ++ err) >> exitFailure
+        Left err -> putStrLn ("Error: " ++ renderToolingError err) >> exitFailure
         Right _  -> pure ()
 
 dispatch :: CompilerContext -> Args -> IOResult ()
@@ -53,14 +54,14 @@ dispatch ctx (Build strict buildArgs) = do
             then withTemporaryGoProject "typus_build_single" $ \tempDir -> do
                     _ <- prepareSingleFileProject ctx strict targetPath tempDir
                     CU.runGoCommandInDir ctx ("build" : goArgs) tempDir
-            else throwError $ "Path does not exist: " ++ targetPath
+            else throwError (PathDoesNotExist targetPath)
 
 dispatch ctx (Run strict runArgs) =
     case runArgs of
-        [] -> throwError "Please specify a .typus file to run"
+        [] -> throwError (InvalidArgument "Please specify a .typus file to run")
         (inputFile:restArgs) -> do
             exists <- liftIO $ doesFileExist inputFile
-            unless exists $ throwError $ "Input file does not exist: " ++ inputFile
+            unless exists $ throwError (FileNotFound inputFile)
             withTemporaryGoProject "typus_run" $ \tempDir -> do
                 tempGoPath <- prepareSingleFileProject ctx strict inputFile tempDir
                 let goArgs = "run" : takeFileName tempGoPath : restArgs

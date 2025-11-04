@@ -13,6 +13,7 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Char (isSpace)
 import Data.List (isPrefixOf, nub)
 import GoToolchain (IOResult)
+import Tooling.Error (MissingEmbedInfo(..), ToolingError(..))
 import System.Directory
     ( copyFile
     , createDirectoryIfMissing
@@ -42,6 +43,14 @@ formatMissingMessage missing =
             "  pattern \"" ++ pat ++ "\" relative to " ++ root ++ " (referenced in " ++ ref ++ ")"
     in unlines (header : map toLine uniqueMissing)
 
+toMissingEmbedInfo :: MissingEmbed -> MissingEmbedInfo
+toMissingEmbedInfo (MissingEmbed pat root ref) =
+    MissingEmbedInfo
+        { meiPattern = pat
+        , meiRoot = root
+        , meiReference = ref
+        }
+
 warnMissingEmbeds :: Logger -> [MissingEmbed] -> IO ()
 warnMissingEmbeds logger missing =
     unless (null missing) $ do
@@ -52,7 +61,7 @@ warnMissingEmbeds logger missing =
 handleMissingEmbeds :: Logger -> Bool -> [MissingEmbed] -> IOResult ()
 handleMissingEmbeds logger strict missing
     | null missing = pure ()
-    | strict = throwError (formatMissingMessage missing)
+    | strict = throwError (MissingEmbeddedAssets (map toMissingEmbedInfo missing))
     | otherwise = liftIO $ warnMissingEmbeds logger missing
 
 extractEmbeddedPatterns :: String -> [String]
