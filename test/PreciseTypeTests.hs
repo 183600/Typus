@@ -6,6 +6,7 @@ module PreciseTypeTests (preciseTypeTests) where
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck (Property, property, testProperty)
+import Test.Dependencies.Arbitrary ()
 import qualified Dependencies as Dep
 -- import qualified Data.Map.Strict as Map
 -- import qualified Data.Set as Set
