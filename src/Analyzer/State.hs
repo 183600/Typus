@@ -106,6 +106,7 @@ getAnalysisSummary state' =
       where
         add ce (e, w, i) =
             case severityOf ce of
+                Fatal -> (e + 1, w, i)
                 Error -> (e + 1, w, i)
                 Warning -> (e, w + 1, i)
                 Info -> (e, w, i + 1)

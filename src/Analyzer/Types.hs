@@ -15,9 +15,7 @@ import Control.Monad.State
 import qualified Data.Map.Strict as Map
 import qualified Ownership as Own
 import qualified Dependencies as Dep
-
-data ErrorSeverity = Error | Warning | Info
-    deriving (Show, Eq, Ord)
+import Compiler.Errors.Core (ErrorSeverity(..))
 
 data CombinedError
     = OwnershipErrorCombined ErrorSeverity Own.OwnershipError

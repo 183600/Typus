@@ -35,6 +35,8 @@ module Compiler.Errors.Core (
 
     -- Error utilities
     errorAt,
+    errorAtWithTimestamp,
+    errorAtWithUTCTime,
     errorWithCategory,
     warningAt,
     warningWithCategory,
@@ -47,6 +49,8 @@ module Compiler.Errors.Core (
     withContext,
     withSuggestions,
     withRelatedErrors,
+    withTimestamp,
+    withUTCTimestamp,
     wrapError,
     combineErrors,
 
@@ -56,6 +60,13 @@ module Compiler.Errors.Core (
     filterBySeverity,
     getErrorStatistics,
     generateErrorReport,
+    generateErrorReportWithTimestamp,
+    generateErrorReportWithUTCTime,
+    generateErrorReportIO,
+
+    -- Timestamp utilities
+    formatTimestamp,
+    getCurrentTimestamp,
 
     -- Recovery strategy utilities
     createRecoveryStrategy,
@@ -73,8 +84,7 @@ import Data.Maybe (mapMaybe)
 import Control.Monad.State
 import GHC.Generics (Generic)
 import Data.Aeson (ToJSON, FromJSON)
-import Data.Time (getCurrentTime, formatTime, defaultTimeLocale)
-import System.IO.Unsafe (unsafePerformIO)
+import Data.Time (UTCTime, getCurrentTime, formatTime, defaultTimeLocale)
 import qualified Data.Map.Strict as Map
 
 -- ============================================================================
@@ -273,11 +283,13 @@ data ErrorLocation = ErrorLocation
 _unknownLocation :: ErrorLocation
 _unknownLocation = ErrorLocation Nothing 0 0 Nothing Nothing
 
--- Get current timestamp for error tracking
-getCurrentTimestamp :: String
-getCurrentTimestamp = unsafePerformIO $ do
-    now <- getCurrentTime
-    return $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S.%3q" now
+-- Format a timestamp using the default error-reporting format
+formatTimestamp :: UTCTime -> String
+formatTimestamp = formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S.%3q"
+
+-- Get current timestamp for error tracking (in IO)
+getCurrentTimestamp :: IO String
+getCurrentTimestamp = formatTimestamp <$> getCurrentTime
 
 -- Create location with just line and column
 _atLocation :: Int -> Int -> ErrorLocation
@@ -471,7 +483,7 @@ data TypeError = TypeError
     , suggestions :: [Text]
     , relatedErrors :: [TypeError]
     , errorChain :: [TypeError]  -- For error wrapping and chaining
-    , timestamp :: String        -- For debugging and logging
+    , timestamp :: Maybe String  -- For debugging and logging
     } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- Error categories for better organization
@@ -553,7 +565,7 @@ formatErrorWithLocation :: TypeError -> String
 formatErrorWithLocation err =
     let locStr = formatLocation (location err)
         contextStr = formatContext (context err)
-        timestampStr = if null (timestamp err) then "" else "[" ++ timestamp err ++ "] "
+        timestampStr = maybe "" (\ts -> "[" ++ ts ++ "] ") (timestamp err)
         baseMsg = formatError err
     in timestampStr ++ locStr ++ baseMsg ++ contextStr
 
@@ -623,11 +635,27 @@ errorAt errId msg loc = TypeError
     , suggestions = []
     , relatedErrors = []
     , errorChain = []
-    , timestamp = getCurrentTimestamp
+    , timestamp = Nothing
     }
 
+-- Create error at specific location with provided timestamp
+errorAtWithTimestamp :: String -> String -> Text -> ErrorLocation -> TypeError
+errorAtWithTimestamp ts errId msg loc = (errorAt errId msg loc) { timestamp = Just ts }
+
+-- Create error at specific location with a UTCTime timestamp
+errorAtWithUTCTime :: UTCTime -> String -> Text -> ErrorLocation -> TypeError
+errorAtWithUTCTime time errId msg loc = errorAtWithTimestamp (formatTimestamp time) errId msg loc
+
+-- Attach or override timestamp on an error
+withTimestamp :: String -> TypeError -> TypeError
+withTimestamp ts err = err { timestamp = Just ts }
+
+-- Attach or override timestamp on an error using UTCTime
+withUTCTimestamp :: UTCTime -> TypeError -> TypeError
+withUTCTimestamp time err = withTimestamp (formatTimestamp time) err
+
 -- Create error with category
-errorWithCategory :: String -> ErrorCategory -> Text -> ErrorLocation -> TypeError
+
 errorWithCategory errId errCategory msg loc = (errorAt errId msg loc) { category = errCategory }
 
 warningAt :: String -> Text -> ErrorLocation -> TypeError
@@ -709,14 +737,21 @@ getErrorStatistics errors = Map.fromList
 
 -- Create comprehensive error report
 generateErrorReport :: [TypeError] -> String
-generateErrorReport errors =
+generateErrorReport = generateErrorReportWithTimestamp Nothing
+
+generateErrorReportWithTimestamp :: Maybe String -> [TypeError] -> String
+generateErrorReportWithTimestamp maybeTimestamp errors =
     let stats = getErrorStatistics errors
         formattedErrors = formatErrorsWithLocation errors
+        header =
+            [ "Error Report"
+            , "============"
+            ]
+        timestampLines = maybe [] (\ts -> ["Generated at: " ++ ts]) maybeTimestamp
     in unlines $
-        [ "Error Report"
-        , "============"
-        , "Generated at: " ++ getCurrentTimestamp
-        , ""
+        header ++
+        timestampLines ++
+        [ ""
         , "Statistics:"
         ] ++
         map (\(key, count) -> "  " ++ key ++ ": " ++ show count) (Map.toList stats) ++
@@ -725,6 +760,16 @@ generateErrorReport errors =
         , "---------------"
         , formattedErrors
         ]
+
+generateErrorReportWithUTCTime :: UTCTime -> [TypeError] -> String
+generateErrorReportWithUTCTime time =
+    generateErrorReportWithTimestamp (Just (formatTimestamp time))
+
+-- Generate an error report including the current timestamp
+generateErrorReportIO :: [TypeError] -> IO String
+generateErrorReportIO errors = do
+    ts <- getCurrentTimestamp
+    pure $ generateErrorReportWithTimestamp (Just ts) errors
 
 -- Enhanced error recovery strategies
 createRecoveryStrategy :: Bool -> Bool -> Maybe String -> Maybe String -> ErrorRecovery
