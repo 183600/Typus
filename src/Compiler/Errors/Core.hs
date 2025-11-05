@@ -4,6 +4,7 @@
 module Compiler.Errors.Core (
     -- Error types
     TypeError(..),
+    CombinedError(..),
     ErrorSeverity(..),
     ErrorCategory(..),
     ErrorLocation(..),
@@ -53,6 +54,8 @@ module Compiler.Errors.Core (
     withUTCTimestamp,
     wrapError,
     combineErrors,
+    combinedErrorSeverity,
+    filterCombinedErrorsBySeverity,
 
     -- Error filtering and analysis
     hasCategory,
@@ -86,6 +89,8 @@ import GHC.Generics (Generic)
 import Data.Aeson (ToJSON, FromJSON)
 import Data.Time (UTCTime, getCurrentTime, formatTime, defaultTimeLocale)
 import qualified Data.Map.Strict as Map
+import qualified Ownership.Common.Types as Own
+import qualified Dependencies.TypeSystem as Dep
 
 -- ============================================================================
 -- Error Severity Levels
@@ -485,6 +490,27 @@ data TypeError = TypeError
     , errorChain :: [TypeError]  -- For error wrapping and chaining
     , timestamp :: Maybe String  -- For debugging and logging
     } deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- ============================================================================
+-- Combined Analyzer Errors
+-- ============================================================================
+
+data CombinedError
+    = OwnershipErrorCombined ErrorSeverity Own.OwnershipError
+    | DependentTypeErrorCombined ErrorSeverity Dep.DependentTypeError
+    | IntegrationError String ErrorSeverity
+    | CrossAnalyzerError String ErrorSeverity [CombinedError]
+    deriving (Show, Eq)
+
+combinedErrorSeverity :: CombinedError -> ErrorSeverity
+combinedErrorSeverity (OwnershipErrorCombined sev _) = sev
+combinedErrorSeverity (DependentTypeErrorCombined sev _) = sev
+combinedErrorSeverity (IntegrationError _ sev) = sev
+combinedErrorSeverity (CrossAnalyzerError _ sev _) = sev
+
+filterCombinedErrorsBySeverity :: ErrorSeverity -> [CombinedError] -> [CombinedError]
+filterCombinedErrorsBySeverity minimumSeverity =
+    filter (\err -> isAtLeast minimumSeverity (combinedErrorSeverity err))
 
 -- Error categories for better organization
 data ErrorCategory

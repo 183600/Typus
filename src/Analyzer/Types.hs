@@ -15,14 +15,7 @@ import Control.Monad.State
 import qualified Data.Map.Strict as Map
 import qualified Ownership as Own
 import qualified Dependencies as Dep
-import Compiler.Errors.Core (ErrorSeverity(..))
-
-data CombinedError
-    = OwnershipErrorCombined ErrorSeverity Own.OwnershipError
-    | DependentTypeErrorCombined ErrorSeverity Dep.DependentTypeError
-    | IntegrationError String ErrorSeverity
-    | CrossAnalyzerError String ErrorSeverity [CombinedError]
-    deriving (Show, Eq)
+import Compiler.Errors.Core (ErrorSeverity(..), CombinedError(..))
 
 data AnalysisResult = AnalysisResult
     { ownershipErrors :: [Own.OwnershipError]
