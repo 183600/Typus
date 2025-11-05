@@ -1,5 +1,5 @@
 module EnhancedErrorHandler (
-  module Compiler.Errors.Compiler
+  module Exports
 ) where
 
-import Compiler.Errors.Compiler
+import Compiler.Errors.Compiler as Exports
