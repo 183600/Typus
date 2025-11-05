@@ -23,6 +23,7 @@ import AnalyzerIntegration
     )
 import Compiler (compile)
 import Compiler.Errors.Compiler (CompilerError, formatCompilerErrors)
+import Compiler.Errors.Core (combinedErrorSeverity, filterCombinedErrorsBySeverity)
 import Data.List (intercalate, partition)
 import Data.Maybe (fromMaybe)
 import qualified Data.Map.Strict as Map
@@ -108,7 +109,7 @@ compileWithIntegratedAnalyzers source CompilerConfig{..} =
                                     }
                         Right analysis -> do
                             let allErrors = analysisToCombined analysis
-                                filtered = filterBySeverity errorReportingLevel allErrors
+                                filtered = filterCombinedErrorsBySeverity errorReportingLevel allErrors
                                 blocking = any (\err -> combinedErrorSeverity err >= Error) filtered
                                 analysisWarnings' = analysisWarnings analysis
                                 info = analysisInfo analysis
@@ -207,18 +208,6 @@ analysisToCombined :: AnalysisResult -> [CombinedError]
 analysisToCombined AnalysisResult{..} =
     map (OwnershipErrorCombined Error) ownershipErrors
         ++ map (DependentTypeErrorCombined Error) dependentTypeErrors
-
--- | Filter combined errors according to the configured minimum severity.
-filterBySeverity :: ErrorSeverity -> [CombinedError] -> [CombinedError]
-filterBySeverity minimumSeverity =
-    filter (\err -> combinedErrorSeverity err >= minimumSeverity)
-
--- | Extract the severity from a combined error.
-combinedErrorSeverity :: CombinedError -> ErrorSeverity
-combinedErrorSeverity (OwnershipErrorCombined severity _) = severity
-combinedErrorSeverity (DependentTypeErrorCombined severity _) = severity
-combinedErrorSeverity (IntegrationError _ severity) = severity
-combinedErrorSeverity (CrossAnalyzerError _ severity _) = severity
 
 -- | Pretty print the integrated compilation result.
 formatCompilationResult :: IntegratedCompileResult -> String

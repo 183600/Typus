@@ -16,6 +16,7 @@ module Analyzer.State (
 import Analyzer.Types
 import qualified Ownership as Own
 import qualified Dependencies as Dep
+import Compiler.Errors.Core (combinedErrorSeverity)
 
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
@@ -105,14 +106,8 @@ getAnalysisSummary state' =
     countBySeverity = foldr add (0, 0, 0)
       where
         add ce (e, w, i) =
-            case severityOf ce of
+            case combinedErrorSeverity ce of
                 Fatal -> (e + 1, w, i)
                 Error -> (e + 1, w, i)
                 Warning -> (e, w + 1, i)
                 Info -> (e, w, i + 1)
-
-    severityOf :: CombinedError -> ErrorSeverity
-    severityOf (OwnershipErrorCombined s _) = s
-    severityOf (DependentTypeErrorCombined s _) = s
-    severityOf (IntegrationError _ s) = s
-    severityOf (CrossAnalyzerError _ s _) = s
