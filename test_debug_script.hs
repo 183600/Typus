@@ -3,7 +3,7 @@ import System.IO
 
 main :: IO ()
 main = do 
-    content <- readFile "closure_test.typus"
+    content <- readFile "fixtures/reference/closure_test.typus"
     putStrLn "=== Testing with debug mode ON ==="
     let (errors, debugLog) = Ownership.analyzeOwnershipDebug True content
     putStrLn $ "Errors found: " ++ show (length errors)

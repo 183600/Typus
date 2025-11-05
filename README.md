@@ -89,6 +89,13 @@ cabal test --test-options="--pattern \"Parser\""
 - [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md) - 测试覆盖率矩阵
 - [TEST_CONSOLIDATION.md](TEST_CONSOLIDATION.md) - 测试整合说明
 
+## Fixture 与示例资源
+
+- `fixtures/reference/` 收纳了历史调试脚本、手动测试文件等 `.typus` 资源，适合快速验证编译与所有权分析逻辑。
+- `examples/` 目录保留了文档和演示使用的示例程序，可配合脚本与指南一起使用。
+
+原先散落在仓库根目录的 `.typus` 文件已经统一迁移到上述目录，便于查找并保持根目录整洁。
+
 ## 文件级指令
 
 ```go

@@ -4,7 +4,7 @@ import System.IO
 
 main :: IO ()
 main = do
-    content <- readFile "250921.typus"
+    content <- readFile "fixtures/reference/250921.typus"
     case parseTypus content of
         Left err -> putStrLn $ "Parse error: " ++ err
         Right typusFile -> do
