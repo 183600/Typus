@@ -6,6 +6,7 @@ module Tooling.Error
 
 import Compiler (CompilerError, renderCompilationError)
 import Data.List (intercalate, nub)
+import qualified SyntaxValidator as SV
 
 -- | Structured error type for compiler tooling utilities.
 data ToolingError
@@ -15,6 +16,7 @@ data ToolingError
     | InvalidArgument String
     | ParserError FilePath String
     | CompilationFailed FilePath [CompilerError]
+    | SyntaxValidationFailed FilePath [SV.SyntaxError]
     | GoToolchainUnavailable String
     | GoCommandFailed
         { teCommand :: String
@@ -48,6 +50,13 @@ renderToolingError err = case err of
         let header = "Compilation failed for " ++ file ++ ":"
             body = renderCompilationError errs
         in header ++ "\n" ++ indent body
+    SyntaxValidationFailed file errs ->
+        let header = "Syntax validation failed for " ++ file ++ ":"
+            details =
+                if null errs
+                then indent "(no additional details)"
+                else indent (unlines (map SV.formatSyntaxError errs))
+        in header ++ "\n" ++ details
     GoToolchainUnavailable msg -> msg
     GoCommandFailed{ teCommand = cmd, teArgs = args, teWorkingDir = dir, teExitCode = code, teStdout = out, teStderr = errOut } ->
         let commandLine = unwords (cmd : args)

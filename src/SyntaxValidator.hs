@@ -7,7 +7,8 @@ module SyntaxValidator (
     newSyntaxValidator,
     validateSyntax,
     validateFile,
-    getSyntaxErrors
+    getSyntaxErrors,
+    formatSyntaxError
 ) where
 
 import qualified Data.Set as Set
@@ -498,4 +499,16 @@ addError validator errType message line col content =
     in validator { validatorErrors = error' : validatorErrors validator }
 
 -- ================== Utility Functions ==================
+
+-- | Render a syntax error with its location and relevant line content.
+formatSyntaxError :: SyntaxError -> String
+formatSyntaxError SyntaxError{..} =
+    let locationPart = case (lineNumber, columnNumber) of
+            (ln, col) | ln > 0 && col > 0 -> "Line " ++ show ln ++ ":" ++ show col ++ " "
+            (ln, _) | ln > 0 -> "Line " ++ show ln ++ " "
+            (_, col) | col > 0 -> "Column " ++ show col ++ " "
+            _ -> ""
+        header = locationPart ++ "[" ++ show errorType ++ "] " ++ errorMessage
+        contextLine = if null lineContent then "" else "\n    " ++ lineContent
+    in header ++ contextLine
 

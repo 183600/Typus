@@ -10,6 +10,7 @@ import Control.Monad (forM, forM_, unless, when)
 import Control.Monad.Except
 import Control.Monad.IO.Class (liftIO)
 import Data.Either (partitionEithers)
+import Data.List (partition)
 import GoToolchain
     ( IOResult
     , GoExecutor(..)
@@ -18,6 +19,7 @@ import GoToolchain
     , nullDevice
     , writeGoModule
     )
+import qualified SyntaxValidator as SV
 import Tooling.Error (ToolingError(..), renderToolingError)
 import System.Directory
     ( doesFileExist
@@ -180,17 +182,26 @@ batchCheck ctx inputDir = do
 -- 检查单个文件：Typus 语法、编译为 Go、go build 语法验证
 checkSingleFile :: CompilerContext -> FilePath -> IOResult ()
 checkSingleFile ctx file = do
-    let Logger { logInfo = logI } = contextLogger ctx
+    let Logger { logInfo = logI, logWarning = logW } = contextLogger ctx
 
     liftIO $ logI $ "\nChecking file: " ++ file
 
     -- 1. Typus 语法检查
     liftIO $ logI "  1. Checking Typus syntax..."
     source <- liftIO $ readFile file
+    let syntaxIssues = SV.validateFile source
+        (syntaxWarnings, syntaxErrors) = partition ((== SV.SyntaxWarning) . SV.errorType) syntaxIssues
+    liftIO $
+        forM_ syntaxWarnings $ \warning ->
+            logW $ "     ⚠ " ++ SV.formatSyntaxError warning
+    unless (null syntaxErrors) $
+        throwError (SyntaxValidationFailed file syntaxErrors)
     parsed <- case P.parseTypus source of
         Left err -> throwError (ParserError file err)
         Right p  -> return p
-    liftIO $ logI "     ✓ Typus syntax OK"
+    if null syntaxWarnings
+        then liftIO $ logI "     ✓ Typus syntax OK"
+        else liftIO $ logI "     ✓ Typus syntax OK (with warnings)"
 
     -- 2. 编译为 Go
     liftIO $ logI "  2. Compiling to Go..."
