@@ -23,8 +23,11 @@ import AnalyzerIntegration
     )
 import Compiler (compile)
 import Compiler.Errors.Compiler (CompilerError, formatCompilerErrors)
-import Data.List (intercalate)
+import Data.List (intercalate, partition)
+import Data.Maybe (fromMaybe)
 import qualified Data.Map.Strict as Map
+import qualified SyntaxValidator as SV
+import Text.Read (readMaybe)
 
 -- | Configuration for the integrated compiler pipeline.
 data CompilerConfig = CompilerConfig
@@ -46,7 +49,7 @@ data IntegratedCompileResult = IntegratedCompileResult
     { success :: Bool
     , compiledCode :: String
     , analysisResult :: Maybe AnalysisResult
-    , syntaxErrors :: [String]
+    , syntaxErrors :: [SV.SyntaxError]
     , filteredErrors :: [CombinedError]
     , compilerErrors :: [CompilerError]
     , compilationWarnings :: [String]
@@ -56,57 +59,62 @@ data IntegratedCompileResult = IntegratedCompileResult
 -- | Orchestrate parsing, analysis, and compilation using the unified pipeline.
 compileWithIntegratedAnalyzers :: String -> CompilerConfig -> IO IntegratedCompileResult
 compileWithIntegratedAnalyzers source CompilerConfig{..} =
-    case P.parseTypus source of
-        Left parseErr ->
+    let syntaxFindings = SV.validateFile source
+        (syntaxWarningsIssues, syntaxErrorIssues) = partition isSyntaxWarning syntaxFindings
+        syntaxWarningMessages = map SV.formatSyntaxError syntaxWarningsIssues
+    in if not (null syntaxErrorIssues)
+        then
             pure
                 IntegratedCompileResult
                     { success = False
                     , compiledCode = ""
                     , analysisResult = Nothing
-                    , syntaxErrors = filter (not . null) (lines parseErr)
+                    , syntaxErrors = syntaxErrorIssues
                     , filteredErrors = []
                     , compilerErrors = []
-                    , compilationWarnings = []
+                    , compilationWarnings = syntaxWarningMessages
                     , compilationInfo = []
                     }
-        Right typusFile -> do
-            let analyzerState = newIntegratedAnalyzer enableOwnership enableDependentTypes
-            analysisOutcome <- runIntegratedAnalysis source analyzerState
-            case analysisOutcome of
-                Left errMsg ->
-                    pure
+        else
+            case P.parseTypus source of
+                Left parseErr ->
+                    let parserIssue = parserErrorToSyntaxError parseErr
+                    in pure
                         IntegratedCompileResult
                             { success = False
                             , compiledCode = ""
                             , analysisResult = Nothing
-                            , syntaxErrors = []
-                            , filteredErrors = [IntegrationError errMsg Fatal]
+                            , syntaxErrors = [parserIssue]
+                            , filteredErrors = []
                             , compilerErrors = []
-                            , compilationWarnings = []
+                            , compilationWarnings = syntaxWarningMessages
                             , compilationInfo = []
                             }
-                Right analysis -> do
-                    let allErrors = analysisToCombined analysis
-                        filtered = filterBySeverity errorReportingLevel allErrors
-                        blocking = any (\err -> combinedErrorSeverity err >= Error) filtered
-                        warnings = analysisWarnings analysis
-                        info = analysisInfo analysis
-                    if blocking
-                        then
+                Right typusFile -> do
+                    let analyzerState = newIntegratedAnalyzer enableOwnership enableDependentTypes
+                    analysisOutcome <- runIntegratedAnalysis source analyzerState
+                    case analysisOutcome of
+                        Left errMsg ->
                             pure
                                 IntegratedCompileResult
                                     { success = False
                                     , compiledCode = ""
-                                    , analysisResult = Just analysis
+                                    , analysisResult = Nothing
                                     , syntaxErrors = []
-                                    , filteredErrors = filtered
+                                    , filteredErrors = [IntegrationError errMsg Fatal]
                                     , compilerErrors = []
-                                    , compilationWarnings = warnings
-                                    , compilationInfo = info
+                                    , compilationWarnings = syntaxWarningMessages
+                                    , compilationInfo = []
                                     }
-                        else
-                            case compile typusFile of
-                                Left compilerErrs ->
+                        Right analysis -> do
+                            let allErrors = analysisToCombined analysis
+                                filtered = filterBySeverity errorReportingLevel allErrors
+                                blocking = any (\err -> combinedErrorSeverity err >= Error) filtered
+                                analysisWarnings' = analysisWarnings analysis
+                                info = analysisInfo analysis
+                                combinedWarnings = syntaxWarningMessages ++ analysisWarnings'
+                            if blocking
+                                then
                                     pure
                                         IntegratedCompileResult
                                             { success = False
@@ -114,22 +122,85 @@ compileWithIntegratedAnalyzers source CompilerConfig{..} =
                                             , analysisResult = Just analysis
                                             , syntaxErrors = []
                                             , filteredErrors = filtered
-                                            , compilerErrors = compilerErrs
-                                            , compilationWarnings = warnings
-                                            , compilationInfo = info
-                                            }
-                                Right goCode ->
-                                    pure
-                                        IntegratedCompileResult
-                                            { success = True
-                                            , compiledCode = goCode
-                                            , analysisResult = Just analysis
-                                            , syntaxErrors = []
-                                            , filteredErrors = filtered
                                             , compilerErrors = []
-                                            , compilationWarnings = warnings
+                                            , compilationWarnings = combinedWarnings
                                             , compilationInfo = info
                                             }
+                                else
+                                    case compile typusFile of
+                                        Left compilerErrs ->
+                                            pure
+                                                IntegratedCompileResult
+                                                    { success = False
+                                                    , compiledCode = ""
+                                                    , analysisResult = Just analysis
+                                                    , syntaxErrors = []
+                                                    , filteredErrors = filtered
+                                                    , compilerErrors = compilerErrs
+                                                    , compilationWarnings = combinedWarnings
+                                                    , compilationInfo = info
+                                                    }
+                                        Right goCode ->
+                                            pure
+                                                IntegratedCompileResult
+                                                    { success = True
+                                                    , compiledCode = goCode
+                                                    , analysisResult = Just analysis
+                                                    , syntaxErrors = []
+                                                    , filteredErrors = filtered
+                                                    , compilerErrors = []
+                                                    , compilationWarnings = combinedWarnings
+                                                    , compilationInfo = info
+                                                    }
+
+isSyntaxWarning :: SV.SyntaxError -> Bool
+isSyntaxWarning err = SV.errorType err == SV.SyntaxWarning
+
+parserErrorToSyntaxError :: String -> SV.SyntaxError
+parserErrorToSyntaxError msg =
+    let ls = lines msg
+        (lineNum, colNum) =
+            case ls of
+                (header:_) -> parseHeader header
+                _ -> (0, 0)
+        lineContent =
+            case drop 2 ls of
+                (codeLine:_) -> extractCodeLine codeLine
+                _ -> ""
+        messageText =
+            case dropWhile null (drop 4 ls) of
+                [] -> msg
+                xs -> intercalate "\n" xs
+    in SV.SyntaxError
+        { SV.errorType = SV.UnexpectedToken
+        , SV.errorMessage = messageText
+        , SV.lineNumber = lineNum
+        , SV.columnNumber = colNum
+        , SV.lineContent = lineContent
+        }
+  where
+    parseHeader header =
+        case splitOnColon header of
+            (_:lineStr:colStr:_) ->
+                ( fromMaybe 0 (readMaybe lineStr)
+                , fromMaybe 0 (readMaybe colStr)
+                )
+            _ -> (0, 0)
+
+    extractCodeLine line =
+        case break (== '|') line of
+            (_, []) -> dropLeadingSpace line
+            (_, _ : rest) -> dropLeadingSpace rest
+
+    dropLeadingSpace [] = []
+    dropLeadingSpace (' ' : xs) = xs
+    dropLeadingSpace ('\t' : xs) = xs
+    dropLeadingSpace xs = xs
+
+    splitOnColon str =
+        case break (== ':') str of
+            (chunk, []) -> [chunk]
+            (chunk, _ : rest) -> chunk : splitOnColon rest
 
 -- | Transform analyzer output into combined errors for downstream consumers.
 analysisToCombined :: AnalysisResult -> [CombinedError]
@@ -153,7 +224,7 @@ combinedErrorSeverity (CrossAnalyzerError _ severity _) = severity
 formatCompilationResult :: IntegratedCompileResult -> String
 formatCompilationResult IntegratedCompileResult{..} =
     let sections = filter (not . null)
-            [ formatSection "📝 Syntax Errors" (map bullet syntaxErrors)
+            [ formatSection "📝 Syntax Errors" (map (bullet . SV.formatSyntaxError) syntaxErrors)
             , formatSection "⚠️ Analysis Errors" (map (bullet . formatCombinedError) filteredErrors)
             , formatCompilerSection compilerErrors
             , formatSection "⚡ Warnings" (map bullet compilationWarnings)

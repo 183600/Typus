@@ -1,17 +1,19 @@
 module Main (main) where
 
 import Cli
-import CompilerUtils (CompilerContext(..), defaultLogger, newCompilerContext)
+import CompilerUtils (CompilerContext(..), Logger(..), defaultLogger, newCompilerContext)
 import qualified CompilerUtils as CU
-import Control.Monad (unless)
+import Control.Monad (forM_, unless)
 import Control.Monad.Except
 import Control.Monad.IO.Class (liftIO)
+import Data.List (partition)
 import EmbedAssets (copyEmbeddedForBuild, handleMissingEmbeds, mirrorEmbeddedResources)
 import GoToolchain (IOResult, createTempGoFile, withTemporaryGoProject)
 import System.Directory (doesDirectoryExist, doesFileExist)
 import System.Exit (exitFailure)
 import System.FilePath (takeFileName)
 import Tooling.Error (ToolingError(..), renderToolingError)
+import qualified SyntaxValidator as SV
 
 main :: IO ()
 main = do
@@ -33,7 +35,18 @@ dispatch ctx (Check inputPath) = do
     isDir <- liftIO $ doesDirectoryExist inputPath
     if isDir
         then CU.batchCheck ctx inputPath
-        else
+        else do
+            exists <- liftIO $ doesFileExist inputPath
+            unless exists $ throwError (FileNotFound inputPath)
+            source <- liftIO $ readFile inputPath
+            let logger = contextLogger ctx
+                syntaxFindings = SV.validateFile source
+                (syntaxWarningsIssues, syntaxErrorIssues) = partition ((== SV.SyntaxWarning) . SV.errorType) syntaxFindings
+            liftIO $
+                forM_ syntaxWarningsIssues $ \warning ->
+                    logWarning logger ("⚠ Syntax warning: " ++ SV.formatSyntaxError warning)
+            unless (null syntaxErrorIssues) $
+                throwError (SyntaxValidationFailed inputPath syntaxErrorIssues)
             withTemporaryGoProject "typus_check" $ \tempDir -> do
                 tempGoPath <- prepareSingleFileProject ctx False inputPath tempDir
                 CU.runGoCommandInDir ctx ["build", tempGoPath] tempDir
