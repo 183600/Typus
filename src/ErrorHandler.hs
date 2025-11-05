@@ -1,5 +1,5 @@
 module ErrorHandler (
-  module Compiler.Errors.Core
+  module Exports
 ) where
 
-import Compiler.Errors.Core
+import Compiler.Errors.Core as Exports
