@@ -183,7 +183,7 @@ Run the debug example to verify functionality:
 
 ```bash
 # Compile the debug example
-stack ghc -- -isrc -i./src debug-example.hs -o debug-example
+stack ghc -- -isrc -i./src examples/debug/debug-example.hs -o debug-example
 
 # Run it (provide empty input for breakpoints)
 echo -e "\n\n" | ./debug-example

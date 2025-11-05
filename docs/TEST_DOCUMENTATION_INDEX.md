@@ -24,7 +24,7 @@ of detail for their workflow.
 
 ## Supplementary material
 
-- [`DEBUG_GUIDE.md`](../DEBUG_GUIDE.md) and [`debug-example.md`](../debug-example.md)
+- [`DEBUG_GUIDE.md`](../DEBUG_GUIDE.md) and [`debug-example.md`](./debug-example.md)
   – worked examples of tracing failing conversions and common debugging
   techniques.
 - [`README_COMPREHENSIVE_TEST.md`](../README_COMPREHENSIVE_TEST.md) – documentation

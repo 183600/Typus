@@ -75,7 +75,7 @@ stack test
 stack exec typus -- check examples
 
 # 如果需要验证嵌入资源复制，可执行
-./run_enhanced_precise_type_tests.sh
+./scripts/run_enhanced_precise_type_tests.sh
 ```
 
 - 在 CI 不具备 Go 工具链时，可通过 `TYPUS_SKIP_GO_BUILD=1 stack exec typus -- check examples` 观察批量检查仍能完成 Typus 语法与编译阶段。
@@ -85,7 +85,7 @@ stack exec typus -- check examples
 
 - `examples/` 与 `fixtures/` 目录主要承担文档示例与对照用例，仍保留早期语法样本以辅助回归测试。
 - `test/` 下的 *.hs 与脚本用于编译器回归基准，未在本轮改动中重写。
-- 历史对比文件（如 `comparison.txt`、`stack_test_output.txt`）仍用于追踪旧版行为，不建议删除。
+- 历史对比文件（如 `fixtures/legacy/comparison.txt`、`fixtures/legacy/stack_test_output.txt`）仍用于追踪旧版行为，不建议删除。
 
 ## 后续建议
 

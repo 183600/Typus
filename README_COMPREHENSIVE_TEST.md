@@ -18,8 +18,8 @@ The comprehensive test script performs the following steps:
 
 ## Files Added
 
-### 1. Shell Script: `test_typus_comprehensive.sh`
-- **Location**: `/home/qwe12345678/typus2/test_typus_comprehensive.sh`
+### 1. Shell Script: `scripts/test_typus_comprehensive.sh`
+- **Location**: `scripts/test_typus_comprehensive.sh`
 - **Purpose**: Main test script that implements the comprehensive testing workflow
 - **Features**:
   - Automatic building of Typus compiler
@@ -43,7 +43,7 @@ The comprehensive test script performs the following steps:
 #### Method 1: Direct Shell Script Execution
 ```bash
 cd /home/qwe12345678/typus2
-./test_typus_comprehensive.sh
+./scripts/test_typus_comprehensive.sh
 ```
 
 #### Method 2: Using Makefile
@@ -56,7 +56,7 @@ make -f Makefile.comprehensive test-comprehensive
 ```bash
 cd /home/qwe12345678/typus2
 stack build
-./test_typus_comprehensive.sh
+./scripts/test_typus_comprehensive.sh
 ```
 
 ### Available Makefile Targets
@@ -158,7 +158,7 @@ Add to your test workflow:
 ```bash
 # Build and run comprehensive tests first
 stack build
-./test_typus_comprehensive.sh || exit 1
+./scripts/test_typus_comprehensive.sh || exit 1
 
 # Run standard stack tests
 stack test
@@ -170,7 +170,7 @@ In your CI pipeline:
 - name: Comprehensive Typus Tests
   run: |
     stack build
-    ./test_typus_comprehensive.sh
+    ./scripts/test_typus_comprehensive.sh
 
 - name: Standard Tests
   run: |
@@ -217,7 +217,7 @@ The script includes comprehensive error handling:
 
 3. **Permission Denied**: Ensure the script is executable
    ```bash
-   chmod +x test_typus_comprehensive.sh
+   chmod +x scripts/test_typus_comprehensive.sh
    ```
 
 4. **Timeout Issues**: Some programs may need longer timeout
