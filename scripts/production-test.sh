@@ -101,7 +101,7 @@ fi
 
 # 6. 运行性能测试
 echo "步骤 6: 运行性能测试..."
-cabal test --test-show-details=direct --test-option="--test-option=performance"
+cabal test --test-show-details=direct --test-option=performance
 PERFORMANCE_TESTS_RESULT=$?
 if [ $PERFORMANCE_TESTS_RESULT -ne 0 ]; then
     echo "错误: 性能测试失败"
