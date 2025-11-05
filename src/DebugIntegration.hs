@@ -127,27 +127,28 @@ exampleDebugIntegration = do
     config <- setupCompilerDebugging
 
     -- Simulate compiler phases
-    debugCompilerStart config "example.typus"
+    let exampleFile = "fixtures/reference/example.typus"
+    debugCompilerStart config exampleFile
 
     -- Parse phase
-    debugParseStep config "example.typus" $ do
-        putStrLn "Parsing example.typus..."
+    debugParseStep config exampleFile $ do
+        putStrLn $ "Parsing " ++ exampleFile ++ "..."
         -- Simulate parsing
         return ()
 
     -- Compile phase
-    debugCompileStep config "example.typus" $ do
-        putStrLn "Compiling example.typus..."
+    debugCompileStep config exampleFile $ do
+        putStrLn $ "Compiling " ++ exampleFile ++ "..."
         -- Simulate compilation
         return ()
 
     -- Ownership phase
-    debugOwnershipStep config "example.typus" $ do
-        putStrLn "Ownership analysis for example.typus..."
+    debugOwnershipStep config exampleFile $ do
+        putStrLn $ "Ownership analysis for " ++ exampleFile ++ "..."
         -- Simulate ownership analysis
         return ()
 
-    debugCompilerEnd config "example.typus"
+    debugCompilerEnd config exampleFile
     putStrLn "=== Debug Integration Example Complete ==="
 
 -- Command line debugger utility functions

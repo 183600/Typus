@@ -4,7 +4,7 @@ import qualified Ownership as OwnershipAdvanced
 
 main :: IO ()
 main = do
-    content <- readFile "test_function_boundaries.typus"
+    content <- readFile "fixtures/reference/test_function_boundaries.typus"
     let errors = OwnershipAdvanced.analyzeOwnership content
     putStrLn "=== Advanced Ownership Analysis Results ==="
     putStrLn $ OwnershipAdvanced.formatOwnershipErrors errors

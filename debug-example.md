@@ -150,8 +150,9 @@ Builds the project with profiling enabled and shows how to generate performance 
 3. **Build and run** with debug output:
    ```bash
    ./debug-cmd.hs build
-   stack exec -- typus compile example.typus
+   stack exec -- typus compile fixtures/reference/example.typus
    ```
+
 
 ### 2. For Performance Issues
 
@@ -162,7 +163,7 @@ Builds the project with profiling enabled and shows how to generate performance 
 
 2. **Run with profiling**:
    ```bash
-   stack exec -- typus -- +RTS -p compile example.typus
+   stack exec -- typus -- +RTS -p compile fixtures/reference/example.typus
    ```
 
 3. **Analyze the profile** report generated.

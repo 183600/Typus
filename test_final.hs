@@ -3,7 +3,7 @@ import System.IO
 
 main :: IO ()
 main = do 
-    content <- readFile "test_ownership_with_builtin.typus"
+    content <- readFile "fixtures/reference/test_ownership_with_builtin.typus"
     putStrLn "=== Testing ownership with built-in functions ==="
     let errors = Ownership.analyzeOwnership content
     putStrLn $ "Errors found: " ++ show (length errors)

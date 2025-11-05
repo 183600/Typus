@@ -7,7 +7,7 @@ import Compiler (compile, renderCompilationError)
 main :: IO ()
 main = do
     putStrLn "Testing compiler..."
-    content <- readFile "simple_test.typus"
+    content <- readFile "fixtures/reference/simple_test.typus"
     putStrLn $ "Parsing content of length: " ++ show (length content)
     
     case parseTypus content of

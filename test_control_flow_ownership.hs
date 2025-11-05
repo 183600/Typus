@@ -31,7 +31,7 @@ testAllExamples = do
     
     -- Test our new comprehensive test file
     putStrLn "\n1. Testing control flow ownership scenarios..."
-    testFile "test_control_flow_ownership.typus"
+    testFile "fixtures/reference/test_control_flow_ownership.typus"
     
     -- Test some simple cases
     putStrLn "\n2. Testing simple conditional ownership..."

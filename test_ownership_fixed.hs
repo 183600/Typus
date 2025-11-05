@@ -4,7 +4,7 @@ import qualified Ownership as OwnershipFixed
 
 main :: IO ()
 main = do
-    content <- readFile "test_function_boundaries.typus"
+    content <- readFile "fixtures/reference/test_function_boundaries.typus"
     let errors = OwnershipFixed.analyzeOwnership content
     putStrLn "=== Fixed Ownership Analysis Results ==="
     putStrLn $ OwnershipFixed.formatOwnershipErrors errors

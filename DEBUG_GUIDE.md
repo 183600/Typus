@@ -38,7 +38,7 @@ config <- defaultCLIDebugConfig
 
 -- Set breakpoints at specific locations
 setBreakpoint config "parse:main"
-setBreakpoint config "compile:example.typus"
+setBreakpoint config "compile:fixtures/reference/example.typus"
 setBreakpoint config "ownership:analysis"
 
 -- List all breakpoints
@@ -83,11 +83,13 @@ withDebugging config "parse" $ do
     -- Parse logic here
     return ()
 
-debugParseStep config "example.typus" $ do
+let exampleFile = "fixtures/reference/example.typus"
+
+debugParseStep config exampleFile $ do
     -- Parse with breakpoint support
     return ()
 
-debugCompileStep config "example.typus" $ do
+debugCompileStep config exampleFile $ do
     -- Compile with breakpoint support
     return ()
 ```
@@ -108,7 +110,7 @@ config <- setupCompilerDebugging
 ```bash
 # In the debug CLI
 set breakpoint parse:main
-set breakpoint compile:example.typus
+set breakpoint compile:fixtures/reference/example.typus
 set breakpoint ownership:analysis
 ```
 
@@ -119,21 +121,23 @@ set breakpoint ownership:analysis
 main = do
     config <- setupCompilerDebugging
 
-    debugCompilerStart config "example.typus"
+    let exampleFile = "fixtures/reference/example.typus"
 
-    debugParseStep config "example.typus" $ do
+    debugCompilerStart config exampleFile
+
+    debugParseStep config exampleFile $ do
         -- Parse logic - will stop at parse:main breakpoint
-        parseFile "example.typus"
+        parseFile exampleFile
 
-    debugCompileStep config "example.typus" $ do
-        -- Compile logic - will stop at compile:example.typus breakpoint
+    debugCompileStep config exampleFile $ do
+        -- Compile logic - will stop at compile:fixtures/reference/example.typus breakpoint
         compileAST ast
 
-    debugOwnershipStep config "example.typus" $ do
+    debugOwnershipStep config exampleFile $ do
         -- Ownership analysis - will stop at ownership:analysis breakpoint
         analyzeOwnership ast
 
-    debugCompilerEnd config "example.typus"
+    debugCompilerEnd config exampleFile
 ```
 
 ### Step 4: Interactive Debugging
