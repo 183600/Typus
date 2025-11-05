@@ -1,5 +1,5 @@
 :set prompt "> "
-content <- readFile "test_input.txt"
+content <- readFile "fixtures/inputs/test_input.txt"
 putStrLn "Original content:"
 putStrLn content
 putStrLn "Cleaned content:"

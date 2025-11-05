@@ -50,11 +50,11 @@ clearBreakpoints config
 
 ### 3. Command-Line Debug Tool
 
-Use the `debug-cli.hs` script for interactive debugging:
+Use the `examples/debug/debug-cli.hs` script for interactive debugging:
 
 ```bash
 # Start the debug CLI
-runhaskell debug-cli.hs
+runhaskell examples/debug/debug-cli.hs
 
 # Available commands in debug CLI:
 help           - Show help
@@ -239,7 +239,7 @@ main = do
 1. **`src/Debug.hs`**: Core debugging functionality with logging and breakpoints
 2. **`src/CommandLineDebug.hs`**: Interactive command-line debugging system
 3. **`src/DebugIntegration.hs`**: Integration hooks for compiler phases
-4. **`debug-cli.hs`**: Command-line tool for debugging management
+4. **`examples/debug/debug-cli.hs`**: Command-line tool for debugging management
 5. **`DEBUG_GUIDE.md`**: This guide
 
 ## Troubleshooting
