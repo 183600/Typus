@@ -9,6 +9,7 @@ module Compiler.Errors.Core (
     ErrorCategory(..),
     ErrorLocation(..),
     ErrorContext(..),
+    emptyContext,
     ErrorRecovery(..),
 
     -- Error collection and management
@@ -73,6 +74,7 @@ module Compiler.Errors.Core (
 
     -- Recovery strategy utilities
     createRecoveryStrategy,
+    customRecovery,
     fatalRecovery,
     errorRecovery,
     warningRecovery,
@@ -351,8 +353,8 @@ infoRecovery :: ErrorRecovery
 infoRecovery = RecoveryStrategy True True Nothing Nothing 0 1.0
 
 -- Create custom recovery strategy
-_customRecovery :: Bool -> Bool -> Maybe String -> Maybe String -> Int -> Float -> ErrorRecovery
-_customRecovery canRec shouldCont recAction recHint cost confidence = RecoveryStrategy
+customRecovery :: Bool -> Bool -> Maybe String -> Maybe String -> Int -> Float -> ErrorRecovery
+customRecovery canRec shouldCont recAction recHint cost confidence = RecoveryStrategy
     canRec shouldCont recAction recHint cost confidence
 
 -- Recovery strategy for specific scenarios
@@ -681,7 +683,7 @@ withUTCTimestamp :: UTCTime -> TypeError -> TypeError
 withUTCTimestamp time err = withTimestamp (formatTimestamp time) err
 
 -- Create error with category
-
+errorWithCategory :: String -> ErrorCategory -> Text -> ErrorLocation -> TypeError
 errorWithCategory errId errCategory msg loc = (errorAt errId msg loc) { category = errCategory }
 
 warningAt :: String -> Text -> ErrorLocation -> TypeError
@@ -769,6 +771,7 @@ generateErrorReportWithTimestamp :: Maybe String -> [TypeError] -> String
 generateErrorReportWithTimestamp maybeTimestamp errors =
     let stats = getErrorStatistics errors
         formattedErrors = formatErrorsWithLocation errors
+        header :: [String]
         header =
             [ "Error Report"
             , "============"

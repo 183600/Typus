@@ -592,13 +592,16 @@ heuristicOwnershipErrors src =
       hasSeq a b = case (search a txt, search b txt) of
                      (Just ia, Just ib) -> ia < ib
                      _ -> False
+      search :: String -> String -> Maybe Int
       search pat s = go 0 s
         where
           n = length pat
+          go :: Int -> String -> Maybe Int
           go _ [] = Nothing
-          go i xs | take n xs == pat = Just i
-                  | otherwise = go (i+1) (drop 1 xs)
-      useAfterMoveData = hasSeq "take_value(data)" "println(data)"
+          go i xs
+            | take n xs == pat = Just i
+            | otherwise = go (i + 1) (drop 1 xs)
+
       doubleMoveData   = case search "take_value(data)" txt of
                            Just i -> case search "take_value(data)" (drop (i+1) txt) of
                                        Just _ -> True
