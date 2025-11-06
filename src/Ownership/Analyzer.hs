@@ -349,7 +349,9 @@ analyzeAsRHS e = case e of
 analyzeAsArgForFunc :: Name -> Expr -> State AState ()
 analyzeAsArgForFunc _f e = case e of
   EUnary UBorrow (EIdent x _) _    -> borrowVar False x
-  EUnary UMutBorrow (EIdent x _) _ -> borrowVar True x
+  EUnary UMutBorrow (EIdent x _) _ -> do
+    borrowVar True x
+    releasePendingMutBorrow x
   EIdent x _                       -> moveVarForce x
   ECall _ args _                   -> mapM_ (analyzeAsArgForFunc _f) args
   EUnknown ts _                    -> scanUnknownAsArg ts
@@ -366,7 +368,9 @@ analyzeExprUse e = case e of
 analyzeAsArg :: Expr -> State AState ()
 analyzeAsArg e = case e of
   EUnary UBorrow (EIdent x _) _    -> borrowVar False x
-  EUnary UMutBorrow (EIdent x _) _ -> borrowVar True x
+  EUnary UMutBorrow (EIdent x _) _ -> do
+    borrowVar True x
+    releasePendingMutBorrow x
   EIdent x _                       -> moveVar x
   ECall _ args _                   -> mapM_ analyzeAsArg args
   EUnknown ts _                    -> scanUnknownAsArg ts
@@ -488,6 +492,13 @@ borrowVar isMut name =
               else case vsMutBorrower v of
                      Just _  -> pushError (BorrowWhileMutBorrowed name)
                      Nothing -> updateVarTop name (\vv -> vv { vsBorrowedBy = "<pending>" : vsBorrowedBy vv })
+
+releasePendingMutBorrow :: Name -> State AState ()
+releasePendingMutBorrow name =
+  updateVarTop name (\vv ->
+    case vsMutBorrower vv of
+      Just borrower | borrower == "<pending>" -> vv { vsMutBorrower = Nothing }
+      _ -> vv)
 
 moveVar :: Name -> State AState ()
 moveVar name =
