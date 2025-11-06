@@ -1,12 +1,24 @@
 module Tooling.Error
     ( ToolingError(..)
     , MissingEmbedInfo(..)
+    , goCommandFailed
     , renderToolingError
     ) where
 
 import Compiler (CompilerError, renderCompilationError)
 import Data.List (intercalate, nub)
 import qualified SyntaxValidator as SV
+
+-- | Detailed information about a failed Go command invocation.
+data GoCommandFailure = GoCommandFailure
+    { gcfCommand :: String
+    , gcfArgs :: [String]
+    , gcfWorkingDir :: FilePath
+    , gcfExitCode :: Int
+    , gcfStdout :: String
+    , gcfStderr :: String
+    }
+    deriving (Eq, Show)
 
 -- | Structured error type for compiler tooling utilities.
 data ToolingError
@@ -18,17 +30,23 @@ data ToolingError
     | CompilationFailed FilePath [CompilerError]
     | SyntaxValidationFailed FilePath [SV.SyntaxError]
     | GoToolchainUnavailable String
-    | GoCommandFailed
-        { teCommand :: String
-        , teArgs :: [String]
-        , teWorkingDir :: FilePath
-        , teExitCode :: Int
-        , teStdout :: String
-        , teStderr :: String
-        }
+    | GoCommandFailed GoCommandFailure
     | MissingEmbeddedAssets [MissingEmbedInfo]
     | BatchCheckFailures [(FilePath, ToolingError)]
     deriving (Eq, Show)
+
+-- | Helper to construct a GoCommandFailed error with detailed context.
+goCommandFailed :: String -> [String] -> FilePath -> Int -> String -> String -> ToolingError
+goCommandFailed command args workingDir exitCode stdout stderr =
+    GoCommandFailed $
+        GoCommandFailure
+            { gcfCommand = command
+            , gcfArgs = args
+            , gcfWorkingDir = workingDir
+            , gcfExitCode = exitCode
+            , gcfStdout = stdout
+            , gcfStderr = stderr
+            }
 
 -- | Lightweight description of a missing embedded asset.
 data MissingEmbedInfo = MissingEmbedInfo
@@ -58,8 +76,14 @@ renderToolingError err = case err of
                 else indent (unlines (map SV.formatSyntaxError errs))
         in header ++ "\n" ++ details
     GoToolchainUnavailable msg -> msg
-    GoCommandFailed{ teCommand = cmd, teArgs = args, teWorkingDir = dir, teExitCode = code, teStdout = out, teStderr = errOut } ->
-        let commandLine = unwords (cmd : args)
+    GoCommandFailed failure ->
+        let cmd = gcfCommand failure
+            args = gcfArgs failure
+            dir = gcfWorkingDir failure
+            code = gcfExitCode failure
+            out = gcfStdout failure
+            errOut = gcfStderr failure
+            commandLine = unwords (cmd : args)
             base = "Go command failed: " ++ commandLine ++ " (exit code " ++ show code ++ ") in " ++ dir
             stdoutSection = if null out then "" else "\nStdout:\n" ++ indent out
             stderrSection = if null errOut then "" else "\nStderr:\n" ++ indent errOut

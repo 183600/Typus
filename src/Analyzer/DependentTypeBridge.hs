@@ -8,23 +8,36 @@ import Analyzer.State
 import Analyzer.SymbolTable (trim)
 import Analyzer.Types
 import qualified Dependencies as Dep
+import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..), parseTypus)
+import SourceLocation (Located, locatedValue)
+import qualified Compiler.DependentTypeChecker as DepChecker
 
 import Control.Monad.State
 import Data.List (isInfixOf, isPrefixOf)
 import qualified Data.Map.Strict as Map
 
 runDependentTypeAnalysis :: String -> IntegratedAnalyzer [Dep.DependentTypeError]
-runDependentTypeAnalysis code = do
-    let typeDefinitions = extractTypeDefinitions code
-        tc = Dep.newDependentTypeCheckerWithTypes typeDefinitions
-    modify $ \s -> s { dependentTypeChecker = tc }
-    _ <- gets dependentTypeChecker
-    let typeErrors = Dep.analyzeDependentTypes code
-    mapM_ (addDependentTypeError Error) typeErrors
-    let filteredErrors = filterKnownTypeErrors typeErrors
-    updateSymbolTableWithTypes filteredErrors
-    symbols <- gets symbolTable
-    pure $ filterSignificantTypeErrors filteredErrors symbols
+runDependentTypeAnalysis code =
+    case parseTypus code of
+        Left err -> do
+            let parseError = Dep.ParseError err
+            addDependentTypeError Error parseError
+            pure [parseError]
+        Right typusFile -> do
+            let dependentContent = DepChecker.extractDependentTypeContent typusFile
+            if not (dependentTypesEnabled typusFile) || null (trim dependentContent)
+                then pure []
+                else do
+                    let typeDefinitions = extractTypeDefinitions dependentContent
+                        tc = Dep.newDependentTypeCheckerWithTypes typeDefinitions
+                    modify $ \s -> s { dependentTypeChecker = tc }
+                    _ <- gets dependentTypeChecker
+                    let typeErrors = Dep.analyzeDependentTypes dependentContent
+                    mapM_ (addDependentTypeError Error) typeErrors
+                    let filteredErrors = filterKnownTypeErrors typeErrors
+                    updateSymbolTableWithTypes filteredErrors
+                    symbols <- gets symbolTable
+                    pure $ filterSignificantTypeErrors filteredErrors symbols
 
 updateSymbolTableWithTypes :: [Dep.DependentTypeError] -> IntegratedAnalyzer ()
 updateSymbolTableWithTypes _typeErrors = pure ()
@@ -47,6 +60,16 @@ filterKnownTypeErrors = filter isSignificantTypeError
         , "error", "interface{}", "[]int", "[]T", "[]string"
         , "Vector", "NonEmptySlice", "map", "chan", "func"
         ]
+
+dependentTypesEnabled :: TypusFile -> Bool
+dependentTypesEnabled typusFile =
+    let directives = tfDirectives typusFile
+        blocks = tfBlocks typusFile
+    in directiveEnabled (fdDependentTypes directives)
+        || any (directiveEnabled . bdDependentTypes . cbDirectives) blocks
+
+directiveEnabled :: Maybe (Located Bool) -> Bool
+directiveEnabled = maybe False locatedValue
 
 extractTypeDefinitions :: String -> [(String, [String], [Dep.TypeConstraint])]
 extractTypeDefinitions code =

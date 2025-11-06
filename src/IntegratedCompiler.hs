@@ -160,10 +160,7 @@ isSyntaxWarning err = SV.errorType err == SV.SyntaxWarning
 parserErrorToSyntaxError :: String -> SV.SyntaxError
 parserErrorToSyntaxError msg =
     let ls = lines msg
-        (lineNum, colNum) =
-            case ls of
-                (header:_) -> parseHeader header
-                _ -> (0, 0)
+        (lineNum, colNum) = positionFromHeader ls
         lineContent =
             case drop 2 ls of
                 (codeLine:_) -> extractCodeLine codeLine
@@ -180,6 +177,12 @@ parserErrorToSyntaxError msg =
         , SV.lineContent = lineContent
         }
   where
+    positionFromHeader :: [String] -> (Int, Int)
+    positionFromHeader entries =
+        case entries of
+            (header:_) -> parseHeader header
+            _ -> (0, 0)
+
     parseHeader header =
         case splitOnColon header of
             (_:lineStr:colStr:_) ->

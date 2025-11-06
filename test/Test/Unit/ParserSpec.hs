@@ -51,7 +51,7 @@ tests =
         let source = unlines
               [ "package main"
               , "func main() {"
-              , "    {//! ownership: on, dependent_types: on"
+              , "    {//! ownership: on, dependent_types: on}"
               , "        println(\"inside\")"
               , "    }"
               , "}"
