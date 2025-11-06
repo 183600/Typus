@@ -9,7 +9,7 @@ import qualified Ownership as Own
 
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
-import Data.Char (isDigit)
+import Data.Char (isAlphaNum, isDigit, isLower)
 import Data.List (isPrefixOf)
 import Data.Maybe (mapMaybe)
 
@@ -24,7 +24,8 @@ checkCrossAnalyzerIssues :: String -> Map.Map String SymbolInfo -> IntegratedAna
 checkCrossAnalyzerIssues code symbols = do
     conflicts <- checkOwnershipTypeConflicts symbols
     inconsistencies <- checkTypeOwnershipInconsistencies code symbols
-    pure $ conflicts ++ inconsistencies
+    let unusedWarnings = checkUnusedVariables code symbols
+    pure $ conflicts ++ inconsistencies ++ unusedWarnings
 
 checkOwnershipTypeConflicts :: Map.Map String SymbolInfo -> IntegratedAnalyzer [CombinedError]
 checkOwnershipTypeConflicts symbols = do
@@ -57,6 +58,28 @@ checkSymbolInconsistency lineNum symbol
     | isMoved symbol && isBorrowed symbol =
         ["Symbol '" ++ symbolName symbol ++ "' at line " ++ show lineNum ++ " is both moved and borrowed"]
     | otherwise = []
+
+checkUnusedVariables :: String -> Map.Map String SymbolInfo -> [CombinedError]
+checkUnusedVariables code symbols =
+    let usageCounts = Map.fromListWith (+) [ (tok, 1 :: Int) | tok <- tokenizeIdentifiers code ]
+        declared = Map.toList $ Map.filter isOwnedSymbol symbols
+    in [ CrossAnalyzerError ("Variable '" ++ name ++ "' declared but never used") Warning []
+       | (name, info) <- declared
+       , shouldWarn name info usageCounts
+       ]
+  where
+    isOwnedSymbol SymbolInfo{ownershipState = Just (Own.Owned _)} = True
+    isOwnedSymbol _ = False
+
+    shouldWarn name _ counts =
+        case Map.lookup name counts of
+            Just occ -> occ <= 1 && isWarnable name
+            Nothing  -> isWarnable name
+
+    isWarnable name =
+        case name of
+            (c:_) -> name /= "_" && not (isKeyword name) && isLower c
+            [] -> False
 
 extractVariablesFromLine :: String -> [String]
 extractVariablesFromLine line =
@@ -112,3 +135,13 @@ isOperator word =
                , "|"
                , "^"
                ]
+
+tokenizeIdentifiers :: String -> [String]
+tokenizeIdentifiers [] = []
+tokenizeIdentifiers (c : cs)
+    | isIdentChar c =
+        let (ident, rest) = span isIdentChar (c : cs)
+        in ident : tokenizeIdentifiers rest
+    | otherwise = tokenizeIdentifiers cs
+  where
+    isIdentChar ch = isAlphaNum ch || ch == '_'
