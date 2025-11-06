@@ -208,9 +208,7 @@ parserErrorToSyntaxError msg =
 
 -- | Transform analyzer output into combined errors for downstream consumers.
 analysisToCombined :: AnalysisResult -> [CombinedError]
-analysisToCombined AnalysisResult{..} =
-    map (OwnershipErrorCombined Error) ownershipErrors
-        ++ map (DependentTypeErrorCombined Error) dependentTypeErrors
+analysisToCombined AnalysisResult{ combinedErrors = errs } = errs
 
 -- | Pretty print the integrated compilation result.
 formatCompilationResult :: IntegratedCompileResult -> String
@@ -264,12 +262,18 @@ showCombinedError (CrossAnalyzerError msg _ nested) =
 
 -- | Produce a high-level summary of analyzer findings.
 getDetailedAnalysisSummary :: AnalysisResult -> String
-getDetailedAnalysisSummary AnalysisResult{..} =
-    let ownershipErrorCount = length ownershipErrors
-        dependentErrorCount = length dependentTypeErrors
-        typeEnvSize = Map.size typeEnvironment
-        warningCount = length analysisWarnings
-        infoCount = length analysisInfo
+getDetailedAnalysisSummary AnalysisResult
+    { ownershipErrors = ownershipErrs
+    , dependentTypeErrors = dependentErrs
+    , analysisWarnings = warnings
+    , analysisInfo = infoMessages
+    , typeEnvironment = typeEnv
+    } =
+    let ownershipErrorCount = length ownershipErrs
+        dependentErrorCount = length dependentErrs
+        typeEnvSize = Map.size typeEnv
+        warningCount = length warnings
+        infoCount = length infoMessages
     in unlines
         [ "Analysis Summary"
         , "================"

@@ -33,11 +33,12 @@ runDependentTypeAnalysis code =
                     modify $ \s -> s { dependentTypeChecker = tc }
                     _ <- gets dependentTypeChecker
                     let typeErrors = Dep.analyzeDependentTypes dependentContent
-                    mapM_ (addDependentTypeError Error) typeErrors
-                    let filteredErrors = filterKnownTypeErrors typeErrors
+                        filteredErrors = filterKnownTypeErrors typeErrors
                     updateSymbolTableWithTypes filteredErrors
                     symbols <- gets symbolTable
-                    pure $ filterSignificantTypeErrors filteredErrors symbols
+                    let significantErrors = filterSignificantTypeErrors filteredErrors symbols
+                    mapM_ (addDependentTypeError Error) significantErrors
+                    pure significantErrors
 
 updateSymbolTableWithTypes :: [Dep.DependentTypeError] -> IntegratedAnalyzer ()
 updateSymbolTableWithTypes _typeErrors = pure ()

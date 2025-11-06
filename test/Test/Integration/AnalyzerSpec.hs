@@ -1,12 +1,20 @@
 module Test.Integration.AnalyzerSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertBool, assertFailure, testCase)
+import Test.Tasty.HUnit (assertBool, assertFailure, (@?=), testCase)
 
 import AnalyzerIntegration
   ( AnalysisResult(..)
+  , CombinedError(..)
+  , ErrorSeverity(..)
   , newIntegratedAnalyzer
   , runIntegratedAnalysis
+  )
+import IntegratedCompiler
+  ( IntegratedCompileResult(..)
+  , analysisToCombined
+  , compileWithIntegratedAnalyzers
+  , defaultCompilerConfig
   )
 
 tests :: TestTree
@@ -33,9 +41,9 @@ tests =
             result <- runIntegratedAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
-              Right analysisResult -> do
-                assertBool "Should have no ownership errors" (null $ ownershipErrors analysisResult)
-                assertBool "Should have no dependent type errors" (null $ dependentTypeErrors analysisResult)
+              Right analysisRes -> do
+                assertBool "Should have no ownership errors" (null $ ownershipErrors analysisRes)
+                assertBool "Should have no dependent type errors" (null $ dependentTypeErrors analysisRes)
 
         , testCase "use-after-move with type constraints" $ do
             let code = unlines
@@ -57,8 +65,79 @@ tests =
             result <- runIntegratedAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
-              Right analysisResult -> do
-                assertBool "Should detect use-after-move" (not $ null $ ownershipErrors analysisResult)
+              Right analysisRes -> do
+                assertBool "Should detect use-after-move" (not $ null $ ownershipErrors analysisRes)
+
+        , testCase "cross-analysis errors are returned to callers" $ do
+            let code = unlines
+                  [ "//! ownership: on"
+                  , "//! dependent_types: on"
+                  , "package main"
+                  , ""
+                  , "func consume(x owned String) {"
+                  , "    println(x)"
+                  , "}"
+                  , ""
+                  , "func main() {"
+                  , "    var s owned String = \"hello\""
+                  , "    consume(s)"
+                  , "    println(s)"
+                  , "}"
+                  ]
+            let state = newIntegratedAnalyzer True True
+            result <- runIntegratedAnalysis code state
+            case result of
+              Left err -> assertFailure $ "Analysis failed: " ++ err
+              Right analysisRes -> do
+                let combined = combinedErrors analysisRes
+                    crossErrors =
+                      [ (msg, severity)
+                      | CrossAnalyzerError msg severity _ <- combined
+                      ]
+                assertBool "Should surface cross-analysis combined errors" (not $ null crossErrors)
+                assertBool "Cross-analysis errors should be treated as blocking"
+                  (all (\(_, severity) -> severity >= Error) crossErrors)
+                analysisToCombined analysisRes @?= combined
+
+        , testCase "integrated compiler blocks on cross-analysis errors" $ do
+            let code = unlines
+                  [ "//! ownership: on"
+                  , "//! dependent_types: on"
+                  , "package main"
+                  , ""
+                  , "func consume(x owned String) {"
+                  , "    println(x)"
+                  , "}"
+                  , ""
+                  , "func main() {"
+                  , "    var s owned String = \"hello\""
+                  , "    consume(s)"
+                  , "    println(s)"
+                  , "}"
+                  ]
+            compileResult <- compileWithIntegratedAnalyzers code defaultCompilerConfig
+            assertBool "Compilation should fail when cross-analysis reports errors"
+              (not $ success compileResult)
+            let crossSeverities =
+                  [ severity
+                  | CrossAnalyzerError _ severity _ <- filteredErrors compileResult
+                  ]
+            assertBool "Filtered errors should include cross-analysis diagnostics" (not $ null crossSeverities)
+            assertBool "Cross-analysis diagnostics should be treated as errors"
+              (all (>= Error) crossSeverities)
+            case analysisResult compileResult of
+              Nothing ->
+                assertFailure "Expected analysis result to be present"
+              Just analysisRes -> do
+                let combined = combinedErrors analysisRes
+                    crossCombined =
+                      [ severity
+                      | CrossAnalyzerError _ severity _ <- combined
+                      ]
+                assertBool "Combined errors should retain cross-analysis diagnostics"
+                  (not $ null crossCombined)
+                assertBool "Combined diagnostics should propagate severity"
+                  (all (>= Error) crossCombined)
 
         , testCase "borrow with type refinement" $ do
             let code = unlines
@@ -81,9 +160,9 @@ tests =
             result <- runIntegratedAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
-              Right analysisResult -> do
-                assertBool "Should have no ownership errors" (null $ ownershipErrors analysisResult)
-                assertBool "Should have no dependent type errors" (null $ dependentTypeErrors analysisResult)
+              Right analysisRes -> do
+                assertBool "Should have no ownership errors" (null $ ownershipErrors analysisRes)
+                assertBool "Should have no dependent type errors" (null $ dependentTypeErrors analysisRes)
 
         , testCase "mutable borrow with constraints" $ do
             let code = unlines
@@ -105,8 +184,8 @@ tests =
             result <- runIntegratedAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
-              Right analysisResult -> do
-                assertBool "Should have no ownership errors" (null $ ownershipErrors analysisResult)
+              Right analysisRes -> do
+                assertBool "Should have no ownership errors" (null $ ownershipErrors analysisRes)
         ]
 
     , testGroup "Error Prioritization"
@@ -128,8 +207,8 @@ tests =
             result <- runIntegratedAnalysis code state
             case result of
               Left _ -> return ()
-              Right analysisResult -> do
-                assertBool "Should detect ownership error" (not $ null $ ownershipErrors analysisResult)
+              Right analysisRes -> do
+                assertBool "Should detect ownership error" (not $ null $ ownershipErrors analysisRes)
 
         , testCase "multiple analyzer warnings combined" $ do
             let code = unlines
@@ -147,9 +226,9 @@ tests =
             result <- runIntegratedAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
-              Right analysisResult -> do
+              Right analysisRes -> do
                 assertBool "Should have warnings about unused variable" 
-                  (not $ null $ analysisWarnings analysisResult)
+                  (not $ null $ analysisWarnings analysisRes)
         ]
 
     , testGroup "Full Pipeline Integration"
@@ -175,7 +254,7 @@ tests =
             result <- runIntegratedAnalysis mainCode state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
-              Right analysisResult -> do
+              Right analysisRes -> do
                 assertBool "Should complete full analysis" True
 
         , testCase "selective feature enabling" $ do
@@ -192,8 +271,8 @@ tests =
             result <- runIntegratedAnalysis ownershipOnlyCode state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
-              Right analysisResult -> do
-                assertBool "Should analyze ownership only" (null $ dependentTypeErrors analysisResult)
+              Right analysisRes -> do
+                assertBool "Should analyze ownership only" (null $ dependentTypeErrors analysisRes)
 
         , testCase "complex nested ownership transfer" $ do
             let code = unlines
@@ -219,8 +298,8 @@ tests =
             result <- runIntegratedAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
-              Right analysisResult -> do
-                assertBool "Should handle nested ownership transfer" (null $ ownershipErrors analysisResult)
+              Right analysisRes -> do
+                assertBool "Should handle nested ownership transfer" (null $ ownershipErrors analysisRes)
 
         , testCase "dependent types with ownership constraints" $ do
             let code = unlines
@@ -241,9 +320,9 @@ tests =
             result <- runIntegratedAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
-              Right analysisResult -> do
+              Right analysisRes -> do
                 assertBool "Should validate dependent type constraints" 
-                  (null $ dependentTypeErrors analysisResult)
+                  (null $ dependentTypeErrors analysisRes)
         ]
 
     , testGroup "Symbolic State Management"
@@ -264,7 +343,7 @@ tests =
             result <- runIntegratedAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
-              Right analysisResult -> do
+              Right analysisRes -> do
                 assertBool "Symbol table should be consistent" True
 
         , testCase "type environment preservation" $ do
@@ -286,8 +365,8 @@ tests =
             result <- runIntegratedAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
-              Right analysisResult -> do
+              Right analysisRes -> do
                 assertBool "Type environment should preserve custom types" 
-                  (not $ null $ typeEnvironment analysisResult)
+                  (not $ null $ typeEnvironment analysisRes)
         ]
     ]

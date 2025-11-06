@@ -56,17 +56,19 @@ analyzeCodeWithBothAnalyzers code = do
         setPhase DependentTypePhase
         runDependentTypeAnalysis code
     setPhase IntegrationPhase
-    integrationResults <- runCrossAnalysis code
-    combineAllResults ownershipResults dependentTypeResults integrationResults
+    _ <- runCrossAnalysis code
+    combineAllResults ownershipResults dependentTypeResults
 
-combineAllResults :: [Own.OwnershipError] -> [Dep.DependentTypeError] -> [CombinedError] -> IntegratedAnalyzer AnalysisResult
-combineAllResults ownershipErrs typeErrs integrationErrs = do
+combineAllResults :: [Own.OwnershipError] -> [Dep.DependentTypeError] -> IntegratedAnalyzer AnalysisResult
+combineAllResults ownershipErrs typeErrs = do
     symbols <- gets symbolTable
+    combinedErrs <- gets getCombinedErrors
     pure
         AnalysisResult
             { ownershipErrors = ownershipErrs
             , dependentTypeErrors = typeErrs
-            , analysisWarnings = filterWarnings integrationErrs
-            , analysisInfo = filterInfo integrationErrs
+            , combinedErrors = combinedErrs
+            , analysisWarnings = filterWarnings combinedErrs
+            , analysisInfo = filterInfo combinedErrs
             , typeEnvironment = extractTypeEnvironment symbols
             }

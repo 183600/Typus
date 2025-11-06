@@ -20,6 +20,7 @@ import Compiler.Errors.Core (ErrorSeverity(..), CombinedError(..))
 data AnalysisResult = AnalysisResult
     { ownershipErrors :: [Own.OwnershipError]
     , dependentTypeErrors :: [Dep.DependentTypeError]
+    , combinedErrors :: [CombinedError]
     , analysisWarnings :: [String]
     , analysisInfo :: [String]
     , typeEnvironment :: Map.Map String Dep.TypeVar

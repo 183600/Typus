@@ -17,10 +17,11 @@ import qualified Data.Set as Set
 runOwnershipAnalysis :: String -> IntegratedAnalyzer [Own.OwnershipError]
 runOwnershipAnalysis code = do
     let ownershipErrs = Own.analyzeOwnership code
-    mapM_ (addOwnershipError Error) ownershipErrs
     updateSymbolTableWithOwnership ownershipErrs
     symbols <- gets symbolTable
-    pure $ filterSignificantOwnershipErrors code ownershipErrs symbols
+    let significantErrors = filterSignificantOwnershipErrors code ownershipErrs symbols
+    mapM_ (addOwnershipError Error) significantErrors
+    pure significantErrors
 
 updateSymbolTableWithOwnership :: [Own.OwnershipError] -> IntegratedAnalyzer ()
 updateSymbolTableWithOwnership ownershipErrs =
