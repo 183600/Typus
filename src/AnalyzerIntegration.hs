@@ -29,6 +29,8 @@ import Analyzer.Types ( AnalyzerState(..)
                       , CombinedError(..)
                       , ErrorSeverity(..)
                       , IntegratedAnalyzer
+                      , AnalysisContext(..)
+                      , AnalysisPhase(..)
                       )
 
 import qualified Ownership as Own

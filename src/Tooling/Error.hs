@@ -1,5 +1,6 @@
 module Tooling.Error
     ( ToolingError(..)
+    , GoCommandFailure(..)
     , MissingEmbedInfo(..)
     , renderToolingError
     ) where
@@ -18,16 +19,20 @@ data ToolingError
     | CompilationFailed FilePath [CompilerError]
     | SyntaxValidationFailed FilePath [SV.SyntaxError]
     | GoToolchainUnavailable String
-    | GoCommandFailed
-        { teCommand :: String
-        , teArgs :: [String]
-        , teWorkingDir :: FilePath
-        , teExitCode :: Int
-        , teStdout :: String
-        , teStderr :: String
-        }
+    | GoCommandFailed GoCommandFailure
     | MissingEmbeddedAssets [MissingEmbedInfo]
     | BatchCheckFailures [(FilePath, ToolingError)]
+    deriving (Eq, Show)
+
+-- | Detailed information about a failed Go command invocation.
+data GoCommandFailure = GoCommandFailure
+    { teCommand :: String
+    , teArgs :: [String]
+    , teWorkingDir :: FilePath
+    , teExitCode :: Int
+    , teStdout :: String
+    , teStderr :: String
+    }
     deriving (Eq, Show)
 
 -- | Lightweight description of a missing embedded asset.
@@ -58,7 +63,7 @@ renderToolingError err = case err of
                 else indent (unlines (map SV.formatSyntaxError errs))
         in header ++ "\n" ++ details
     GoToolchainUnavailable msg -> msg
-    GoCommandFailed{ teCommand = cmd, teArgs = args, teWorkingDir = dir, teExitCode = code, teStdout = out, teStderr = errOut } ->
+    GoCommandFailed GoCommandFailure{ teCommand = cmd, teArgs = args, teWorkingDir = dir, teExitCode = code, teStdout = out, teStderr = errOut } ->
         let commandLine = unwords (cmd : args)
             base = "Go command failed: " ++ commandLine ++ " (exit code " ++ show code ++ ") in " ++ dir
             stdoutSection = if null out then "" else "\nStdout:\n" ++ indent out

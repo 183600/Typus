@@ -161,9 +161,10 @@ parserErrorToSyntaxError :: String -> SV.SyntaxError
 parserErrorToSyntaxError msg =
     let ls = lines msg
         (lineNum, colNum) =
-            case ls of
+            (case ls of
                 (header:_) -> parseHeader header
                 _ -> (0, 0)
+            ) :: (Int, Int)
         lineContent =
             case drop 2 ls of
                 (codeLine:_) -> extractCodeLine codeLine

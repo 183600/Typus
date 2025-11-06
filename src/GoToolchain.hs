@@ -14,7 +14,7 @@ module GoToolchain
 
 import Control.Concurrent.MVar (MVar, modifyMVar, newMVar)
 import Control.Monad (unless)
-import Control.Monad.Except (ExceptT(..), throwError)
+import Control.Monad.Except (ExceptT(..), runExceptT, throwError)
 import Control.Monad.IO.Class (liftIO)
 import Data.Char (toLower)
 import System.Directory (createDirectoryIfMissing, findExecutable)
@@ -25,7 +25,7 @@ import System.IO (hClose)
 import System.IO.Temp (withSystemTempDirectory, openTempFile)
 import System.Info (os)
 import System.Process (CreateProcess(cwd), proc, readCreateProcessWithExitCode)
-import Tooling.Error (ToolingError(..))
+import Tooling.Error (ToolingError(..), GoCommandFailure(..))
 
 -- | Common IO result type used across the CLI utilities, returning structured tooling errors.
 type IOResult a = ExceptT ToolingError IO a
@@ -60,7 +60,7 @@ defaultGoExecutor logFn = do
                     ExitSuccess ->
                         liftIO $ unless (null stdout) (logger stdout)
                     ExitFailure code ->
-                        throwError GoCommandFailed
+                        throwError $ GoCommandFailed GoCommandFailure
                             { teCommand = "go"
                             , teArgs = args
                             , teWorkingDir = dir

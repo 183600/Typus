@@ -101,7 +101,7 @@ blockDirectiveParser :: DirectiveParser [(T.Text, T.Text)]
 blockDirectiveParser = do
   _ <- symbol "{//!"
   pairs <- MP.sepBy directive (symbol ",")
-  _ <- symbol "}"
+  _ <- MP.optional (symbol "}")
   pure pairs
   where
     directive = do

@@ -28,12 +28,17 @@ library
     exposed-modules:
         Compiler,
         Compiler.Errors,
+        Compiler.Errors.Core,
         Parser,
         SyntaxValidator,
         SimpleSyntaxValidator,
         Ownership,
         Dependencies,
+        Dependencies.AST,
+        Dependencies.TypeSystem,
         CompilerUtils,
+        Compiler.GoAst,
+        Compiler.ValueAnalysis,
         GoToolchain,
         Tooling.Error,
         EmbedAssets,
@@ -48,16 +53,13 @@ library
         SourceLocation
     other-modules:
         Compiler.Error,
-        Compiler.GoAst,
         Compiler.GoLexer,
         Compiler.GoParsing,
         Compiler.GoVarSpec,
         Compiler.IR,
         Compiler.DependentTypeChecker,
         Compiler.OwnershipChecker,
-        Compiler.ValueAnalysis,
         Compiler.TypeChecker,
-        Compiler.Errors.Core,
         Compiler.Errors.Compiler,
         Analyzer.Types,
         Analyzer.State,
@@ -67,9 +69,7 @@ library
         Analyzer.CrossAnalysis,
         ErrorHandler,
         EnhancedErrorHandler,
-        Dependencies.AST,
         Dependencies.Parser,
-        Dependencies.TypeSystem,
         Dependencies.Analyzer,
         Dependencies.Inference,
         Ownership.Common.Lexer,
@@ -94,7 +94,8 @@ library
         optparse-applicative >= 0.16.0 && <1,
         temporary >= 1.2 && <2,
         time >= 1.8 && <2,
-        old-time >= 1.1 && <2
+        old-time >= 1.1 && <2,
+        Glob >= 0.10 && <1
     default-language: Haskell2010
 
 executable typus
