@@ -35,7 +35,7 @@ grammarDefinition = unlines
     "<typeParams>    ::= \"<\" <identifier> (\",\" <identifier>)* \">\"",
     "<whereClause>   ::= \"where\" <constraint> (\",\" <constraint>)*",
     "<varDecl>       ::= (\"var\" | \"const\") <identifier> \":\" <typeExpr>",
-    "<funcDecl>      ::= \"func\" <identifier> \"(" <paramList> \")\" [\":\" <typeExpr>]",
+    "<funcDecl>      ::= \"func\" <identifier> \"(\" <paramList> \")\" [\":\" <typeExpr>]",
     "<paramList>     ::= <param> (\",\" <param>)* | ε",
     "<param>         ::= <identifier> \":\" <typeExpr>",
     "<constraintDef> ::= \"constraint\" <identifier> \"=\" <constraintExpr>",
@@ -43,11 +43,11 @@ grammarDefinition = unlines
     "<simpleType>    ::= <identifier>",
     "<genericType>   ::= <identifier> \"<\" <typeExpr> (\",\" <typeExpr>)* \">\"",
     "<dependentType> ::= <typeExpr> \"where\" <constraint> (\",\" <constraint>)*",
-    "<functionType>  ::= \"func\" \"(" <paramList> \")\" \":\" <typeExpr>",
+    "<functionType>  ::= \"func\" \"(\" <paramList> \")\" \":\" <typeExpr>",
     "<constraint>    ::= <sizeConstraint> | <rangeConstraint> | <predicateConstraint>",
     "<sizeConstraint> ::= <identifier> (\">\" | \">=\") <integer>",
     "<rangeConstraint> ::= <identifier> \"<\" <integer> \",\" <integer> \">\"",
-    "<predicateConstraint> ::= <identifier> \"(" <argList> \")\"",
+    "<predicateConstraint> ::= <identifier> \"(\" <argList> \")\"",
     "<argList>       ::= <typeExpr> (\",\" <typeExpr>)* | ε",
     "<integer>       ::= [0-9]+",
     "<identifier>    ::= [A-Za-z_][A-Za-z0-9_]*"
@@ -334,9 +334,10 @@ parseTypeExpr = try parseConditionalType
       pure $ PredC p (maybe [] id args)
 
     parseTerm = try (SimpleT . T.pack . show <$> integer)
-           <|> try (do f <- identifier
-                        args <- parens ((commaSep parseTypeExpr) <|> pure [])
-                        pure (GenericT f args))
+           <|> try (do
+                 f <- identifier
+                 args <- parens ((commaSep parseTypeExpr) <|> pure [])
+                 pure (GenericT f args))
            <|> (SimpleT <$> identifier)
 
     parseConditionalType = do

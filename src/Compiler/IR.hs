@@ -176,6 +176,7 @@ replaceGenericAngles input =
     isInlineSpace tok =
       isWhitespaceToken tok && not (containsNewline (tokenText tok))
 
+    containsNewline :: String -> Bool
     containsNewline = any (`elem` "\n\r")
 
     isLessToken GoToken{ tokenKind = TokSymbol, tokenText = "<" } = True
@@ -183,8 +184,10 @@ replaceGenericAngles input =
 
     mkSymbol sym = GoToken { tokenKind = TokSymbol, tokenText = sym }
 
+    hasNonTrivial :: [GoToken] -> Bool
     hasNonTrivial = any (\t -> not (isWhitespaceToken t || isCommentToken t))
 
+    consumeGenericTokens :: Int -> [GoToken] -> [GoToken] -> ([GoToken], [GoToken], Bool)
     consumeGenericTokens _ acc [] = (reverse acc, [], False)
     consumeGenericTokens depth acc (tok':rest')
       | tokenKind tok' == TokSymbol && tokenText tok' == "<" =

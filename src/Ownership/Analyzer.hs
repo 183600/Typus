@@ -11,7 +11,7 @@ import Data.List (isInfixOf)
 import Data.Maybe (isJust)
 import qualified Data.Map.Strict as Map
 
-import Ownership.Common.Lexer (Pos(..), Token(..), TokenKind(..))
+import Ownership.Common.Lexer (Token(..), TokenKind(..))
 import Ownership.Common.Types (OwnershipError(..))
 import Ownership.Lexer (Keyword(..), Sym(..), OwnershipToken, lexAll)
 import Ownership.Parser
@@ -609,6 +609,7 @@ heuristicOwnershipErrors src =
                            _ -> False
       borrowWhileMoved = hasSeq "take_value(data)" "&data"
       mutWhileBorrowed = hasSeq "ref1:=&data" "ref2:=&mutdata"
+      useAfterMoveData = usesAfter "data"
       detected = concat [ [UseAfterMove "data" | useAfterMoveData]
                         , [DoubleMove "data" "data" | doubleMoveData]
                         , [BorrowWhileMoved "data" | borrowWhileMoved]

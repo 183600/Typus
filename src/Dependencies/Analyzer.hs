@@ -7,7 +7,6 @@ module Dependencies.Analyzer (
   validateStatement
 ) where
 
-import Control.Monad (mapM_)
 import Control.Monad.State
 import qualified Data.Set as Set
 import qualified Data.Text as T
