@@ -28,13 +28,13 @@ tests =
               , "package main"
               , "func main() {}"
               , ""
-              , "{//! dependent_types: on"
+              , "{//! dependent_types: on}"
               , "alias Broken"
               , "}"
               ]
         typusFile <- expectParse source
         case Compiler.compile typusFile of
-          Left err -> assertBool "error should mention dependent types" ("Dependent type errors" `isInfixOf` Compiler.renderCompilationError err)
+          Left err -> assertBool "error should mention dependent type checking" ("DependentTypeCheckingPhase" `isInfixOf` Compiler.renderCompilationError err)
           Right _  -> assertFailure "expected dependent type error"
 
     , testCase "rejects malformed syntax with unbalanced braces" $ do

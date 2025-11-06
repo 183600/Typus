@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Test.Dependencies.Arbitrary () where
 
 import Test.QuickCheck (Arbitrary(..), oneof, elements, listOf1, choose)

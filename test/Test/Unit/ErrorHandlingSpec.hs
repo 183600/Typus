@@ -19,6 +19,7 @@ import Compiler.Errors.Core
   ( ErrorCategory(..)
   , ErrorContext(..)
   , ErrorRecovery(..)
+  , ErrorSeverity(..)
   , TypeError(..)
   , canRecoverFrom
   , fatalError
@@ -45,18 +46,18 @@ tests =
         assertBool "phase should mention parsing" ("Parsing" `isInfixOf` show (cePhase err))
 
     , testCase "typeError preserves suggestions and context" $ do
-        let span = spanBetween (posAt 5 13) (posAt 5 20)
+        let srcSpan = spanBetween (posAt 5 13) (posAt 5 20)
             sourceSnippet = "var x int = \"hello\""
             hints = map T.pack ["Use strconv.Atoi", "Change the variable type"]
-            err = typeError "E002" (T.pack "Type mismatch") span (Just sourceSnippet) hints
+            err = typeError "E002" (T.pack "Type mismatch") srcSpan (Just sourceSnippet) hints
             TypeError { suggestions = recordedHints, context = ctx } = ceError err
         recordedHints @?= hints
         contextCode ctx @?= Just sourceSnippet
         ceSourceContext err @?= Just sourceSnippet
 
     , testCase "ownershipError provides recovery guidance" $ do
-        let span = spanBetween (posAt 12 3) (posAt 12 15)
-            err = ownershipError "E003" (T.pack "Value moved") span "let y = x" []
+        let ownershipSpan = spanBetween (posAt 12 3) (posAt 12 15)
+            err = ownershipError "E003" (T.pack "Value moved") ownershipSpan "let y = x" []
             recoveryInfo = recovery (ceError err)
         canRecover recoveryInfo @?= True
         shouldContinue recoveryInfo @?= True

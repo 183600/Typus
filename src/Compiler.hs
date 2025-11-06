@@ -27,9 +27,7 @@ import qualified Compiler.IR as IR
 import Compiler.DependentTypeChecker (checkDependentTypes)
 import Compiler.OwnershipChecker (checkOwnership, checkOwnershipWithValueInfo)
 import Compiler.TypeChecker
-  ( Type(..)
-  , TypeEnv(..)
-  , hasTypeErrors
+  ( hasTypeErrors
   , extractDeclarations
   , extractFunctionCalls
   , buildTypeEnv

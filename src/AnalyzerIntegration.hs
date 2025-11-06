@@ -25,6 +25,8 @@ import Analyzer.OwnershipBridge
 import Analyzer.DependentTypeBridge
 import Analyzer.CrossAnalysis
 import Analyzer.Types ( AnalyzerState(..)
+                      , AnalysisContext(..)
+                      , AnalysisPhase(..)
                       , AnalysisResult(..)
                       , CombinedError(..)
                       , ErrorSeverity(..)
