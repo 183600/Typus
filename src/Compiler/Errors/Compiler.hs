@@ -156,7 +156,7 @@ mkCompilerError errId msg phase category severity mSpan mContext hintTexts stack
 -- Create a syntax error with location
 syntaxError :: String -> Text -> SourcePos -> CompilerError
 syntaxError errId msg pos = CompilerError
-    { ceError = errorWithCategory errId Parsing msg (toErrorLocation pos)
+    { ceError = (errorWithCategory errId Parsing msg (toErrorLocation pos))
         { recovery = errorRecovery
         , severity = Error
         }
@@ -167,8 +167,8 @@ syntaxError errId msg pos = CompilerError
 
 -- Create a type error with location and context
 typeError :: String -> Text -> SourceSpan -> Maybe String -> [Text] -> CompilerError
-typeError errId msg span mContext suggestions = CompilerError
-    { ceError = (errorWithCategory errId TypeChecking msg (toErrorLocationWithSpan span))
+typeError errId msg sourceSpan mContext suggestions = CompilerError
+    { ceError = (errorWithCategory errId TypeChecking msg (toErrorLocationWithSpan sourceSpan))
         { suggestions = suggestions
         , context = emptyContext { contextCode = mContext }
         , recovery = errorRecovery
@@ -180,8 +180,8 @@ typeError errId msg span mContext suggestions = CompilerError
 
 -- Create an ownership error with recovery suggestions
 ownershipError :: String -> Text -> SourceSpan -> String -> [Text] -> CompilerError
-ownershipError errId msg span code suggestions = CompilerError
-    { ceError = (errorWithCategory errId Ownership msg (toErrorLocationWithSpan span))
+ownershipError errId msg sourceSpan code suggestions = CompilerError
+    { ceError = (errorWithCategory errId Ownership msg (toErrorLocationWithSpan sourceSpan))
         { suggestions = suggestions
         , context = emptyContext { contextCode = Just code }
         , recovery = customRecovery True True 
@@ -196,8 +196,8 @@ ownershipError errId msg span code suggestions = CompilerError
 
 -- Create a dependent type error
 dependentTypeError :: String -> Text -> SourceSpan -> [Text] -> CompilerError
-dependentTypeError errId msg span suggestions = CompilerError
-    { ceError = (errorWithCategory errId Constraint msg (toErrorLocationWithSpan span))
+dependentTypeError errId msg sourceSpan suggestions = CompilerError
+    { ceError = (errorWithCategory errId Constraint msg (toErrorLocationWithSpan sourceSpan))
         { suggestions = suggestions
         , severity = Error
         , recovery = errorRecovery
@@ -209,8 +209,8 @@ dependentTypeError errId msg span suggestions = CompilerError
 
 -- Create a semantic error
 semanticError :: String -> Text -> SourceSpan -> Maybe String -> CompilerError
-semanticError errId msg span mContext = CompilerError
-    { ceError = (errorWithCategory errId Semantic msg (toErrorLocationWithSpan span))
+semanticError errId msg sourceSpan mContext = CompilerError
+    { ceError = (errorWithCategory errId Semantic msg (toErrorLocationWithSpan sourceSpan))
         { context = emptyContext { contextCode = mContext }
         , recovery = errorRecovery
         }
@@ -265,24 +265,30 @@ formatCompilerError CompilerError{..} =
 -- Format recovery information
 formatRecoveryInfo :: ErrorRecovery -> String
 formatRecoveryInfo rec =
-    let canRecStr = if canRecover rec
+    let canRecStr :: String
+        canRecStr = if canRecover rec
             then "\n✓ Recoverable error - compilation can continue"
             else "\n✗ Fatal error - compilation stopped"
+        actionStr :: String
         actionStr = case recoveryAction rec of
             Just action -> "\nRecovery Action: " ++ action
             Nothing -> ""
+        hintStr :: String
         hintStr = case recoveryHint rec of
             Just hint -> "\nHint: " ++ hint
             Nothing -> ""
-        confidenceStr = "\nRecovery Confidence: " ++ 
-            show (round (recoveryConfidence rec * 100)) ++ "%"
+        confidencePct :: Int
+        confidencePct = round (recoveryConfidence rec * 100)
+        confidenceStr :: String
+        confidenceStr = "\nRecovery Confidence: " ++ show confidencePct ++ "%"
     in canRecStr ++ actionStr ++ hintStr ++ confidenceStr
 
 -- Add line numbers to source code
 addLineNumbers :: String -> String
 addLineNumbers code = 
-    unlines $ zipWith formatLine [1..] (lines code)
+    unlines $ zipWith formatLine [1 :: Int ..] (lines code)
   where
+    formatLine :: Int -> String -> String
     formatLine n line = "  " ++ show n ++ " | " ++ line
 
 -- Format multiple compiler errors
@@ -323,7 +329,7 @@ generateDetailedReport errs =
 -- Format error summary
 formatErrorSummary :: ErrorStatistics -> String
 formatErrorSummary ErrorStatistics{..} =
-    unlines
+    unlines $
         [ "=== Error Summary ==="
         , "Total Errors: " ++ show esTotal
         , "Fatal: " ++ show esFatal
@@ -332,13 +338,15 @@ formatErrorSummary ErrorStatistics{..} =
         , "Info: " ++ show esInfo
         , ""
         , "By Phase:"
-        ] ++ map formatPhaseStat (Map.toList esByPhase) ++
-        [ ""
-        , "By Category:"
-        ] ++ map formatCategoryStat (Map.toList esByCategory) ++
-        [ ""
-        , "Recoverable: " ++ show esRecoverable ++ " / " ++ show esTotal
         ]
+        ++ map formatPhaseStat (Map.toList esByPhase)
+        ++ [ ""
+           , "By Category:"
+           ]
+        ++ map formatCategoryStat (Map.toList esByCategory)
+        ++ [ ""
+           , "Recoverable: " ++ show esRecoverable ++ " / " ++ show esTotal
+           ]
 
 formatPhaseStat :: (CompilationPhase, Int) -> String
 formatPhaseStat (phase, count) = "  " ++ show phase ++ ": " ++ show count
@@ -380,7 +388,9 @@ analyzeErrors errs = ErrorStatistics
     isInfoLevel err = severity (ceError err) == Info
     isRecoverableError err = canRecover $ recovery (ceError err)
     
+    groupByPhase :: [CompilerError] -> Map.Map CompilationPhase Int
     groupByPhase = Map.fromListWith (+) . map (\e -> (cePhase e, 1))
+    groupByCategory :: [CompilerError] -> Map.Map ErrorCategory Int
     groupByCategory = Map.fromListWith (+) . map (\e -> (category (ceError e), 1))
 
 -- ============================================================================
@@ -389,8 +399,8 @@ analyzeErrors errs = ErrorStatistics
 
 -- Add source location to an error
 withSourceLocation :: CompilerError -> SourceSpan -> CompilerError
-withSourceLocation err span = err
-    { ceError = (ceError err) { location = toErrorLocationWithSpan span }
+withSourceLocation err sourceSpan = err
+    { ceError = (ceError err) { location = toErrorLocationWithSpan sourceSpan }
     }
 
 -- Track location during parsing
@@ -462,7 +472,8 @@ suggestFix CompilerError{ceError=err} =
 -- Generate recommendations based on error statistics
 generateRecommendations :: ErrorStatistics -> String
 generateRecommendations ErrorStatistics{..} =
-    let recs = catMaybes
+    let recs :: [String]
+        recs = catMaybes
             [ if esTotal > 10 
                 then Just "Consider breaking down your code into smaller functions"
                 else Nothing

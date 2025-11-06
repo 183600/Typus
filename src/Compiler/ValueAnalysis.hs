@@ -82,6 +82,13 @@ data ShortVarInit = ShortVarInit
     , sviValues :: [String]
     } deriving (Eq, Show)
 
+data ScanState
+    = NoStringState
+    | DoubleStringState Bool
+    | SingleStringState Bool
+    | BacktickState
+    deriving (Eq)
+
 collectShortVarInits :: [(Int, String)] -> [ShortVarInit]
 collectShortVarInits = go []
   where
@@ -221,13 +228,6 @@ findShortVarIndex text = go 0 NoStringState
                     let nextState = if c == '`' then NoStringState else BacktickState
                     in go (idx + 1) nextState
 
-    data ScanState
-        = NoStringState
-        | DoubleStringState Bool
-        | SingleStringState Bool
-        | BacktickState
-        deriving (Eq)
-
 determineValueKind :: String -> ValueKind
 determineValueKind expr
     | isValueInit expr = ValueCopy
@@ -272,7 +272,7 @@ isValueCompositeLiteral :: String -> Bool
 isValueCompositeLiteral s =
     let t = trim s
     in case words t of
-        (w:_) -> isKnownValueType w && "{" `elem` t
+        (w:_) -> isKnownValueType w && '{' `elem` t
         _ -> False
 
 isKnownValueType :: String -> Bool

@@ -8,20 +8,34 @@ module Compiler.GoParsing (
 ) where
 
 import Data.Char (isAlphaNum, isSpace)
-import Data.List (dropWhileEnd, foldl')
+import Data.List (dropWhileEnd)
+import qualified Data.List as List
 import Utils (trim)
+
+data StrState = NoString | DoubleStr | SingleStr | BacktickStr
+    deriving (Eq)
+
+data SplitState
+    = NoStringState
+    | DoubleStringState Bool
+    | SingleStringState Bool
+    | BacktickStringState
+    | ParenState Int
+    | BraceState Int
+    | BracketState Int
+    deriving (Eq)
+
+data SplitAction = SplitHere
 
 -- | Remove trailing // comments while respecting string literals.
 stripLineComment :: String -> String
 stripLineComment = go NoString False
   where
-    data StrState = NoString | DoubleStr | SingleStr | BacktickStr deriving Eq
-
     go _ _ [] = []
     go state escaped (x:y:rest)
         | state == NoString && x == '/' && y == '/' = []
         | otherwise = x : goState state escaped y rest
-    go state escaped [x] = [x]
+    go _ _ [x] = [x]
 
     goState state escaped current rest =
         case state of
@@ -48,7 +62,7 @@ stripLineComment = go NoString False
 splitTopLevel :: Char -> String -> [String]
 splitTopLevel delim input = reverse (finalise current pieces)
   where
-    (pieces, current, _) = foldl' step ([], [], NoStringState) input
+    (pieces, current, _) = List.foldl' step ([], [], NoStringState) input
 
     finalise cur acc =
         let piece = trim (reverse cur)
@@ -109,22 +123,10 @@ splitTopLevel delim input = reverse (finalise current pieces)
                 nextState = if depth' == 0 then NoStringState else BracketState depth'
             in (nextState, Nothing)
 
-    data SplitState
-        = NoStringState
-        | DoubleStringState Bool
-        | SingleStringState Bool
-        | BacktickStringState
-        | ParenState Int
-        | BraceState Int
-        | BracketState Int
-        deriving (Eq)
-
-    data SplitAction = SplitHere
-
 -- | Compute the aggregate change in nesting depth for parentheses,
 -- brackets, and braces.
 nestingDelta :: String -> Int
-nestingDelta = foldl' step 0
+nestingDelta = List.foldl' step 0
   where
     step acc c = acc + delta c
     delta '(' = 1

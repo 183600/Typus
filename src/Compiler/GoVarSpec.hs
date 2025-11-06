@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
+
 module Compiler.GoVarSpec (
     RawVarSpec(..),
     parseVarDeclRawSpecs,
