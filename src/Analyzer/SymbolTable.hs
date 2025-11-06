@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
+
 module Analyzer.SymbolTable (
     collectSymbolsAndTypes,
     collectSymbolsFromAST,
@@ -180,7 +182,7 @@ createConstantSymbolInfo name _lineNum = do
             }
 
 validateSymbolTable :: SymbolTable -> SymbolCollector SymbolTable
-validateSymbolTable symbols = pure $ Map.filterWithKey (const . validateSymbolEntry) symbols
+validateSymbolTable symbols = pure $ Map.filterWithKey validateSymbolEntry symbols
   where
     validateSymbolEntry :: String -> SymbolInfo -> Bool
     validateSymbolEntry name symbol =
