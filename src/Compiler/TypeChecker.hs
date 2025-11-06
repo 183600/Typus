@@ -14,12 +14,13 @@ module Compiler.TypeChecker (
 
 import Parser (TypusFile(..))
 import Compiler.GoAst
-import Compiler.GoParsing (consumeNames, nestingDelta, splitTopLevel, stripLineComment)
+import Compiler.GoParsing (consumeNames, splitTopLevel, stripLineComment)
 import qualified Compiler.GoVarSpec as GoVar
 import qualified Compiler.IR as IR
 
+import Control.Applicative ((<|>))
 import Data.Char (isAlphaNum, isDigit, isSpace)
-import Data.List (dropWhileEnd, foldl', intercalate, isPrefixOf, stripPrefix)
+import Data.List (intercalate, isPrefixOf, stripPrefix)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -129,7 +130,7 @@ buildTypeEnv GoModule{..} =
     functionEntry _ = Nothing
 
     varEntry (GoVar decl) = extractVarTypes decl
-    varEntry (GoConst decl) = extractVarTypes decl
+    varEntry (GoConst decl) = extractConstTypes decl
     varEntry _ = []
 
 -- | Legacy line-based API maintained for compatibility.
@@ -209,7 +210,7 @@ checkVarSpec env context VarSpec{..} =
                 else []
 
 checkCall :: TypeEnv -> Maybe String -> CallExpr -> [TypeError]
-checkCall TypeEnv{..} context call@CallExpr{..} =
+checkCall TypeEnv{..} context CallExpr{..} =
     case lookupSignature callName of
         Nothing -> []
         Just signature ->
@@ -223,7 +224,7 @@ checkCall TypeEnv{..} context call@CallExpr{..} =
     lastSegment n =
         case break (== '.') (reverse n) of
             (revSuffix, []) -> reverse revSuffix
-            (revSuffix, _:revPrefix) -> reverse revPrefix
+            (_, _:revPrefix) -> reverse revPrefix
 
     checkArity FunctionSignature{..} =
         let params = fsParams
@@ -260,6 +261,7 @@ checkCall TypeEnv{..} context call@CallExpr{..} =
             expectedForIdx idx
                 | idx < length fixedParams = Just (fpType (fixedParams !! idx))
                 | otherwise = fpType <$> variadicParam
+            indexedArgs :: [(Int, String)]
             indexedArgs = zip [0..] callArgs
         in concatMap (checkArg expectedForIdx) indexedArgs
 
@@ -307,7 +309,10 @@ extractFunctionName :: String -> Maybe String
 extractFunctionName header = do
     rest <- stripPrefix "func" (trim header)
     let after = dropWhile isSpace rest
-    guard (not (null after) && head after /= '(')
+    guard (case after of
+        [] -> False
+        '(' : _ -> False
+        _ -> True)
     let namePart = takeWhile isValid after
     guard (not (null namePart))
     pure namePart
@@ -318,17 +323,20 @@ extractFunctionName header = do
 
 parseFunctionSignature :: String -> Maybe FunctionSignature
 parseFunctionSignature rawHeader = do
-    (_, afterFunc) <- stripPrefix "func" (trim rawHeader)
+    (_, afterFunc) <- stripPrefixWith "func" (trim rawHeader)
     let afterTrim = dropWhile isSpace afterFunc
-    guard (not (null afterTrim) && head afterTrim /= '(')
+    guard (case afterTrim of
+        [] -> False
+        '(' : _ -> False
+        _ -> True)
     nameAndRest <- pure afterTrim
     let (namePart, rest0) = break (`elem` "([") nameAndRest
     guard (not (null namePart))
     let rest1 = dropWhile isSpace rest0
     afterGenericsSource <-
-        if not (null rest1) && head rest1 == '['
-            then fmap snd (consumeBalanced '[' ']' rest1)
-            else Just rest1
+        case rest1 of
+            '[' : _ -> fmap snd (consumeBalanced '[' ']' rest1)
+            _ -> Just rest1
     (_, paramsSection, afterParams) <- consumeParenSection afterGenericsSource
     let paramSegments = splitTopLevel ',' paramsSection
         params = concatMap parseParamSegment paramSegments
@@ -338,7 +346,7 @@ parseFunctionSignature rawHeader = do
         , fsReturns = returns
         }
   where
-    stripPrefix prefix s
+    stripPrefixWith prefix s
         | prefix `isPrefixOf` s = Just (prefix, drop (length prefix) s)
         | otherwise = Nothing
 
@@ -363,7 +371,7 @@ parseReturnTypes raw =
     let trimmed = trim raw
     in if null trimmed
         then []
-        else if head trimmed == '(' && last trimmed == ')'
+        else if startsWithChar '(' trimmed && endsWithChar ')' trimmed
             then case stripOuterParens trimmed of
                 Nothing -> [typeFromString trimmed]
                 Just inner -> map (typeFromString . extractTypeComponent) (splitTopLevel ',' inner)
@@ -376,27 +384,29 @@ extractTypeComponent segment =
     in if null names then s else trim remainder
 
 parseVarDeclSpecs :: VarDecl -> [VarSpec]
-parseVarDeclSpecs decl = map fromRaw (GoVar.parseVarDeclRawSpecs Nothing decl)
-  where
-    fromRaw GoVar.RawVarSpec{..} =
-        VarSpec
-            { vsNames = rvsNames
-            , vsType = fmap typeFromString rvsType
-            , vsValues = rvsValues
-            }
+parseVarDeclSpecs decl = map toVarSpec (GoVar.parseVarDeclRawSpecs Nothing decl)
 
 parseConstDeclSpecs :: ConstDecl -> [VarSpec]
-parseConstDeclSpecs decl = map fromRaw (GoVar.parseConstDeclRawSpecs Nothing decl)
-  where
-    fromRaw GoVar.RawVarSpec{..} =
-        VarSpec
-            { vsNames = rvsNames
-            , vsType = fmap typeFromString rvsType
-            , vsValues = rvsValues
-            }
+parseConstDeclSpecs decl = map toVarSpec (GoVar.parseConstDeclRawSpecs Nothing decl)
 
+toVarSpec :: GoVar.RawVarSpec -> VarSpec
+toVarSpec GoVar.RawVarSpec{..} =
+    VarSpec
+        { vsNames = rvsNames
+        , vsType = fmap typeFromString rvsType
+        , vsValues = rvsValues
+        }
 
+parseVarSpec :: String -> Maybe VarSpec
+parseVarSpec raw = toVarSpec <$> GoVar.parseVarSpecRaw raw
 
+extractConstTypes :: ConstDecl -> [(String, Type)]
+extractConstTypes decl =
+    [ (name, ty)
+    | VarSpec{..} <- parseConstDeclSpecs decl
+    , Just ty <- [vsType]
+    , name <- vsNames
+    ]
 
 extractVarTypes :: VarDecl -> [(String, Type)]
 extractVarTypes decl =
@@ -439,7 +449,8 @@ consumeBalanced open close input =
         c:rest | c == open -> go 1 [] rest
         _ -> Nothing
   where
-    go _ acc [] = Nothing
+    go :: Int -> String -> String -> Maybe (String, String)
+    go _ _ [] = Nothing
     go level acc (x:xs)
         | x == open = go (level + 1) (x:acc) xs
         | x == close =
@@ -454,6 +465,7 @@ consumeParenSection text =
         '(' : rest -> go 1 [] rest
         _ -> Nothing
   where
+    go :: Int -> String -> String -> Maybe (String, String, String)
     go _ _ [] = Nothing
     go level acc (c:cs)
         | c == '(' = go (level + 1) (c:acc) cs
@@ -469,6 +481,7 @@ stripOuterParens s =
         '(' : rest -> reverseStrip rest [] 1
         _ -> Nothing
   where
+    reverseStrip :: String -> String -> Int -> Maybe String
     reverseStrip [] _ _ = Nothing
     reverseStrip (c:cs) acc depth
         | c == '(' = reverseStrip cs (c:acc) (depth + 1)
@@ -482,44 +495,52 @@ stripOuterParens s =
 -- Call extraction
 --------------------------------------------------------------------------------
 
+data ReaderState
+    = NoStringState'
+    | DoubleState Bool
+    | SingleState Bool
+    | BacktickState'
+    deriving (Eq)
+
 extractCallExpressions :: String -> [CallExpr]
-extractCallExpressions input = go 0 NoString False 0 []
+extractCallExpressions input = go 0 NoStringState' 0 []
   where
     len = length input
 
-    go idx state escaped depth acc
+    go :: Int -> ReaderState -> Int -> [CallExpr] -> [CallExpr]
+    go idx state depth acc
         | idx >= len = reverse acc
         | otherwise =
             let ch = input !! idx
             in case state of
                 NoStringState' ->
                     case ch of
-                        '"' -> go (idx + 1) (DoubleState False) False depth acc
-                        '\'' -> go (idx + 1) (SingleState False) False depth acc
-                        '`' -> go (idx + 1) BacktickState' False depth acc
+                        '"' -> go (idx + 1) (DoubleState False) depth acc
+                        '\'' -> go (idx + 1) (SingleState False) depth acc
+                        '`' -> go (idx + 1) BacktickState' depth acc
                         '(' ->
                             if depth == 0
                                 then case collectCall idx of
-                                    Nothing -> go (idx + 1) NoStringState' False (depth + 1) acc
-                                    Just (callExpr, nextIdx) -> go (nextIdx + 1) NoStringState' False 0 (callExpr : acc)
-                                else go (idx + 1) NoStringState' False (depth + 1) acc
-                        ')' -> go (idx + 1) NoStringState' False (max 0 (depth - 1)) acc
-                        _ -> go (idx + 1) NoStringState' False depth acc
+                                    Nothing -> go (idx + 1) NoStringState' (depth + 1) acc
+                                    Just (callExpr, nextIdx) -> go (nextIdx + 1) NoStringState' 0 (callExpr : acc)
+                                else go (idx + 1) NoStringState' (depth + 1) acc
+                        ')' -> go (idx + 1) NoStringState' (max 0 (depth - 1)) acc
+                        _ -> go (idx + 1) NoStringState' depth acc
                 DoubleState esc ->
                     let esc' = (not esc && ch == '\\')
                         nextState = if not esc && ch == '"' then NoStringState' else DoubleState esc'
-                    in go (idx + 1) nextState False depth acc
+                    in go (idx + 1) nextState depth acc
                 SingleState esc ->
                     let esc' = (not esc && ch == '\\')
                         nextState = if not esc && ch == '\'' then NoStringState' else SingleState esc'
-                    in go (idx + 1) nextState False depth acc
+                    in go (idx + 1) nextState depth acc
                 BacktickState' ->
                     let nextState = if ch == '`' then NoStringState' else BacktickState'
-                    in go (idx + 1) nextState False depth acc
+                    in go (idx + 1) nextState depth acc
 
     collectCall openIdx = do
         name <- collectCallableName (openIdx - 1)
-        (argsText, closeIdx) <- collectArgs (openIdx + 1) 1 NoStringState' False []
+        (argsText, closeIdx) <- collectArgs (openIdx + 1) 1 NoStringState' []
         let args = map trim (splitTopLevel ',' argsText)
         pure (CallExpr name args, closeIdx)
 
@@ -563,6 +584,7 @@ extractCallExpressions input = go 0 NoString False 0 []
         findMatching _ idx | idx < 0 = Nothing
         findMatching openChar idx = goMatch idx 0
           where
+            goMatch :: Int -> Int -> Maybe Int
             goMatch j level
                 | j < 0 = Nothing
                 | otherwise =
@@ -575,40 +597,34 @@ extractCallExpressions input = go 0 NoString False 0 []
                                 then goMatch (j - 1) (level + 1)
                                 else goMatch (j - 1) level
 
-    collectArgs idx depth state escaped acc
+    collectArgs :: Int -> Int -> ReaderState -> String -> Maybe (String, Int)
+    collectArgs idx depth state acc
         | idx >= len = Nothing
         | otherwise =
             let ch = input !! idx
             in case state of
                 NoStringState' ->
                     case ch of
-                        '"' -> collectArgs (idx + 1) depth (DoubleState False) False (ch:acc)
-                        '\'' -> collectArgs (idx + 1) depth (SingleState False) False (ch:acc)
-                        '`' -> collectArgs (idx + 1) depth BacktickState' False (ch:acc)
-                        '(' -> collectArgs (idx + 1) (depth + 1) state False (ch:acc)
+                        '"' -> collectArgs (idx + 1) depth (DoubleState False) (ch:acc)
+                        '\'' -> collectArgs (idx + 1) depth (SingleState False) (ch:acc)
+                        '`' -> collectArgs (idx + 1) depth BacktickState' (ch:acc)
+                        '(' -> collectArgs (idx + 1) (depth + 1) state (ch:acc)
                         ')' ->
                             if depth == 1
                                 then Just (reverse acc, idx)
-                                else collectArgs (idx + 1) (depth - 1) state False (ch:acc)
-                        _ -> collectArgs (idx + 1) depth state False (ch:acc)
+                                else collectArgs (idx + 1) (depth - 1) state (ch:acc)
+                        _ -> collectArgs (idx + 1) depth state (ch:acc)
                 DoubleState esc ->
                     let esc' = (not esc && ch == '\\')
                         nextState = if not esc && ch == '"' then NoStringState' else DoubleState esc'
-                    in collectArgs (idx + 1) depth nextState False (ch:acc)
+                    in collectArgs (idx + 1) depth nextState (ch:acc)
                 SingleState esc ->
                     let esc' = (not esc && ch == '\\')
                         nextState = if not esc && ch == '\'' then NoStringState' else SingleState esc'
-                    in collectArgs (idx + 1) depth nextState False (ch:acc)
+                    in collectArgs (idx + 1) depth nextState (ch:acc)
                 BacktickState' ->
                     let nextState = if ch == '`' then NoStringState' else BacktickState'
-                    in collectArgs (idx + 1) depth nextState False (ch:acc)
-
-    data ReaderState
-        = NoStringState'
-        | DoubleState Bool
-        | SingleState Bool
-        | BacktickState'
-        deriving (Eq)
+                    in collectArgs (idx + 1) depth nextState (ch:acc)
 
 collectModuleCalls :: GoModule -> [CallExpr]
 collectModuleCalls GoModule{..} =
@@ -669,17 +685,23 @@ inferArgumentType TypeEnv{..} rawExpr =
     lastSegment n =
         case break (== '.') (reverse n) of
             (revSuffix, []) -> reverse revSuffix
-            (revSuffix, _:revPrefix) -> reverse revPrefix
+            (_, _:revPrefix) -> reverse revPrefix
+
+startsWithChar :: Char -> String -> Bool
+startsWithChar _ [] = False
+startsWithChar c (x:_) = c == x
+
+endsWithChar :: Char -> String -> Bool
+endsWithChar _ [] = False
+endsWithChar c [x] = x == c
+endsWithChar c (_:xs) = endsWithChar c xs
 
 isStringLiteral :: String -> Bool
 isStringLiteral s =
-    (headMatch '"' && lastMatch '"') || (headMatch '`' && lastMatch '`')
-  where
-    headMatch c = not (null s) && head s == c
-    lastMatch c = not (null s) && last s == c
+    (startsWithChar '"' s && endsWithChar '"' s) || (startsWithChar '`' s && endsWithChar '`' s)
 
 isRuneLiteral :: String -> Bool
-isRuneLiteral s = length s >= 2 && head s == '\'' && last s == '\''
+isRuneLiteral s = length s >= 2 && startsWithChar '\'' s && endsWithChar '\'' s
 
 isBoolLiteral :: String -> Bool
 isBoolLiteral s = s == "true" || s == "false"

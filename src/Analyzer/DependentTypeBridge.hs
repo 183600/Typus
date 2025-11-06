@@ -10,7 +10,6 @@ import Analyzer.Types
 import qualified Dependencies as Dep
 
 import Control.Monad.State
-import Data.Char (isDigit)
 import Data.List (isInfixOf, isPrefixOf)
 import qualified Data.Map.Strict as Map
 
@@ -42,6 +41,7 @@ filterKnownTypeErrors = filter isSignificantTypeError
     isSignificantTypeError (Dep.TypeNotFound typeName) = typeName `notElem` knownTypes
     isSignificantTypeError _ = True
 
+    knownTypes :: [String]
     knownTypes =
         [ "int", "string", "bool", "float64", "byte", "rune"
         , "error", "interface{}", "[]int", "[]T", "[]string"

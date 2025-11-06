@@ -3,7 +3,6 @@ module Analyzer.CrossAnalysis (
 ) where
 
 import Analyzer.State
-import Analyzer.SymbolTable (trim)
 import Analyzer.Types
 import qualified Dependencies as Dep
 import qualified Ownership as Own
