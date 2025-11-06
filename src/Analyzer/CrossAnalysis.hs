@@ -9,6 +9,7 @@ import qualified Ownership as Own
 
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Data.Char (isAlphaNum, isDigit, isLower)
 import Data.List (isPrefixOf)
 import Data.Maybe (mapMaybe)
@@ -62,16 +63,18 @@ checkSymbolInconsistency lineNum symbol
 checkUnusedVariables :: String -> Map.Map String SymbolInfo -> [CombinedError]
 checkUnusedVariables code symbols =
     let usageCounts = Map.fromListWith (+) [ (tok, 1 :: Int) | tok <- tokenizeIdentifiers code ]
-        declared = Map.toList $ Map.filter isOwnedSymbol symbols
+        declaredFromSymbols = Map.keys $ Map.filter isOwnedSymbol symbols
+        declaredLocals = collectLocalOwnedVariables code
+        declaredNames = Set.toList $ Set.fromList (declaredFromSymbols ++ declaredLocals)
     in [ CrossAnalyzerError ("Variable '" ++ name ++ "' declared but never used") Warning []
-       | (name, info) <- declared
-       , shouldWarn name info usageCounts
+       | name <- declaredNames
+       , shouldWarn name usageCounts
        ]
   where
     isOwnedSymbol SymbolInfo{ownershipState = Just (Own.Owned _)} = True
     isOwnedSymbol _ = False
 
-    shouldWarn name _ counts =
+    shouldWarn name counts =
         case Map.lookup name counts of
             Just occ -> occ <= 1 && isWarnable name
             Nothing  -> isWarnable name
@@ -80,6 +83,23 @@ checkUnusedVariables code symbols =
         case name of
             (c:_) -> name /= "_" && not (isKeyword name) && isLower c
             [] -> False
+
+    collectLocalOwnedVariables :: String -> [String]
+    collectLocalOwnedVariables src =
+        mapMaybe extractOwnedVar (lines src)
+      where
+        extractOwnedVar line =
+            case words line of
+                ("var":candidate:rest)
+                    | any (== "owned") rest ->
+                        let name = normalizeName candidate
+                        in if isWarnable name then Just name else Nothing
+                _ -> Nothing
+
+        normalizeName raw =
+            takeWhile isLocalIdentChar (dropWhile (`elem` "&*") raw)
+
+        isLocalIdentChar ch = isAlphaNum ch || ch == '_'
 
 extractVariablesFromLine :: String -> [String]
 extractVariablesFromLine line =
