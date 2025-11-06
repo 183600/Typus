@@ -79,7 +79,7 @@ tokenizeGo = go
           in GoToken kind text : go rest
 
       -- Numbers (including floats)
-      | isDigit c || (c == '.' && not (null cs) && isDigit (head cs)) =
+      | isDigit c || startsFraction c cs =
           let (numberText, rest) = spanNumber input
           in GoToken TokNumber numberText : go rest
 
@@ -101,6 +101,9 @@ tokenizeGo = go
 
       -- Fallback
       | otherwise = GoToken TokOther [c] : go cs
+
+    startsFraction '.' (d:_) = isDigit d
+    startsFraction _ _ = False
 
 -- ---------------------------------------------------------------------------
 -- Token predicates

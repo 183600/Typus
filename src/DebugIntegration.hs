@@ -127,7 +127,8 @@ exampleDebugIntegration = do
     config <- setupCompilerDebugging
 
     -- Simulate compiler phases
-    let exampleFile = "fixtures/reference/example.typus"
+    let exampleFile :: FilePath
+        exampleFile = "fixtures/reference/example.typus"
     debugCompilerStart config exampleFile
 
     -- Parse phase

@@ -13,7 +13,7 @@ import Compiler.GoAst
 import Compiler.GoParsing (nestingDelta, splitTopLevel, stripLineComment)
 import qualified Compiler.GoVarSpec as GoVar
 import Data.Char (isDigit, isSpace)
-import Data.List (dropWhileEnd, foldl', intercalate, isPrefixOf)
+import Data.List (dropWhileEnd, intercalate, isPrefixOf)
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Utils (trim)
@@ -191,12 +191,17 @@ trimBlockSuffix s =
         _ -> trimmed
 
 selectExprForIndex :: [String] -> [String] -> Int -> String
-selectExprForIndex names values idx
-    | null values = ""
-    | length values == length names && idx < length values = values !! idx
-    | length values == 1 = head values
-    | idx < length values = values !! idx
-    | otherwise = intercalate ", " values
+selectExprForIndex names values idx =
+    case values of
+        [] -> ""
+        [single] -> single
+        _
+            | sameLength && idx < valueCount -> values !! idx
+            | idx < valueCount -> values !! idx
+            | otherwise -> intercalate ", " values
+  where
+    valueCount = length values
+    sameLength = valueCount == length names
 
 findShortVarIndex :: String -> Maybe Int
 findShortVarIndex text = go 0 NoStringState
