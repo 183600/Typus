@@ -18,8 +18,8 @@ import qualified Dependencies as Dep
 import Compiler.Errors.Core (ErrorSeverity(..), CombinedError(..))
 
 data AnalysisResult = AnalysisResult
-    { ownershipErrors :: [Own.OwnershipError]
-    , dependentTypeErrors :: [Dep.DependentTypeError]
+    { ownershipErrors :: [(ErrorSeverity, Own.OwnershipError)]
+    , dependentTypeErrors :: [(ErrorSeverity, Dep.DependentTypeError)]
     , combinedErrors :: [CombinedError]
     , analysisWarnings :: [String]
     , analysisInfo :: [String]
@@ -53,8 +53,8 @@ data AnalyzerState = AnalyzerState
     , symbolTable :: Map.Map String SymbolInfo
     , analysisContext :: AnalysisContext
     , combinedErrors :: [CombinedError]
-    , ownershipErrorsAcc :: [Own.OwnershipError]
-    , dependentTypeErrorsAcc :: [Dep.DependentTypeError]
+    , ownershipErrorsAcc :: [(ErrorSeverity, Own.OwnershipError)]
+    , dependentTypeErrorsAcc :: [(ErrorSeverity, Dep.DependentTypeError)]
     } deriving (Show, Eq)
 
 type IntegratedAnalyzer = StateT AnalyzerState (ExceptT String IO)

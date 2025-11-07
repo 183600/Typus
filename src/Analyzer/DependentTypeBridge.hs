@@ -16,13 +16,13 @@ import Control.Monad.State
 import Data.List (isInfixOf, isPrefixOf)
 import qualified Data.Map.Strict as Map
 
-runDependentTypeAnalysis :: String -> IntegratedAnalyzer [Dep.DependentTypeError]
+runDependentTypeAnalysis :: String -> IntegratedAnalyzer [(ErrorSeverity, Dep.DependentTypeError)]
 runDependentTypeAnalysis code =
     case parseTypus code of
         Left err -> do
             let parseError = Dep.ParseError err
             addDependentTypeError Error parseError
-            pure [parseError]
+            pure [(Error, parseError)]
         Right typusFile -> do
             let dependentContent = DepChecker.extractDependentTypeContent typusFile
             if not (dependentTypesEnabled typusFile) || null (trim dependentContent)
@@ -37,8 +37,9 @@ runDependentTypeAnalysis code =
                     updateSymbolTableWithTypes filteredErrors
                     symbols <- gets symbolTable
                     let significantErrors = filterSignificantTypeErrors filteredErrors symbols
-                    mapM_ (addDependentTypeError Error) significantErrors
-                    pure significantErrors
+                        labeledErrors = map (\err -> (Error, err)) significantErrors
+                    mapM_ (uncurry addDependentTypeError) labeledErrors
+                    pure labeledErrors
 
 updateSymbolTableWithTypes :: [Dep.DependentTypeError] -> IntegratedAnalyzer ()
 updateSymbolTableWithTypes _typeErrors = pure ()
