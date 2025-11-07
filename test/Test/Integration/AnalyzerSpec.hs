@@ -3,6 +3,8 @@ module Test.Integration.AnalyzerSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, (@?=), testCase)
 
+import Data.List (isInfixOf)
+
 import AnalyzerIntegration
   ( AnalysisResult(..)
   , CombinedError(..)
@@ -186,6 +188,24 @@ tests =
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
                 assertBool "Should have no ownership errors" (null $ ownershipErrors analysisRes)
+        ]
+
+    , testGroup "Error Handling"
+        [ testCase "fails fast when Go AST parsing fails" $ do
+            let invalidCode = unlines
+                  [ "//! ownership: on"
+                  , "package main"
+                  , ""
+                  , "func main() {"
+                  , "    var s int = 1"
+                  ]
+            let state = newIntegratedAnalyzer True True
+            result <- runIntegratedAnalysis invalidCode state
+            case result of
+              Left err ->
+                assertBool "Expected Go AST parse failure message" ("Go AST parsing failed" `isInfixOf` err)
+              Right _ ->
+                assertFailure "Expected analysis to fail when Go AST parsing fails"
         ]
 
     , testGroup "Error Prioritization"

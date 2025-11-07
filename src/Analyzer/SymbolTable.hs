@@ -13,23 +13,20 @@ import qualified Dependencies as Dep
 import qualified Ownership as Own
 import Compiler.GoAst (GoModule(..), GoDecl(..), FuncDecl(..), VarDecl(..), ConstDecl(..), TypeDecl(..), parseGoModule)
 
+import Control.Monad.Except (throwError)
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
 import Data.Char (isSpace, isAlphaNum, isDigit)
-import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
+import Data.List (isPrefixOf)
 
 type SymbolTable = Map.Map String SymbolInfo
 type SymbolCollector a = IntegratedAnalyzer a
 
 collectSymbolsAndTypes :: String -> IntegratedAnalyzer SymbolTable
-collectSymbolsAndTypes code = do
+collectSymbolsAndTypes code =
     case parseGoModule (lines code) of
         Right goModule -> collectSymbolsFromAST goModule
-        Left _ -> do
-            let linesOfCode = lines code
-            symbols <- mapM processLineForSymbols (zip [1 ..] linesOfCode)
-            let combinedSymbols = foldr Map.union Map.empty symbols
-            validateSymbolTable combinedSymbols
+        Left err -> throwError $ "Go AST parsing failed: " ++ err
 
 collectSymbolsFromAST :: GoModule -> IntegratedAnalyzer SymbolTable
 collectSymbolsFromAST GoModule{..} = do
@@ -50,30 +47,6 @@ collectSymbolsFromAST GoModule{..} = do
         [] -> pure Map.empty
         (h:_) -> processTypeDeclaration lineNum h
     processDecl _ = pure Map.empty
-
-processLineForSymbols :: (Int, String) -> IntegratedAnalyzer SymbolTable
-processLineForSymbols (lineNum, line) = do
-    let trimmed = trim line
-    if isIgnorable trimmed
-        then pure Map.empty
-        else dispatch trimmed
-  where
-    dispatch trimmed =
-        if "var " `isPrefixOf` trimmed || ":=" `isInfixOf` trimmed
-            then processVariableDeclaration lineNum trimmed
-        else if "type " `isPrefixOf` trimmed
-            then processTypeDeclaration lineNum trimmed
-        else if "func " `isPrefixOf` trimmed
-            then processFunctionDeclaration lineNum trimmed
-        else if "const " `isPrefixOf` trimmed
-            then processConstantDeclaration lineNum trimmed
-        else pure Map.empty
-
-    isIgnorable s =
-        "//" `isPrefixOf` s
-            || null s
-            || "/*" `isPrefixOf` s
-            || "*/" `isSuffixOf` s
 
 processVariableDeclaration :: Int -> String -> SymbolCollector SymbolTable
 processVariableDeclaration lineNum line = do
