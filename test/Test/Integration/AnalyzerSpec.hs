@@ -229,6 +229,49 @@ tests =
               Right analysisRes -> do
                 assertBool "Should have warnings about unused variable" 
                   (not $ null $ analysisWarnings analysisRes)
+
+        , testCase "warnings retain severity in combined errors" $ do
+            let code = unlines
+                  [ "//! ownership: on"
+                  , "//! dependent_types: on"
+                  , "package main"
+                  , ""
+                  , "func main() {"
+                  , "    var unused owned String = \"hello\""
+                  , "    var x int = 42"
+                  , "    println(x)"
+                  , "}"
+                  ]
+            let state = newIntegratedAnalyzer True True
+            result <- runIntegratedAnalysis code state
+            case result of
+              Left err -> assertFailure $ "Analysis failed: " ++ err
+              Right analysisRes -> do
+                let warningSeverities =
+                      [ severity
+                      | CrossAnalyzerError _ severity _ <- analysisToCombined analysisRes
+                      ]
+                assertBool "Expected a warning severity in combined errors"
+                  (Warning `elem` warningSeverities)
+
+        , testCase "compiler config filters out warning-only diagnostics" $ do
+            let code = unlines
+                  [ "//! ownership: on"
+                  , "//! dependent_types: on"
+                  , "package main"
+                  , ""
+                  , "func main() {"
+                  , "    var unused owned String = \"hello\""
+                  , "    var x int = 42"
+                  , "    println(x)"
+                  , "}"
+                  ]
+            let config = defaultCompilerConfig { errorReportingLevel = Fatal }
+            compileResult <- compileWithIntegratedAnalyzers code config
+            assertBool "Compilation should succeed when only warnings are present" (success compileResult)
+            filteredErrors compileResult @?= []
+            assertBool "Warnings should still surface outside filtered errors"
+              (not $ null $ compilationWarnings compileResult)
         ]
 
     , testGroup "Full Pipeline Integration"

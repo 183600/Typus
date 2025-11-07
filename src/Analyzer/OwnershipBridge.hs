@@ -14,14 +14,15 @@ import Data.Maybe (listToMaybe, mapMaybe)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
-runOwnershipAnalysis :: String -> IntegratedAnalyzer [Own.OwnershipError]
+runOwnershipAnalysis :: String -> IntegratedAnalyzer [(ErrorSeverity, Own.OwnershipError)]
 runOwnershipAnalysis code = do
     let ownershipErrs = Own.analyzeOwnership code
     updateSymbolTableWithOwnership ownershipErrs
     symbols <- gets symbolTable
     let significantErrors = filterSignificantOwnershipErrors code ownershipErrs symbols
-    mapM_ (addOwnershipError Error) significantErrors
-    pure significantErrors
+        labeledErrors = map (\res -> (Error, res)) significantErrors
+    mapM_ (uncurry addOwnershipError) labeledErrors
+    pure labeledErrors
 
 updateSymbolTableWithOwnership :: [Own.OwnershipError] -> IntegratedAnalyzer ()
 updateSymbolTableWithOwnership ownershipErrs =

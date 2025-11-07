@@ -53,13 +53,13 @@ ifEnableDependentTypes def action = do
 
 addOwnershipError :: ErrorSeverity -> Own.OwnershipError -> IntegratedAnalyzer ()
 addOwnershipError severity err = modify $ \s ->
-    s { ownershipErrorsAcc = ownershipErrorsAcc s ++ [err]
+    s { ownershipErrorsAcc = ownershipErrorsAcc s ++ [(severity, err)]
       , combinedErrors = combinedErrors s ++ [OwnershipErrorCombined severity err]
       }
 
 addDependentTypeError :: ErrorSeverity -> Dep.DependentTypeError -> IntegratedAnalyzer ()
 addDependentTypeError severity err = modify $ \s ->
-    s { dependentTypeErrorsAcc = dependentTypeErrorsAcc s ++ [err]
+    s { dependentTypeErrorsAcc = dependentTypeErrorsAcc s ++ [(severity, err)]
       , combinedErrors = combinedErrors s ++ [DependentTypeErrorCombined severity err]
       }
 

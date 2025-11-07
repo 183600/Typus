@@ -59,7 +59,7 @@ analyzeCodeWithBothAnalyzers code = do
     _ <- runCrossAnalysis code
     combineAllResults ownershipResults dependentTypeResults
 
-combineAllResults :: [Own.OwnershipError] -> [Dep.DependentTypeError] -> IntegratedAnalyzer AnalysisResult
+combineAllResults :: [(ErrorSeverity, Own.OwnershipError)] -> [(ErrorSeverity, Dep.DependentTypeError)] -> IntegratedAnalyzer AnalysisResult
 combineAllResults ownershipErrs typeErrs = do
     symbols <- gets symbolTable
     combinedErrs <- gets getCombinedErrors
