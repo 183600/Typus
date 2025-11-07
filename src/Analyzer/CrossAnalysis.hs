@@ -10,9 +10,12 @@ import qualified Ownership as Own
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Data.Char (isAlphaNum, isDigit, isLower)
+import Data.Char (isDigit, isLower)
 import Data.List (isPrefixOf)
-import Data.Maybe (mapMaybe)
+import Data.Maybe (mapMaybe, fromMaybe)
+import Compiler.GoAst (parseGoModule)
+import Ownership.Common.Lexer (Token(..), TokenKind(..))
+import Ownership.Lexer (OwnershipToken, Sym(..), lexAll)
 
 runCrossAnalysis :: String -> IntegratedAnalyzer [CombinedError]
 runCrossAnalysis code = do
@@ -60,46 +63,79 @@ checkSymbolInconsistency lineNum symbol
         ["Symbol '" ++ symbolName symbol ++ "' at line " ++ show lineNum ++ " is both moved and borrowed"]
     | otherwise = []
 
-checkUnusedVariables :: String -> Map.Map String SymbolInfo -> [CombinedError]
-checkUnusedVariables code symbols =
-    let usageCounts = Map.fromListWith (+) [ (tok, 1 :: Int) | tok <- tokenizeIdentifiers code ]
-        declaredFromSymbols = Map.keys $ Map.filter isOwnedSymbol symbols
-        declaredLocals = collectLocalOwnedVariables code
-        declaredNames = Set.toList $ Set.fromList (declaredFromSymbols ++ declaredLocals)
-    in [ CrossAnalyzerError ("Variable '" ++ name ++ "' declared but never used") Warning []
-       | name <- declaredNames
-       , shouldWarn name usageCounts
-       ]
-  where
-    isOwnedSymbol SymbolInfo{ownershipState = Just (Own.Owned _)} = True
-    isOwnedSymbol _ = False
+data UsageSummary = UsageSummary
+    { usageByScope :: Map.Map (String, Int) Int
+    , usageTotals :: Map.Map String Int
+    }
 
-    shouldWarn name counts =
-        case Map.lookup name counts of
-            Just occ -> occ <= 1 && isWarnable name
-            Nothing  -> isWarnable name
+checkUnusedVariables :: String -> Map.Map String SymbolInfo -> [CombinedError]
+checkUnusedVariables code symbols
+    | null trackedSymbols = []
+    | otherwise =
+        case parseGoModule (lines code) of
+            Left _ -> []
+            Right _ ->
+                let tokens = lexAll code
+                    usageSummary = computeUsageSummary trackedNameSet tokens
+                in mapMaybe (unusedWarning usageSummary) trackedSymbols
+  where
+    trackedSymbols = filter isTrackedSymbol (Map.elems symbols)
+
+    trackedNameSet = Set.fromList (map symbolName trackedSymbols)
+
+    isTrackedSymbol symbol =
+        case ownershipState symbol of
+            Just (Own.Owned _) -> isWarnable (symbolName symbol)
+            _ -> False
+
+    unusedWarning summary symbol
+        | isMoved symbol || isBorrowed symbol = Nothing
+        | usageCount summary symbol > 1 = Nothing
+        | otherwise =
+            Just $ CrossAnalyzerError ("Variable '" ++ symbolName symbol ++ "' declared but never used") Warning []
+
+    usageCount UsageSummary{..} symbol =
+        let name = symbolName symbol
+            scopeKey = (name, symbolScope symbol)
+        in fromMaybe (Map.findWithDefault 0 name usageTotals) (Map.lookup scopeKey usageByScope)
 
     isWarnable name =
         case name of
             (c:_) -> name /= "_" && not (isKeyword name) && isLower c
             [] -> False
 
-    collectLocalOwnedVariables :: String -> [String]
-    collectLocalOwnedVariables src =
-        mapMaybe extractOwnedVar (lines src)
-      where
-        extractOwnedVar line =
-            case words line of
-                ("var":candidate:rest)
-                    | any (== "owned") rest ->
-                        let name = normalizeName candidate
-                        in if isWarnable name then Just name else Nothing
-                _ -> Nothing
+computeUsageSummary :: Set.Set String -> [OwnershipToken] -> UsageSummary
+computeUsageSummary trackedNames tokens =
+    go tokens 0 False Map.empty Map.empty
+  where
+    go [] _ _ scoped totals = UsageSummary scoped totals
+    go (Token kind _ : rest) depth lastDot scoped totals =
+        case kind of
+            TSym SLBrace ->
+                go rest (depth + 1) False scoped totals
+            TSym SRBrace ->
+                go rest (max 0 (depth - 1)) False scoped totals
+            TSym SDot ->
+                go rest depth True scoped totals
+            TId ident ->
+                let shouldCount =
+                        Set.member ident trackedNames
+                            && not lastDot
+                            && not (nextIsColon rest)
+                    scoped' =
+                        if shouldCount
+                            then Map.insertWith (+) (ident, depth) 1 scoped
+                            else scoped
+                    totals' =
+                        if shouldCount
+                            then Map.insertWith (+) ident 1 totals
+                            else totals
+                in go rest depth False scoped' totals'
+            _ ->
+                go rest depth False scoped totals
 
-        normalizeName raw =
-            takeWhile isLocalIdentChar (dropWhile (`elem` "&*") raw)
-
-        isLocalIdentChar ch = isAlphaNum ch || ch == '_'
+    nextIsColon (Token (TSym SColon) _ : _) = True
+    nextIsColon _ = False
 
 extractVariablesFromLine :: String -> [String]
 extractVariablesFromLine line =
@@ -156,12 +192,4 @@ isOperator word =
                , "^"
                ]
 
-tokenizeIdentifiers :: String -> [String]
-tokenizeIdentifiers [] = []
-tokenizeIdentifiers (c : cs)
-    | isIdentChar c =
-        let (ident, rest) = span isIdentChar (c : cs)
-        in ident : tokenizeIdentifiers rest
-    | otherwise = tokenizeIdentifiers cs
-  where
-    isIdentChar ch = isAlphaNum ch || ch == '_'
+
