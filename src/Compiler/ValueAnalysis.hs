@@ -13,7 +13,7 @@ import Compiler.GoAst
 import Compiler.GoParsing (nestingDelta, splitTopLevel, stripLineComment)
 import qualified Compiler.GoVarSpec as GoVar
 import Data.Char (isDigit, isSpace)
-import Data.List (dropWhileEnd, intercalate, isPrefixOf)
+import Data.List (dropWhileEnd, foldl', intercalate, isPrefixOf)
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Utils (trim)
