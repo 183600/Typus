@@ -8,6 +8,7 @@ import qualified Dependencies as Dep
 import qualified Ownership as Own
 
 import Control.Monad.State
+import Data.Foldable (foldl')
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Char (isDigit, isLower)
@@ -16,6 +17,7 @@ import Data.Maybe (mapMaybe, fromMaybe)
 import Compiler.GoAst (parseGoModule)
 import Ownership.Common.Lexer (Token(..), TokenKind(..))
 import Ownership.Lexer (OwnershipToken, Sym(..), lexAll)
+import Ownership.Parser (Program(..), Stmt(..), Expr(..), parseProgram)
 
 runCrossAnalysis :: String -> IntegratedAnalyzer [CombinedError]
 runCrossAnalysis code = do
@@ -106,36 +108,96 @@ checkUnusedVariables code symbols
 
 computeUsageSummary :: Set.Set String -> [OwnershipToken] -> UsageSummary
 computeUsageSummary trackedNames tokens =
-    go tokens 0 False Map.empty Map.empty
+    let program = parseProgram tokens
+        occurrences = collectOccurrences trackedNames program
+    in foldl' updateSummary (UsageSummary Map.empty Map.empty) occurrences
   where
-    go [] _ _ scoped totals = UsageSummary scoped totals
-    go (Token kind _ : rest) depth lastDot scoped totals =
-        case kind of
-            TSym SLBrace ->
-                go rest (depth + 1) False scoped totals
-            TSym SRBrace ->
-                go rest (max 0 (depth - 1)) False scoped totals
-            TSym SDot ->
-                go rest depth True scoped totals
-            TId ident ->
-                let shouldCount =
-                        Set.member ident trackedNames
-                            && not lastDot
-                            && not (nextIsColon rest)
-                    scoped' =
-                        if shouldCount
-                            then Map.insertWith (+) (ident, depth) 1 scoped
-                            else scoped
-                    totals' =
-                        if shouldCount
-                            then Map.insertWith (+) ident 1 totals
-                            else totals
-                in go rest depth False scoped' totals'
-            _ ->
-                go rest depth False scoped totals
+    updateSummary (UsageSummary scoped totals) (name, depth) =
+        let scoped' = Map.insertWith (+) (name, depth) 1 scoped
+            totals' = Map.insertWith (+) name 1 totals
+        in UsageSummary scoped' totals'
 
-    nextIsColon (Token (TSym SColon) _ : _) = True
-    nextIsColon _ = False
+collectOccurrences :: Set.Set String -> Program -> [(String, Int)]
+collectOccurrences tracked (Program stmts) = goStmts 0 stmts
+  where
+    goStmts depth = concatMap (goStmt depth)
+
+    goStmt depth stmt =
+        case stmt of
+            SVarDecl name mInit _ ->
+                record name depth ++ maybe [] (goExpr depth) mInit
+            SLetDecl name mInit _ ->
+                record name depth ++ maybe [] (goExpr depth) mInit
+            SAssignStmt name _ expr _ ->
+                record name depth ++ goExpr depth expr
+            SExpr expr _ ->
+                goExpr depth expr
+            SBlock body _ ->
+                goStmts (depth + 1) body
+            SFunc body _ ->
+                goStmts (depth + 1) body
+            SFor body _ ->
+                goStmts (depth + 1) body
+            SDirectiveBlock _ body _ ->
+                goStmts (depth + 1) body
+            SDirectiveLine _ _ ->
+                []
+
+    goExpr depth expr =
+        case expr of
+            EIdent name _ ->
+                record name depth
+            ECall name args _ ->
+                record name depth ++ concatMap (goExpr depth) args
+            EUnary _ inner _ ->
+                goExpr depth inner
+            EUnknown toks _ ->
+                collectFromTokens depth toks
+            _ ->
+                []
+
+    collectFromTokens depth toks =
+        [ (name, depth)
+        | name <- collectPlainIdentifiers toks ++ collectSelectorBases toks
+        , Set.member name tracked
+        ]
+
+    record name depth
+        | Set.member name tracked = [(name, depth)]
+        | otherwise = []
+
+collectPlainIdentifiers :: [OwnershipToken] -> [String]
+collectPlainIdentifiers tokens = go Nothing tokens
+  where
+    go _ [] = []
+    go prev (current:rest) =
+        let next = case rest of
+                (x:_) -> Just x
+                [] -> Nothing
+            remainder = go (Just current) rest
+        in case current of
+            Token (TId ident) _
+                | not (isSymbolToken SDot prev)
+                , not (isSymbolToken SDot next)
+                , not (isSymbolToken SColon next)
+                , not (isSymbolToken SLParen next) -> ident : remainder
+                | otherwise -> remainder
+            _ ->
+                remainder
+
+collectSelectorBases :: [OwnershipToken] -> [String]
+collectSelectorBases = go []
+  where
+    go acc (Token (TId ident) _ : Token (TSym SDot) _ : Token (TId _) _ : rest) =
+        go (ident : acc) rest
+    go acc (_:rest) = go acc rest
+    go acc [] = reverse acc
+
+isSymbolToken :: Sym -> Maybe OwnershipToken -> Bool
+isSymbolToken sym = maybe False matches
+  where
+    matches (Token (TSym sym') _) = sym == sym'
+    matches _ = False
 
 extractVariablesFromLine :: String -> [String]
 extractVariablesFromLine line =
