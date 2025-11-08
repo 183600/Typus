@@ -25,8 +25,13 @@ tests =
             kindOf "inner" @?= [Reference]
             kindOf "lookup" @?= [Reference]
             kindOf "fake" @?= []
+            kindOf "customStruct" @?= [ValueCopy]
+            kindOf "customAlias" @?= [ValueCopy]
+            kindOf "groupStruct" @?= [ValueCopy]
+            kindOf "groupAlias" @?= [ValueCopy]
+            kindOf "customPointer" @?= [Reference]
 
-            sortedCopies @?= ["first", "groupedValue", "text", "value"]
+            sortedCopies @?= ["customAlias", "customStruct", "first", "groupAlias", "groupStruct", "groupedValue", "text", "value"]
         ]
 
 parseModule :: String -> IO GoModule
@@ -47,6 +52,21 @@ sampleSource = unlines
     , "    groupedValue, groupedRef = 5, make([]byte, 0)"
     , ")"
     , ""
+    , "type MyStruct struct {"
+    , "    ID int"
+    , "}"
+    , ""
+    , "type MyAlias = MyStruct"
+    , ""
+    , "type MyNumber int"
+    , ""
+    , "type ("
+    , "    ExportedGrouped struct {"
+    , "        Name string"
+    , "    }"
+    , "    ExportedAlias = ExportedGrouped"
+    , ")"
+    , ""
     , "func example(items []string) {"
     , "    // fake := make([]int, 0)"
     , "    value := 42"
@@ -57,5 +77,13 @@ sampleSource = unlines
     , "    for _, entry := range items {"
     , "        inner := make([]string, 0)"
     , "    }"
+    , "}"
+    , ""
+    , "func custom() {"
+    , "    customStruct := MyStruct{ID: 1}"
+    , "    customAlias := MyAlias{ID: 2}"
+    , "    groupStruct := ExportedGrouped{Name: \"ok\"}"
+    , "    groupAlias := ExportedAlias{Name: \"alias\"}"
+    , "    customPointer := &MyStruct{ID: 3}"
     , "}"
     ]
