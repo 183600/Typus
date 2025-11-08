@@ -18,6 +18,7 @@ import AnalyzerIntegration
     ( AnalysisResult(..)
     , CombinedError(..)
     , ErrorSeverity(..)
+    , mkAnalysisInput
     , newIntegratedAnalyzer
     , runIntegratedAnalysis
     )
@@ -93,7 +94,8 @@ compileWithIntegratedAnalyzers source CompilerConfig{..} =
                             }
                 Right typusFile -> do
                     let analyzerState = newIntegratedAnalyzer enableOwnership enableDependentTypes
-                    analysisOutcome <- runIntegratedAnalysis source analyzerState
+                        analysisInput = mkAnalysisInput source
+                    analysisOutcome <- runIntegratedAnalysis analysisInput analyzerState
                     case analysisOutcome of
                         Left errMsg ->
                             pure

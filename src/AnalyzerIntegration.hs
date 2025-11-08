@@ -5,6 +5,8 @@ module AnalyzerIntegration (
     AnalysisResult(..),
     CombinedError(..),
     ErrorSeverity(..),
+    AnalysisInput(..),
+    mkAnalysisInput,
     newIntegratedAnalyzer,
     runIntegratedAnalysis,
     analyzeCodeWithBothAnalyzers,
@@ -36,17 +38,37 @@ import Analyzer.Types ( AnalyzerState(..)
 import qualified Ownership as Own
 import qualified Dependencies as Dep
 
-runIntegratedAnalysis :: String -> AnalyzerState -> IO (Either String AnalysisResult)
-runIntegratedAnalysis code initialState = do
-    result <- runExceptT $ runStateT (analyzeCodeWithBothAnalyzers code) initialState
+-- | Input metadata for running the integrated analyzers.
+data AnalysisInput = AnalysisInput
+    { sourceCode :: String
+    , sourceFilePath :: Maybe FilePath
+    , sourceLabel :: Maybe String
+    } deriving (Show, Eq)
+
+-- | Construct a minimal analysis input from raw source code.
+mkAnalysisInput :: String -> AnalysisInput
+mkAnalysisInput code =
+    AnalysisInput
+        { sourceCode = code
+        , sourceFilePath = Nothing
+        , sourceLabel = Nothing
+        }
+
+runIntegratedAnalysis :: AnalysisInput -> AnalyzerState -> IO (Either String AnalysisResult)
+runIntegratedAnalysis input initialState = do
+    result <- runExceptT $ runStateT (analyzeCodeWithBothAnalyzers input) initialState
     pure $ case result of
         Left err -> Left err
         Right (analysisResult, _) -> Right analysisResult
 
-analyzeCodeWithBothAnalyzers :: String -> IntegratedAnalyzer AnalysisResult
-analyzeCodeWithBothAnalyzers code = do
-    modify $ \s -> s { analysisContext = (analysisContext s) { currentFile = "<input>" } }
+analyzeCodeWithBothAnalyzers :: AnalysisInput -> IntegratedAnalyzer AnalysisResult
+analyzeCodeWithBothAnalyzers input = do
+    modify $ \s ->
+        let ctx = analysisContext s
+            updatedCtx = ctx { currentFile = resolveSourceDescriptor input }
+        in s { analysisContext = updatedCtx }
     setPhase InitialPhase
+    let code = sourceCode input
     symbols <- collectSymbolsAndTypes code
     modify $ \s -> s { symbolTable = symbols }
     ownershipResults <- ifEnableOwnership [] $ do
@@ -72,3 +94,9 @@ combineAllResults ownershipErrs typeErrs = do
             , analysisInfo = filterInfo combinedErrs
             , typeEnvironment = extractTypeEnvironment symbols
             }
+
+resolveSourceDescriptor :: AnalysisInput -> String
+resolveSourceDescriptor input =
+    case sourceFilePath input of
+        Just path -> path
+        Nothing -> maybe "<input>" id (sourceLabel input)
