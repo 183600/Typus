@@ -3,12 +3,19 @@ module Test.Integration.AnalyzerSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, (@?=), testCase)
 
+import Control.Monad.Except (runExceptT)
+import Control.Monad.State (runStateT)
 import Data.List (isInfixOf)
 
 import AnalyzerIntegration
-  ( AnalysisResult(..)
+  ( AnalysisContext(..)
+  , AnalysisInput(..)
+  , AnalysisResult(..)
+  , AnalyzerState(..)
   , CombinedError(..)
   , ErrorSeverity(..)
+  , analyzeCodeWithBothAnalyzers
+  , mkAnalysisInput
   , newIntegratedAnalyzer
   , runIntegratedAnalysis
   )
@@ -18,6 +25,9 @@ import IntegratedCompiler
   , compileWithIntegratedAnalyzers
   , defaultCompilerConfig
   )
+
+runAnalysis :: String -> AnalyzerState -> IO (Either String AnalysisResult)
+runAnalysis code state = runIntegratedAnalysis (mkAnalysisInput code) state
 
 tests :: TestTree
 tests =
@@ -40,7 +50,7 @@ tests =
                   , "}"
                   ]
             let state = newIntegratedAnalyzer True True
-            result <- runIntegratedAnalysis code state
+            result <- runAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
@@ -64,7 +74,7 @@ tests =
                   , "}"
                   ]
             let state = newIntegratedAnalyzer True True
-            result <- runIntegratedAnalysis code state
+            result <- runAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
@@ -87,7 +97,7 @@ tests =
                   , "}"
                   ]
             let state = newIntegratedAnalyzer True True
-            result <- runIntegratedAnalysis code state
+            result <- runAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
@@ -159,7 +169,7 @@ tests =
                   , "}"
                   ]
             let state = newIntegratedAnalyzer True True
-            result <- runIntegratedAnalysis code state
+            result <- runAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
@@ -183,7 +193,7 @@ tests =
                   , "}"
                   ]
             let state = newIntegratedAnalyzer True True
-            result <- runIntegratedAnalysis code state
+            result <- runAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
@@ -200,7 +210,7 @@ tests =
                   , "    var s int = 1"
                   ]
             let state = newIntegratedAnalyzer True True
-            result <- runIntegratedAnalysis invalidCode state
+            result <- runAnalysis invalidCode state
             case result of
               Left err ->
                 assertBool "Expected Go AST parse failure message" ("Go AST parsing failed" `isInfixOf` err)
@@ -224,7 +234,7 @@ tests =
                   , "func consume(x owned String) {}"
                   ]
             let state = newIntegratedAnalyzer True True
-            result <- runIntegratedAnalysis code state
+            result <- runAnalysis code state
             case result of
               Left _ -> return ()
               Right analysisRes -> do
@@ -243,7 +253,7 @@ tests =
                   , "}"
                   ]
             let state = newIntegratedAnalyzer True True
-            result <- runIntegratedAnalysis code state
+            result <- runAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
@@ -263,7 +273,7 @@ tests =
                   , "}"
                   ]
             let state = newIntegratedAnalyzer True True
-            result <- runIntegratedAnalysis code state
+            result <- runAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
@@ -294,6 +304,42 @@ tests =
               (not $ null $ compilationWarnings compileResult)
         ]
 
+    , testGroup "Analysis Context Metadata"
+        [ testCase "records provided source path in analysis context" $ do
+            let code = unlines
+                  [ "package main"
+                  , ""
+                  , "func main() {"
+                  , "    println(\"hi\")"
+                  , "}"
+                  ]
+                state = newIntegratedAnalyzer True True
+                sourcePath = "/workspace/project/main.typus"
+                input = (mkAnalysisInput code) { sourceFilePath = Just sourcePath }
+            runResult <- runExceptT $ runStateT (analyzeCodeWithBothAnalyzers input) state
+            case runResult of
+              Left err -> assertFailure $ "Analysis failed: " ++ err
+              Right (_, finalState) ->
+                currentFile (analysisContext finalState) @?= sourcePath
+
+        , testCase "uses custom label when no path is provided" $ do
+            let code = unlines
+                  [ "package main"
+                  , ""
+                  , "func main() {"
+                  , "    println(\"hi\")"
+                  , "}"
+                  ]
+                state = newIntegratedAnalyzer True True
+                label = "<buffer>"
+                input = (mkAnalysisInput code) { sourceLabel = Just label }
+            runResult <- runExceptT $ runStateT (analyzeCodeWithBothAnalyzers input) state
+            case runResult of
+              Left err -> assertFailure $ "Analysis failed: " ++ err
+              Right (_, finalState) ->
+                currentFile (analysisContext finalState) @?= label
+        ]
+
     , testGroup "Full Pipeline Integration"
         [ testCase "complete project with mixed directives" $ do
             let mainCode = unlines
@@ -314,7 +360,7 @@ tests =
                   , "}"
                   ]
             let state = newIntegratedAnalyzer True True
-            result <- runIntegratedAnalysis mainCode state
+            result <- runAnalysis mainCode state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
@@ -331,7 +377,7 @@ tests =
                   , "}"
                   ]
             let state = newIntegratedAnalyzer True False
-            result <- runIntegratedAnalysis ownershipOnlyCode state
+            result <- runAnalysis ownershipOnlyCode state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
@@ -358,7 +404,7 @@ tests =
                   , "}"
                   ]
             let state = newIntegratedAnalyzer True True
-            result <- runIntegratedAnalysis code state
+            result <- runAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
@@ -380,7 +426,7 @@ tests =
                   , "}"
                   ]
             let state = newIntegratedAnalyzer True True
-            result <- runIntegratedAnalysis code state
+            result <- runAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
@@ -403,7 +449,7 @@ tests =
                   , "}"
                   ]
             let state = newIntegratedAnalyzer True True
-            result <- runIntegratedAnalysis code state
+            result <- runAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
@@ -425,7 +471,7 @@ tests =
                   , "}"
                   ]
             let state = newIntegratedAnalyzer True True
-            result <- runIntegratedAnalysis code state
+            result <- runAnalysis code state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
