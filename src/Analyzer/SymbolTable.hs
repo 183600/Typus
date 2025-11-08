@@ -11,16 +11,30 @@ module Analyzer.SymbolTable (
 import Analyzer.Types
 import qualified Dependencies as Dep
 import qualified Ownership as Own
-import Compiler.GoAst (GoModule(..), GoDecl(..), FuncDecl(..), VarDecl(..), ConstDecl(..), TypeDecl(..), parseGoModule)
+import Compiler.GoAst (GoModule(..), GoDecl(..), FuncDecl(..), VarDecl(..), ConstDecl(..), TypeDecl(..), parseGoModule, flattenDeclLines)
+import qualified Compiler.GoVarSpec as GoVar
+import Compiler.GoParsing (stripLineComment, nestingDelta, splitTopLevel)
 
 import Control.Monad.Except (throwError)
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
 import Data.Char (isSpace, isAlphaNum, isDigit)
-import Data.List (isPrefixOf)
+import Data.List (dropWhileEnd, isPrefixOf, mapAccumL)
+import Data.Maybe (catMaybes, fromMaybe, listToMaybe)
 
 type SymbolTable = Map.Map String SymbolInfo
 type SymbolCollector a = IntegratedAnalyzer a
+
+data RawTypeSpec = RawTypeSpec
+    { rtsName :: String
+    , rtsParams :: [String]
+    , rtsConstraints :: [Dep.Constraint]
+    , rtsLine :: Maybe Int
+    }
+
+
+combineSymbolTables :: [SymbolTable] -> SymbolTable
+combineSymbolTables = foldr Map.union Map.empty
 
 collectSymbolsAndTypes :: String -> IntegratedAnalyzer SymbolTable
 collectSymbolsAndTypes code =
@@ -30,42 +44,41 @@ collectSymbolsAndTypes code =
 
 collectSymbolsFromAST :: GoModule -> IntegratedAnalyzer SymbolTable
 collectSymbolsFromAST GoModule{..} = do
-    symbols <- mapM processDecl (zip [1..] gmDecls)
-    let combinedSymbols = foldr Map.union Map.empty symbols
+    let annotatedDecls = annotateDecls gmDecls
+    symbolTables <- mapM processDecl annotatedDecls
+    let combinedSymbols = combineSymbolTables symbolTables
     validateSymbolTable combinedSymbols
   where
-    processDecl (lineNum, GoFunc (FuncDecl ls)) = case ls of
+    annotateDecls :: [GoDecl] -> [(Int, GoDecl)]
+    annotateDecls decls = snd $ mapAccumL step 1 decls
+      where
+        step lineStart decl =
+            let lineCount = max 1 (length (flattenDeclLines decl))
+                nextLine = lineStart + lineCount
+            in (nextLine, (lineStart, decl))
+
+    processDecl (lineStart, GoFunc (FuncDecl ls)) = case ls of
         [] -> pure Map.empty
-        (h:_) -> processFunctionDeclaration lineNum h
-    processDecl (lineNum, GoVar (VarDecl ls _)) = do
-        varSymbols <- mapM (uncurry processVariableDeclaration) (zip [lineNum..] ls)
-        pure $ foldr Map.union Map.empty varSymbols
-    processDecl (lineNum, GoConst (ConstDecl ls _)) = do
-        constSymbols <- mapM (uncurry processConstantDeclaration) (zip [lineNum..] ls)
-        pure $ foldr Map.union Map.empty constSymbols
-    processDecl (lineNum, GoType (TypeDecl ls _)) = case ls of
-        [] -> pure Map.empty
-        (h:_) -> processTypeDeclaration lineNum h
+        (header:_) -> processFunctionDeclaration lineStart header
+    processDecl (lineStart, GoVar varDecl) =
+        processVariableDeclaration lineStart varDecl
+    processDecl (lineStart, GoConst constDecl) =
+        processConstantDeclaration lineStart constDecl
+    processDecl (lineStart, GoType typeDecl) =
+        processTypeDeclaration lineStart typeDecl
     processDecl _ = pure Map.empty
 
-processVariableDeclaration :: Int -> String -> SymbolCollector SymbolTable
-processVariableDeclaration lineNum line = do
-    let varName = extractVariableNameFromLine line
-        varType = extractTypeFromLine line
-    if not (null varName) && isValidIdentifier varName
-        then do
-            symbolInfo <- createSymbolInfo varName varType lineNum
-            pure $ Map.singleton varName symbolInfo
-        else pure Map.empty
+processVariableDeclaration :: Int -> VarDecl -> SymbolCollector SymbolTable
+processVariableDeclaration lineStart varDecl = do
+    let specs = GoVar.parseVarDeclRawSpecs (Just lineStart) varDecl
+    symbolTables <- mapM (symbolsFromVarSpec lineStart) specs
+    pure $ combineSymbolTables symbolTables
 
-processTypeDeclaration :: Int -> String -> SymbolCollector SymbolTable
-processTypeDeclaration lineNum line = do
-    let (typeName, typeParams, cs) = parseTypeDeclaration line
-    if not (null typeName) && isValidIdentifier typeName
-        then do
-            typeSymbol <- createTypeSymbolInfo typeName typeParams cs lineNum
-            pure $ Map.singleton typeName typeSymbol
-        else pure Map.empty
+processTypeDeclaration :: Int -> TypeDecl -> SymbolCollector SymbolTable
+processTypeDeclaration lineStart typeDecl = do
+    let specs = parseTypeDeclRawSpecs (Just lineStart) typeDecl
+    symbolTables <- mapM (symbolsFromTypeSpec lineStart) specs
+    pure $ combineSymbolTables symbolTables
 
 processFunctionDeclaration :: Int -> String -> SymbolCollector SymbolTable
 processFunctionDeclaration lineNum line = do
@@ -76,19 +89,192 @@ processFunctionDeclaration lineNum line = do
             pure $ Map.singleton funcName symbolInfo
         else pure Map.empty
 
-processConstantDeclaration :: Int -> String -> SymbolCollector SymbolTable
-processConstantDeclaration lineNum line = do
-    let constName = extractConstantNameFromLine line
-    if not (null constName) && isValidIdentifier constName
+processConstantDeclaration :: Int -> ConstDecl -> SymbolCollector SymbolTable
+processConstantDeclaration lineStart constDecl = do
+    let specs = GoVar.parseConstDeclRawSpecs (Just lineStart) constDecl
+    symbolTables <- mapM (symbolsFromConstSpec lineStart) specs
+    pure $ combineSymbolTables symbolTables
+
+symbolsFromVarSpec :: Int -> GoVar.RawVarSpec -> SymbolCollector SymbolTable
+symbolsFromVarSpec fallback GoVar.RawVarSpec{..} = do
+    let declLine = fromMaybe fallback rvsLine
+        typeVar = convertTypeAnnotation rvsType
+    entries <- mapM (varEntry declLine typeVar) rvsNames
+    pure $ Map.fromList (catMaybes entries)
+  where
+    varEntry line typeVar name
+        | isValidIdentifier name = do
+            info <- createSymbolInfo name typeVar line
+            pure (Just (name, info))
+        | otherwise = pure Nothing
+
+symbolsFromConstSpec :: Int -> GoVar.RawVarSpec -> SymbolCollector SymbolTable
+symbolsFromConstSpec fallback GoVar.RawVarSpec{..} = do
+    let declLine = fromMaybe fallback rvsLine
+    entries <- mapM (constEntry declLine) rvsNames
+    pure $ Map.fromList (catMaybes entries)
+  where
+    constEntry line name
+        | isValidIdentifier name = do
+            info <- createConstantSymbolInfo name line
+            pure (Just (name, info))
+        | otherwise = pure Nothing
+
+symbolsFromTypeSpec :: Int -> RawTypeSpec -> SymbolCollector SymbolTable
+symbolsFromTypeSpec fallback RawTypeSpec{..} = do
+    let declLine = fromMaybe fallback rtsLine
+    if isValidIdentifier rtsName
         then do
-            symbolInfo <- createConstantSymbolInfo constName lineNum
-            pure $ Map.singleton constName symbolInfo
+            info <- createTypeSymbolInfo rtsName rtsParams rtsConstraints declLine
+            pure $ Map.singleton rtsName info
         else pure Map.empty
 
-typeDeclarationParts :: String -> [String]
-typeDeclarationParts = words
+convertTypeAnnotation :: Maybe String -> Maybe Dep.TypeVar
+convertTypeAnnotation Nothing = Nothing
+convertTypeAnnotation (Just raw) =
+    let normalized = normalizeTypeString raw
+    in if null normalized then Nothing else Just (Dep.TVCon normalized)
 
-isValidIdentifier :: String -> Bool
+normalizeTypeString :: String -> String
+normalizeTypeString = collapseSpaces . trim
+  where
+    collapseSpaces [] = []
+    collapseSpaces (c:cs)
+        | isSpace c = ' ' : collapseSpaces (dropWhile isSpace cs)
+        | otherwise = c : collapseSpaces cs
+
+parseTypeDeclRawSpecs :: Maybe Int -> TypeDecl -> [RawTypeSpec]
+parseTypeDeclRawSpecs _ TypeDecl{ typeLines = [] } = []
+parseTypeDeclRawSpecs start TypeDecl{ typeLines = ls, typeIsGroup = False } =
+    maybe [] (:[]) (parseSingleTypeSpec start ls)
+parseTypeDeclRawSpecs start TypeDecl{ typeLines = ls, typeIsGroup = True } =
+    parseGroupedTypeSpecs start ls
+
+parseSingleTypeSpec :: Maybe Int -> [String] -> Maybe RawTypeSpec
+parseSingleTypeSpec start lines0 = do
+    (mLine, header) <- firstMeaningfulLine start lines0
+    (name, params) <- parseTypeSpecHeader header
+    pure RawTypeSpec
+        { rtsName = name
+        , rtsParams = params
+        , rtsConstraints = []
+        , rtsLine = mLine
+        }
+
+parseGroupedTypeSpecs :: Maybe Int -> [String] -> [RawTypeSpec]
+parseGroupedTypeSpecs start lines0 =
+    let annotated = annotateWithLines start lines0
+        inner = drop 1 (dropWhileEnd isGroupClosing annotated)
+    in reverse (collectSpecs inner Nothing "" 0 [])
+  where
+    isGroupClosing (_, line) = trim (stripLineComment line) == ")"
+
+    collectSpecs [] currentStart current _ acc
+        | null (trim current) = acc
+        | otherwise =
+            case finalizeSpec currentStart current of
+                Nothing -> acc
+                Just spec -> spec : acc
+    collectSpecs ((mLine, raw):rest) currentStart current depth acc =
+        let stripped = trim (stripLineComment raw)
+        in if null stripped
+            then collectSpecs rest currentStart current depth acc
+            else
+                let nextText = if null current then stripped else current ++ " " ++ stripped
+                    startLine = currentStart <|> mLine
+                    depth' = depth + nestingDelta stripped
+                in if depth' <= 0
+                    then collectSpecs rest Nothing "" 0 (maybeAddSpec startLine mLine nextText acc)
+                    else collectSpecs rest startLine nextText depth' acc
+
+    maybeAddSpec startLine fallback text acc =
+        case finalizeSpec (startLine <|> fallback) text of
+            Nothing -> acc
+            Just spec -> spec : acc
+
+    finalizeSpec mLine text = do
+        (name, params) <- parseTypeSpecHeader text
+        pure RawTypeSpec
+            { rtsName = name
+            , rtsParams = params
+            , rtsConstraints = []
+            , rtsLine = mLine
+            }
+
+firstMeaningfulLine :: Maybe Int -> [String] -> Maybe (Maybe Int, String)
+firstMeaningfulLine start lines0 =
+    listToMaybe
+        [ (lineNo, trim (stripLineComment line))
+        | (lineNo, line) <- annotateWithLines start lines0
+        , let stripped = trim (stripLineComment line)
+        , not (null stripped)
+        ]
+
+annotateWithLines :: Maybe Int -> [String] -> [(Maybe Int, String)]
+annotateWithLines Nothing ls = [(Nothing, line) | line <- ls]
+annotateWithLines (Just start) ls =
+    let count = length ls
+        lineNumbers = [start .. start + count - 1]
+    in zip (map Just lineNumbers) ls
+
+parseTypeSpecHeader :: String -> Maybe (String, [String])
+parseTypeSpecHeader raw = do
+    let cleaned = trim raw
+        withoutKeyword =
+            if "type " `isPrefixOf` cleaned
+                then dropWhile isSpace (drop (length "type") cleaned)
+                else cleaned
+    (namePart, rest) <- parseTypeName withoutKeyword
+    let (params, _) = parseTypeParams rest
+    pure (namePart, params)
+
+parseTypeName :: String -> Maybe (String, String)
+parseTypeName text =
+    let trimmed = dropWhile isSpace text
+        (namePart, rest) = span isTypeNameChar trimmed
+    in if null namePart then Nothing else Just (namePart, rest)
+  where
+    isTypeNameChar c = isAlphaNum c || c == '_'
+
+parseTypeParams :: String -> ([String], String)
+parseTypeParams text =
+    let trimmed = dropWhile isSpace text
+    in case trimmed of
+        '[' : _ ->
+            case consumeBalanced '[' ']' trimmed of
+                Nothing -> ([], trimmed)
+                Just (inside, after) ->
+                    ( parseParamNames inside
+                    , after
+                    )
+        _ -> ([], trimmed)
+
+parseParamNames :: String -> [String]
+parseParamNames inside =
+    [ paramName
+    | segment <- splitTopLevel ',' inside
+    , let cleaned = dropWhile isSpace segment
+          paramName = takeWhile isParamChar cleaned
+    , not (null paramName)
+    ]
+  where
+    isParamChar c = isAlphaNum c || c == '_' || c == '.'
+
+consumeBalanced :: Char -> Char -> String -> Maybe (String, String)
+consumeBalanced open close input =
+    case dropWhile isSpace input of
+        c:rest | c == open -> go 1 [] rest
+        _ -> Nothing
+  where
+    go _ _ [] = Nothing
+    go depth acc (x:xs)
+        | x == open = go (depth + 1) (x:acc) xs
+        | x == close =
+            if depth == 1
+                then Just (reverse acc, xs)
+                else go (depth - 1) (x:acc) xs
+        | otherwise = go depth (x:acc) xs
+
 isValidIdentifier name =
     not (null name)
         && not (isReservedName name)
@@ -175,48 +361,11 @@ extractTypeEnvironment = Map.mapMaybe symbolType
 trim :: String -> String
 trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
 
-extractVariableNameFromLine :: String -> String
-extractVariableNameFromLine line =
-    let wordsList = words line
-     in if "var" `isPrefixOf` line
-            then if length wordsList >= 2 then wordsList !! 1 else ""
-            else case break (== ':') line of
-                (name, ':' : '=' : _) -> trim name
-                _ -> ""
-
-extractTypeFromLine :: String -> Maybe Dep.TypeVar
-extractTypeFromLine line =
-    let wordsList = words line
-     in if "var" `isPrefixOf` line && length wordsList >= 3
-            then Just $ Dep.TVCon (wordsList !! 2)
-            else Nothing
-
-parseTypeDeclaration :: String -> (String, [String], [Dep.Constraint])
-parseTypeDeclaration line =
-    let wordsList = typeDeclarationParts line
-     in if length wordsList >= 2 && "type" `isPrefixOf` line
-            then
-                let typeName = wordsList !! 1
-                    typeParams = extractTypeParams (drop 2 wordsList)
-                    cs = []
-                 in (typeName, typeParams, cs)
-            else ("", [], [])
-
-extractTypeParams :: [String] -> [String]
-extractTypeParams = filter (not . null) . map (takeWhile (/= '>')) . filter (isPrefixOf "<")
-
 extractFunctionNameFromLine :: String -> String
 extractFunctionNameFromLine line =
     let parts = words line
      in if length parts >= 2 && parts !! 0 == "func"
-            then takeWhile (/= '(') (parts !! 1)
-            else ""
-
-extractConstantNameFromLine :: String -> String
-extractConstantNameFromLine line =
-    let parts = words line
-     in if length parts >= 3 && parts !! 0 == "const"
-            then parts !! 1
+            then takeWhile (\c -> c /= '(' && c /= '[') (parts !! 1)
             else ""
 
 isReservedName :: String -> Bool
