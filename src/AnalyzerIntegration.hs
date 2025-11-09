@@ -2,6 +2,7 @@
 module AnalyzerIntegration (
     IntegratedAnalyzer,
     AnalyzerState(..),
+    AnalysisContext(..),
     AnalysisResult(..),
     CombinedError(..),
     ErrorSeverity(..),

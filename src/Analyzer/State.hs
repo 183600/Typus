@@ -33,7 +33,7 @@ newIntegratedAnalyzer enableOwnershipFlag enableDependentTypesFlag = AnalyzerSta
         , currentFile = ""
         , analysisPhase = InitialPhase
         }
-    , combinedErrors = []
+    , combinedErrorsAcc = []
     , ownershipErrorsAcc = []
     , dependentTypeErrorsAcc = []
     }
@@ -54,17 +54,17 @@ ifEnableDependentTypes def action = do
 addOwnershipError :: ErrorSeverity -> Own.OwnershipError -> IntegratedAnalyzer ()
 addOwnershipError severity err = modify $ \s ->
     s { ownershipErrorsAcc = ownershipErrorsAcc s ++ [(severity, err)]
-      , combinedErrors = combinedErrors s ++ [OwnershipErrorCombined severity err]
+      , combinedErrorsAcc = combinedErrorsAcc s ++ [OwnershipErrorCombined severity err]
       }
 
 addDependentTypeError :: ErrorSeverity -> Dep.DependentTypeError -> IntegratedAnalyzer ()
 addDependentTypeError severity err = modify $ \s ->
     s { dependentTypeErrorsAcc = dependentTypeErrorsAcc s ++ [(severity, err)]
-      , combinedErrors = combinedErrors s ++ [DependentTypeErrorCombined severity err]
+      , combinedErrorsAcc = combinedErrorsAcc s ++ [DependentTypeErrorCombined severity err]
       }
 
 addCombinedError :: CombinedError -> IntegratedAnalyzer ()
-addCombinedError err = modify $ \s -> s { combinedErrors = combinedErrors s ++ [err] }
+addCombinedError err = modify $ \s -> s { combinedErrorsAcc = combinedErrorsAcc s ++ [err] }
 
 filterWarnings :: [CombinedError] -> [String]
 filterWarnings = collectMessages Warning
@@ -88,11 +88,11 @@ collectMessages sev = concatMap (go sev)
         (if s == target then [msg] else []) ++ concatMap (go target) subs
 
 getCombinedErrors :: AnalyzerState -> [CombinedError]
-getCombinedErrors = combinedErrors
+getCombinedErrors = combinedErrorsAcc
 
 getAnalysisSummary :: AnalyzerState -> String
 getAnalysisSummary state' =
-    let (errorCount, warningCount, infoCount) = countBySeverity (combinedErrors state')
+    let (errorCount, warningCount, infoCount) = countBySeverity (combinedErrorsAcc state')
     in unlines
         [ "Analysis Summary:"
         , "================="

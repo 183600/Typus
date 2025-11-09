@@ -13,7 +13,8 @@ import Compiler.GoAst
 import Compiler.GoParsing (nestingDelta, splitTopLevel, stripLineComment)
 import qualified Compiler.GoVarSpec as GoVar
 import Data.Char (isAlphaNum, isDigit, isSpace, isUpper, toLower)
-import Data.List (dropWhileEnd, foldl', intercalate, isInfixOf, isPrefixOf, stripPrefix)
+import Data.List (dropWhileEnd, intercalate, isInfixOf, isPrefixOf, stripPrefix)
+import qualified Data.List as List
 import Data.Maybe (fromMaybe, maybeToList)
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -36,7 +37,7 @@ type ValueTypeSet = Set.Set String
 analyzeValueSemantics :: GoModule -> [ValueInfo]
 analyzeValueSemantics goModule@GoModule{..} =
     let valueTypes = collectValueTypeNames goModule
-    in snd $ foldl' (step valueTypes) (1, []) gmDecls
+    in snd $ List.foldl' (step valueTypes) (1, []) gmDecls
   where
     step valueTypes (lineStart, acc) decl =
         let infos = analyzeDecl valueTypes decl lineStart
@@ -169,7 +170,7 @@ parseShortVarNames lhs =
     in filter (not . null) (map trim (splitTopLevel ',' stripped))
 
 stripContextPrefix :: String -> String
-stripContextPrefix text = dropLeadingParens (foldl' (flip dropKeyword) (trim text) keywords)
+stripContextPrefix text = dropLeadingParens (List.foldl' (flip dropKeyword) (trim text) keywords)
   where
     keywords = ["if", "for", "switch", "select"]
 
@@ -319,7 +320,7 @@ builtInValueTypes = Set.fromList
 
 collectValueTypeNames :: GoModule -> ValueTypeSet
 collectValueTypeNames GoModule{..} =
-    foldl' step builtInValueTypes gmDecls
+    List.foldl' step builtInValueTypes gmDecls
   where
     step acc decl = case decl of
         GoType typeDecl ->
@@ -354,7 +355,7 @@ parseGroupedSpecs lines0 =
 
     isGroupClosing line = trim (stripLineComment line) == ")"
 
-    collectSpecs [] current depth acc
+    collectSpecs [] current _ acc
         | null (trim current) = acc
         | otherwise = maybeAdd current acc
     collectSpecs (raw:rest) current depth acc =
@@ -419,6 +420,7 @@ dropTypeParameters text =
         '[':rest -> dropWhile isSpace (dropBalanced 1 rest)
         _ -> trimmed
   where
+    dropBalanced :: Int -> String -> String
     dropBalanced _ [] = []
     dropBalanced depth (x:xs)
         | x == '[' = dropBalanced (depth + 1) xs
@@ -430,9 +432,9 @@ dropTypeParameters text =
 
 isExportedValueType :: TypeSpecSummary -> Bool
 isExportedValueType TypeSpecSummary{..} =
-    not (null tssName)
-        && isUpper (head tssName)
-        && typeSummaryIndicatesValue tssRemainder
+    case tssName of
+        c:_ -> isUpper c && typeSummaryIndicatesValue tssRemainder
+        [] -> False
 
 typeSummaryIndicatesValue :: String -> Bool
 typeSummaryIndicatesValue remainder =

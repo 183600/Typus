@@ -89,11 +89,11 @@ extractTypeDefinitions code =
         Right (definitions, _) -> mapMaybe toTypeDefinition definitions
   where
     toTypeDefinition :: DependentType -> Maybe (String, [String], [Dep.TypeConstraint])
-    toTypeDefinition (TypeDecl name params _ constraints) =
+    toTypeDefinition (TypeDecl name params _ declConstraints) =
         let paramNames = map paramName params
             scope = Set.fromList paramNames
             parameterConstraints = concatMap (collectParameterConstraints scope) params
-            declarationConstraints = concatMap (convertConstraint scope) constraints
+            declarationConstraints = concatMap (convertConstraint scope) declConstraints
         in Just (name, paramNames, parameterConstraints <> declarationConstraints)
     toTypeDefinition _ = Nothing
 
@@ -148,6 +148,7 @@ extractTypeDefinitions code =
 
     isBuiltinTypeName name = name `elem` builtinTypeNames
 
+    builtinTypeNames :: [String]
     builtinTypeNames =
         [ "int", "string", "bool", "float64", "byte", "rune"
         , "error", "interface{}", "map", "chan", "func"

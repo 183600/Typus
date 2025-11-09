@@ -52,7 +52,7 @@ data AnalyzerState = AnalyzerState
     , currentScope :: Int
     , symbolTable :: Map.Map String SymbolInfo
     , analysisContext :: AnalysisContext
-    , combinedErrors :: [CombinedError]
+    , combinedErrorsAcc :: [CombinedError]
     , ownershipErrorsAcc :: [(ErrorSeverity, Own.OwnershipError)]
     , dependentTypeErrorsAcc :: [(ErrorSeverity, Dep.DependentTypeError)]
     } deriving (Show, Eq)
