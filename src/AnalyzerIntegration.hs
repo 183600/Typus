@@ -71,7 +71,8 @@ analyzeCodeWithBothAnalyzers input = do
     setPhase InitialPhase
     let code = sourceCode input
     symbols <- collectSymbolsAndTypes code
-    modify $ \s -> s { symbolTable = symbols }
+    let augmentedSymbols = augmentSymbolTableWithLocals code symbols
+    modify $ \s -> s { symbolTable = augmentedSymbols }
     ownershipResults <- ifEnableOwnership [] $ do
         setPhase OwnershipPhase
         runOwnershipAnalysis code

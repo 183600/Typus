@@ -3,6 +3,7 @@
 module Analyzer.SymbolTable (
     collectSymbolsAndTypes,
     collectSymbolsFromAST,
+    augmentSymbolTableWithLocals,
     trim,
     isReservedName,
     extractTypeEnvironment
@@ -19,8 +20,8 @@ import Control.Applicative ((<|>))
 import Control.Monad.Except (throwError)
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
-import Data.Char (isSpace, isAlphaNum, isDigit)
-import Data.List (dropWhileEnd, isPrefixOf, mapAccumL)
+import Data.Char (isSpace, isAlphaNum, isDigit, toLower)
+import Data.List (dropWhileEnd, isPrefixOf, mapAccumL, foldl')
 import Data.Maybe (catMaybes, fromMaybe, listToMaybe)
 
 type SymbolTable = Map.Map String SymbolInfo
@@ -357,6 +358,59 @@ validateSymbolTable symbols = pure $ Map.filterWithKey validateSymbolEntry symbo
         not (null $ symbolName symbol)
             && isValidIdentifier (symbolName symbol)
             && symbolScope symbol >= 0
+
+augmentSymbolTableWithLocals :: String -> SymbolTable -> SymbolTable
+augmentSymbolTableWithLocals source initialSymbols =
+    snd $ foldl' processLine (0, initialSymbols) (lines source)
+  where
+    processLine (depth, acc) rawLine =
+        let depthBefore = depth
+            trimmedLine = trim rawLine
+            acc'
+              | depthBefore > 0 && isVarDeclLine trimmedLine =
+                  addLocalVarSymbols depthBefore trimmedLine acc
+              | otherwise = acc
+            depthAfter = depth + braceDeltaLine rawLine
+        in (depthAfter, acc')
+
+    isVarDeclLine txt = "var " `isPrefixOf` txt
+
+    addLocalVarSymbols depthBefore line acc =
+        case GoVar.parseVarSpecRaw line of
+            Nothing -> acc
+            Just spec
+              | not (declaresOwned spec) -> acc
+              | otherwise ->
+                  foldl' (insertLocalSymbol depthBefore spec) acc (GoVar.rvsNames spec)
+
+    insertLocalSymbol depthBefore spec acc name
+        | Map.member name acc = acc
+        | otherwise =
+            let typeVar = convertTypeAnnotation (GoVar.rvsType spec)
+                info = SymbolInfo
+                    { symbolName = name
+                    , symbolType = typeVar
+                    , ownershipState = Just (Own.Owned name)
+                    , symbolScope = depthBefore
+                    , isMoved = False
+                    , isBorrowed = False
+                    , constraints = []
+                    }
+            in Map.insert name info acc
+
+    declaresOwned spec =
+        case GoVar.rvsType spec of
+            Just ty ->
+                let lowered = map toLower ty
+                in "owned" `elem` words lowered
+            Nothing -> False
+
+    braceDeltaLine :: String -> Int
+    braceDeltaLine = foldl' update 0
+      where
+        update acc '{' = acc + 1
+        update acc '}' = acc - 1
+        update acc _   = acc
 
 extractTypeEnvironment :: SymbolTable -> Map.Map String Dep.TypeVar
 extractTypeEnvironment = Map.mapMaybe symbolType

@@ -34,9 +34,9 @@ module Dependencies.TypeSystem (
   unify
 ) where
 
-import Control.Monad (when)
 import Control.Monad.State
 import Data.Either (partitionEithers)
+
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Text (Text)

@@ -21,6 +21,7 @@ runOwnershipAnalysis code = do
     symbols <- gets symbolTable
     let significantErrors = filterSignificantOwnershipErrors code ownershipErrs symbols
         labeledErrors = map (\res -> (Error, res)) significantErrors
+    updateSymbolTableWithOwnership significantErrors
     mapM_ (uncurry addOwnershipError) labeledErrors
     pure labeledErrors
 
