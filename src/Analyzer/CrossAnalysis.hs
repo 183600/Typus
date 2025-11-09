@@ -8,7 +8,7 @@ import qualified Dependencies as Dep
 import qualified Ownership as Own
 
 import Control.Monad.State
-import Data.Foldable (foldl')
+import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Char (isDigit, isLower)
@@ -96,10 +96,10 @@ checkUnusedVariables code symbols
         | otherwise =
             Just $ CrossAnalyzerError ("Variable '" ++ symbolName symbol ++ "' declared but never used") Warning []
 
-    usageCount UsageSummary{..} symbol =
+    usageCount UsageSummary{usageTotals = usageTotalsMap, usageByScope = usageByScopeMap} symbol =
         let name = symbolName symbol
             scopeKey = (name, symbolScope symbol)
-        in fromMaybe (Map.findWithDefault 0 name usageTotals) (Map.lookup scopeKey usageByScope)
+        in fromMaybe (Map.findWithDefault 0 name usageTotalsMap) (Map.lookup scopeKey usageByScopeMap)
 
     isWarnable name =
         case name of
@@ -110,7 +110,7 @@ computeUsageSummary :: Set.Set String -> [OwnershipToken] -> UsageSummary
 computeUsageSummary trackedNames tokens =
     let program = parseProgram tokens
         occurrences = collectOccurrences trackedNames program
-    in foldl' updateSummary (UsageSummary Map.empty Map.empty) occurrences
+    in List.foldl' updateSummary (UsageSummary Map.empty Map.empty) occurrences
   where
     updateSummary (UsageSummary scoped totals) (name, depth) =
         let scoped' = Map.insertWith (+) (name, depth) 1 scoped

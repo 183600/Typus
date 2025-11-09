@@ -8,6 +8,7 @@ module IntegratedCompiler (
     AnalysisResult(..),
     CombinedError(..),
     ErrorSeverity(..),
+    analysisToCombined,
     formatCompilationResult,
     getDetailedAnalysisSummary,
     showCombinedError

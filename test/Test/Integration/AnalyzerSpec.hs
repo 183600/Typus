@@ -21,6 +21,7 @@ import AnalyzerIntegration
   )
 import IntegratedCompiler
   ( IntegratedCompileResult(..)
+  , CompilerConfig(..)
   , analysisToCombined
   , compileWithIntegratedAnalyzers
   , defaultCompilerConfig

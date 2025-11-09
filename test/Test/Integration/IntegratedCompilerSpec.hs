@@ -23,6 +23,7 @@ import IntegratedCompiler
   , CombinedError(..)
   , CompilerConfig(..)
   , ErrorSeverity(..)
+  , IntegratedCompileResult(..)
   , analysisToCombined
   , compileWithIntegratedAnalyzers
   , defaultCompilerConfig
@@ -91,7 +92,8 @@ tests =
               withSampleTypusProject $ \dir -> do
                 result <- runExceptT (batchCheck ctx dir)
                 result @?= Right ()
-                readIORef runCount @?= 1
+                runInvocations <- readIORef runCount
+                runInvocations @?= 1
 
         , testCase "skips Go toolchain when skip flag is enabled" $
             withEnvVar "TYPUS_SKIP_GO_BUILD" (Just "1") $ do
@@ -104,7 +106,8 @@ tests =
               withSampleTypusProject $ \dir -> do
                 result <- runExceptT (batchCheck ctx dir)
                 result @?= Right ()
-                readIORef runCount @?= 0
+                runInvocations <- readIORef runCount
+                runInvocations @?= 0
         ]
     ]
 

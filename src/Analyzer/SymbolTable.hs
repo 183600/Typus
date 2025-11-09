@@ -15,6 +15,7 @@ import Compiler.GoAst (GoModule(..), GoDecl(..), FuncDecl(..), VarDecl(..), Cons
 import qualified Compiler.GoVarSpec as GoVar
 import Compiler.GoParsing (stripLineComment, nestingDelta, splitTopLevel)
 
+import Control.Applicative ((<|>))
 import Control.Monad.Except (throwError)
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
@@ -266,6 +267,7 @@ consumeBalanced open close input =
         c:rest | c == open -> go 1 [] rest
         _ -> Nothing
   where
+    go :: Int -> String -> String -> Maybe (String, String)
     go _ _ [] = Nothing
     go depth acc (x:xs)
         | x == open = go (depth + 1) (x:acc) xs
@@ -275,6 +277,7 @@ consumeBalanced open close input =
                 else go (depth - 1) (x:acc) xs
         | otherwise = go depth (x:acc) xs
 
+isValidIdentifier :: String -> Bool
 isValidIdentifier name =
     not (null name)
         && not (isReservedName name)
