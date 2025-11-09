@@ -11,10 +11,19 @@ import qualified Dependencies as Dep
 import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..), parseTypus)
 import SourceLocation (Located, locatedValue)
 import qualified Compiler.DependentTypeChecker as DepChecker
+import DependentTypesParser
+    ( DependentType(..)
+    , TypeConstraint(..)
+    , TypeParameter(..)
+    , TypeRef(..)
+    , runDependentTypesParser
+    )
 
 import Control.Monad.State
-import Data.List (isInfixOf, isPrefixOf)
+import Data.Char (isAlpha, isUpper)
+import Data.Maybe (mapMaybe, maybeToList)
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 runDependentTypeAnalysis :: String -> IntegratedAnalyzer [(ErrorSeverity, Dep.DependentTypeError)]
 runDependentTypeAnalysis code =
@@ -75,68 +84,72 @@ directiveEnabled = maybe False locatedValue
 
 extractTypeDefinitions :: String -> [(String, [String], [Dep.TypeConstraint])]
 extractTypeDefinitions code =
-    let linesOfCode = lines code
-        typeLines = filter isTypeDefinitionLine linesOfCode
-    in map parseTypeDefinitionLine typeLines
+    case runDependentTypesParser code of
+        Left _ -> []
+        Right (definitions, _) -> mapMaybe toTypeDefinition definitions
   where
-    isTypeDefinitionLine line =
-        let trimmed = trim line
-        in "type " `isPrefixOf` trimmed && not ("//" `isPrefixOf` trimmed)
+    toTypeDefinition :: DependentType -> Maybe (String, [String], [Dep.TypeConstraint])
+    toTypeDefinition (TypeDecl name params _ constraints) =
+        let paramNames = map paramName params
+            scope = Set.fromList paramNames
+            parameterConstraints = concatMap (collectParameterConstraints scope) params
+            declarationConstraints = concatMap (convertConstraint scope) constraints
+        in Just (name, paramNames, parameterConstraints <> declarationConstraints)
+    toTypeDefinition _ = Nothing
 
-    parseTypeDefinitionLine line =
-        let withoutType = drop 5 (trim line)
-            (typeName, rest) = break (`elem` [' ', '<']) withoutType
-        in if null typeName
-               then ("", [], [])
-               else
-                   if "<" `isInfixOf` rest
-                       then parseGenericTypeDefinition typeName rest
-                       else parseSimpleTypeDefinition typeName rest
+    collectParameterConstraints scope TypeParameter{ paramName = pname, paramType = pType, paramConstraints = pcs } =
+        maybeToList (paramTypeConstraint scope pname pType)
+            <> concatMap (convertConstraint scope) pcs
 
-    parseGenericTypeDefinition typeName rest =
-        let paramsPart = takeWhile (/= '>') (drop 1 rest)
-            params = map trim (splitByComma paramsPart)
-            afterParams = dropWhile (/= '>') rest
-            cs = parseWhereConstraints afterParams
-        in (typeName, params, cs)
+    paramTypeConstraint scope pname pType
+        | pType == defaultParamType = Nothing
+        | otherwise = Just (Dep.Subtype (Dep.TVVar pname) (convertTypeRef scope pType))
 
-    parseSimpleTypeDefinition typeName rest =
-        (typeName, [], parseWhereConstraints rest)
+    defaultParamType = TypeRef "int" []
 
-    parseWhereConstraints rest =
-        let trimmed' = trim rest
-        in if "where " `isPrefixOf` trimmed'
-               then parseSimpleConstraints (drop 6 trimmed')
-               else []
+    convertConstraint scope constraint =
+        case constraint of
+            EqualityConstraint lhs rhs ->
+                [Dep.Equal (Dep.TVVar lhs) (valueToTypeVar scope rhs)]
+            RangeConstraint name low high ->
+                [Dep.TypeRange (Dep.TVVar name) low high]
+            SizeConstraint name threshold ->
+                [Dep.TypeSizeGE (Dep.TVVar name) threshold]
+            NonEmptyConstraint name ->
+                [Dep.TypeSizeGT (Dep.TVVar name) 0]
+            PredicateConstraint name args ->
+                [Dep.Predicate name (map (valueToTypeVar scope) args)]
+            TypeClassConstraint name typeRef ->
+                [Dep.Subtype (Dep.TVVar name) (convertTypeRef scope typeRef)]
+            CustomConstraint raw _ ->
+                [Dep.Predicate raw []]
 
-    parseSimpleConstraints constraintStr =
-        let constraints' = splitByChar '&' constraintStr
-        in map parseSingleConstraint constraints'
+    valueToTypeVar scope text =
+        case reads text :: [(Integer, String)] of
+            [(n, "")] -> Dep.TVCon (show n)
+            _
+                | Set.member text scope -> Dep.TVVar text
+                | isBuiltinTypeName text -> Dep.TVCon text
+                | startsWithUpper text -> Dep.TVCon text
+                | otherwise -> Dep.TVVar text
 
-    parseSingleConstraint constraint =
-        let trimmed' = trim constraint
-            wordsInConstraint = words trimmed'
-        in case wordsInConstraint of
-            [var, ">", value] ->
-                case reads value of
-                    [(num, "")] -> Dep.TypeSizeGT (Dep.TVVar var) (num + 1)
-                    _ -> Dep.Predicate trimmed' [Dep.TVVar var]
-            [var, ">=", value] ->
-                case reads value of
-                    [(num, "")] -> Dep.TypeSizeGE (Dep.TVVar var) num
-                    _ -> Dep.Predicate trimmed' [Dep.TVVar var]
-            ["len", var, ">", value] ->
-                case reads value of
-                    [(num, "")] -> Dep.TypeSizeGT (Dep.TVVar var) (num + 1)
-                    _ -> Dep.Predicate trimmed' [Dep.TVVar var]
-            ["nonempty", var] -> Dep.TypeSizeGT (Dep.TVVar var) 0
-            _ -> Dep.Predicate trimmed' []
+    convertTypeRef scope (TypeRef name args)
+        | null args =
+            if Set.member name scope
+                then Dep.TVVar name
+                else Dep.TVCon name
+        | otherwise =
+            Dep.TVApp name (map (convertTypeRef scope) args)
 
-    splitByComma s = case break (== ',') s of
-        (a, []) -> [a]
-        (a, _ : b) -> a : splitByComma b
+    startsWithUpper name =
+        case name of
+            c:rest -> isUpper c && any isAlpha rest
+            _ -> False
 
-splitByChar :: Char -> String -> [String]
-splitByChar delimiter s = case break (== delimiter) s of
-    (a, []) -> [a]
-    (a, _ : b) -> a : splitByChar delimiter b
+    isBuiltinTypeName name = name `elem` builtinTypeNames
+
+    builtinTypeNames =
+        [ "int", "string", "bool", "float64", "byte", "rune"
+        , "error", "interface{}", "map", "chan", "func"
+        ]
+
