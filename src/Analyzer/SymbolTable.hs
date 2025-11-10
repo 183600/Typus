@@ -21,7 +21,7 @@ import Control.Monad.Except (throwError)
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
 import Data.Char (isSpace, isAlphaNum, isDigit, toLower)
-import Data.List (dropWhileEnd, isPrefixOf, mapAccumL, foldl')
+import Data.List (dropWhileEnd, isPrefixOf, mapAccumL)
 import Data.Maybe (catMaybes, fromMaybe, listToMaybe)
 
 type SymbolTable = Map.Map String SymbolInfo

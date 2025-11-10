@@ -12,7 +12,7 @@ module SyntaxValidator (
 ) where
 
 import qualified Data.Set as Set
-import Data.List (isPrefixOf, isInfixOf)
+import Data.List (isInfixOf, isPrefixOf, tails)
 import Data.Char (isSpace, isAlphaNum, isAlpha, isDigit)
 
 -- ================== Helper Functions ==================
@@ -298,8 +298,23 @@ performValidation validator tokens =
 
 validateTokenSequence :: SyntaxValidator -> [Token] -> SyntaxValidator
 validateTokenSequence validator [] = validator
-validateTokenSequence validator tokens = 
-    foldl validateToken validator (zip tokens (drop 1 tokens ++ [TNewline 0]))
+validateTokenSequence validator tokens =
+    foldl validateToken validator (zip tokens nextTokens)
+  where
+    nextTokens = map nextSignificant (tails tokens)
+
+    nextSignificant [] = TNewline 0
+    nextSignificant (_:rest) =
+        case dropWhile isSkippable rest of
+            (t:_) -> t
+            []    -> TNewline 0
+
+    isSkippable token =
+        case token of
+            TWhitespace _ _ -> True
+            TNewline _ -> True
+            TComment _ _ _ -> True
+            _ -> False
 
 validateToken :: SyntaxValidator -> (Token, Token) -> SyntaxValidator
 validateToken validator (current, next) =

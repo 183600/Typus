@@ -28,6 +28,7 @@ module Dependencies.Inference (
   inNewScope
 ) where
 
+import Control.Monad (unless)
 import Control.Monad.Except
 import Control.Monad.State
 import Data.IORef
