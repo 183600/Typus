@@ -98,4 +98,26 @@ tests =
                 posLine (spanStart (locSpan firstTag)) @?= 1
                 posLine (spanStart (locSpan secondTag)) @?= 2
               _ -> assertFailure "expected two build tags"
+
+    , testCase "rejects unknown file directives" $ do
+        let source = unlines
+              [ "//! unsupported: on"
+              , "package main"
+              , "func main() {}"
+              ]
+        case parseTypus source of
+          Left err -> assertBool ("error should mention unknown directive: " <> err) ("Unknown file directive" `isInfixOf` err)
+          Right _ -> assertFailure "expected parse failure for unknown directive"
+
+    , testCase "requires directive blocks to close" $ do
+        let source = unlines
+              [ "package main"
+              , "func main() {"
+              , "    {//! ownership: on"
+              , "        println(\"inside\")"
+              , "}"
+              ]
+        case parseTypus source of
+          Left err -> assertBool ("error should mention missing closing brace: " <> err) ("Unclosed directive block" `isInfixOf` err)
+          Right _ -> assertFailure "expected parse failure for unterminated directive block"
     ]
