@@ -12,7 +12,7 @@ module Parser
 
 import Control.Applicative (empty)
 import Control.Monad (foldM)
-import Data.Char (isAlphaNum)
+import Data.Char (isAlphaNum, isSpace)
 import Data.List (isPrefixOf)
 import Data.Maybe (fromMaybe)
 import Data.Void (Void)
@@ -289,14 +289,21 @@ parseBlockDirectiveLine ParsedLine{..} = do
     if not (blockPrefix `T.isPrefixOf` stripped)
       then Left $ "Invalid block directive line (missing {//!): " ++ plText
       else
-        case MP.runParser (blockDirectiveParser <* MP.eof) "<block directives>" stripped of
-          Left _ -> Left $ "Invalid block directive line: " ++ plText
-          Right pairs -> mapM convert pairs
+        let normalized = ensureClosingBrace stripped
+        in case MP.runParser (blockDirectiveParser <* MP.eof) "<block directives>" normalized of
+             Left _ -> Left $ "Invalid block directive line: " ++ plText
+             Right pairs -> mapM convert pairs
   where
     convert (keyText, valueText) =
       case parseBool (T.unpack valueText) of
         Left err      -> Left err
         Right boolVal -> Right (T.unpack keyText, locatedWithSpan plSpan boolVal)
+    ensureClosingBrace txt =
+      let trimmedEnd = T.dropWhileEnd isSpace txt
+      in if closingBrace `T.isSuffixOf` trimmedEnd
+           then txt
+           else txt <> closingBrace
+    closingBrace = T.singleton '}'
 
 parseBlockDirectives :: [(String, Located Bool)] -> Either String BlockDirectives
 parseBlockDirectives pairs = foldM updateDirective defaultBlockDirectives pairs
