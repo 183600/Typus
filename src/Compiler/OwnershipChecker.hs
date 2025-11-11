@@ -169,7 +169,10 @@ extractValueCopyVarsLegacy src =
 isIgnorableOwnershipError :: [String] -> OwnershipError -> Bool
 isIgnorableOwnershipError valueCopyVars err = case err of
     UseAfterMove v -> v `elem` valueCopyVars
+    OutOfScope v   -> v `elem` ownershipKeywords
     _ -> False
+  where
+    ownershipKeywords = ["owned", "mut", "borrow", "borrowed"]
 
 trim :: String -> String
 trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
