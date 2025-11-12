@@ -21,7 +21,7 @@ requireSymbol :: String -> Map.Map String SymbolInfo -> IO SymbolInfo
 requireSymbol name table =
   case Map.lookup name table of
     Nothing -> do
-      assertFailure ("expected symbol '" <> name <> "' to be present")
+      _ <- assertFailure ("expected symbol '" <> name <> "' to be present")
       fail "unreachable"
     Just info -> pure info
 

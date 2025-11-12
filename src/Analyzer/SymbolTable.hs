@@ -364,13 +364,14 @@ augmentSymbolTableWithLocals source initialSymbols =
     snd $ foldl' processLine (0, initialSymbols) (lines source)
   where
     processLine (depth, acc) rawLine =
-        let depthBefore = depth
+        let depthBefore = max 0 depth
             trimmedLine = trim rawLine
             acc'
               | depthBefore > 0 && isVarDeclLine trimmedLine =
                   addLocalVarSymbols depthBefore trimmedLine acc
               | otherwise = acc
-            depthAfter = depth + braceDeltaLine rawLine
+            depthAfterRaw = depthBefore + braceDeltaLine rawLine
+            depthAfter = max 0 depthAfterRaw
         in (depthAfter, acc')
 
     isVarDeclLine txt = "var " `isPrefixOf` txt
@@ -429,7 +430,6 @@ isReservedName :: String -> Bool
 isReservedName name =
     name
         `elem` [ "fmt"
-               , "main"
                , "func"
                , "var"
                , "let"
