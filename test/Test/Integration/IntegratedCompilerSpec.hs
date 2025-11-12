@@ -163,7 +163,7 @@ multiAnalyzerSource = unlines
   , "//! dependent_types: on"
   , "package main"
   , ""
-  , "{//! dependent_types: on"
+  , "{//! dependent_types: on}"
   , "type BadAlias = UnknownType"
   , "}"
   , ""
