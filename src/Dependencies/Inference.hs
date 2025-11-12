@@ -29,8 +29,9 @@ module Dependencies.Inference (
 ) where
 
 import Control.Monad (unless)
-import Control.Monad.Except
-import Control.Monad.State
+import Control.Monad.Except (ExceptT)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.State (StateT, gets, modify)
 import Data.IORef
 import Data.List (nub)
 import qualified Data.Map.Strict as Map

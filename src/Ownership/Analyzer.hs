@@ -6,7 +6,7 @@ module Ownership.Analyzer
   ) where
 
 import Control.Monad (when)
-import Control.Monad.State
+import Control.Monad.State hiding (when)
 import Data.List (isInfixOf)
 import Data.Maybe (isJust)
 import qualified Data.Map.Strict as Map

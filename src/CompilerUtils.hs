@@ -7,7 +7,7 @@ module CompilerUtils (
 import Compiler (compile)
 import qualified Parser as P
 import Control.Monad (forM, forM_, unless, when)
-import Control.Monad.Except
+import Control.Monad.Except (runExceptT, throwError)
 import Control.Monad.IO.Class (liftIO)
 import Data.Either (partitionEithers)
 import Data.List (partition)
