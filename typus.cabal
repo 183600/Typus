@@ -211,6 +211,7 @@ test-suite typus-test
         Test.Unit.OwnershipSpec,
         Test.Unit.ParserSpec,
         Test.Unit.TypeSystemSpec,
+        Test.Unit.SymbolTableSpec,
         Test.Unit.ValueAnalysisSpec
     build-depends:
         base >=4.7 && <5,
