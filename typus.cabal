@@ -208,6 +208,7 @@ test-suite typus-test
         Test.Unit.CompilerSpec,
         Test.Unit.DependentTypesSpec,
         Test.Unit.ErrorHandlingSpec,
+        Test.Unit.EmbedAssetsSpec,
         Test.Unit.OwnershipSpec,
         Test.Unit.ParserSpec,
         Test.Unit.TypeSystemSpec,
