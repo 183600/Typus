@@ -22,7 +22,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, (@?=), testCase)
 
 import GoToolchain (GoExecutor(..))
-import Tooling.Error (ToolingError, renderToolingError)
+import Tooling.Error (ToolingError(..), goCommandFailed, renderToolingError)
 
 fixtureRoot :: FilePath
 fixtureRoot = "test" </> "fixtures" </> "full_project"
@@ -37,6 +37,8 @@ tests =
     , testCase "batchCheck triggers Go validation" testBatchCheckInvokesGo
     , testCase "batchCheck honours the skip flag" testBatchCheckSkipFlag
     , testCase "convertFile passes Go sources through unchanged" testConvertGoPassthrough
+    , testCase "batchCheck surfaces syntax validation errors" testBatchCheckReportsSyntaxErrors
+    , testCase "batchCheck surfaces go build failures" testBatchCheckReportsGoFailures
     ]
 
 testBatchConvertFullProject :: IO ()
@@ -106,6 +108,67 @@ testConvertGoPassthrough = withSystemTempDirectory "typus-go-passthrough" $ \tmp
     content <- readFile outputPath
     content @?= goSource
 
+testBatchCheckReportsSyntaxErrors :: IO ()
+testBatchCheckReportsSyntaxErrors =
+  withSystemTempDirectory "typus-batch-check-syntax" $ \tmpDir -> do
+    let invalidFile = tmpDir </> "broken.typus"
+    writeFile invalidFile $ unlines
+      [ "package main"
+      , "func main() {"
+      , "    println(\"hi\")"
+      ]
+
+    (executor, runsRef) <- recordingExecutor
+    ctx <- newCompilerContextWithExecutor silentLogger executor
+
+    result <- runExceptT (batchCheck ctx tmpDir)
+    case result of
+      Left (BatchCheckFailures failures) -> do
+        length failures @?= 1
+        let (failedPath, failureErr) = head failures
+        failedPath @?= invalidFile
+        case failureErr of
+          SyntaxValidationFailed errFile issues -> do
+            errFile @?= invalidFile
+            assertBool "expected syntax errors to be reported" (not (null issues))
+          other -> assertFailure $ "unexpected failure type: " ++ show other
+      Left other -> assertFailure $ "unexpected tooling error: " ++ show other
+      Right _ -> assertFailure "expected syntax validation failure"
+
+    invocations <- readIORef runsRef
+    invocations @?= []
+
+testBatchCheckReportsGoFailures :: IO ()
+testBatchCheckReportsGoFailures =
+  withSystemTempDirectory "typus-batch-check-go" $ \tmpDir -> do
+    let validFile = tmpDir </> "main.typus"
+    writeFile validFile $ unlines
+      [ "package main"
+      , "func main() {"
+      , "    println(\"hi\")"
+      , "}"
+      ]
+
+    (executor, runsRef) <- failingExecutor
+    ctx <- newCompilerContextWithExecutor silentLogger executor
+
+    result <- runExceptT (batchCheck ctx tmpDir)
+    case result of
+      Left (BatchCheckFailures failures) -> do
+        length failures @?= 1
+        let (failedPath, failureErr) = head failures
+        failedPath @?= validFile
+        case failureErr of
+          GoCommandFailed _ -> do
+            let rendered = renderToolingError failureErr
+            assertBool "go command failure should mention go build" ("go build" `isInfixOf` rendered)
+          other -> assertFailure $ "unexpected failure type: " ++ show other
+      Left other -> assertFailure $ "unexpected tooling error: " ++ show other
+      Right _ -> assertFailure "expected go command failure"
+
+    invocations <- readIORef runsRef
+    assertBool "expected go invocation to be recorded" (not (null invocations))
+
 --------------------------------------------------------------------------------
 -- Helpers
 --------------------------------------------------------------------------------
@@ -154,5 +217,16 @@ skippingExecutor = do
         , goRunCommandInDir = \args dir -> ExceptT $ do
             modifyIORef' ref ((args, dir) :)
             pure (Right ())
+        }
+  pure (exec, ref)
+
+failingExecutor :: IO (GoExecutor, IORef [([String], FilePath)])
+failingExecutor = do
+  ref <- newIORef []
+  let exec = GoExecutor
+        { goShouldSkip = pure False
+        , goRunCommandInDir = \args dir -> ExceptT $ do
+            modifyIORef' ref ((args, dir) :)
+            pure (Left (goCommandFailed "go" args dir 2 "" "simulated go build failure"))
         }
   pure (exec, ref)

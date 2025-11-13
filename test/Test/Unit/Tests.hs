@@ -5,6 +5,7 @@ import Test.Tasty (TestTree, testGroup)
 import qualified Test.Unit.CLISpec
 import qualified Test.Unit.CompilerSpec
 import qualified Test.Unit.DependentTypesSpec
+import qualified Test.Unit.EmbedAssetsSpec
 import qualified Test.Unit.ErrorHandlingSpec
 import qualified Test.Unit.OwnershipSpec
 import qualified Test.Unit.ParserSpec
@@ -25,5 +26,6 @@ tests =
     , Test.Unit.CompilerSpec.tests
     , Test.Unit.ValueAnalysisSpec.tests
     , Test.Unit.ErrorHandlingSpec.tests
+    , Test.Unit.EmbedAssetsSpec.tests
     , Test.Unit.CLISpec.tests
     ]
