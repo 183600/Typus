@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Test.Unit.DependentTypesSpec (tests) where
 
 import Control.Monad.State (execState, runState)
@@ -94,6 +96,19 @@ tests =
                 )
               ]
 
+    , testCase "extracts numeric equality constraints as concrete values" $ do
+        let source = unlines
+              [ "type Bounded<N> struct {}"
+              , "where N == 1"
+              ]
+        extractTypeDefinitions source
+          @?= [ ( "Bounded"
+                , ["N"]
+                , [ Dep.Equal (Dep.TVVar "N") (Dep.TVCon "1")
+                  ]
+                )
+              ]
+
     , testCase "ignores aliases and dependent functions when extracting types" $ do
         let source = unlines
               [ "type Envelope<T> struct {"
@@ -109,6 +124,18 @@ tests =
                 )
               ]
 
+    , testCase "analyzeAST accepts well-formed declarations" $ do
+        let ast =
+              Dep.Program
+                [ Dep.STypeDef "Vector" ["T"] []
+                , Dep.SVarDecl "items" (Dep.GenericT "Vector" [Dep.SimpleT "int"])
+                ]
+        Dep.analyzeAST ast @?= []
+
+    , testCase "analyzeAST reports missing type references" $ do
+        let ast = Dep.Program [Dep.SVarDecl "value" (Dep.SimpleT "Missing")]
+        Dep.analyzeAST ast @?= [Dep.TypeNotFound "Missing"]
+
     , testCase "validateStatement registers dependent type definitions" $ do
         let stmt = Dep.STypeDef "Vector" ["T"] [Dep.SizeGE "T" 1]
             checker = execState (Dep.validateStatement stmt) Dep.newDependentTypeChecker
@@ -121,6 +148,18 @@ tests =
             checker = execState (Dep.validateStatement stmt) Dep.newDependentTypeChecker
         TS.getDependentTypeErrors checker
           @?= [TS.TypeNotFound "Missing"]
+
+    , testCase "solveConstraints succeeds with satisfiable constraints" $ do
+        let (result, checker) =
+              runState
+                ( do
+                    Dep.addConstraint (Dep.Equal (Dep.TVCon "int") (Dep.TVCon "int"))
+                    Dep.addConstraint (Dep.Subtype (Dep.TVCon "int") (Dep.TVCon "int"))
+                    Dep.solveConstraints
+                )
+                Dep.newDependentTypeChecker
+        assertBool "expected constraints to solve" result
+        Dep.getDependentTypeErrors checker @?= []
 
     , testCase "solveConstraints reports invalid range constraints" $ do
         let stmt = Dep.SConstraintDef "invalidRange" (Dep.RangeC "x" 10 1)
