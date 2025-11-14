@@ -214,6 +214,7 @@ test-suite typus-test
             Test.Integration.Tests,
             Test.Integration.PipelineSpec,
             Test.Integration.AnalyzerSpec,
+            Test.Integration.OwnershipSpec,
             Test.Integration.IntegratedCompilerSpec,
             Test.Integration.FullProjectSpec
     build-depends:
