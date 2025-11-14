@@ -3,10 +3,10 @@ module Main (main) where
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
-import Test.Dependencies.Arbitrary ()
 import qualified Test.Unit
 
 #if defined(FULL_TESTS) || defined(PRODUCTION_TESTS)
+import Test.Dependencies.Arbitrary ()
 import qualified Test.Golden
 import qualified Test.Integration
 #endif

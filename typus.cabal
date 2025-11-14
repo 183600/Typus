@@ -192,7 +192,6 @@ test-suite typus-test
     hs-source-dirs:   test
     default-extensions: NoMonomorphismRestriction
     other-modules:
-        Test.Dependencies.Arbitrary,
         Test.Unit,
         Test.Unit.Tests,
         Test.Unit.CLISpec,
@@ -207,6 +206,7 @@ test-suite typus-test
         Test.Unit.ValueAnalysisSpec
     if flag(full) || flag(production)
         other-modules:
+            Test.Dependencies.Arbitrary,
             Test.Golden,
             Test.Golden.Tests,
             Test.Golden.CompilerSpec,
@@ -222,28 +222,20 @@ test-suite typus-test
         typus,
         containers,
         mtl,
-        parsec >= 3.1.0,
         directory >= 1.3.0,
         filepath >= 1.4.0,
-        process >= 1.6.0,
         HUnit >= 1.6.0,
-        deepseq >= 1.4.0,
-        time >= 1.8.0,
         tasty >= 1.4,
         tasty-hunit >= 0.10,
-        tasty-golden >= 2.3,
-        tasty-quickcheck >= 0.10,
-        criterion >= 1.6,
-        QuickCheck >= 2.14,
-        async >= 2.2,
-        stm >= 2.5,
-        Glob >= 0.10 && <1,
         temporary >= 1.2 && <2,
-        time >= 1.8 && <2,
         text >= 1.2.0 && <3,
-        hpc >= 0.7,
-        bytestring >= 0.10 && <1,
         transformers >= 0.5 && <0.7
+    if flag(full) || flag(production)
+        build-depends:
+            bytestring >= 0.10 && <1,
+            process >= 1.6.0,
+            QuickCheck >= 2.14,
+            tasty-golden >= 2.3
     default-language: Haskell2010
     ghc-options:      -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-M4G -Wno-unused-top-binds -Wno-unused-local-binds -Wno-unused-matches
     if flag(fast)
