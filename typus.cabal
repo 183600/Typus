@@ -12,6 +12,7 @@ extra-doc-files: ChangeLog.md
 extra-source-files:
     test/fixtures/full_project/*.typus
     test/fixtures/full_project/assets/hello.txt
+    test/golden/fixtures/simple_go_code.go
 
 source-repository head
   type: git
@@ -203,20 +204,11 @@ test-suite typus-test
         Test.Unit.ParserSpec,
         Test.Unit.TypeSystemSpec,
         Test.Unit.SymbolTableSpec,
-        Test.Unit.ValueAnalysisSpec
+        Test.Unit.ValueAnalysisSpec,
+        Test.Unit.VerbositySpec
     if flag(full) || flag(production)
         other-modules:
-            Test.Dependencies.Arbitrary,
-            Test.Golden,
-            Test.Golden.Tests,
-            Test.Golden.CompilerSpec,
-            Test.Integration,
-            Test.Integration.Tests,
-            Test.Integration.PipelineSpec,
-            Test.Integration.AnalyzerSpec,
-            Test.Integration.OwnershipSpec,
-            Test.Integration.IntegratedCompilerSpec,
-            Test.Integration.FullProjectSpec
+            Test.Dependencies.Arbitrary
     build-depends:
         base >=4.7 && <5,
         typus,
@@ -232,14 +224,27 @@ test-suite typus-test
         transformers >= 0.5 && <0.7
     if flag(full) || flag(production)
         build-depends:
-            bytestring >= 0.10 && <1,
-            process >= 1.6.0,
-            QuickCheck >= 2.14,
-            tasty-golden >= 2.3
+            QuickCheck >= 2.14
     default-language: Haskell2010
     ghc-options:      -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-M4G -Wno-unused-top-binds -Wno-unused-local-binds -Wno-unused-matches
     if flag(fast)
         cpp-options:   -DFAST_TESTS
+    else
+        other-modules:
+            Test.Golden,
+            Test.Golden.Tests,
+            Test.Golden.CompilerSpec,
+            Test.Integration,
+            Test.Integration.Tests,
+            Test.Integration.PipelineSpec,
+            Test.Integration.AnalyzerSpec,
+            Test.Integration.OwnershipSpec,
+            Test.Integration.IntegratedCompilerSpec,
+            Test.Integration.FullProjectSpec
+        build-depends:
+            bytestring >= 0.10 && <1,
+            process >= 1.6.0,
+            tasty-golden >= 2.3
     if flag(full)
         cpp-options:   -DFULL_TESTS
     if flag(production)

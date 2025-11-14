@@ -12,6 +12,7 @@ import qualified Test.Unit.ParserSpec
 import qualified Test.Unit.TypeSystemSpec
 import qualified Test.Unit.SymbolTableSpec
 import qualified Test.Unit.ValueAnalysisSpec
+import qualified Test.Unit.VerbositySpec
 
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
@@ -28,4 +29,5 @@ tests =
     , Test.Unit.ErrorHandlingSpec.tests
     , Test.Unit.EmbedAssetsSpec.tests
     , Test.Unit.CLISpec.tests
+    , Test.Unit.VerbositySpec.tests
     ]

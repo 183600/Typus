@@ -13,6 +13,10 @@ tests =
         result <- withArgs ["convert", "input.typus", "-o", "output.go"] parseArgs
         result @?= Convert "input.typus" "output.go"
 
+    , testCase "parses check command" $ do
+        result <- withArgs ["check", "module.typus"] parseArgs
+        result @?= Check "module.typus"
+
     , testCase "parses --version option" $ do
         result <- withArgs ["--version"] parseArgs
         result @?= Version
@@ -21,6 +25,10 @@ tests =
         result <- withArgs ["build", "--strict-embed"] parseArgs
         result @?= Build True []
 
+    , testCase "parses build forwarding go arguments" $ do
+        result <- withArgs ["build", "fmt", "-v"] parseArgs
+        result @?= Build False ["fmt", "-v"]
+
     , testCase "parses run defaults to non-strict" $ do
         result <- withArgs ["run", "example.typus"] parseArgs
         result @?= Run False ["example.typus"]
@@ -28,4 +36,8 @@ tests =
     , testCase "parses run with strict embed flag" $ do
         result <- withArgs ["run", "--strict-embed", "example.typus"] parseArgs
         result @?= Run True ["example.typus"]
+
+    , testCase "parses run command with additional arguments" $ do
+        result <- withArgs ["run", "main.typus", "input.txt", "--verbose"] parseArgs
+        result @?= Run False ["main.typus", "input.txt", "--verbose"]
     ]
