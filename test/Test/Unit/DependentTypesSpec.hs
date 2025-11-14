@@ -79,6 +79,36 @@ tests =
                 )
               ]
 
+    , testCase "translates nonempty shorthand constraint to TypeSizeGT" $ do
+        let source = unlines
+              [ "type Bag<T> struct {"
+              , "    values: T"
+              , "}"
+              , "where nonempty values"
+              ]
+        extractTypeDefinitions source
+          @?= [ ( "Bag"
+                , ["T"]
+                , [ Dep.TypeSizeGT (Dep.TVVar "values") 0
+                  ]
+                )
+              ]
+
+    , testCase "ignores aliases and dependent functions when extracting types" $ do
+        let source = unlines
+              [ "type Envelope<T> struct {"
+              , "    payload: T"
+              , "}"
+              , "alias EnvelopeAlias = Envelope<int>"
+              , "func enforce(x Envelope<int>) where len x > 0"
+              ]
+        extractTypeDefinitions source
+          @?= [ ( "Envelope"
+                , ["T"]
+                , []
+                )
+              ]
+
     , testCase "validateStatement registers dependent type definitions" $ do
         let stmt = Dep.STypeDef "Vector" ["T"] [Dep.SizeGE "T" 1]
             checker = execState (Dep.validateStatement stmt) Dep.newDependentTypeChecker
