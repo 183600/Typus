@@ -118,6 +118,7 @@ dmypy.json
 
 # Generated files
 *.go
+!test/golden/fixtures/*.go
 *.o
 *.out
 *.so
