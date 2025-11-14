@@ -1,5 +1,7 @@
 module Test.Unit.DependentTypesSpec (tests) where
 
+import Control.Monad.State (execState, runState)
+import qualified Data.Map.Strict as Map
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ( (@?=), assertBool, testCase )
 
@@ -8,6 +10,7 @@ import DependentTypesParser
   ( validateDependentTypeSyntax
   )
 import qualified Dependencies as Dep
+import qualified Dependencies.TypeSystem as TS
 
 tests :: TestTree
 tests =
@@ -75,4 +78,25 @@ tests =
                   ]
                 )
               ]
+
+    , testCase "validateStatement registers dependent type definitions" $ do
+        let stmt = Dep.STypeDef "Vector" ["T"] [Dep.SizeGE "T" 1]
+            checker = execState (Dep.validateStatement stmt) Dep.newDependentTypeChecker
+            defs = TS.typeDefinitions (TS.dtcTypeEnv checker)
+        Map.lookup "Vector" defs
+          @?= Just (TS.TypeDefDecl ["T"] [TS.TypeSizeGE (TS.TVVar "T") 1])
+
+    , testCase "validateStatement reports missing alias targets" $ do
+        let stmt = Dep.STypeAlias "Alias" (Dep.SimpleT "Missing") []
+            checker = execState (Dep.validateStatement stmt) Dep.newDependentTypeChecker
+        TS.getDependentTypeErrors checker
+          @?= [TS.TypeNotFound "Missing"]
+
+    , testCase "solveConstraints reports invalid range constraints" $ do
+        let stmt = Dep.SConstraintDef "invalidRange" (Dep.RangeC "x" 10 1)
+            (result, checker) =
+              runState (Dep.validateStatement stmt >> TS.solveConstraints) Dep.newDependentTypeChecker
+        assertBool "expected constraint solving to fail" (not result)
+        TS.getDependentTypeErrors checker
+          @?= [TS.SemanticError "invalid range: min > max"]
     ]
