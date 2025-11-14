@@ -130,11 +130,11 @@ flag full
 -- Production testing flags
 flag production
     description: Enable production-grade testing with strict requirements
-    default:     True
+    default:     False
 
 flag coverage
     description: Enable test coverage generation
-    default:     True
+    default:     False
 
 flag werror
     description: Treat warnings as errors

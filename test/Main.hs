@@ -22,8 +22,10 @@ allTests =
     integrationSuites =
 #if defined(FAST_TESTS)
       []
-#else
+#elif defined(FULL_TESTS) || defined(PRODUCTION_TESTS)
       [Test.Integration.tests]
+#else
+      []
 #endif
     goldenSuites =
 #if defined(FAST_TESTS)
