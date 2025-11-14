@@ -96,4 +96,72 @@ tests =
               , "}"
               ]
         analyzeOwnership source @?= [MultipleMutBorrows "data"]
+
+    , testCase "fmt.Println is treated as pure usage" $ do
+        let source = unlines
+              [ "package main"
+              , ""
+              , "func produce() string {"
+              , "    return \"payload\""
+              , "}"
+              , ""
+              , "func main() {"
+              , "    data := produce()"
+              , "    fmt.Println(data)"
+              , "    println(data)"
+              , "}"
+              ]
+        analyzeOwnership source @?= []
+
+    , testCase "respects ownership off directive" $ do
+        let source = unlines
+              [ "//! ownership: off"
+              , ""
+              , "package main"
+              , ""
+              , "func produce() string {"
+              , "    return \"payload\""
+              , "}"
+              , ""
+              , "func consume(x string) string {"
+              , "    return x"
+              , "}"
+              , ""
+              , "func use(_ string) {}"
+              , ""
+              , "func main() {"
+              , "    data := produce()"
+              , "    consume(data)"
+              , "    use(data)"
+              , "}"
+              ]
+        analyzeOwnership source @?= []
+
+    , testCase "line directive toggles ownership tracking back on" $ do
+        let source = unlines
+              [ "package main"
+              , ""
+              , "func produce() string {"
+              , "    return \"payload\""
+              , "}"
+              , ""
+              , "func consume(x string) string {"
+              , "    return x"
+              , "}"
+              , ""
+              , "func use(_ string) {}"
+              , ""
+              , "func main() {"
+              , "    //! ownership: off"
+              , "    ignored := produce()"
+              , "    consume(ignored)"
+              , "    use(ignored)"
+              , ""
+              , "    //! ownership: on"
+              , "    tracked := produce()"
+              , "    consume(tracked)"
+              , "    println(tracked)"
+              , "}"
+              ]
+        analyzeOwnership source @?= [UseAfterMove "tracked"]
     ]
