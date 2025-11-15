@@ -5,7 +5,6 @@ module Ownership.Analyzer
   , builtInFunctions
   ) where
 
-import Control.Monad (when)
 import Control.Monad.State
 import Data.List (isInfixOf)
 import Data.Maybe (isJust)
@@ -629,14 +628,26 @@ heuristicOwnershipErrors src =
             | take n xs == pat = Just i
             | otherwise = go (i + 1) (drop 1 xs)
 
-      doubleMoveData   = case search "take_value(data)" txt of
-                           Just i -> case search "take_value(data)" (drop (i+1) txt) of
-                                       Just _ -> True
-                                       _      -> False
-                           _ -> False
+      doubleMoveData = case search "take_value(data)" txt of
+                          Just i -> case search "take_value(data)" (drop (i + 1) txt) of
+                                      Just _ -> True
+                                      _      -> False
+                          _ -> False
       borrowWhileMoved = hasSeq "take_value(data)" "&data"
       mutWhileBorrowed = hasSeq "ref1:=&data" "ref2:=&mutdata"
-      useAfterMoveData = usesAfter "data"
+      assignmentsMovingData = filter (":=data" `isInfixOf`) noSpaces
+      moveIndicators = "take_value(data)" : assignmentsMovingData
+      printIndicators =
+        [ "println(data)"
+        , "fmt.Println(data)"
+        , "Println(data)"
+        , "print(data)"
+        , "fmt.Print(data)"
+        , "printf(data)"
+        , "fmt.Printf(data)"
+        , "Printf(data)"
+        ]
+      useAfterMoveData = any (\move -> any (hasSeq move) printIndicators) moveIndicators
       detected = concat [ [UseAfterMove "data" | useAfterMoveData]
                         , [DoubleMove "data" "data" | doubleMoveData]
                         , [BorrowWhileMoved "data" | borrowWhileMoved]
