@@ -2,22 +2,28 @@
 
 ## 🚀 快速开始
 
+### 默认快速测试
+```bash
+# 仅运行快速单元测试（默认行为）
+cabal test
+```
+
 ### 运行所有测试
 ```bash
-# 方式1: 使用 cabal
-cabal test
+# 方式1: 使用 cabal（关闭 fast 标志以包含集成 / Golden 测试）
+cabal test --flags="-fast full"
 
-# 方式2: 使用 stack
+# 方式2: 使用 stack（Stack 配置会默认运行生产级测试）
 stack test
 
 # 查看详细输出
-cabal test --test-show-details=streaming
+cabal test --flags="-fast full" --test-show-details=streaming
 ```
 
 ### 运行测试并生成覆盖率报告
 ```bash
-# 使用 cabal
-cabal test --flag typus:coverage
+# 使用 cabal（建议关闭 fast 以收集完整覆盖率）
+cabal test --flags="-fast coverage"
 
 # 使用 stack (推荐)
 stack test --coverage
@@ -32,19 +38,19 @@ stack hpc report --all --destdir=coverage-report
 
 ### 快速测试 (开发时使用)
 ```bash
-cabal test --flag typus:fast
+cabal test
 ```
-仅运行快速单元测试，适合开发时快速验证。
+仅运行快速单元测试，适合开发时快速验证（默认行为）。
 
 ### 完整测试 (提交前使用)
 ```bash
-cabal test --flag typus:full
+cabal test --flags="-fast full"
 ```
 运行所有测试包括慢速集成测试和性能测试。
 
 ### 生产测试 (发布前使用)
 ```bash
-cabal test --flag typus:production
+cabal test --flags="-fast production"
 ```
 启用严格的生产级测试，将警告视为错误。
 
@@ -226,8 +232,8 @@ cabal test --test-options="+RTS -M8G -RTS"
 # 使用并行测试 (如果支持)
 cabal test --test-options="-j4"
 
-# 或只运行快速测试
-cabal test --flag typus:fast
+# 或只运行快速测试（重新启用 fast 标志）
+cabal test --flags="+fast"
 ```
 
 ### HPC覆盖率文件冲突
@@ -237,7 +243,7 @@ rm -f typus-test.tix
 rm -rf .hpc/
 
 # 重新运行测试
-cabal test --flag typus:coverage
+cabal test --flags="-fast coverage"
 ```
 
 ## 🔄 持续集成
@@ -249,12 +255,12 @@ cabal test --flag typus:coverage
   run: |
     cabal update
     cabal build all
-    cabal test --test-show-details=streaming
+    cabal test --flags="-fast full" --test-show-details=streaming
     
 - name: Check coverage
   run: |
-    cabal test --flag typus:coverage
-    TYPUS_COVERAGE_THRESHOLD=70 cabal test
+    cabal test --flags="-fast coverage"
+    TYPUS_COVERAGE_THRESHOLD=70 cabal test --flags="-fast coverage"
 ```
 
 ### 在提交前自动运行测试
@@ -262,7 +268,7 @@ cabal test --flag typus:coverage
 ```bash
 #!/bin/bash
 echo "Running tests before commit..."
-cabal test --flag typus:fast
+cabal test
 if [ $? -ne 0 ]; then
     echo "Tests failed! Commit aborted."
     exit 1
@@ -290,10 +296,10 @@ fi
 
 ## 💡 最佳实践
 
-1. **开发时**: 使用 `cabal test --flag typus:fast` 快速验证
-2. **提交前**: 运行 `cabal test` 确保所有测试通过
-3. **发布前**: 运行 `cabal test --flag typus:full --flag typus:production`
-4. **定期**: 生成覆盖率报告，确保覆盖率不下降
+1. **开发时**: 使用 `cabal test` 快速验证（默认快速模式）
+2. **提交前**: 运行 `cabal test --flags="-fast full"` 覆盖所有测试
+3. **发布前**: 运行 `cabal test --flags="-fast production"`
+4. **定期**: 生成覆盖率报告，确保覆盖率不下降（`cabal test --flags="-fast coverage"`）
 5. **新功能**: 先写测试，然后实现功能 (TDD)
 6. **Bug修复**: 先写重现bug的测试，然后修复
 

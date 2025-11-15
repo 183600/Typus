@@ -53,7 +53,7 @@ cabal run typus-compilation-test
 #### New Way ✅
 
 ```bash
-# Run all tests
+# Run quick tests (default)
 cabal test
 
 # Run specific test modules using patterns
@@ -67,10 +67,10 @@ cabal test --test-options="--pattern \"Test.Integration\""
 cabal test --test-options="--pattern \"Test.Golden\""
 
 # Run with different modes
-cabal test --flag typus:fast           # Quick tests only
-cabal test --flag typus:full           # All tests including slow ones
-cabal test --flag typus:production     # Production-ready tests with strict checks
-cabal test --flag typus:coverage       # Generate coverage report
+cabal test --flags="+fast"             # Quick tests only (explicitly enable fast)
+cabal test --flags="-fast full"        # All tests including slow ones
+cabal test --flags="-fast production"  # Production-ready tests with strict checks
+cabal test --flags="-fast coverage"    # Generate coverage report
 ```
 
 ### For CI/CD Pipelines
@@ -94,17 +94,17 @@ cabal test --flag typus:coverage       # Generate coverage report
 ```yaml
 # New: Single unified test command
 - name: Run all tests
-  run: cabal test --test-show-details=streaming
+  run: cabal test --flags="-fast full" --test-show-details=streaming
 
 # Or use different test modes for different stages
 - name: Fast tests on commit
-  run: cabal test --flag typus:fast
+  run: cabal test
 
 - name: Full tests on PR
-  run: cabal test --flag typus:full
+  run: cabal test --flags="-fast full"
 
 - name: Production tests before merge
-  run: cabal test --flag typus:production --flag typus:coverage
+  run: cabal test --flags="-fast production coverage"
 ```
 
 ### For Test Writers
@@ -184,12 +184,12 @@ These tests specifically target the previously under-tested areas identified in 
 
 The unified test suite supports multiple testing modes:
 
-| Flag | Description | Use Case |
-|------|-------------|----------|
-| `--flag typus:fast` | Run only fast unit tests | During development |
-| `--flag typus:full` | Run all tests including slow ones | Before committing |
-| `--flag typus:production` | Enable strict production checks | Before releasing |
-| `--flag typus:coverage` | Generate coverage reports | Regular coverage tracking |
+| Command | Description | Use Case |
+|---------|-------------|----------|
+| `cabal test` | Run only fast unit tests (default) | During development |
+| `cabal test --flags="-fast full"` | Run all tests including slow ones | Before committing |
+| `cabal test --flags="-fast production"` | Enable strict production checks | Before releasing |
+| `cabal test --flags="-fast coverage"` | Generate coverage reports | Regular coverage tracking |
 
 ## Coverage Goals
 

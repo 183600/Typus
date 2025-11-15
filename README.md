@@ -68,17 +68,17 @@ make install
 ### 运行测试
 
 ```bash
-# 运行所有测试
+# 默认运行快速单元测试
 cabal test
 
-# 运行快速测试（开发时使用）
-cabal test --flag typus:fast
+# 运行完整测试套件（包含集成 / Golden 测试）
+cabal test --flags="-fast full"
 
-# 运行完整测试套件
-cabal test --flag typus:full
+# 运行生产级测试（启用严格校验）
+cabal test --flags="-fast production"
 
-# 生成覆盖率报告
-cabal test --flag typus:coverage
+# 生成覆盖率报告（推荐关闭 fast 以获取完整数据）
+cabal test --flags="-fast coverage"
 
 # 运行特定测试模块
 cabal test --test-options="--pattern \"Parser\""

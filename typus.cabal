@@ -121,8 +121,8 @@ executable typus
 
 -- Fast/Full test flags
 flag fast
-    description: Run only fast tests by default
-    default:     False
+    description: Enable fast test mode by default (disable to run comprehensive suites)
+    default:     True
 
 flag full
     description: Include slow/integration/perf tests
@@ -152,10 +152,9 @@ flag werror
 --   - typus-compilation-test (redundant with Test.Integration.PipelineSpec)
 --
 -- All testing should now be done via:
---   cabal test                              (run all tests)
---   cabal test --flag typus:fast            (fast tests only)
---   cabal test --flag typus:full            (comprehensive tests)
---   cabal test --flag typus:production      (production-ready tests)
+--   cabal test                              (fast unit tests only; default behaviour)
+--   cabal test --flags="-fast full"         (comprehensive tests)
+--   cabal test --flags="-fast production"   (production-ready tests)
 --   cabal test --flag typus:coverage        (with coverage)
 --
 -- This consolidation reduces maintenance costs and ensures all tests use

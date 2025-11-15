@@ -1,5 +1,7 @@
 module Test.Unit.ErrorHandlingSpec (tests) where
 
+import Control.Monad.Except (throwError)
+import Control.Monad.State (runStateT)
 import Data.List (isInfixOf)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
@@ -10,14 +12,25 @@ import Compiler.Errors
   ( CompilerError(..)
   , ErrorStatistics(..)
   , analyzeErrors
+  , collectErrors
+  , continueWith
   , formatCompilerError
+  , formatCompilerErrors
+  , generateDetailedReport
+  , makeUserFriendly
   , ownershipError
+  , recoverFrom
+  , runCompilerM
+  , suggestFix
   , syntaxError
   , typeError
+  , withRecovery
+  , withSourceLocation
   )
 import Compiler.Errors.Core
   ( ErrorCategory(..)
   , ErrorContext(..)
+  , ErrorLocation(..)
   , ErrorRecovery(..)
   , ErrorSeverity(..)
   , TypeError(..)
@@ -83,4 +96,57 @@ tests =
         let fatal = fatalError "E999" (T.pack "Fatal") (toErrorLocation (posAt 0 0))
         canRecoverFrom fatal @?= False
         shouldContinueAfter fatal @?= False
+
+    , testCase "formatCompilerErrors groups output by phase" $ do
+        let parseErr = syntaxError "E020" (T.pack "Parse grouping error") (posAt 7 3)
+            typeSpan = spanBetween (posAt 9 1) (posAt 9 5)
+            checkingErr = typeError "E021" (T.pack "Type checking grouping") typeSpan Nothing []
+            formatted = formatCompilerErrors [parseErr, checkingErr]
+        assertBool "expected parsing phase header" ("ParsingPhase (1 errors)" `isInfixOf` formatted)
+        assertBool "expected type checking phase header" ("TypeCheckingPhase (1 errors)" `isInfixOf` formatted)
+
+    , testCase "generateDetailedReport highlights fatal recommendations" $ do
+        let parseErr = syntaxError "E022" (T.pack "Parse failure") (posAt 11 2)
+            typeSpan = spanBetween (posAt 12 1) (posAt 12 4)
+            fatalBase = typeError "E023" (T.pack "Critical mismatch") typeSpan Nothing []
+            fatalErr = fatalBase { ceError = (ceError fatalBase) { severity = Fatal } }
+            report = generateDetailedReport [parseErr, fatalErr]
+        assertBool "includes summary header" ("=== Error Summary ===" `isInfixOf` report)
+        assertBool "counts total errors" ("Total Errors: 2" `isInfixOf` report)
+        assertBool "suggests resolving fatal errors" ("Fix fatal errors first" `isInfixOf` report)
+
+    , testCase "makeUserFriendly simplifies error presentation" $ do
+        let srcSpan = spanBetween (posAt 14 1) (posAt 14 6)
+            rawErr = typeError "E024" (T.pack "Type mismatch in assignment") srcSpan Nothing [T.pack "Review variable types"]
+            friendly = makeUserFriendly rawErr
+            TypeError { message = friendlyMsg, suggestions = friendlySuggestions } = ceError friendly
+        friendlyMsg @?= T.pack "Type error: The types don't match. Make sure you're using the right type of value."
+        friendlySuggestions @?= [T.pack "💡 Review variable types"]
+
+    , testCase "suggestFix provides guidance for type errors" $ do
+        let srcSpan = spanBetween (posAt 16 1) (posAt 16 3)
+            err = typeError "E025" (T.pack "Another mismatch") srcSpan Nothing []
+            hints = suggestFix err
+        assertBool "should mention checking variable types" (T.pack "Check the types of your variables" `elem` hints)
+
+    , testCase "collectErrors captures recovered compiler errors" $ do
+        let err = syntaxError "E026" (T.pack "Intermediate failure") (posAt 18 3)
+        collectErrors (recoverFrom err) @?= Left [err]
+
+    , testCase "continueWith records error state while returning fallback" $ do
+        let err = syntaxError "E027" (T.pack "Continue with fallback") (posAt 20 5)
+        runStateT (continueWith "fallback" err) [] @?= Right ("fallback", [err])
+
+    , testCase "withRecovery falls back when action throws" $ do
+        let err = syntaxError "E028" (T.pack "Recoverable failure") (posAt 22 7)
+        runCompilerM (withRecovery (throwError [err]) (99 :: Int)) @?= Right 99
+
+    , testCase "withSourceLocation updates span boundaries" $ do
+        let err = syntaxError "E029" (T.pack "Needs new span") (posAt 24 2)
+            newSpan = spanBetween (posAt 30 4) (posAt 31 9)
+            updated = withSourceLocation err newSpan
+            loc = location (ceError updated)
+        line loc @?= 30
+        endLine loc @?= Just 31
+        endColumn loc @?= Just 9
     ]
