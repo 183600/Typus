@@ -125,13 +125,16 @@ testBatchCheckReportsSyntaxErrors =
     case result of
       Left (BatchCheckFailures failures) -> do
         length failures @?= 1
-        let (failedPath, failureErr) = head failures
-        failedPath @?= invalidFile
-        case failureErr of
-          SyntaxValidationFailed errFile issues -> do
-            errFile @?= invalidFile
-            assertBool "expected syntax errors to be reported" (not (null issues))
-          other -> assertFailure $ "unexpected failure type: " ++ show other
+        case failures of
+          (failedPath, failureErr):_ -> do
+            failedPath @?= invalidFile
+            case failureErr of
+              SyntaxValidationFailed errFile issues -> do
+                errFile @?= invalidFile
+                assertBool "expected syntax errors to be reported" (not (null issues))
+              other -> assertFailure $ "unexpected failure type: " ++ show other
+          [] ->
+            assertFailure "expected at least one failure"
       Left other -> assertFailure $ "unexpected tooling error: " ++ show other
       Right _ -> assertFailure "expected syntax validation failure"
 
@@ -156,13 +159,16 @@ testBatchCheckReportsGoFailures =
     case result of
       Left (BatchCheckFailures failures) -> do
         length failures @?= 1
-        let (failedPath, failureErr) = head failures
-        failedPath @?= validFile
-        case failureErr of
-          GoCommandFailed _ -> do
-            let rendered = renderToolingError failureErr
-            assertBool "go command failure should mention go build" ("go build" `isInfixOf` rendered)
-          other -> assertFailure $ "unexpected failure type: " ++ show other
+        case failures of
+          (failedPath, failureErr):_ -> do
+            failedPath @?= validFile
+            case failureErr of
+              GoCommandFailed _ -> do
+                let rendered = renderToolingError failureErr
+                assertBool "go command failure should mention go build" ("go build" `isInfixOf` rendered)
+              other -> assertFailure $ "unexpected failure type: " ++ show other
+          [] ->
+            assertFailure "expected at least one failure"
       Left other -> assertFailure $ "unexpected tooling error: " ++ show other
       Right _ -> assertFailure "expected go command failure"
 

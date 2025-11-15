@@ -6,7 +6,7 @@ module Ownership.Analyzer
   ) where
 
 import Control.Monad (when)
-import Control.Monad.State hiding (when)
+import Control.Monad.State
 import Data.List (isInfixOf)
 import Data.Maybe (isJust)
 import qualified Data.Map.Strict as Map
@@ -63,6 +63,7 @@ builtInUseSemantics :: [String]
 builtInUseSemantics =
   [ "Println", "Print", "Printf"
   , "println", "print", "printf"
+  , "fmt.Println", "fmt.Print", "fmt.Printf"
   , "Sprintf", "Fprintf", "Scanf"
   , "len", "cap"
   , "Lock", "Unlock", "RLock", "RUnlock"
@@ -172,13 +173,15 @@ analyzeStmt st = case st of
       OpWalrus ->
         case rhs of
           EUnary UBorrow (EIdent sourceName _) _ -> do
+            borrowVar False sourceName
             declareVar name
             registerBorrowVar name sourceName False
-            updateVarTop sourceName (\vv -> vv { vsBorrowedBy = name : vsBorrowedBy vv })
+            updateVarTop sourceName (finalizeSharedBorrow name)
           EUnary UMutBorrow (EIdent sourceName _) _ -> do
+            borrowVar True sourceName
             declareVar name
             registerBorrowVar name sourceName True
-            updateVarTop sourceName (\vv -> vv { vsMutBorrower = Just name })
+            updateVarTop sourceName (finalizeMutBorrow name)
           _ -> do
             declareVar name
             case rhs of
@@ -279,6 +282,19 @@ registerBorrowVar borrowName sourceName isMut = do
   let borrowInfo = BorrowInfo { biSource = sourceName, biMut = isMut }
   modify (\st -> st { aBorrows = Map.insert borrowName borrowInfo (aBorrows st) })
 
+finalizeSharedBorrow :: Name -> VarState -> VarState
+finalizeSharedBorrow borrower v =
+  case vsBorrowedBy v of
+    "<pending>" : rest -> v { vsBorrowedBy = borrower : rest }
+    names               -> v { vsBorrowedBy = names }
+
+finalizeMutBorrow :: Name -> VarState -> VarState
+finalizeMutBorrow borrower v =
+  case vsMutBorrower v of
+    Just "<pending>" -> v { vsMutBorrower = Just borrower }
+    other             -> v { vsMutBorrower = other }
+
+
 withDirective :: Directive -> State AState a -> State AState a
 withDirective (Directive kv) action = do
   st <- get
@@ -361,20 +377,13 @@ analyzeExprUse :: Expr -> State AState ()
 analyzeExprUse e = case e of
   EIdent x _ -> useVar x
   EUnary _ inner _ -> analyzeExprUse inner
-  ECall f args _ -> if f `elem` builtInUseSemantics then mapM_ analyzeExprUse args else mapM_ analyzeAsArg args
+  ECall f args _ ->
+    if f `elem` builtInUseSemantics
+      then mapM_ analyzeExprUse args
+      else mapM_ (analyzeAsArgForFunc f) args
   EUnknown ts _ -> scanUnknownAsUse ts
   _ -> pure ()
 
-analyzeAsArg :: Expr -> State AState ()
-analyzeAsArg e = case e of
-  EUnary UBorrow (EIdent x _) _    -> borrowVar False x
-  EUnary UMutBorrow (EIdent x _) _ -> do
-    borrowVar True x
-    releasePendingMutBorrow x
-  EIdent x _                       -> moveVar x
-  ECall _ args _                   -> mapM_ analyzeAsArg args
-  EUnknown ts _                    -> scanUnknownAsArg ts
-  _                                -> pure ()
 
 --------------------------------------------------------------------------------
 -- Scanning helpers for unknown expressions
@@ -414,11 +423,16 @@ collectPlainIdents ts = go Nothing ts
     go mPrev (cur:rest) =
       let next = case rest of { (x:_) -> Just x; [] -> Nothing }
           acc = go (Just cur) rest
-      in case cur of
-           Token (TId s) _
-             | isLowerIdent s && not (isDot mPrev) && not (isDot next) && not (isColon next) && not (isLParen next) -> s : acc
-             | otherwise -> acc
-           _ -> acc
+       in case cur of
+            Token (TId s) _
+              | isLowerIdent s
+                && not (isDot mPrev)
+                && not (isReturn mPrev)
+                && not (isDot next)
+                && not (isColon next)
+                && not (isLParen next) -> s : acc
+              | otherwise -> acc
+            _ -> acc
 
     isColon (Just t) = isSym SColon t
     isColon Nothing  = False
@@ -426,6 +440,8 @@ collectPlainIdents ts = go Nothing ts
     isDot Nothing  = False
     isLParen (Just t) = isSym SLParen t
     isLParen Nothing  = False
+    isReturn (Just (Token (TKw KwReturn) _)) = True
+    isReturn _ = False
 
     isLowerIdent s = case s of
       (c:_) | (c >= 'a' && c <= 'z') || c == '_' -> True
