@@ -166,28 +166,25 @@ The Typus compiler is optimized and ready for production deployment.
 ## 配置标志
 
 ### 测试模式
-- `--flag fast`: 仅运行快速测试
+- `--flag fast`: 仅运行快速测试（默认开启，运行完整套件时请通过 `--flags="-fast …"` 关闭）
 - `--flag full`: 包含慢速/集成/性能测试
-- `--flag production`: 启用生产级测试 (默认启用)
-- `--flag coverage`: 启用测试覆盖率生成 (默认启用)
+- `--flag production`: 启用生产级测试
+- `--flag coverage`: 启用测试覆盖率生成
 - `--flag werror`: 将警告视为错误 (手动标志)
 
 ### 运行测试命令
 ```bash
-# 运行所有测试
+# 默认运行快速测试
 cabal test
 
+# 运行所有测试
+cabal test --flags="-fast full"
+
 # 运行测试并生成详细输出
-cabal test --test-show-details=streaming
+cabal test --flags="-fast full" --test-show-details=streaming
 
 # 运行测试并生成覆盖率报告
-cabal test --flag typus:coverage
-
-# 运行快速测试
-cabal test --flag typus:fast
-
-# 运行完整测试套件
-cabal test --flag typus:full
+cabal test --flags="-fast coverage"
 
 # Stack方式运行测试并生成覆盖率
 stack test --coverage
