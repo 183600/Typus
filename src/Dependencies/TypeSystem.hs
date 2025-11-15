@@ -35,7 +35,7 @@ module Dependencies.TypeSystem (
 ) where
 
 import Control.Monad (when)
-import Control.Monad.State hiding (when)
+import Control.Monad.State
 import Data.Either (partitionEithers)
 
 import qualified Data.Map.Strict as Map
@@ -245,7 +245,8 @@ solveConstraints = do
           toEither (Left e)  = Left e
           toEither (Right x) = Right x
       mapM_ addTypeError errs
-      put st { dtcTypeEnv = (dtcTypeEnv st) { pendingConstraints = [] } }
+      st' <- get
+      put st' { dtcTypeEnv = (dtcTypeEnv st') { pendingConstraints = [] } }
       pure (null errs)
 
 checkTypeConstraint :: [(String, TypeVar)] -> TypeConstraint -> State DependentTypeChecker ()

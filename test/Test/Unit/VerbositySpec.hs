@@ -34,7 +34,8 @@ tests =
         counter <- newIORef (0 :: Int)
         whenVerbose Verbose (increment counter)
         whenVerbose Quiet (increment counter)
-        readIORef counter @?= 1
+        finalCount <- readIORef counter
+        finalCount @?= 1
     ]
   where
     envVar :: String

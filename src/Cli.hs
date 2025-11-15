@@ -1,6 +1,7 @@
 module Cli (Args(..), parseArgs) where
 
 import Options.Applicative
+import System.Environment (getArgs, withArgs)
 
 data Args
     = Convert FilePath FilePath
@@ -47,9 +48,34 @@ argsParser = subparser
     ) <|> versionOption
 
 parseArgs :: IO Args
-parseArgs = execParser opts
+parseArgs = do
+  rawArgs <- getArgs
+  withArgs (normalizeArgs rawArgs) (execParser opts)
   where
     opts = info (argsParser <**> helper)
       ( fullDesc
      <> progDesc "Typus compiler and toolchain"
      <> header "typus - A Go extension with ownership and dependent types" )
+
+normalizeArgs :: [String] -> [String]
+normalizeArgs args =
+  case args of
+    ("build":rest) -> "build" : adjustCommandArgs rest
+    ("run":rest)   -> "run" : adjustCommandArgs rest
+    xs             -> xs
+
+adjustCommandArgs :: [String] -> [String]
+adjustCommandArgs args =
+  let (strictFlags, remainder) = consumeStrictEmbed args
+  in strictFlags ++ addSentinel remainder
+
+consumeStrictEmbed :: [String] -> ([String], [String])
+consumeStrictEmbed ("--strict-embed":xs) =
+  let (flags, rest) = consumeStrictEmbed xs
+  in ("--strict-embed" : flags, rest)
+consumeStrictEmbed xs = ([], xs)
+
+addSentinel :: [String] -> [String]
+addSentinel [] = []
+addSentinel xs@("--":_) = xs
+addSentinel xs = "--" : xs

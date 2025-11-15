@@ -26,6 +26,7 @@ module Dependencies (
   analyzeDependentTypes,
   analyzeAST,
   validateASTSemantics,
+  validateStatement,
 
   -- Core operations
   checkType,
@@ -68,7 +69,7 @@ module Dependencies (
 ) where
 
 import Dependencies.AST
-import Dependencies.Analyzer (analyzeAST, analyzeDependentTypes, validateASTSemantics)
+import Dependencies.Analyzer (analyzeAST, analyzeDependentTypes, validateASTSemantics, validateStatement)
 import Dependencies.Inference
 import Dependencies.Parser (grammarDefinition, parseProgram, runParser)
 import Dependencies.TypeSystem

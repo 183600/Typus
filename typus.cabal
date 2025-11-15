@@ -205,7 +205,8 @@ test-suite typus-test
         Test.Unit.TypeSystemSpec,
         Test.Unit.SymbolTableSpec,
         Test.Unit.ValueAnalysisSpec,
-        Test.Unit.VerbositySpec
+        Test.Unit.VerbositySpec,
+        TestSupport.Verbosity
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
