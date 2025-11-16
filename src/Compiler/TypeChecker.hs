@@ -2,7 +2,9 @@
 module Compiler.TypeChecker (
     Type(..),
     TypeEnv(..),
+    TypeCheckDiagnostic(..),
     hasTypeErrors,
+    diagnoseTypeErrors,
     extractDeclarations,
     extractFunctionCalls,
     buildTypeEnv,
@@ -13,6 +15,7 @@ module Compiler.TypeChecker (
 ) where
 
 import Parser (TypusFile(..))
+import Compiler.Errors (CompilerError)
 import Compiler.GoAst
 import Compiler.GoParsing (consumeNames, splitTopLevel, stripLineComment)
 import qualified Compiler.GoVarSpec as GoVar
@@ -67,6 +70,12 @@ data TypeError = TypeError
     , teMessage :: String
     } deriving (Eq, Show)
 
+-- | Public diagnostic representation exposed to the compiler pipeline.
+data TypeCheckDiagnostic = TypeCheckDiagnostic
+    { tcdContext :: Maybe String
+    , tcdMessage :: String
+    } deriving (Eq, Show)
+
 
 -- | Determine whether the given Typus file has malformed Go syntax.
 hasMalformedSyntax :: TypusFile -> Bool
@@ -79,12 +88,24 @@ hasMalformedSyntax typusFile =
 -- | Entry point for the simplified checker.
 hasTypeErrors :: TypusFile -> Bool
 hasTypeErrors typusFile =
-    case IR.moduleFromTypus typusFile of
+    case diagnoseTypeErrors typusFile of
         Left _ -> True
+        Right diagnostics -> not (null diagnostics)
+
+-- | Collect detailed diagnostics for type errors.
+diagnoseTypeErrors :: TypusFile -> Either [CompilerError] [TypeCheckDiagnostic]
+diagnoseTypeErrors typusFile =
+    case IR.moduleFromTypus typusFile of
+        Left errs -> Left errs
         Right goModule ->
             let env = buildTypeEnv goModule
                 errors = gatherTypeErrors env goModule
-            in not (null errors)
+            in Right (map toDiagnostic errors)
+  where
+    toDiagnostic TypeError{..} = TypeCheckDiagnostic
+        { tcdContext = teContext
+        , tcdMessage = teMessage
+        }
 
 -- | Extract top-level declarations (function headers, var/const specs).
 extractDeclarations :: String -> [String]
