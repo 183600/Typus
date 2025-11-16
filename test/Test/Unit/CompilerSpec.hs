@@ -2,9 +2,10 @@ module Test.Unit.CompilerSpec (tests) where
 
 import Data.List (isInfixOf)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
+import Test.Tasty.HUnit (assertBool, assertFailure, testCase)
 
 import qualified Compiler
+import qualified Compiler.DependentTypeChecker as DepChecker
 import qualified Parser
 
 tests :: TestTree
@@ -36,6 +37,16 @@ tests =
         case Compiler.compile typusFile of
           Left err -> assertBool "error should mention dependent type checking" ("DependentTypeCheckingPhase" `isInfixOf` Compiler.renderCompilationError err)
           Right _  -> assertFailure "expected dependent type error"
+
+    , testCase "file-level dependent type directives are enforced without blocks" $ do
+        let source = unlines
+              [ "//! dependent_types: on"
+              , "alias Broken"
+              ]
+        typusFile <- expectParse source
+        case DepChecker.checkDependentTypes typusFile of
+          Left errs -> assertBool "expected at least one dependent type error" (not $ null errs)
+          Right _   -> assertFailure "expected dependent type errors when file directive is enabled"
 
     , testCase "rejects malformed syntax with unbalanced braces" $ do
         let source = unlines

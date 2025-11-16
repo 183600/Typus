@@ -19,6 +19,7 @@ import AnalyzerIntegration
   , newIntegratedAnalyzer
   , runIntegratedAnalysis
   )
+import qualified Analyzer.DependentTypeBridge as DepBridge
 import IntegratedCompiler
   ( IntegratedCompileResult(..)
   , CompilerConfig(..)
@@ -34,7 +35,19 @@ tests :: TestTree
 tests =
   testGroup "Integrated Analyzer"
     [ testGroup "Cross-Analysis"
-        [ testCase "ownership transfer in dependent-type context" $ do
+        [ testCase "file-level dependent type directives trigger analysis without blocks" $ do
+            let code = unlines
+                  [ "//! dependent_types: on"
+                  , "alias Broken"
+                  ]
+            let state = newIntegratedAnalyzer False True
+            runResult <- runExceptT $ runStateT (DepBridge.runDependentTypeAnalysis code) state
+            case runResult of
+              Left err -> assertFailure $ "Analysis failed: " ++ err
+              Right (errors, _) ->
+                assertBool "Expected dependent type errors from file-level directive" (not (null errors))
+
+        , testCase "ownership transfer in dependent-type context" $ do
             let code = unlines
                   [ "//! ownership: on"
                   , "//! dependent_types: on"
