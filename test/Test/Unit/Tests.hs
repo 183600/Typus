@@ -3,6 +3,7 @@ module Test.Unit.Tests (tests) where
 import Test.Tasty (TestTree, testGroup)
 
 import qualified Test.Unit.CLISpec
+import qualified Test.Unit.CommandLineDebugSpec
 import qualified Test.Unit.CompilerSpec
 import qualified Test.Unit.DependentTypesSpec
 import qualified Test.Unit.EmbedAssetsSpec
@@ -30,6 +31,7 @@ tests =
     , Test.Unit.ValueAnalysisSpec.tests
     , Test.Unit.ErrorHandlingSpec.tests
     , Test.Unit.EmbedAssetsSpec.tests
+    , Test.Unit.CommandLineDebugSpec.tests
     , Test.Unit.CLISpec.tests
     , Test.Unit.VerbositySpec.tests
     ]
