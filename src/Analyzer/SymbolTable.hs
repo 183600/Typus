@@ -22,6 +22,7 @@ import Control.Monad.State
 import qualified Data.Map.Strict as Map
 import Data.Char (isSpace, isAlphaNum, isDigit, toLower)
 import Data.List (dropWhileEnd, isPrefixOf, mapAccumL)
+import qualified Data.List as List
 import Data.Maybe (catMaybes, fromMaybe, listToMaybe)
 
 type SymbolTable = Map.Map String SymbolInfo
@@ -361,7 +362,7 @@ validateSymbolTable symbols = pure $ Map.filterWithKey validateSymbolEntry symbo
 
 augmentSymbolTableWithLocals :: String -> SymbolTable -> SymbolTable
 augmentSymbolTableWithLocals source initialSymbols =
-    snd $ foldl' processLine (0, initialSymbols) (lines source)
+    snd $ List.foldl' processLine (0, initialSymbols) (lines source)
   where
     processLine (depth, acc) rawLine =
         let depthBefore = max 0 depth
@@ -382,7 +383,7 @@ augmentSymbolTableWithLocals source initialSymbols =
             Just spec
               | not (declaresOwned spec) -> acc
               | otherwise ->
-                  foldl' (insertLocalSymbol depthBefore spec) acc (GoVar.rvsNames spec)
+                  List.foldl' (insertLocalSymbol depthBefore spec) acc (GoVar.rvsNames spec)
 
     insertLocalSymbol depthBefore spec acc name
         | Map.member name acc = acc
@@ -407,7 +408,7 @@ augmentSymbolTableWithLocals source initialSymbols =
             Nothing -> False
 
     braceDeltaLine :: String -> Int
-    braceDeltaLine = foldl' update 0
+    braceDeltaLine = List.foldl' update 0
       where
         update acc '{' = acc + 1
         update acc '}' = acc - 1
