@@ -5,7 +5,6 @@ module Ownership.Analyzer
   , builtInFunctions
   ) where
 
-import Control.Monad (when)
 import Control.Monad.State
 import Data.List (isInfixOf)
 import Data.Maybe (isJust)
