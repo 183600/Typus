@@ -8,6 +8,8 @@ module Compiler
   , generateDetailedReport
   , analyzeErrors
   , hasTypeErrors
+  , TypeCheckDiagnostic(..)
+  , diagnoseTypeErrors
   , extractDeclarations
   , extractFunctionCalls
   , buildTypeEnv
@@ -28,6 +30,8 @@ import Compiler.DependentTypeChecker (checkDependentTypes)
 import Compiler.OwnershipChecker (checkOwnership, checkOwnershipWithValueInfo)
 import Compiler.TypeChecker
   ( hasTypeErrors
+  , TypeCheckDiagnostic(..)
+  , diagnoseTypeErrors
   , extractDeclarations
   , extractFunctionCalls
   , buildTypeEnv
@@ -61,9 +65,12 @@ compile typusFile = do
   pure (IR.goSource goArtifact)
   where
     ensureNoTypeErrors file =
-      if hasTypeErrors file
-        then Left [typeCheckFailure]
-        else Right ()
+      case diagnoseTypeErrors file of
+        Left errs -> Left errs
+        Right [] -> Right ()
+        Right diagnostics ->
+          let detailed = map typeDiagnosticToCompilerError diagnostics
+          in Left (typeCheckFailure : detailed)
 
 -- | Convert legacy error lists into a human readable form.
 renderCompilationError :: [CompilerError] -> String
@@ -106,6 +113,13 @@ malformedSyntaxError =
     ["Compiler.ensureSourceIR"]
     Nothing
 
+typeCheckSuggestions :: [T.Text]
+typeCheckSuggestions =
+  map T.pack
+    [ "Inspect intermediate type-checking diagnostics for precise locations"
+    , "Add explicit type annotations to clarify intent"
+    ]
+
 typeCheckFailure :: CompilerError
 typeCheckFailure =
   mkCompilerError
@@ -116,9 +130,27 @@ typeCheckFailure =
     Error
     (Just defaultSpan)
     Nothing
-    (map T.pack
-      [ "Inspect intermediate type-checking diagnostics for precise locations"
-      , "Add explicit type annotations to clarify intent"
-      ])
+    typeCheckSuggestions
     ["Compiler.ensureNoTypeErrors"]
     Nothing
+
+typeDiagnosticToCompilerError :: TypeCheckDiagnostic -> CompilerError
+typeDiagnosticToCompilerError (TypeCheckDiagnostic context detail) =
+  let message =
+        maybe ("Type error: " ++ detail)
+              (\ctx -> "Type error in '" ++ ctx ++ "': " ++ detail)
+              context
+      stackTraceBase = ["Compiler.ensureNoTypeErrors"]
+      stackTrace =
+        maybe stackTraceBase (\ctx -> stackTraceBase ++ ["Type context: " ++ ctx]) context
+  in mkCompilerError
+       "CP0002"
+       (T.pack message)
+       TypeCheckingPhase
+       TypeChecking
+       Error
+       (Just defaultSpan)
+       Nothing
+       typeCheckSuggestions
+       stackTrace
+       Nothing

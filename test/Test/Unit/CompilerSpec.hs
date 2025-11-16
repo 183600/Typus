@@ -48,6 +48,25 @@ tests =
           Left errs -> assertBool "expected at least one dependent type error" (not $ null errs)
           Right _   -> assertFailure "expected dependent type errors when file directive is enabled"
 
+    , testCase "reports detailed diagnostics when type checking fails" $ do
+        let source = unlines
+              [ "package main"
+              , "func add(x int, y int) int {"
+              , "    return x + y"
+              , "}"
+              , ""
+              , "func main() {"
+              , "    add(\"oops\", 2)"
+              , "}"
+              ]
+        typusFile <- expectParse source
+        case Compiler.compile typusFile of
+          Left errs -> do
+            let rendered = Compiler.renderCompilationError errs
+            assertBool "expected summary type-check failure" ("Type errors detected during semantic analysis" `isInfixOf` rendered)
+            assertBool "expected detailed argument type mismatch" ("Type error in 'main': add argument 1: expected type int, got string" `isInfixOf` rendered)
+          Right _ -> assertFailure "expected type checker to emit detailed diagnostics"
+
     , testCase "rejects malformed syntax with unbalanced braces" $ do
         let source = unlines
               [ "package main"
