@@ -33,7 +33,7 @@ test:
 # Run all tests via Stack (production-grade flags set in stack.yaml)
 stack-test:
 	stack test --test-arguments="--hide-successes"
- 	@echo "Stack tests completed!"
+	@echo "Stack tests completed!"
 
 # Run quick tests (without performance tests)
 test-quick:
