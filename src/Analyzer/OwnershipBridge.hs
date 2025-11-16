@@ -1,5 +1,6 @@
 module Analyzer.OwnershipBridge (
-    runOwnershipAnalysis
+    runOwnershipAnalysis,
+    processOwnershipErrors
 ) where
 
 import Analyzer.State
@@ -17,7 +18,10 @@ import qualified Data.Set as Set
 runOwnershipAnalysis :: String -> IntegratedAnalyzer [(ErrorSeverity, Own.OwnershipError)]
 runOwnershipAnalysis code = do
     let ownershipErrs = Own.analyzeOwnership code
-    updateSymbolTableWithOwnership ownershipErrs
+    processOwnershipErrors code ownershipErrs
+
+processOwnershipErrors :: String -> [Own.OwnershipError] -> IntegratedAnalyzer [(ErrorSeverity, Own.OwnershipError)]
+processOwnershipErrors code ownershipErrs = do
     symbols <- gets symbolTable
     let significantErrors = filterSignificantOwnershipErrors code ownershipErrs symbols
         labeledErrors = map (\res -> (Error, res)) significantErrors
