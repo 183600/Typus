@@ -8,6 +8,7 @@ import qualified Test.Unit.DependentTypesSpec
 import qualified Test.Unit.EmbedAssetsSpec
 import qualified Test.Unit.ErrorHandlingSpec
 import qualified Test.Unit.OwnershipSpec
+import qualified Test.Unit.OwnershipBridgeSpec
 import qualified Test.Unit.ParserSpec
 import qualified Test.Unit.TypeSystemSpec
 import qualified Test.Unit.SymbolTableSpec
@@ -21,6 +22,7 @@ tests =
   testGroup "Unit"
     [ Test.Unit.ParserSpec.tests
     , Test.Unit.OwnershipSpec.tests
+    , Test.Unit.OwnershipBridgeSpec.tests
     , Test.Unit.DependentTypesSpec.tests
     , Test.Unit.TypeSystemSpec.tests
     , Test.Unit.SymbolTableSpec.tests
