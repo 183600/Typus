@@ -48,8 +48,14 @@ checkDependentTypes typusFile =
 
 extractDependentTypeContent :: TypusFile -> String
 extractDependentTypeContent typusFile =
-    let dependentBlocks = filter (directiveEnabled . bdDependentTypes . cbDirectives) (tfBlocks typusFile)
-    in concatMap cbContent dependentBlocks
+    let directives = tfDirectives typusFile
+        fileEnabled = directiveEnabled (fdDependentTypes directives)
+        blocks = tfBlocks typusFile
+        includeBlock block =
+            case bdDependentTypes (cbDirectives block) of
+                Nothing -> fileEnabled
+                Just locatedFlag -> locatedValue locatedFlag
+    in concatMap cbContent (filter includeBlock blocks)
 
 parserFailure :: String -> CompilerError
 parserFailure errMsg =
