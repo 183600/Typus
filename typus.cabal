@@ -195,6 +195,7 @@ test-suite typus-test
         Test.Unit,
         Test.Unit.Tests,
         Test.Unit.CLISpec,
+        Test.Unit.CommandLineDebugSpec,
         Test.Unit.CompilerSpec,
         Test.Unit.DependentTypesSpec,
         Test.Unit.ErrorHandlingSpec,

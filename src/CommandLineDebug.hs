@@ -196,22 +196,26 @@ showDebugStatus config = do
 
 -- Check conditional breakpoint
 checkConditionalBreakpoint :: CommandLineDebugConfig -> String -> (String -> Bool) -> IO ()
-checkConditionalBreakpoint config location _ = do
-    interactive <- readIORef (cldInteractive config)
-    if interactive
-        then do
-            putStrLn $ "\n=== CONDITIONAL BREAKPOINT: " ++ location ++ " ==="
-            putStrLn "Condition met. Available commands:"
-            putStrLn "  c, continue - Continue execution"
-            putStrLn "  s, step - Step to next breakpoint"
-            putStrLn "  i, info - Show debug info"
-            putStrLn "  h, help - Show help"
-            handleConditionalBreakpointCommands config location
+checkConditionalBreakpoint config location condition = do
+    let locationState = location
+    if not (condition locationState)
+        then pure ()
         else do
-            putStrLn $ "\n=== CONDITIONAL BREAKPOINT: " ++ location ++ " ==="
-            putStrLn "Press Enter to continue..."
-            _ <- getLine
-            return ()
+            interactive <- readIORef (cldInteractive config)
+            if interactive
+                then do
+                    putStrLn $ "\n=== CONDITIONAL BREAKPOINT: " ++ location ++ " ==="
+                    putStrLn "Condition met. Available commands:"
+                    putStrLn "  c, continue - Continue execution"
+                    putStrLn "  s, step - Step to next breakpoint"
+                    putStrLn "  i, info - Show debug info"
+                    putStrLn "  h, help - Show help"
+                    handleConditionalBreakpointCommands config location
+                else do
+                    putStrLn $ "\n=== CONDITIONAL BREAKPOINT: " ++ location ++ " ==="
+                    putStrLn "Press Enter to continue..."
+                    _ <- getLine
+                    return ()
 
 -- Handle conditional breakpoint commands
 handleConditionalBreakpointCommands :: CommandLineDebugConfig -> String -> IO ()
