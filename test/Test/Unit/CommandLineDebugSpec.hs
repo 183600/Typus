@@ -2,7 +2,9 @@ module Test.Unit.CommandLineDebugSpec (tests) where
 
 import CommandLineDebug
   ( CommandLineDebugConfig(..)
+  , DebugCommandResult(..)
   , defaultCLIDebugConfig
+  , processDebugCommand
   , runWithCLIDebug
   )
 import Data.IORef (newIORef, readIORef, writeIORef)
@@ -25,4 +27,16 @@ tests =
 
         wasExecuted <- readIORef executed
         wasExecuted @?= True
+    , testCase "disable command keeps debugging disabled when already disabled" $ do
+        config <- defaultCLIDebugConfig
+
+        firstResult <- processDebugCommand config "unit-test-location" ["disable"]
+        firstResult @?= AwaitMoreInput
+        firstEnabled <- readIORef (cldEnabled config)
+        firstEnabled @?= False
+
+        secondResult <- processDebugCommand config "unit-test-location" ["disable"]
+        secondResult @?= AwaitMoreInput
+        secondEnabled <- readIORef (cldEnabled config)
+        secondEnabled @?= False
     ]
