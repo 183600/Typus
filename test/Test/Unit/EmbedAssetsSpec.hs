@@ -75,6 +75,33 @@ tests =
             contents <- readFile copiedPath
             contents @?= "hello"
 
+    , testCase "mirrorEmbeddedResources handles indented go:embed directives" $ do
+        withSystemTempDirectory "embed-assets" $ \root -> do
+          let srcDir = root </> "src"
+              sourcePath = srcDir </> "main.typus"
+              assetPath = srcDir </> "assets" </> "hello.txt"
+              tempDir = root </> "out"
+              tempGoPath = tempDir </> "main.go"
+          createDirectoryIfMissing True (srcDir </> "assets")
+          createDirectoryIfMissing True tempDir
+          writeFile sourcePath "package main"
+          writeFile assetPath "hello"
+          writeFile tempGoPath $ unlines
+            [ "package main"
+            , "    //go:embed assets/hello.txt"
+            , "var data string"
+            ]
+
+          missing <- mirrorEmbeddedResources silentLogger sourcePath tempDir tempGoPath
+          missing @?= []
+
+          let copiedPath = tempDir </> "assets" </> "hello.txt"
+          copiedExists <- doesFileExist copiedPath
+          assertBool "expected embedded file to be mirrored" copiedExists
+          when copiedExists $ do
+            contents <- readFile copiedPath
+            contents @?= "hello"
+
     , testCase "mirrorEmbeddedResources reports missing patterns" $ do
         withSystemTempDirectory "embed-assets" $ \root -> do
           let srcDir = root </> "src"

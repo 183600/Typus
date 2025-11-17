@@ -68,11 +68,15 @@ extractEmbeddedPatterns :: String -> [String]
 extractEmbeddedPatterns content =
     [ normalize token
     | line <- lines content
-    , "//go:embed" `isPrefixOf` dropWhile isSpace line
-    , token <- words (dropWhile isSpace (drop 11 line))
+    , let trimmed = dropWhile isSpace line
+    , directive `isPrefixOf` trimmed
+    , let rest = dropWhile isSpace (drop (length directive) trimmed)
+    , token <- words rest
     , not (null token)
     ]
   where
+    directive = "//go:embed"
+
     normalize t =
       case stripQuoted '"' t of
         Just s  -> s
