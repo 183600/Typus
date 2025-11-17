@@ -8,6 +8,8 @@ module CommandLineDebug
     , listBreakpoints
     , clearBreakpoints
     , toggleDebugOutput
+    , DebugCommandResult(..)
+    , processDebugCommand
     , setDebugLevel
     , showDebugStatus
     ) where
@@ -89,44 +91,53 @@ handleDebugCommands config location = do
     putStr "debug> "
     hFlush stdout
     line <- getLine
-    case words line of
-        ["c"] -> return ()
-        ["continue"] -> return ()
-        ["s"] -> return ()
-        ["step"] -> return ()
+    result <- processDebugCommand config location (words line)
+    case result of
+        ResumeExecution -> return ()
+        AwaitMoreInput -> handleDebugCommands config location
+
+-- Result of handling a debug command
+data DebugCommandResult
+    = ResumeExecution
+    | AwaitMoreInput
+    deriving (Eq, Show)
+
+processDebugCommand :: CommandLineDebugConfig -> String -> [String] -> IO DebugCommandResult
+processDebugCommand config _ tokens =
+    case tokens of
+        ["c"] -> return ResumeExecution
+        ["continue"] -> return ResumeExecution
+        ["s"] -> return ResumeExecution
+        ["step"] -> return ResumeExecution
         ["l"] -> do
             listBreakpoints config
-            handleDebugCommands config location
+            return AwaitMoreInput
         ["list"] -> do
             listBreakpoints config
-            handleDebugCommands config location
-        ["d"] -> do
-            toggleDebugOutput config
-            putStrLn "Debugging disabled"
-            handleDebugCommands config location
-        ["disable"] -> do
-            toggleDebugOutput config
-            putStrLn "Debugging disabled"
-            handleDebugCommands config location
-        ["e"] -> do
-            toggleDebugOutput config
-            putStrLn "Debugging enabled"
-            handleDebugCommands config location
-        ["enable"] -> do
-            toggleDebugOutput config
-            putStrLn "Debugging enabled"
-            handleDebugCommands config location
+            return AwaitMoreInput
+        ["d"] -> disableDebugging >> return AwaitMoreInput
+        ["disable"] -> disableDebugging >> return AwaitMoreInput
+        ["e"] -> enableDebugging >> return AwaitMoreInput
+        ["enable"] -> enableDebugging >> return AwaitMoreInput
         ["q"] -> error "Program terminated by user at breakpoint"
         ["quit"] -> error "Program terminated by user at breakpoint"
         ["h"] -> do
             showDebugHelp
-            handleDebugCommands config location
+            return AwaitMoreInput
         ["help"] -> do
             showDebugHelp
-            handleDebugCommands config location
+            return AwaitMoreInput
         _ -> do
             putStrLn "Unknown command. Type 'h' for help."
-            handleDebugCommands config location
+            return AwaitMoreInput
+  where
+    disableDebugging = applyState False "Debugging disabled"
+    enableDebugging = applyState True "Debugging enabled"
+
+    applyState newState statusMessage = do
+        writeIORef (cldEnabled config) newState
+        putStrLn $ "Debug output " ++ if newState then "enabled" else "disabled"
+        putStrLn statusMessage
 
 -- Show debug help
 showDebugHelp :: IO ()
