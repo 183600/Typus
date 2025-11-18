@@ -61,7 +61,7 @@
   },
   "lint-staged": {
     "*.hs": [
-      "cabal format",
+      "./scripts/format-haskell.sh",
       "git add"
     ]
   }
