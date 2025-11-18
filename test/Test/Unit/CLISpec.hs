@@ -25,6 +25,14 @@ tests =
         result <- withArgs ["build", "--strict-embed"] parseArgs
         result @?= Build True []
 
+    , testCase "parses build strict embed flag after positional argument" $ do
+        result <- withArgs ["build", "fmt", "--strict-embed"] parseArgs
+        result @?= Build True ["fmt"]
+
+    , testCase "allows passing --strict-embed through to Go arguments" $ do
+        result <- withArgs ["build", "--", "--strict-embed"] parseArgs
+        result @?= Build False ["--strict-embed"]
+
     , testCase "parses build forwarding go arguments" $ do
         result <- withArgs ["build", "fmt", "-v"] parseArgs
         result @?= Build False ["fmt", "-v"]
@@ -36,6 +44,10 @@ tests =
     , testCase "parses run with strict embed flag" $ do
         result <- withArgs ["run", "--strict-embed", "example.typus"] parseArgs
         result @?= Run True ["example.typus"]
+
+    , testCase "parses run strict embed flag after file argument" $ do
+        result <- withArgs ["run", "main.typus", "--strict-embed"] parseArgs
+        result @?= Run True ["main.typus"]
 
     , testCase "parses run command with additional arguments" $ do
         result <- withArgs ["run", "main.typus", "input.txt", "--verbose"] parseArgs

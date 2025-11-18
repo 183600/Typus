@@ -70,10 +70,13 @@ adjustCommandArgs args =
   in strictFlags ++ addSentinel remainder
 
 consumeStrictEmbed :: [String] -> ([String], [String])
-consumeStrictEmbed ("--strict-embed":xs) =
-  let (flags, rest) = consumeStrictEmbed xs
-  in ("--strict-embed" : flags, rest)
-consumeStrictEmbed xs = ([], xs)
+consumeStrictEmbed = go [] [] False
+  where
+    go strictFlags acc _ [] = (reverse strictFlags, reverse acc)
+    go strictFlags acc seen (arg:rest)
+      | arg == "--" = go strictFlags (arg : acc) True rest
+      | arg == "--strict-embed" && not seen = go ("--strict-embed" : strictFlags) acc seen rest
+      | otherwise = go strictFlags (arg : acc) seen rest
 
 addSentinel :: [String] -> [String]
 addSentinel [] = []
