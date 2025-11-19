@@ -3,6 +3,9 @@ module Compiler.DependentTypeChecker (
     extractDependentTypeContent
 ) where
 
+import Data.Char (isSpace)
+import Data.List (intercalate, isInfixOf, isPrefixOf)
+import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 
 import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
@@ -32,30 +35,154 @@ checkDependentTypes typusFile =
         blocks = tfBlocks typusFile
         fileEnabled = directiveEnabled (fdDependentTypes directives)
         blockEnabled = any (directiveEnabled . bdDependentTypes . cbDirectives) blocks
-        shouldCheck = fileEnabled || blockEnabled
-    in if shouldCheck
-           then case extractDependentTypeContent typusFile of
-               [] -> Right ()
-               content ->
-                   case runDependentTypesParser content of
-                       Left err -> Left [parserFailure err]
-                       Right (_, parser) ->
-                           let errors = parserErrors parser
-                           in if null errors
-                                  then Right ()
-                                  else Left (map toCompilerError errors)
-           else Right ()
+        dependentContent = extractDependentTypeContent typusFile
+        hasDependentBlocks = hasMeaningfulContent dependentContent
+        shouldCheck = (fileEnabled || blockEnabled) && hasDependentBlocks
+    in if not shouldCheck
+           then Right ()
+           else case runDependentTypesParser dependentContent of
+               Left err -> Left [parserFailure err]
+               Right (_, parser) ->
+                   let errors = parserErrors parser
+                   in if null errors
+                         then Right ()
+                         else Left (map toCompilerError errors)
 
 extractDependentTypeContent :: TypusFile -> String
 extractDependentTypeContent typusFile =
-    let directives = tfDirectives typusFile
+    let blocks = tfBlocks typusFile
+        directives = tfDirectives typusFile
         fileEnabled = directiveEnabled (fdDependentTypes directives)
-        blocks = tfBlocks typusFile
-        includeBlock block =
-            case bdDependentTypes (cbDirectives block) of
-                Nothing -> fileEnabled
-                Just locatedFlag -> locatedValue locatedFlag
-    in concatMap cbContent (filter includeBlock blocks)
+        explicitSegments =
+            [ blockContent
+            | block <- blocks
+            , let blockDirs = cbDirectives block
+            , Just locatedFlag <- [bdDependentTypes blockDirs]
+            , locatedValue locatedFlag
+            , let blockContent = cbContent block
+            , hasMeaningfulContent blockContent
+            ]
+        implicitSegments
+            | not fileEnabled = []
+            | otherwise =
+                [ segment
+                | block <- blocks
+                , let blockDirs = cbDirectives block
+                , bdDependentTypes blockDirs == Nothing
+                , segment <- extractImplicitDependentSegments (cbContent block)
+                , hasMeaningfulContent segment
+                ]
+    in intercalate "\n" (explicitSegments ++ implicitSegments)
+
+extractImplicitDependentSegments :: String -> [String]
+extractImplicitDependentSegments content = go (lines content) []
+  where
+    go [] acc = reverse acc
+    go (line:rest) acc =
+        case classifySegmentStart line of
+            Nothing -> go rest acc
+            Just kind ->
+                let (segmentText, remaining) = captureSegment kind line rest
+                in go remaining (segmentText : acc)
+
+data SegmentKind
+    = AliasSegment
+    | TypeSegment
+    | FuncSegment
+    deriving (Eq, Show)
+
+classifySegmentStart :: String -> Maybe SegmentKind
+classifySegmentStart line =
+    let trimmed = trimLeading line
+    in if "alias " `isPrefixOf` trimmed
+          then Just AliasSegment
+          else if isTypeCandidate trimmed
+              then Just TypeSegment
+              else if isFuncCandidate trimmed
+                  then Just FuncSegment
+                  else Nothing
+  where
+    isTypeCandidate txt =
+        "type " `isPrefixOf` txt
+        && (hasAngleGenerics txt || hasWhereClause txt)
+    isFuncCandidate txt =
+        "func " `isPrefixOf` txt
+        && (containsArrow txt || hasWhereClause txt)
+    hasAngleGenerics txt = '<' `elem` txt && '>' `elem` txt
+    hasWhereClause txt = " where " `isInfixOf` txt
+    containsArrow txt = "->" `isInfixOf` txt
+
+captureSegment :: SegmentKind -> String -> [String] -> (String, [String])
+captureSegment AliasSegment start rest =
+    let (continuation, remaining) = span aliasContinuation rest
+    in (unlines (start : continuation), remaining)
+captureSegment TypeSegment start rest =
+    let startDelta = braceDelta start
+        needsBody = "struct" `isInfixOf` start || startDelta > 0
+        (additional, remaining) = captureStructuredLines rest startDelta needsBody
+    in (unlines (start : additional), remaining)
+captureSegment FuncSegment start rest =
+    let startDelta = braceDelta start
+        (additional, remaining) = captureStructuredLines rest startDelta False
+    in (unlines (start : additional), remaining)
+
+aliasContinuation :: String -> Bool
+aliasContinuation line =
+    let trimmed = trimLeading line
+    in not (null trimmed) && not (isBoundaryStart trimmed)
+
+captureStructuredLines :: [String] -> Int -> Bool -> ([String], [String])
+captureStructuredLines lines0 initialDepth needsBody =
+    go lines0 initialDepth needsBody (initialDepth > 0) []
+  where
+    go [] _ _ _ acc = (reverse acc, [])
+    go (line:rest) depth bodyRequired seenBody acc =
+        let delta = braceDelta line
+            depth' = depth + delta
+            seenBody' = seenBody || delta /= 0 || depth > 0
+            acc' = line : acc
+            nextLine = listToMaybe rest
+        in if shouldStop bodyRequired depth' seenBody' nextLine
+              then (reverse acc', rest)
+              else go rest depth' bodyRequired seenBody' acc'
+
+shouldStop :: Bool -> Int -> Bool -> Maybe String -> Bool
+shouldStop bodyRequired depth seenBody nextLine =
+    case nextLine of
+        Nothing -> not bodyRequired || depth <= 0 || not seenBody
+        Just line ->
+            let trimmed = trimLeading line
+            in if bodyRequired
+                  then seenBody && depth <= 0 && (null trimmed || isBoundaryStart trimmed)
+                  else null trimmed || isBoundaryStart trimmed
+
+braceDelta :: String -> Int
+braceDelta = go 0 False False
+  where
+    go acc _ _ [] = acc
+    go acc inString escaped (c:cs)
+        | escaped = go acc inString False cs
+        | c == '\\' && inString = go acc inString True cs
+        | c == '"' = go acc (not inString) False cs
+        | inString = go acc inString False cs
+        | c == '{' = go (acc + 1) inString False cs
+        | c == '}' = go (acc - 1) inString False cs
+        | otherwise = go acc inString False cs
+
+isBoundaryStart :: String -> Bool
+isBoundaryStart txt =
+    any (`isPrefixOf` txt)
+        [ "package "
+        , "import "
+        , "func "
+        , "type "
+        , "var "
+        , "const "
+        , "}"
+        ]
+
+trimLeading :: String -> String
+trimLeading = dropWhile isSpace
 
 parserFailure :: String -> CompilerError
 parserFailure errMsg =
@@ -156,6 +283,9 @@ spanForLine :: Int -> SourceSpan
 spanForLine lineNumber =
     let safeLine = max 1 lineNumber
     in spanFrom (posAt safeLine 1)
+
+hasMeaningfulContent :: String -> Bool
+hasMeaningfulContent = not . T.null . T.strip . T.pack
 
 nonEmpty :: String -> Maybe String
 nonEmpty s = if null s then Nothing else Just s
