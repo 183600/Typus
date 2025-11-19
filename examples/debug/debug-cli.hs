@@ -3,12 +3,11 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 
-import Control.Monad.IO.Class (liftIO)
-import Control.Monad (when, forever)
+import Control.Monad (forever)
+import Data.IORef (writeIORef)
 import System.Environment (getArgs)
+import System.Exit (exitSuccess)
 import System.IO (hFlush, stdout)
-import Data.Char (toLower)
-import Data.List (isPrefixOf)
 import Data.Maybe (listToMaybe)
 
 import Debug
@@ -41,10 +40,10 @@ runInteractiveDebug config = forever $ do
         ["h"] -> showHelp
         ["quit"] -> do
             putStrLn "Exiting debug CLI..."
-            return ()
+            exitSuccess
         ["q"] -> do
             putStrLn "Exiting debug CLI..."
-            return ()
+            exitSuccess
         ["status"] -> showDebugStatus config
         ["s"] -> showDebugStatus config
         ["set", "breakpoint", location] -> setBreakpoint config location

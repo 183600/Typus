@@ -4,6 +4,7 @@ module CommandLineDebug
     ( CommandLineDebugConfig(..)
     , defaultCLIDebugConfig
     , runWithCLIDebug
+    , checkBreakpoint
     , setBreakpoint
     , listBreakpoints
     , clearBreakpoints
