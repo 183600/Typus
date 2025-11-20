@@ -5,11 +5,17 @@ module Test.Unit.DependentTypesSpec (tests) where
 import Control.Monad.State (execState, runState)
 import qualified Data.Map.Strict as Map
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit ( (@?=), assertBool, testCase )
+import Test.Tasty.HUnit ( (@?=), assertBool, assertFailure, testCase )
 
 import Analyzer.DependentTypeBridge (extractTypeDefinitions)
 import DependentTypesParser
-  ( validateDependentTypeSyntax
+  ( DependentType(..)
+  , DependentTypeError(..)
+  , TypeConstraint(..)
+  , TypeParameter(..)
+  , TypeRef(..)
+  , parseTypeDeclaration
+  , validateDependentTypeSyntax
   )
 import qualified Dependencies as Dep
 import qualified Dependencies.TypeSystem as TS
@@ -168,4 +174,76 @@ tests =
         assertBool "expected constraint solving to fail" (not result)
         TS.getDependentTypeErrors checker
           @?= [TS.SemanticError "invalid range: min > max"]
+
+    , testCase "extractTypeDefinitions preserves equality between parameters" $ do
+        let source = unlines
+              [ "type Pair<Left, Right> struct {"
+              , "    first: Left"
+              , "    second: Right"
+              , "}"
+              , "where Left == Right"
+              ]
+        extractTypeDefinitions source
+          @?= [ ( "Pair"
+                , ["Left", "Right"]
+                , [Dep.Equal (Dep.TVVar "Left") (Dep.TVVar "Right")]
+                )
+              ]
+
+    , testCase "extractTypeDefinitions treats uppercase constants as concrete types" $ do
+        let source = unlines
+              [ "type Limited<limit> struct {}"
+              , "where limit == MaxSize"
+              ]
+        extractTypeDefinitions source
+          @?= [ ( "Limited"
+                , ["limit"]
+                , [Dep.Equal (Dep.TVVar "limit") (Dep.TVCon "MaxSize")]
+                )
+              ]
+
+    , testCase "extractTypeDefinitions converts custom constraints to predicates" $ do
+        let source = unlines
+              [ "type Verified<T> struct {"
+              , "    data: T"
+              , "}"
+              , "where enforceVerified"
+              ]
+        extractTypeDefinitions source
+          @?= [ ( "Verified"
+                , ["T"]
+                , [Dep.Predicate "enforceVerified" []]
+                )
+              ]
+
+    , testCase "parseTypeDeclaration captures inline parameter constraints" $ do
+        let source = unlines
+              [ "type Sized<T | len T > 3 & requires(T)> struct {"
+              , "    values: T"
+              , "}"
+              ]
+        case parseTypeDeclaration source of
+          Left err ->
+            assertFailure ("failed to parse type declaration: " ++ err)
+          Right (TypeDecl _ params _ _) -> do
+            let expectedParam =
+                  TypeParameter
+                    { paramName = "T"
+                    , paramType = TypeRef "int" []
+                    , paramConstraints =
+                        [ SizeConstraint "T" 4
+                        , PredicateConstraint "requires" ["T"]
+                        ]
+                    }
+            params @?= [expectedParam]
+          Right _ ->
+            assertFailure "parseTypeDeclaration did not return a type declaration"
+
+    , testCase "validateDependentTypeSyntax reports duplicate type definitions" $ do
+        let source = unlines
+              [ "type Vector struct {}"
+              , "type Vector struct {}"
+              ]
+        validateDependentTypeSyntax source
+          @?= [InvalidTypeSyntax "重复定义: Vector"]
     ]
