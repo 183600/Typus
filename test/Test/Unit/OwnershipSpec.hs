@@ -97,6 +97,48 @@ tests =
               ]
         analyzeOwnership source @?= [MultipleMutBorrows "data"]
 
+    , testCase "detects double move attempts" $ do
+        let source = unlines
+              [ "package main"
+              , ""
+              , "func consume(x string) string {"
+              , "    return x"
+              , "}"
+              , ""
+              , "func main() {"
+              , "    data := \"payload\""
+              , "    consume(data)"
+              , "    consume(data)"
+              , "}"
+              ]
+        analyzeOwnership source @?= [DoubleMove "data" "data"]
+
+    , testCase "reports out-of-scope variable usage" $ do
+        let source = unlines
+              [ "package main"
+              , "func main() {"
+              , "    println(value)"
+              , "}"
+              ]
+        analyzeOwnership source @?= [OutOfScope "value"]
+
+    , testCase "allows reborrowing after scoped mutable borrow ends" $ do
+        let source = unlines
+              [ "package main"
+              , ""
+              , "func main() {"
+              , "    data := \"payload\""
+              , "    {"
+              , "        mutRef := &mut data"
+              , "        println(mutRef)"
+              , "    }"
+              , "    println(data)"
+              , "    mutRef2 := &mut data"
+              , "    println(mutRef2)"
+              , "}"
+              ]
+        analyzeOwnership source @?= []
+
     , testCase "fmt.Println is treated as pure usage" $ do
         let source = unlines
               [ "package main"
@@ -109,6 +151,29 @@ tests =
               , "    data := produce()"
               , "    fmt.Println(data)"
               , "    println(data)"
+              , "}"
+              ]
+        analyzeOwnership source @?= []
+
+    , testCase "mutex locking and unlocking are treated as safe usages" $ do
+        let source = unlines
+              [ "package main"
+              , ""
+              , "type Mutex struct {}"
+              , ""
+              , "func (m *Mutex) Lock() {}"
+              , "func (m *Mutex) Unlock() {}"
+              , ""
+              , "func newMutex() Mutex {"
+              , "    return Mutex{}"
+              , "}"
+              , ""
+              , "func main() {"
+              , "    mu := newMutex()"
+              , "    mu.Lock()"
+              , "    println(\"work\")"
+              , "    mu.Unlock()"
+              , "    println(\"done\")"
               , "}"
               ]
         analyzeOwnership source @?= []
