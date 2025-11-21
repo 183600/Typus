@@ -9,12 +9,15 @@ import Test.Tasty.HUnit ( (@?=), assertBool, assertFailure, testCase )
 
 import Analyzer.DependentTypeBridge (extractTypeDefinitions)
 import DependentTypesParser
-  ( DependentType(..)
+  ( DependentTypesParser(..)
+  , DependentType(..)
   , DependentTypeError(..)
   , TypeConstraint(..)
   , TypeParameter(..)
   , TypeRef(..)
+  , parseDependentType
   , parseTypeDeclaration
+  , runDependentTypesParser
   , validateDependentTypeSyntax
   )
 import qualified Dependencies as Dep
@@ -36,6 +39,23 @@ tests =
         let invalidSource = "alias Broken"
         let errors = validateDependentTypeSyntax invalidSource
         assertBool "expected dependent type parser to report errors" (not (null errors))
+
+    , testCase "runDependentTypesParser recovers from invalid declarations" $ do
+        let source = unlines
+              [ "alias Broken"
+              , "type Safe struct {}"
+              ]
+        case runDependentTypesParser source of
+          Left err ->
+            assertFailure ("failed to parse dependent type block: " ++ err)
+          Right (defs, parserState) -> do
+            let dependentName def =
+                  case def of
+                    TypeDecl n _ _ _ -> n
+                    TypeAlias n _ _ -> n
+                    DependentFunction n _ _ _ -> n
+            map dependentName defs @?= ["Safe"]
+            parserErrors parserState @?= [SyntaxError "Parse error" 0 ""]
 
     , testCase "extracts constraints from multiline type declarations" $ do
         let source = unlines
@@ -83,6 +103,23 @@ tests =
                 , ["T"]
                 , [ Dep.Subtype (Dep.TVVar "T") (Dep.TVApp "Comparable" [Dep.TVCon "int"])
                   , Dep.Subtype (Dep.TVVar "values") (Dep.TVApp "Comparable" [Dep.TVCon "int"])
+                  ]
+                )
+              ]
+
+    , testCase "extractTypeDefinitions handles parameter types referencing other parameters" $ do
+        let source = unlines
+              [ "type Graph<Node, Edge: Container<Node> | Edge: Comparable<Node>> struct {"
+              , "    adjacency: Edge<Node>"
+              , "}"
+              , "where NonEmpty(adjacency)"
+              ]
+        extractTypeDefinitions source
+          @?= [ ( "Graph"
+                , ["Node", "Edge"]
+                , [ Dep.Subtype (Dep.TVVar "Edge") (Dep.TVApp "Container" [Dep.TVVar "Node"])
+                  , Dep.Subtype (Dep.TVVar "Edge") (Dep.TVApp "Comparable" [Dep.TVVar "Node"])
+                  , Dep.Predicate "NonEmpty" [Dep.TVVar "adjacency"]
                   ]
                 )
               ]
@@ -215,6 +252,31 @@ tests =
                 , [Dep.Predicate "enforceVerified" []]
                 )
               ]
+
+    , testCase "parseDependentType parses dependent functions with constraints" $ do
+        let source = unlines
+              [ "func enforce(vector: Vector<int>, limit: int) -> bool"
+              , "where len vector > 1 & limit >= 1"
+              , "{"
+              , "    return true"
+              , "}"
+              ]
+        case parseDependentType source of
+          Left err ->
+            assertFailure ("failed to parse dependent function: " ++ err)
+          Right (DependentFunction name params ret cons, _) -> do
+            name @?= "enforce"
+            params @?=
+              [ ("vector", TypeRef "Vector" [TypeRef "int" []])
+              , ("limit", TypeRef "int" [])
+              ]
+            ret @?= TypeRef "bool" []
+            cons @?=
+              [ SizeConstraint "vector" 2
+              , RangeConstraint "limit" 1 maxBound
+              ]
+          Right _ ->
+            assertFailure "parseDependentType did not return a dependent function"
 
     , testCase "parseTypeDeclaration captures inline parameter constraints" $ do
         let source = unlines
