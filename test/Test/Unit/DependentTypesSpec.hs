@@ -308,4 +308,131 @@ tests =
               ]
         validateDependentTypeSyntax source
           @?= [InvalidTypeSyntax "重复定义: Vector"]
+
+    , testCase "parseDependentType parses alias definitions with constraints" $ do
+        let source = unlines
+              [ "alias NonEmptySlice = Slice<int>"
+              , "where len buffer > 0 & ensure(buffer)"
+              ]
+        case parseDependentType source of
+          Left err ->
+            assertFailure ("failed to parse type alias: " ++ err)
+          Right (TypeAlias name target cons, _) -> do
+            name @?= "NonEmptySlice"
+            target @?= TypeRef "Slice" [TypeRef "int" []]
+            cons @?=
+              [ SizeConstraint "buffer" 1
+              , PredicateConstraint "ensure" ["buffer"]
+              ]
+          Right _ ->
+            assertFailure "parseDependentType did not return a type alias"
+
+    , testCase "parseDependentType handles nested function bodies" $ do
+        let source = unlines
+              [ "func analyze(input: Vector<int>, limit) -> bool where limit >= 1 & requires(input, limit) {"
+              , "    if limit > 10 {"
+              , "        return true"
+              , "    }"
+              , "    { nested { block } }"
+              , "    return false"
+              , "}"
+              ]
+        case parseDependentType source of
+          Left err ->
+            assertFailure ("failed to parse function with nested body: " ++ err)
+          Right (DependentFunction name params ret cons, _) -> do
+            name @?= "analyze"
+            params @?=
+              [ ("input", TypeRef "Vector" [TypeRef "int" []])
+              , ("limit", TypeRef "int" [])
+              ]
+            ret @?= TypeRef "bool" []
+            cons @?=
+              [ RangeConstraint "limit" 1 maxBound
+              , PredicateConstraint "requires" ["input", "limit"]
+              ]
+          Right _ ->
+            assertFailure "parseDependentType did not return a dependent function"
+
+    , testCase "extractTypeDefinitions records explicit parameter kinds" $ do
+        let source = unlines
+              [ "type Catalog<Item: Slice<Product> | len Item > 2, Product> struct {"
+              , "    entries: Item"
+              , "}"
+              , "where len entries > 1"
+              ]
+        extractTypeDefinitions source
+          @?= [ ( "Catalog"
+                , ["Item", "Product"]
+                , [ Dep.Subtype (Dep.TVVar "Item") (Dep.TVApp "Slice" [Dep.TVVar "Product"])
+                  , Dep.TypeSizeGE (Dep.TVVar "Item") 3
+                  , Dep.TypeSizeGE (Dep.TVVar "entries") 2
+                  ]
+                )
+              ]
+
+    , testCase "extractTypeDefinitions categorizes predicate arguments precisely" $ do
+        let source = unlines
+              [ "type Audit<T> struct {"
+              , "    values: T"
+              , "}"
+              , "where check(values, limit, 42, bool, ResultType)"
+              ]
+        extractTypeDefinitions source
+          @?= [ ( "Audit"
+                , ["T"]
+                , [ Dep.Predicate "check"
+                      [ Dep.TVVar "values"
+                      , Dep.TVVar "limit"
+                      , Dep.TVCon "42"
+                      , Dep.TVCon "bool"
+                      , Dep.TVCon "ResultType"
+                      ]
+                  ]
+                )
+              ]
+
+    , testCase "extractTypeDefinitions records bounded ranges" $ do
+        let source = unlines
+              [ "type Sensor<Limit> struct {}"
+              , "where Limit >= 1 & Limit <= 10"
+              ]
+        extractTypeDefinitions source
+          @?= [ ( "Sensor"
+                , ["Limit"]
+                , [ Dep.TypeRange (Dep.TVVar "Limit") 1 maxBound
+                  , Dep.TypeRange (Dep.TVVar "Limit") minBound 10
+                  ]
+                )
+              ]
+
+    , testCase "extractTypeDefinitions handles type class constraints with generics" $ do
+        let source = unlines
+              [ "type Collection<Item, Iterator | Iterator: Iterable<Item>> struct {"
+              , "    it: Iterator"
+              , "}"
+              , "where it: Iterable<Item> & nonempty it"
+              ]
+        extractTypeDefinitions source
+          @?= [ ( "Collection"
+                , ["Item", "Iterator"]
+                , [ Dep.Subtype (Dep.TVVar "Iterator") (Dep.TVApp "Iterable" [Dep.TVVar "Item"])
+                  , Dep.Subtype (Dep.TVVar "it") (Dep.TVApp "Iterable" [Dep.TVVar "Item"])
+                  , Dep.TypeSizeGT (Dep.TVVar "it") 0
+                  ]
+                )
+              ]
+
+    , testCase "extractTypeDefinitions treats lowercase equality targets as symbolic variables" $ do
+        let source = unlines
+              [ "type Limits<Upper> struct {}"
+              , "where Upper == expectedMax"
+              ]
+        extractTypeDefinitions source
+          @?= [ ( "Limits"
+                , ["Upper"]
+                , [ Dep.Equal (Dep.TVVar "Upper") (Dep.TVVar "expectedMax")
+                  ]
+                )
+              ]
     ]
