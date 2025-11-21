@@ -70,4 +70,47 @@ tests =
               , "}"
               ]
         analyzeOwnership source @?= [OutOfScope "temp"]
+
+    , testCase "type declarations do not mask ownership violations" $ do
+        let source = unlines
+              [ "//! ownership: on"
+              , ""
+              , "package main"
+              , ""
+              , "type Config struct {"
+              , "    value string"
+              , "}"
+              , ""
+              , "func consume(x string) string {"
+              , "    return x"
+              , "}"
+              , ""
+              , "func main() {"
+              , "    data := \"payload\""
+              , "    consume(data)"
+              , "    println(data)"
+              , "}"
+              ]
+        analyzeOwnership source @?= [UseAfterMove "data"]
+
+    , testCase "shared borrows across helpers block later mutable borrows" $ do
+        let source = unlines
+              [ "//! ownership: on"
+              , ""
+              , "package main"
+              , ""
+              , "func mutate(x &mut string) {"
+              , "}"
+              , ""
+              , "func observe(_ &string) {"
+              , "}"
+              , ""
+              , "func main() {"
+              , "    data := \"payload\""
+              , "    ref := &data"
+              , "    observe(ref)"
+              , "    mutate(&mut data)"
+              , "}"
+              ]
+        analyzeOwnership source @?= [MutBorrowWhileBorrowed "data"]
     ]
