@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Test.Unit.TypeSystemSpec (tests) where
 
 import Control.Monad.State (execState, runState)
