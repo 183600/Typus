@@ -229,4 +229,141 @@ tests =
               , "}"
               ]
         analyzeOwnership source @?= [UseAfterMove "tracked"]
+
+    , testCase "releases immutable borrows when leaving nested scope" $ do
+        let source = unlines
+              [ "package main"
+              , ""
+              , "func consume(x string) string {"
+              , "    return x"
+              , "}"
+              , ""
+              , "func main() {"
+              , "    data := \"payload\""
+              , "    {"
+              , "        ref := &data"
+              , "        println(ref)"
+              , "    }"
+              , "    consume(data)"
+              , "    println(data)"
+              , "}"
+              ]
+        analyzeOwnership source @?= [UseAfterMove "data"]
+
+    , testCase "mutable borrow scope ending allows subsequent immutable borrow" $ do
+        let source = unlines
+              [ "package main"
+              , ""
+              , "func main() {"
+              , "    data := \"payload\""
+              , "    {"
+              , "        tmp := &mut data"
+              , "        println(tmp)"
+              , "    }"
+              , "    ref := &data"
+              , "    println(ref)"
+              , "}"
+              ]
+        analyzeOwnership source @?= []
+
+    , testCase "block directive limits ownership disabling to its block" $ do
+        let source = unlines
+              [ "package main"
+              , ""
+              , "func consume(x string) string {"
+              , "    return x"
+              , "}"
+              , ""
+              , "func main() {"
+              , "    data := \"payload\""
+              , "    {//! ownership: off"
+              , "        alias := data"
+              , "        consume(alias)"
+              , "        println(alias)"
+              , "    }"
+              , "    consume(data)"
+              , "    println(data)"
+              , "}"
+              ]
+        analyzeOwnership source @?= [UseAfterMove "data"]
+
+    , testCase "nested block directives re-enable ownership tracking" $ do
+        let source = unlines
+              [ "package main"
+              , ""
+              , "func consume(x string) string {"
+              , "    return x"
+              , "}"
+              , ""
+              , "func main() {"
+              , "    data := \"payload\""
+              , "    {//! ownership: off"
+              , "        alias := data"
+              , "        {//! ownership: on"
+              , "            consume(data)"
+              , "            println(data)"
+              , "        }"
+              , "        println(alias)"
+              , "    }"
+              , "}"
+              ]
+        analyzeOwnership source @?= [UseAfterMove "data"]
+
+    , testCase "for loop introduces synthetic iteration bindings" $ do
+        let source = unlines
+              [ "package main"
+              , ""
+              , "func main() {"
+              , "    for {"
+              , "        println(i)"
+              , "        println(value)"
+              , "    }"
+              , "}"
+              ]
+        analyzeOwnership source @?= []
+
+    , testCase "assignment after move resets ownership flags" $ do
+        let source = unlines
+              [ "package main"
+              , ""
+              , "func consume(x string) string {"
+              , "    return x"
+              , "}"
+              , ""
+              , "func main() {"
+              , "    data := \"payload\""
+              , "    consume(data)"
+              , "    data = \"reloaded\""
+              , "    println(data)"
+              , "}"
+              ]
+        analyzeOwnership source @?= []
+
+    , testCase "len built-in counts as pure usage" $ do
+        let source = unlines
+              [ "package main"
+              , ""
+              , "func main() {"
+              , "    data := \"payload\""
+              , "    length := len(data)"
+              , "    println(length)"
+              , "    println(data)"
+              , "}"
+              ]
+        analyzeOwnership source @?= []
+
+    , testCase "temporary mutable borrows used as arguments are released" $ do
+        let source = unlines
+              [ "package main"
+              , ""
+              , "func mutate(x &mut string) {"
+              , "}"
+              , ""
+              , "func main() {"
+              , "    data := \"payload\""
+              , "    mutate(&mut data)"
+              , "    println(data)"
+              , "}"
+              ]
+        analyzeOwnership source @?= []
     ]
