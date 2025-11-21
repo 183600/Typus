@@ -2,9 +2,11 @@ module Test.Unit.TypeSystemSpec (tests) where
 
 import Control.Monad.State (execState, runState)
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ( (@?=), assertBool, assertFailure, testCase )
 
+import Dependencies.AST (Constraint(..), TypeExpr(..))
 import qualified Dependencies.TypeSystem as TS
 
 -- | Unit tests for the core dependent type checker primitives.
@@ -49,4 +51,44 @@ tests =
         case TS.unify [(TS.TVVar "T", TS.TVApp "List" [TS.TVVar "T"])] of
           Nothing -> pure ()
           Just _ -> assertFailure "expected occurs check to reject infinite type"
+
+    , testCase "convertTypeExprAndRefinements accumulates refinement constraints" $ do
+        let params = Set.fromList ["T"]
+            typeExpr =
+              RefineT
+                (GenericT "Vector" [SimpleT "T"])
+                [ SizeGE "values" 2
+                , PredC "Ordered" [SimpleT "T"]
+                ]
+            (tv, constraints) = TS.convertTypeExprAndRefinements params typeExpr
+        tv @?= TS.TVApp "Vector" [TS.TVVar "T"]
+        constraints @?=
+          [ TS.TypeSizeGE (TS.TVVar "values") 2
+          , TS.Predicate "Ordered" [TS.TVVar "T"]
+          ]
+
+    , testCase "convertConstraint preserves nested generic predicate arguments" $ do
+        let params = Set.fromList ["Element"]
+            constraint =
+              PredC "EnsureOrder"
+                [ GenericT "List" [SimpleT "Element"]
+                , SimpleT "Standalone"
+                ]
+        TS.convertConstraint params constraint
+          @?= TS.Predicate "EnsureOrder"
+                [ TS.TVApp "List" [TS.TVVar "Element"]
+                , TS.TVCon "Standalone"
+                ]
+
+    , testCase "convertTypeExprAndRefinements handles refined function returns" $ do
+        let params = Set.fromList ["T"]
+            funcType =
+              FuncT
+                [("input", SimpleT "T")]
+                (RefineT (SimpleT "Result") [SizeGT "input" 0])
+            (tv, constraints) = TS.convertTypeExprAndRefinements params funcType
+        tv @?= TS.TVFun [TS.TVVar "T"] (TS.TVCon "Result")
+        constraints @?=
+          [ TS.TypeSizeGT (TS.TVVar "input") 0
+          ]
     ]
