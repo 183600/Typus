@@ -47,6 +47,21 @@ tests =
                 posLine (spanStart (locSpan loc)) @?= 2
                 posLine (spanEnd (locSpan loc)) @?= 3
 
+    , testCase "treats file-level constraints directive as dependent type alias" $ do
+        let source = unlines
+              [ "//! constraints: on"
+              , "package main"
+              , "func main() {}"
+              ]
+        case parseTypus source of
+          Left err -> assertFailure $ "parseTypus failed: " <> err
+          Right typusFile -> do
+            let FileDirectives { fdConstraints = constraints, fdDependentTypes = dependentTypes } = tfDirectives typusFile
+            case constraints of
+              Nothing -> assertFailure "expected constraints directive"
+              Just loc -> locatedValue loc @?= True
+            dependentTypes @?= constraints
+
     , testCase "captures block directives with associated code" $ do
         let source = unlines
               [ "package main"
@@ -75,6 +90,46 @@ tests =
                 assertBool "block content should include println call" ("println(\"inside\")" `isInfixOf` content)
                 posLine (spanStart blkSpan) @?= 4
                 posLine (spanEnd blkSpan) @?= 5
+
+    , testCase "parses README-style block directives without inline closing brace" $ do
+        let source = unlines
+              [ "package main"
+              , "func main() {"
+              , "    {//! ownership: on"
+              , "        println(\"ownership block\")"
+              , "    }"
+              , ""
+              , "    {//! constraints: on"
+              , "        println(\"dependent block\")"
+              , "    }"
+              , "}"
+              ]
+        case parseTypus source of
+          Left err -> assertFailure $ "parseTypus failed: " <> err
+          Right typusFile -> do
+            let blocks = tfBlocks typusFile
+                hasDirective selector CodeBlock { cbDirectives = directives } =
+                  maybe False locatedValue (selector directives)
+                ownershipBlock = find (hasDirective bdOwnership) blocks
+                constraintsBlock = find (hasDirective bdConstraints) blocks
+            case ownershipBlock of
+              Nothing -> assertFailure "expected README ownership block"
+              Just CodeBlock { cbDirectives = directives, cbContent = content } -> do
+                case bdOwnership directives of
+                  Nothing -> assertFailure "expected ownership directive"
+                  Just loc -> locatedValue loc @?= True
+                assertBool "ownership block should include println call" ("println(\"ownership block\")" `isInfixOf` content)
+            case constraintsBlock of
+              Nothing -> assertFailure "expected README constraints block"
+              Just CodeBlock { cbDirectives = directives, cbContent = content } -> do
+                case bdConstraints directives of
+                  Nothing -> assertFailure "expected constraints directive"
+                  Just loc -> locatedValue loc @?= True
+                case bdDependentTypes directives of
+                  Nothing -> assertFailure "expected dependent types alias"
+                  Just loc -> locatedValue loc @?= True
+                bdConstraints directives @?= bdDependentTypes directives
+                assertBool "constraints block should include println call" ("println(\"dependent block\")" `isInfixOf` content)
 
     , testCase "ignores trailing whitespace-only files" $ do
         let source :: String; source = "\n   \n\n"

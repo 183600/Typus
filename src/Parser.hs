@@ -289,12 +289,10 @@ parseBlockDirectiveLine ParsedLine{..} = do
     if not (blockPrefix `T.isPrefixOf` stripped)
       then Left $ "Invalid block directive line (missing {//!): " ++ plText
       else
-        case ensureClosingBrace stripped of
-          Left err -> Left err
-          Right normalized ->
-            case MP.runParser (blockDirectiveParser <* MP.eof) "<block directives>" normalized of
-              Left _ -> Left $ "Invalid block directive line: " ++ plText
-              Right pairs -> mapM convert pairs
+        let normalized = ensureClosingBrace stripped
+        in case MP.runParser (blockDirectiveParser <* MP.eof) "<block directives>" normalized of
+             Left _ -> Left $ "Invalid block directive line: " ++ plText
+             Right pairs -> mapM convert pairs
   where
     convert (keyText, valueText) =
       case parseBool (T.unpack valueText) of
@@ -303,8 +301,8 @@ parseBlockDirectiveLine ParsedLine{..} = do
     ensureClosingBrace txt =
       let trimmedEnd = T.dropWhileEnd isSpace txt
       in if closingBrace `T.isSuffixOf` trimmedEnd
-           then Right txt
-           else Left "Unclosed directive block: missing closing '}'"
+           then trimmedEnd
+           else trimmedEnd <> closingBrace
     closingBrace = T.singleton '}'
 
 parseBlockDirectives :: [(String, Located Bool)] -> Either String BlockDirectives
