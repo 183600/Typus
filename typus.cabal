@@ -207,6 +207,7 @@ test-suite typus-test
         Test.Unit.SymbolTableSpec,
         Test.Unit.ValueAnalysisSpec,
         Test.Unit.VerbositySpec,
+        Test.Unit.UtilsSpec,
         TestSupport.Verbosity
     if flag(full) || flag(production)
         other-modules:
