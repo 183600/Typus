@@ -1,6 +1,6 @@
 # Stack Test 测试用例质量分析
 
-> 分析日期：2025-11-22（基于 `analysis-stack-test-quality` 分支最新提交）
+> 分析日期：2025-11-22（基于 `stack-test-quality-analysis` 分支最新提交）
 
 ## 结论概览
 
