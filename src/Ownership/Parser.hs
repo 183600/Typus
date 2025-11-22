@@ -111,7 +111,7 @@ parseStmt xs0 =
 
     (t:rest) | isKw KwType t || isKw KwInterface t ->
       let (_, afterSig) = consumeUntilLBrace rest
-          (_ignoredBlock, rest') = parseBlockBody afterSig
+          rest' = skipBalancedBlock afterSig
       in (SExpr (EUnknown [] (Pos 0 0)) (Pos 0 0), rest')
 
     (t:rest) | isKw KwFunc t ->
@@ -183,6 +183,19 @@ parseBlockBody xs = go [] xs (0 :: Int)
         then (reverse acc, ts')
         else let (st, rest') = parseStmt ts'
              in go (st:acc) rest' (depth + 1)
+
+skipBalancedBlock :: [OwnershipToken] -> [OwnershipToken]
+skipBalancedBlock = go (0 :: Int) False
+  where
+    go _ _ [] = []
+    go depth started (tok:rest)
+      | isSym SLBrace tok = go (depth + 1) True rest
+      | isSym SRBrace tok =
+          let depth' = max 0 (depth - 1)
+          in if depth' == 0 && started
+                then rest
+                else go depth' started rest
+      | otherwise = go depth started rest
 
 consumeUntilLBrace :: [OwnershipToken] -> ([OwnershipToken], [OwnershipToken])
 consumeUntilLBrace xs = go [] xs
