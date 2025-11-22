@@ -291,7 +291,7 @@ parseConstraint =
   MP.<|> MP.try lenConstraint
   MP.<|> MP.try nonemptyConstraint
   MP.<|> MP.try typeClassConstraint
-  MP.<|> compareConstraint
+  MP.<|> MP.try compareConstraint
   MP.<|> do
         raw <- lexeme $ MP.some (MP.satisfy (\c -> c /= '&' && c /= ',' && c /= '\n' && c /= '\r'))
         pure $ CustomConstraint (trim raw) ""
@@ -344,8 +344,13 @@ fieldSep = void (symbol ",") MP.<|> void (symbol ";")
 parseStructBody :: Parser TypeBody
 parseStructBody = do
   _ <- symbol "struct"
-  fields <- braces (parseField `MP.sepEndBy` fieldSep)
+  fields <- braces (MP.many parseFieldWithOptionalSep)
   pure $ StructBody fields
+  where
+    parseFieldWithOptionalSep = do
+      field <- parseField
+      _ <- MP.optional fieldSep
+      pure field
 
 --------------------------------------------------------------------------------
 -- 顶层定义解析

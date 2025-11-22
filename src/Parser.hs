@@ -237,9 +237,9 @@ parseBlocksFromParsedLines = go [] []
              let accWithCode = flushCodeBufToAcc accRev codeBufRev
              directivesPairs <- parseBlockDirectiveLine line
              directives <- parseBlockDirectives directivesPairs
-             (blockLines, blockSpan, remaining) <- captureDirectiveBlock (plSpan line) rest
+             (blockLines, blockSpan, remaining) <- captureDirectiveBlock line rest
              let content = buildBlockContent blockLines
-             let block = CodeBlock
+                 block = CodeBlock
                    { cbDirectives = directives
                    , cbContent = content
                    , cbSpan = blockSpan
@@ -316,18 +316,26 @@ parseBlockDirectives pairs = foldM updateDirective defaultBlockDirectives pairs
       _ -> Left $ "Unknown block directive: " ++ key
 
 captureDirectiveBlock
-  :: SourceSpan
+  :: ParsedLine
   -> [ParsedLine]
   -> Either String ([ParsedLine], SourceSpan, [ParsedLine])
-captureDirectiveBlock directiveSpan = go 0 []
+captureDirectiveBlock directiveLine = go 0 []
   where
+    directiveIndent = leadingIndentation (plText directiveLine)
+    directiveSpan = plSpan directiveLine
+
     go _ _ [] = Left "Unclosed directive block: missing closing '}'"
     go depth accRev (line:rest) =
       let newDepth = depth + curlyDelta (plText line)
       in if newDepth < 0
-           then let blockLines = reverse accRev
-                    blockSpan = computeBlockSpan directiveSpan (plSpan line) blockLines
-                in Right (blockLines, blockSpan, rest)
+           then
+             let closingIndent = leadingIndentation (plText line)
+             in if closingIndent < directiveIndent
+                  then Left "Unclosed directive block: missing closing '}'"
+                  else
+                    let blockLines = reverse accRev
+                        blockSpan = computeBlockSpan directiveSpan (plSpan line) blockLines
+                    in Right (blockLines, blockSpan, rest)
            else go newDepth (line:accRev) rest
 
 computeBlockSpan :: SourceSpan -> SourceSpan -> [ParsedLine] -> SourceSpan
@@ -385,3 +393,8 @@ curlyDelta = go False False 0
                 '{' -> go False False (acc + 1) cs
                 '}' -> go False False (acc - 1) cs
                 _   -> go False False acc cs
+
+leadingIndentation :: String -> Int
+leadingIndentation = length . takeWhile isIndentChar
+  where
+    isIndentChar c = c == ' ' || c == '\t'
