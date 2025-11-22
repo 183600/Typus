@@ -3,6 +3,7 @@ module Test.Unit.UtilsSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
+import TestSupport.QuickCheck (fastProperty)
 import Utils
 
 -- | High-signal unit tests for the standalone helpers exposed by "Utils".
@@ -188,4 +189,17 @@ tests =
         , testCase "breakOn returns empty suffix when the pattern matches the entire string" $ do
             breakOn "abc" "abc" @?= ("", "")
         ]
+
+    , testGroup "Property-based regression"
+        [ fastProperty "trim is idempotent" prop_trimIdempotent
+        , fastProperty "splitByCollapsed never yields empty chunks" prop_splitByCollapsedNoEmpty
+        ]
     ]
+
+prop_trimIdempotent :: String -> Bool
+prop_trimIdempotent input =
+  let once = trim input
+  in trim once == once
+
+prop_splitByCollapsedNoEmpty :: String -> Bool
+prop_splitByCollapsedNoEmpty input = all (not . null) (splitByCollapsed ':' input)

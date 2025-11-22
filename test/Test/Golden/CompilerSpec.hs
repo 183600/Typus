@@ -47,6 +47,16 @@ tests =
         diffCmd
         (goldenDir </> "generic_type.go")
         (compileFixture "generic_type.typus")
+    , goldenVsStringDiff
+        "advanced ownership fixtures stay stable"
+        diffCmd
+        (goldenDir </> "advanced_ownership.go")
+        (compileFixture "advanced_ownership.typus")
+    , goldenVsStringDiff
+        "dependent type fixtures retain their Go lowering"
+        diffCmd
+        (goldenDir </> "type_system_valid.go")
+        (compileFixture "type_system_valid.typus")
     ]
 
   where
