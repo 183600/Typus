@@ -7,6 +7,7 @@ import qualified Test.Integration.AnalyzerSpec
 import qualified Test.Integration.OwnershipSpec
 import qualified Test.Integration.IntegratedCompilerSpec
 import qualified Test.Integration.FullProjectSpec
+import qualified Test.Integration.CLISpec
 
 -- | Integration scenarios that exercise the full compiler pipeline and external
 -- tooling (when available).
@@ -18,4 +19,5 @@ tests =
     , Test.Integration.OwnershipSpec.tests
     , Test.Integration.IntegratedCompilerSpec.tests
     , Test.Integration.FullProjectSpec.tests
+    , Test.Integration.CLISpec.tests
     ]

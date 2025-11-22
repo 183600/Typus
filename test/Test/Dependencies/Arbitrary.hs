@@ -22,9 +22,10 @@ instance Arbitrary TypeConstraint where
 
 instance Arbitrary Statement where
   arbitrary = oneof
-    [ pure (STypeDef "MyType" ["T"] [])
-    , pure (SVarDecl "x" (SimpleT "int"))
-    , pure (SFuncDecl "id" [("x", SimpleT "T")] (Just (SimpleT "T")))
+    [ pure (STypeDef "Buffer" ["T"] [])
+    , pure (STypeAlias "IntAlias" (SimpleT "int") [])
+    , pure (SVarDecl "input" (SimpleT "int"))
+    , pure (SFuncDecl "idInt" [("value", SimpleT "int")] (Just (SimpleT "int")))
     ]
 
 instance Arbitrary AST where

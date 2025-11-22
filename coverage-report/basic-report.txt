@@ -1,8 +1,2 @@
-100% expressions used (0/0)
-100% boolean coverage (0/0)
-     100% guards (0/0)
-     100% 'if' conditions (0/0)
-     100% qualifiers (0/0)
-100% alternatives used (0/0)
-100% local declarations used (0/0)
-100% top-level declarations used (0/0)
+Coverage data is currently unavailable.
+Run `stack test --coverage` followed by `scripts/coverage-report.sh` to refresh this report.

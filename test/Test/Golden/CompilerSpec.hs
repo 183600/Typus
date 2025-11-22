@@ -37,6 +37,16 @@ tests =
         diffCmd
         (goldenDir </> "simple_go_code.go")
         (compileFixture "simple_go_code.typus")
+    , goldenVsStringDiff
+        "statements without package/import infer a runnable main"
+        diffCmd
+        (goldenDir </> "statements_without_package.go")
+        (compileFixture "statements_without_package.typus")
+    , goldenVsStringDiff
+        "generic type parameters render Go square bracket notation"
+        diffCmd
+        (goldenDir </> "generic_type.go")
+        (compileFixture "generic_type.typus")
     ]
 
   where
