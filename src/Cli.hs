@@ -1,4 +1,4 @@
-module Cli (Args(..), parseArgs) where
+module Cli (Args(..), parseArgs, parseArgsFromList) where
 
 import Options.Applicative
 import System.Environment (getArgs, withArgs)
@@ -48,14 +48,17 @@ argsParser = subparser
     ) <|> versionOption
 
 parseArgs :: IO Args
-parseArgs = do
-  rawArgs <- getArgs
-  withArgs (normalizeArgs rawArgs) (execParser opts)
-  where
-    opts = info (argsParser <**> helper)
-      ( fullDesc
-     <> progDesc "Typus compiler and toolchain"
-     <> header "typus - A Go extension with ownership and dependent types" )
+parseArgs = getArgs >>= parseArgsFromList
+
+parseArgsFromList :: [String] -> IO Args
+parseArgsFromList rawArgs =
+  withArgs (normalizeArgs rawArgs) (execParser parserInfo)
+
+parserInfo :: ParserInfo Args
+parserInfo = info (argsParser <**> helper)
+  ( fullDesc
+ <> progDesc "Typus compiler and toolchain"
+ <> header "typus - A Go extension with ownership and dependent types" )
 
 normalizeArgs :: [String] -> [String]
 normalizeArgs args =
