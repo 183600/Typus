@@ -12,7 +12,8 @@ extra-doc-files: ChangeLog.md
 extra-source-files:
     test/fixtures/full_project/*.typus
     test/fixtures/full_project/assets/hello.txt
-    test/golden/fixtures/simple_go_code.go
+    test/golden/fixtures/*.go
+    test/data/**/*.typus
 
 source-repository head
   type: git
@@ -243,7 +244,8 @@ test-suite typus-test
             Test.Integration.AnalyzerSpec,
             Test.Integration.OwnershipSpec,
             Test.Integration.IntegratedCompilerSpec,
-            Test.Integration.FullProjectSpec
+            Test.Integration.FullProjectSpec,
+            Test.Integration.CLISpec
         build-depends:
             bytestring >= 0.10 && <1,
             process >= 1.6.0,

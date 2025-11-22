@@ -1,0 +1,1 @@
+fmt.Println("hello from Typus without package")

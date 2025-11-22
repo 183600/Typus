@@ -1,7 +1,8 @@
 module Test.Integration.PipelineSpec (tests) where
 
 import Data.List (isInfixOf)
-import System.Directory (findExecutable)
+import System.Directory (doesFileExist, findExecutable)
+import System.Environment (lookupEnv)
 import System.Exit (ExitCode(..))
 import System.FilePath ((</>))
 import System.IO.Temp (withSystemTempDirectory)
@@ -29,12 +30,10 @@ parseFixture name = do
 
 assertGoBuilds :: String -> IO ()
 assertGoBuilds goCode = do
-  mGo <- findExecutable "go"
+  mGo <- resolveGoCommand
   case mGo of
     Nothing ->
-      -- Lack of a Go toolchain should not fail the suite; the message keeps
-      -- the skip explicit in test output.
-      assertBool "Go toolchain missing; skipping go build invocation" True
+      assertFailure "Go toolchain is missing. Install Go or set TYPUS_FAKE_GO to a validation script."
     Just go -> withSystemTempDirectory "typus-integration" $ \tmp -> do
       let goFile = tmp </> "generated.go"
           exeFile = tmp </> "generated"
@@ -44,6 +43,20 @@ assertGoBuilds goCode = do
         ExitSuccess -> pure ()
         ExitFailure code ->
           assertFailure ("go build failed with exit code " <> show code <> ": " <> stderr)
+  where
+    resolveGoCommand :: IO (Maybe FilePath)
+    resolveGoCommand = do
+      realGo <- findExecutable "go"
+      case realGo of
+        Just path -> pure (Just path)
+        Nothing -> do
+          envOverride <- lookupEnv "TYPUS_FAKE_GO"
+          case envOverride of
+            Just candidate -> pure (Just candidate)
+            Nothing -> do
+              let bundled = "scripts" </> "fake-go.sh"
+              exists <- doesFileExist bundled
+              pure (if exists then Just bundled else Nothing)
 
 tests :: TestTree
 tests =

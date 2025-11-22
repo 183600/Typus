@@ -8,22 +8,34 @@ set -e
 echo "生成测试覆盖率报告..."
 echo "======================"
 
+# 解析覆盖率数据源，可通过 TIX_FILE 环境变量覆写
+TIX_FILE="${TIX_FILE:-typus-test.tix}"
+if [ ! -f "$TIX_FILE" ]; then
+    ALT_TIX=$(find .stack-work -name "typus-test.tix" 2>/dev/null | head -n 1)
+    if [ -n "$ALT_TIX" ]; then
+        echo "发现 Stack 构建产物中的覆盖率文件: $ALT_TIX"
+        TIX_FILE="$ALT_TIX"
+    fi
+fi
+
 # 检查是否启用了覆盖率
-if [ ! -f "typus-test.tix" ]; then
+if [ ! -f "$TIX_FILE" ]; then
     echo "错误: 未找到覆盖率数据文件 typus-test.tix"
-    echo "请使用 --enable-coverage 重新构建项目"
+    echo "请运行 'stack test --coverage' 后再执行本脚本"
     exit 1
 fi
+
+echo "使用覆盖率数据: $TIX_FILE"
 
 # 创建覆盖率报告目录
 COVERAGE_DIR="coverage-report"
 mkdir -p "$COVERAGE_DIR"
 
 echo "1. 生成基本覆盖率报告..."
-hpc report typus-test.tix --include=src --exclude=Main > "$COVERAGE_DIR/basic-report.txt"
+hpc report "$TIX_FILE" --include=src --exclude=Main > "$COVERAGE_DIR/basic-report.txt"
 
 echo "2. 生成详细覆盖率报告..."
-hpc markup typus-test.tix --include=src --exclude=Main --destdir="$COVERAGE_DIR/hpc-html/"
+hpc markup "$TIX_FILE" --include=src --exclude=Main --destdir="$COVERAGE_DIR/hpc-html/"
 
 echo "3. 生成模块覆盖率报告..."
 # 获取所有模块
@@ -34,7 +46,7 @@ for module in $MODULES; do
     if [ "$module" != "Main" ]; then
         echo "----------------------------------------" >> "$COVERAGE_DIR/module-report.txt"
         echo "模块: $module" >> "$COVERAGE_DIR/module-report.txt"
-        hpc report typus-test.tix --include="src" --include="$module" --exclude="Main" >> "$COVERAGE_DIR/module-report.txt" 2>/dev/null || echo "  模块无覆盖率数据" >> "$COVERAGE_DIR/module-report.txt"
+        hpc report "$TIX_FILE" --include="src" --include="$module" --exclude="Main" >> "$COVERAGE_DIR/module-report.txt" 2>/dev/null || echo "  模块无覆盖率数据" >> "$COVERAGE_DIR/module-report.txt"
     fi
 done
 
@@ -87,7 +99,7 @@ echo "未覆盖的函数/代码行:" > "$COVERAGE_DIR/uncovered.txt"
 find src -name "*.hs" -type f | while read file; do
     module_name=$(echo "$file" | sed 's|src/||' | sed 's|\.hs$||' | tr '/' '.')
     if [ "$module_name" != "Main" ]; then
-        coverage=$(hpc report typus-test.tix --include="src" --include="$module_name" --exclude="Main" 2>/dev/null | grep "expression" | awk '{print $7}' | tr -d '%' || echo "0")
+        coverage=$(hpc report "$TIX_FILE" --include="src" --include="$module_name" --exclude="Main" 2>/dev/null | grep "expression" | awk '{print $7}' | tr -d '%' || echo "0")
         if [ "$coverage" != "0" ]; then
             echo "  $module_name: ${coverage}% 覆盖率"
             if [ "$coverage" -lt 80 ]; then
