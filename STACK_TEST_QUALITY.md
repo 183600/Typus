@@ -59,6 +59,22 @@
 4. **CLI/E2E 覆盖有限且依赖外部工具链**：`Test/Integration/CLISpec.hs` 仅验证 `--version` 与 `convert`，没有覆盖 `check/build/run`、错误处理、退出码。并且 CLI/Pipeline 测试要求主机具备 `stack` 与 `go`（或提供假可执行文件），在沙箱或缓存失效时会导致测试易碎。
 5. **文档与现实脱节**：`TEST_ENHANCEMENT_SUMMARY.md` 等仍声称存在 “425+ 测试 / 90% 覆盖 / 大量 QuickCheck”，但代码库目前只有 183 个 `testCase` + 3 个 golden + 3 个属性测试，缺乏透明的指标可能误导使用方。
 
+### 指标偏差（文档 vs 实际数据）
+
+| 指标 | 文档/来源 | 实际数据 | 备注 |
+| --- | --- | --- | --- |
+| 总测试数量 | 425+（`TEST_ENHANCEMENT_SUMMARY.md` 第 90–105 行） | 183 个 HUnit `testCase` + 3 个 tasty-golden 对拍 + 3 个 QuickCheck 属性 ≈ 189 | `rg -o "testCase \"" test \| wc -l`（2025-11-22）与 `Test/Golden/CompilerSpec.hs`、`Test/Unit` 统计 |
+| QuickCheck 属性测试 | 300+（同上） | 3 个（`Test.Unit.DependentTypesSpec` 1 个，`Test.Unit.TypeSystemSpec` 2 个） | 仅在 `PRODUCTION_TESTS`/`FULL_TESTS` 下构建 |
+| 端到端 / CLI 测试 | 50+ E2E & 7 CLI（同上） | `Test.Integration.FullProjectSpec` 6 个批处理用例 + `PipelineSpec` 3 个 + `Integration.CLISpec` 2 个真实 CLI 冒烟；`Test.Unit.CLISpec` 11 个仅覆盖参数解析 | 实际命中真实二进制的只有 2 个 CLI 冒烟用例 |
+| 覆盖率 | ≥70%（`TEST_ENHANCEMENT_SUMMARY.md` 第 117–125 行） | `coverage-report/summary.json` 标记为 “unavailable”，未生成任何 `.tix` 数据 | `stack test --coverage` 尚未产出报告 |
+
+### 执行稳定性与外部依赖
+
+- `test/Test/Integration/CLISpec.hs` 通过 `requireStackBinary` 查找真实 `stack` 并执行 `stack exec typus -- …`；一旦 PATH 中缺少 stack，该测试会直接 `assertFailure`，在受限 CI 代理上属于典型的环境耦合性用例。
+- `test/Test/Integration/PipelineSpec.hs` 的 `assertGoBuilds` 需要找到 `go`、`$TYPUS_FAKE_GO` 或仓库自带的 `scripts/fake-go.sh`；若都不存在就报 “Go toolchain is missing”，因此缓存被清或 fake 脚本漏配时整个 `stack test` 会失败，稳定性受外部工具链牵制。
+- `stack.yaml` 将 `production:true`、`coverage:true`、`werror:true` 固定开启，使得 `typus.cabal` 永远使用 `-DPRODUCTION_TESTS -Werror -fhpc -with-rtsopts=-M8G`。这虽可保证严格性，但也意味着任何覆盖率收集脚本缺失、或 runner 可用内存 <8G 时都会导致 `stack test` 本身不稳定。
+- `typus.cabal` 中 `if flag(fast)` 直接剔除 Golden/Integration/CLI 模块（第 234–252 行）；开发者若为了提速执行 `stack test --flag typus:fast`，就只剩核心单元测试，极易形成“本地绿 / CI 红”的错觉。
+
 ## 改进建议（按优先级）
 
 1. **恢复并自动化覆盖率产物**：在 CI 中重新运行 `stack test --coverage` 并执行 `scripts/coverage-report.sh`，将真实覆盖率写回 `coverage-report/summary.json` 与 `module-report.txt`，并据此设置阈值。
