@@ -34,7 +34,6 @@ module Dependencies.TypeSystem (
   unify
 ) where
 
-import Control.Monad (when)
 import Control.Monad.State
 import Data.Either (partitionEithers)
 
@@ -161,7 +160,14 @@ convertConstraint params c = case c of
 nameToTypeVar :: Set.Set String -> Text -> TypeVar
 nameToTypeVar params n =
   let s = T.unpack n
-  in if s `Set.member` params then TVVar s else TVCon s
+  in if s `Set.member` params
+        then TVVar s
+        else if isLowerStart s
+          then TVVar s
+          else TVCon s
+  where
+    isLowerStart (c:_) = (c >= 'a' && c <= 'z') || c == '_'
+    isLowerStart _ = False
 
 -- Type environment operations -------------------------------------------------
 

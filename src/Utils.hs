@@ -167,11 +167,13 @@ fixIndentation = normalizeIndentation
 --   例：
 --     breakOn "ll" "hello" == ("he", "o")
 breakOn :: String -> String -> (String, String)
-breakOn pat s =
-  let text = T.pack s
-      patText = T.pack pat
-      (before, remainder) = T.breakOn patText text
-  in case T.stripPrefix patText remainder of
-       Just after -> (T.unpack before, T.unpack after)
-       Nothing    -> (s, "")
+breakOn pat s
+  | null pat = ("", s)
+  | otherwise =
+      let text = T.pack s
+          patText = T.pack pat
+          (before, remainder) = T.breakOn patText text
+      in case T.stripPrefix patText remainder of
+           Just after -> (T.unpack before, T.unpack after)
+           Nothing    -> (s, "")
 
