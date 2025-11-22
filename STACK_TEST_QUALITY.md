@@ -70,7 +70,7 @@
 
 ### 执行稳定性与外部依赖
 
-- `test/Test/Integration/CLISpec.hs` 通过 `requireStackBinary` 查找真实 `stack` 并执行 `stack exec typus -- …`；一旦 PATH 中缺少 stack，该测试会直接 `assertFailure`，在受限 CI 代理上属于典型的环境耦合性用例。
+- `test/Test/Integration/CLISpec.hs` 现在优先尝试真实 `stack exec typus -- …`，若 PATH 中缺少 stack 则自动回退到 `Cli.Runner.runWithArgs`（或尊重 `TYPUS_FAKE_STACK` 指向的 stub，例如 `scripts/fake-stack.sh`），显著降低了对外部工具链的硬依赖。
 - `test/Test/Integration/PipelineSpec.hs` 的 `assertGoBuilds` 需要找到 `go`、`$TYPUS_FAKE_GO` 或仓库自带的 `scripts/fake-go.sh`；若都不存在就报 “Go toolchain is missing”，因此缓存被清或 fake 脚本漏配时整个 `stack test` 会失败，稳定性受外部工具链牵制。
 - `stack.yaml` 将 `production:true`、`coverage:true`、`werror:true` 固定开启，使得 `typus.cabal` 永远使用 `-DPRODUCTION_TESTS -Werror -fhpc -with-rtsopts=-M8G`。这虽可保证严格性，但也意味着任何覆盖率收集脚本缺失、或 runner 可用内存 <8G 时都会导致 `stack test` 本身不稳定。
 - `typus.cabal` 中 `if flag(fast)` 直接剔除 Golden/Integration/CLI 模块（第 234–252 行）；开发者若为了提速执行 `stack test --flag typus:fast`，就只剩核心单元测试，极易形成“本地绿 / CI 红”的错觉。
@@ -81,7 +81,7 @@
 2. **扩充 Golden 与 CLI 场景**：为所有权、依赖类型错误以及多文件工程生成新的 golden，对 CLI 的 `check`/`build`/`run` 增加端到端测试（包含失败路径、`--strict-embed`、Go executor 交互）。
 3. **补齐薄弱模块**：新增 `ValueAnalysis`、`OwnershipBridge`、`CommandLineDebug`、`GoToolchain` 等模块的失败路径和边界断言，避免单用例覆盖过多逻辑。
 4. **扩大属性测试/随机化范围**：将 QuickCheck 属性测试扩充到 `Ownership`、`Analyzer` 等模块，并尽量让 `fast` 配置保留轻量属性测试，减少 “切换 flag 即失去生成式保障” 的风险。
-5. **降低对真实工具链的隐形依赖**：为 `Test/Integration/PipelineSpec.hs`、CLI 测试提供官方 fake Go 脚本 & stack stub，同时在 CI 文档中写明如何设置 `TYPUS_FAKE_GO`，减少基础设施波动带来的误报。
+5. **降低对真实工具链的隐形依赖**：`scripts/fake-go.sh` 与新增的 `scripts/fake-stack.sh` 已可作为官方 stub；下一步需要在 CI 文档中写明如何设置 `TYPUS_FAKE_GO`/`TYPUS_FAKE_STACK` 并在开发指南中强调 CLI 测试的自动回退逻辑，进一步减少基础设施波动带来的误报。
 6. **同步质量指标到文档**：将真实的 `testCase` 数、QuickCheck 用例数、覆盖率数据写回 `README`/`TEST_ENHANCEMENT_SUMMARY.md` 等，让外部团队基于事实评估风险。
 
 ## 数据来源与可复现性
