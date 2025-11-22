@@ -47,6 +47,11 @@ tests =
         diffCmd
         (goldenDir </> "generic_type.go")
         (compileFixture "generic_type.typus")
+    , goldenVsStringDiff
+        "dependent type directives emit generic Go declarations"
+        diffCmd
+        (goldenDir </> "dependent_types.go")
+        (compileFixture "code_with_dependent_types.typus")
     ]
 
   where

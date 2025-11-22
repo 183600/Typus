@@ -35,6 +35,7 @@ library
         Analyzer.SymbolTable,
         Analyzer.Types,
         Cli,
+        Cli.Runner,
         CommandLineDebug,
         Compiler,
         Compiler.DependentTypeChecker,
