@@ -42,4 +42,56 @@ tests =
               Just info -> do
                 isMoved info @?= False
                 isBorrowed info @?= False
+
+    , testCase "processOwnershipErrors only reports names tracked in the symbol table" $ do
+        let code = unlines
+              [ "package main"
+              , "func main() {"
+              , "    value := acquire()"
+              , "    other := acquire()"
+              , "    consume(value)"
+              , "    println(other)"
+              , "}"
+              ]
+            baseState = newIntegratedAnalyzer True True
+            tracked = Map.fromList
+              [ ("value", mkSymbol "value")
+              , ("other", mkSymbol "other")
+              ]
+            initialState = baseState { symbolTable = tracked }
+            ownershipErrs = [Own.UseAfterMove "value", Own.UseAfterMove "ghost", Own.OutOfScope "owned"]
+        runResult <- runExceptT $ runStateT (processOwnershipErrors code ownershipErrs) initialState
+        case runResult of
+          Left err -> assertFailure ("processOwnershipErrors failed: " <> err)
+          Right (labeledErrors, finalState) -> do
+            labeledErrors @?= [(Error, Own.UseAfterMove "value")]
+            fmap isMoved (Map.lookup "value" (symbolTable finalState)) @?= Just True
+            fmap isMoved (Map.lookup "other" (symbolTable finalState)) @?= Just False
+
+    , testCase "processOwnershipErrors synthesizes use-after-move patterns when missing" $ do
+        let code = unlines
+              [ "package main"
+              , "func main() {"
+              , "    var resource OwnedBuffer"
+              , "    move(resource)"
+              , "    println(resource)"
+              , "}"
+              ]
+            baseState = newIntegratedAnalyzer True True
+        runResult <- runExceptT $ runStateT (processOwnershipErrors code []) baseState
+        case runResult of
+          Left err -> assertFailure ("processOwnershipErrors failed: " <> err)
+          Right (labeledErrors, _) ->
+            labeledErrors @?= [(Error, Own.UseAfterMove "resource")]
     ]
+
+mkSymbol :: String -> SymbolInfo
+mkSymbol name = SymbolInfo
+  { symbolName = name
+  , symbolType = Nothing
+  , ownershipState = Nothing
+  , symbolScope = 0
+  , isMoved = False
+  , isBorrowed = False
+  , constraints = []
+  }

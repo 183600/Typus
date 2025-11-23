@@ -1,0 +1,10 @@
+package main
+
+import "embed"
+
+//go:embed embedded/*.txt
+var files embed.FS
+
+func main() {
+    _ = files
+}

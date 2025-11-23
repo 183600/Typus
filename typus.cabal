@@ -208,9 +208,11 @@ test-suite typus-test
         Test.Unit.TypeSystemSpec,
         Test.Unit.SymbolTableSpec,
         Test.Unit.ValueAnalysisSpec,
+        Test.Unit.GoToolchainSpec,
         Test.Unit.VerbositySpec,
         Test.Unit.UtilsSpec,
-        TestSupport.Verbosity
+        TestSupport.Verbosity,
+        TestSupport.QuickCheck
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
@@ -224,13 +226,12 @@ test-suite typus-test
         HUnit >= 1.6.0,
         tasty >= 1.4,
         tasty-hunit >= 0.10,
+        tasty-quickcheck >= 0.10,
+        QuickCheck >= 2.14,
         temporary >= 1.2 && <2,
         silently >= 0.3 && <0.4,
         text >= 1.2.0 && <3,
         transformers >= 0.5 && <0.7
-    if flag(full) || flag(production)
-        build-depends:
-            QuickCheck >= 2.14
     default-language: Haskell2010
     ghc-options:      -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-M4G -Wno-unused-top-binds -Wno-unused-local-binds -Wno-unused-matches
     if flag(fast)
