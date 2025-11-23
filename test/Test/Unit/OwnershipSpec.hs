@@ -1,9 +1,14 @@
 module Test.Unit.OwnershipSpec (tests) where
 
+import Data.Char (isSpace)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ( (@?=), assertBool, testCase )
+import qualified Test.QuickCheck as QC
 
-import Ownership (OwnershipError(..), analyzeOwnership)
+import Ownership (OwnershipError(..), analyzeOwnership, builtInFunctions, lexAll)
+import Ownership.Common.Lexer (Token(..), TokenKind(..))
+import Ownership.Lexer (Sym(..))
+import TestSupport.QuickCheck (fastProperty)
 
 tests :: TestTree
 tests =
@@ -366,4 +371,25 @@ tests =
               , "}"
               ]
         analyzeOwnership source @?= []
+
+    , testGroup "Property-based guarantees"
+        [ fastProperty "newline tokens only appear when newline characters are present" prop_noSpuriousNewlines
+        , fastProperty "built-in functions never include whitespace" prop_builtInFunctionsSansWhitespace
+        ]
     ]
+
+prop_noSpuriousNewlines :: String -> QC.Property
+prop_noSpuriousNewlines input =
+    not (any (== '\n') input) QC.==>
+        countNewlineTokens (lexAll input) == 0
+
+prop_builtInFunctionsSansWhitespace :: QC.Property
+prop_builtInFunctionsSansWhitespace =
+    let offenders = filter (any isSpace) builtInFunctions
+    in QC.counterexample ("Found whitespace in: " <> show offenders) (null offenders)
+
+countNewlineTokens :: [Token kw Sym] -> Int
+countNewlineTokens = length . filter isNewline
+  where
+    isNewline (Token (TSym SNewline) _) = True
+    isNewline _ = False

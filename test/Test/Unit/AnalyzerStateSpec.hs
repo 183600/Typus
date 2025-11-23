@@ -9,6 +9,9 @@ import Control.Monad.State (runStateT)
 import qualified Data.Map.Strict as Map
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit
+import qualified Test.QuickCheck as QC
+
+import TestSupport.QuickCheck (fastProperty)
 
 initialState :: Bool -> Bool -> AnalyzerState
 initialState = newIntegratedAnalyzer
@@ -106,4 +109,110 @@ tests =
                     }
             getCombinedErrors state @?= sampleErrors
             getAnalysisSummary state @?= summaryExpectation
+
+        , testGroup "Property-based guarantees"
+            [ fastProperty "filterWarnings matches a manual traversal" prop_filterWarningsMatchesManual
+            , fastProperty "filterInfo matches a manual traversal" prop_filterInfoMatchesManual
+            ]
         ]
+
+prop_filterWarningsMatchesManual :: [ArbCombinedError] -> QC.Property
+prop_filterWarningsMatchesManual forest =
+    let errors = map unArbCombined forest
+        expected = manualMessages Warning errors
+        actual = filterWarnings errors
+    in QC.counterexample (mismatch actual expected) (actual == expected)
+
+prop_filterInfoMatchesManual :: [ArbCombinedError] -> QC.Property
+prop_filterInfoMatchesManual forest =
+    let errors = map unArbCombined forest
+        expected = manualMessages Info errors
+        actual = filterInfo errors
+    in QC.counterexample (mismatch actual expected) (actual == expected)
+
+mismatch :: Show a => a -> a -> String
+mismatch actual expected =
+    "actual = " <> show actual <> "\nexpected = " <> show expected
+
+newtype ArbCombinedError = ArbCombinedError { unArbCombined :: CombinedError }
+    deriving (Show)
+
+instance QC.Arbitrary ArbCombinedError where
+    arbitrary = ArbCombinedError <$> genCombinedError
+    shrink (ArbCombinedError err) = ArbCombinedError <$> shrinkCombinedError err
+
+genCombinedError :: QC.Gen CombinedError
+genCombinedError = QC.sized go
+  where
+    go n
+        | n <= 0 = genLeaf
+        | otherwise = QC.frequency
+            [ (4, genLeaf)
+            , (1, genCross (n `div` 2))
+            ]
+
+    genLeaf = QC.oneof
+        [ OwnershipErrorCombined <$> genSeverity <*> genOwnershipError
+        , DependentTypeErrorCombined <$> genSeverity <*> genDependentTypeError
+        , IntegrationError <$> genMessage <*> genSeverity
+        ]
+
+    genCross sizeHint = do
+        msg <- genMessage
+        sev <- genSeverity
+        subs <- QC.resize sizeHint (QC.listOf (go (sizeHint `div` 2)))
+        pure (CrossAnalyzerError msg sev subs)
+
+shrinkCombinedError :: CombinedError -> [CombinedError]
+shrinkCombinedError (CrossAnalyzerError msg sev subs) =
+    IntegrationError msg sev : [CrossAnalyzerError msg sev subs' | subs' <- QC.shrinkList shrinkCombinedError subs]
+shrinkCombinedError _ = []
+
+genSeverity :: QC.Gen ErrorSeverity
+genSeverity = QC.elements [Fatal, Error, Warning, Info]
+
+genOwnershipError :: QC.Gen Own.OwnershipError
+genOwnershipError = QC.oneof
+    [ Own.UseAfterMove <$> genVarName
+    , Own.DoubleMove <$> genVarName <*> genVarName
+    , Own.BorrowWhileMoved <$> genVarName
+    , Own.MutBorrowWhileBorrowed <$> genVarName
+    , Own.BorrowWhileMutBorrowed <$> genVarName
+    , Own.MultipleMutBorrows <$> genVarName
+    , Own.UseWhileMutBorrowed <$> genVarName
+    , Own.OutOfScope <$> genVarName
+    , Own.BorrowError <$> genVarName
+    , Own.CrossFunctionMove <$> genVarName <*> genVarName
+    , Own.ParameterMoveMismatch <$> genVarName
+    , Own.ControlFlowError <$> genMessage
+    , Own.PathSensitiveError <$> genMessage
+    , Own.LoopOwnershipError <$> genMessage
+    ]
+
+genDependentTypeError :: QC.Gen Dep.DependentTypeError
+genDependentTypeError = QC.oneof
+    [ Dep.TypeNotFound <$> genVarName
+    , Dep.InvalidTypeArgument <$> genVarName
+    , Dep.AmbiguousType <$> genVarName
+    , Dep.ParseError <$> genMessage
+    , Dep.SemanticError <$> genMessage
+    ]
+
+genVarName :: QC.Gen String
+genVarName = QC.listOf1 (QC.elements ['a'..'z'])
+
+genMessage :: QC.Gen String
+genMessage = QC.listOf1 (QC.elements (['a'..'z'] ++ ['0'..'9'] ++ " _-"))
+
+manualMessages :: ErrorSeverity -> [CombinedError] -> [String]
+manualMessages sev = concatMap (flatten sev)
+  where
+    flatten target err = case err of
+        OwnershipErrorCombined s e | s == target -> [show e]
+        OwnershipErrorCombined _ _ -> []
+        DependentTypeErrorCombined s e | s == target -> [show e]
+        DependentTypeErrorCombined _ _ -> []
+        IntegrationError msg s | s == target -> [msg]
+        IntegrationError _ _ -> []
+        CrossAnalyzerError msg s subs ->
+            (if s == target then [msg] else []) ++ concatMap (flatten target) subs
