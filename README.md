@@ -84,6 +84,21 @@ cabal test --flags="-fast coverage"
 cabal test --test-options="--pattern \"Parser\""
 ```
 
+### stack test 真实指标（2025-11-23）
+
+- `stack test` 默认执行 229 个 Tasty 节点：`rg -o "testCase \"" test | wc -l` 统计到 212 个 HUnit `testCase`，再加上 5 个 golden 对拍与 12 个 `fastProperty`/QuickCheck 属性测试。
+- 166 个单元测试覆盖 parser、ownership、type system、CLI 参数解析与 Go 工具链 stub；46 个集成测试涵盖 Analyzer、Pipeline、Ownership 以及 8 个 CLI 冒烟用例；`Test/Golden/CompilerSpec.hs` 则对核心转换生成 5 份固定输出。
+- QuickCheck/`fastProperty` 目前分布在 DependentTypes(1)、TypeSystem(2)、Ownership(2)、AnalyzerState(2)、Utils(2)、ValueAnalysis(3) 模块，默认 `stack test` 全部执行。
+- `coverage-report/summary.json` 当前的 `total_coverage` 字段为 `"unavailable"`，仓库里没有可信的 `.tix`。需要运行 `stack test --coverage` 后再执行 `scripts/coverage-report.sh` 才能刷新覆盖率报告。
+
+```bash
+rg -o "testCase \"" test | wc -l            # 212
+rg -o "testCase \"" test/Test/Unit | wc -l   # 166
+rg -o "testCase \"" test/Test/Integration | wc -l   # 46
+```
+
+- 更多细节与改进建议可参考 [STACK_TEST_QUALITY.md](STACK_TEST_QUALITY.md)，其中记录了 CLI 依赖、回退策略与下一步计划。
+
 更多测试相关信息请参考:
 - [QUICK_TEST_GUIDE.md](QUICK_TEST_GUIDE.md) - 快速测试指南
 - [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md) - 测试覆盖率矩阵

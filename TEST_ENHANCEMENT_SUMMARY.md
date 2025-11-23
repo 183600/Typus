@@ -1,250 +1,114 @@
 # 测试套件增强总结
 
 ## 执行日期
-2025-01-08
+2025-11-23（基于 `test/sync-real-metrics-to-readme-and-summary` 分支最新统计）
 
 ## 任务目标
-确保只要 stack test 通过，这个项目就可以用于生产环境，并且确保 stack test 是高质量、高覆盖率、多种类型（单元、集成、端到端）的。
+- 保持 `stack test` 作为唯一且可信的质量门禁；
+- 让 README 及配套测试文档反映真实的测试规模与覆盖现状，而非“425+ 测试 / 70% 覆盖率”这类过期数字；
+- 记录覆盖率空白并提供可复现的统计方法，方便后续持续改进。
 
-## 已完成工作
+## 真实指标概览
+- `stack test` 当前会执行 **229** 个 Tasty 节点：`rg -o "testCase \"" test | wc -l` 得到 **212 个 HUnit `testCase`**，再加上 5 个 `tasty-golden` 对拍与 12 个 `fastProperty`/QuickCheck 属性测试。
+- 166 个单元测试覆盖 parser、ownership、type system、CLI 参数解析、Go 工具链 stub 等模块；46 个集成测试涵盖 Analyzer、Pipeline、FullProject 与 Ownership，另有 8 个直接命中 `stack exec typus` 的 CLI 冒烟用例。
+- `Test.Golden.CompilerSpec` 对五个典型 Typus 输入进行输出对拍，确保 Parser→Compiler→Go 渲染逻辑保持稳定。
+- `coverage-report/summary.json` 的 `total_coverage` 字段目前为 `"unavailable"`，仓库内缺少可信的 `.tix` 产物，暂时无法宣称 70% 覆盖率。
 
-### 1. 单元测试全面增强 ✅
+| 分类 | 数量 | 说明 |
+| --- | --- | --- |
+| 单元测试 | 166 | `Test/Unit/*` 中的 HUnit `testCase`，默认 `stack test` 全量执行 |
+| 集成测试 | 46 | `Test/Integration/*` 的 HUnit `testCase`，覆盖 Analyzer、Pipeline、Ownership、CLI |
+| Golden 测试 | 5 | `Test.Golden.CompilerSpec` 中的 `goldenVsStringDiff` 对拍 |
+| QuickCheck / fastProperty | 12 | 分布在 DependentTypes、TypeSystem、Ownership、AnalyzerState、Utils、ValueAnalysis |
+| CLI 冒烟 | 8 | `Test/Integration/CLISpec.hs`，真实触发 `typus` 子命令与失败路径 |
+| 总计 | 229 | 166（Unit）+ 46（Integration）+ 5（Golden）+ 12（属性测试） |
 
-#### 1.1 Parser 测试增强 (test/TestParser.hs)
-- **之前**: 3个基础测试
-- **现在**: 21个全面测试
-- **新增测试类别**:
-  - 基础功能测试 (5个)
-  - 指令解析测试 (4个)
-  - 边界情况测试 (5个)
-  - 错误处理测试 (3个)
-  - 复杂场景测试 (4个)
-- **覆盖场景**:
-  - 空输入、注释、Unicode、超长行
-  - 所有权和依赖类型指令
-  - 嵌套结构、块级指令、泛型
-  - 畸形输入、错误恢复
+### 统计命令
+```bash
+rg -o "testCase \"" test | wc -l             # 212（全部 HUnit testCase）
+rg -o "testCase \"" test/Test/Unit | wc -l    # 166（单元测试）
+rg -o "testCase \"" test/Test/Integration | wc -l  # 46（集成/CLI 测试）
+rg -n "fastProperty" test/Test/Unit/*.hs       # 12 个属性测试定义
+```
 
-#### 1.2 Compiler 测试增强 (test/TestCompiler.hs)
-- **之前**: 2个基础测试
-- **现在**: 19个全面测试
-- **新增测试类别**:
-  - 基础编译器测试 (5个)
-  - 指令编译测试 (3个)
-  - 边界情况测试 (4个)
-  - 错误处理测试 (2个)
-  - 复杂编译测试 (3个)
-  - 输出有效性测试 (2个)
-- **覆盖场景**:
-  - 函数、结构体、接口、方法
-  - 所有权和依赖类型指令编译
-  - 注释、转义、Unicode、复杂表达式
-  - 不完整代码、错误恢复
-  - 输出验证
+## 单元测试覆盖面
+| 模块 | `testCase` 数 | 重点场景 |
+| --- | --- | --- |
+| `Test/Unit/AnalyzerStateSpec.hs` | 7 | Analyzer.State 的诊断过滤、聚合、severity 排序，另含 2 个 `fastProperty` 验证 filter* 行为 |
+| `Test/Unit/CLISpec.hs` | 11 | `convert`/`check`/`build`/`run` 子命令参数解析、`--strict-embed` 透传、版本信息 |
+| `Test/Unit/CliRunnerSpec.hs` | 3 | `Cli.Runner.runWithArgs` 对缺失 `stack` 的回退、`TYPUS_FAKE_STACK` 支持 |
+| `Test/Unit/CommandLineDebugSpec.hs` | 2 | `--debug`、`--emit-ast` 标志解析 |
+| `Test/Unit/CompilerSpec.hs` | 5 | 编译器的 happy-path 与错误冒泡 |
+| `Test/Unit/DependentTypesSpec.hs` | 29 | 类型/函数声明解析、错误路径，含 1 个 `fastProperty` 验证随机 AST |
+| `Test/Unit/EmbedAssetsSpec.hs` | 6 | 资源嵌入、`--strict-embed` 行为 |
+| `Test/Unit/ErrorHandlingSpec.hs` | 14 | 诊断分级、错误上下文拼接、Formatter 行为 |
+| `Test/Unit/GoToolchainSpec.hs` | 7 | `TYPUS_SKIP_GO_BUILD`、`TYPUS_FAKE_GO`、临时 Go 工程生成 |
+| `Test/Unit/OwnershipSpec.hs` | 22 | 移动语义、借用冲突、块级作用域，含 2 个 `fastProperty` 断言 |
+| `Test/Unit/OwnershipBridgeSpec.hs` | 3 | 所有权错误同步到符号表的行为 |
+| `Test/Unit/ParserSpec.hs` | 8 | 文件/块级指令、Build tag、错误提示 |
+| `Test/Unit/SymbolTableSpec.hs` | 3 | 作用域遮蔽、可变/不可变标记 |
+| `Test/Unit/TypeSystemSpec.hs` | 11 | 类型检查、约束求解，含 2 个 `fastProperty` |
+| `Test/Unit/UtilsSpec.hs` | 26 | 字符串、路径与诊断辅助函数，含 2 个 `fastProperty` |
+| `Test/Unit/ValueAnalysisSpec.hs` | 5 | Go AST 值/引用分类、控制流，含 3 个 `fastProperty` |
+| `Test/Unit/VerbositySpec.hs` | 4 | CLI 日志等级与 `--verbose` 处理 |
 
-#### 1.3 Ownership 测试增强 (test/TestOwnership.hs)
-- **之前**: 3个基础测试
-- **现在**: 15个全面测试
-- **新增测试类别**:
-  - 基础所有权测试 (4个)
-  - 移动语义测试 (3个)
-  - 借用检查测试 (2个)
-  - 边界情况测试 (3个)
-  - 错误检测测试 (3个)
-- **覆盖场景**:
-  - 基本转移、有效转移
-  - 结构体移动、函数参数、返回值
-  - 块级所有权、多块
-  - 基本类型、切片、Map
-  - Move后使用、双重Move、复杂控制流
+## 集成 / Golden / 端到端用例
+| 模块 | `testCase` 数 | 覆盖内容 |
+| --- | --- | --- |
+| `Test/Integration/AnalyzerSpec.hs` | 20 | 依赖类型 + 所有权联动、CrossAnalyzer 聚合、severity 传播 |
+| `Test/Integration/FullProjectSpec.hs` | 6 | `batchConvert`/`batchCheck`、Go executor 的记录/跳过/失败三态 |
+| `Test/Integration/IntegratedCompilerSpec.hs` | 4 | 集成编译输出、诊断过滤、配置覆盖 |
+| `Test/Integration/OwnershipSpec.hs` | 5 | 真实 Typus 片段的端到端所有权验证 |
+| `Test/Integration/PipelineSpec.hs` | 3 | Parser→Compiler→Go build 流程，依赖真实或 fake `go` 可执行文件 |
+| `Test/Integration/CLISpec.hs` | 8 | `stack exec typus` 的 `--version`、`convert/check/build/run`、`--strict-embed`、缺失入口等路径 |
+| `Test/Golden/CompilerSpec.hs` | 5 | `simple_go_code`、`statements_without_package`、`generic_type`、`advanced_ownership`、`type_system_valid` 对拍 |
 
-### 2. 文档完善 ✅
+## 属性测试分布
+- **DependentTypes**：1 个属性测试（随机生成 AST，确保 `analyzeAST` 不产生错误）。
+- **TypeSystem**：2 个属性测试（`solveConstraints` 处理自反约束与队列清空）。
+- **Ownership**：2 个属性测试（指令 token 化不会产生伪造换行，内置函数名不含空白）。
+- **AnalyzerState**：2 个属性测试（`filterWarnings` / `filterInfo` 等价于人工遍历）。
+- **Utils**：2 个属性测试（`trim` 幂等、`splitByCollapsed` 不产出空 chunk）。
+- **ValueAnalysis**：3 个属性测试（`isReferenceInit`、`isValueType`、指针识别）。
 
-#### 2.1 创建 PRODUCTION_READINESS.md
-- 详细的测试覆盖率统计
-- 测试类型和数量清单
-- 测试质量保证说明
-- 生产就绪检查清单
-- CI/CD 集成指南
-- 覆盖率配置和阈值
-- 未来改进建议
+以上 12 个 `fastProperty` 均在默认 `stack test` 中执行，与是否启用 `PRODUCTION_TESTS` 无关。
 
-#### 2.2 创建 TESTING_GUIDE.md
-- 快速开始指南
-- 运行特定测试的方法
-- 覆盖率报告生成
-- 测试开发指南
-- 调试失败测试
-- CI/CD 配置示例
-- 常见问题解答
+## 覆盖率现状
+- `coverage-report/summary.json` 与 `coverage-report/module-report.txt` 均显示 “Coverage data has not been generated yet.”，仓库缺少可信的 `.tix`。
+- 需要运行 `stack test --coverage`，然后执行 `scripts/coverage-report.sh` 才能生成最新的 HTML/JSON/TXT 报告；生成结果应随代码一起提交，避免再次出现“unavailable”状态。
 
-#### 2.3 更新 README.md
-- 添加测试门禁说明
-- 链接到详细测试文档
-- 强调 stack test 的重要性
-- 提供快速运行命令
+```bash
+stack test --coverage              # 生成 typus.tix
+scripts/coverage-report.sh         # 汇总到 coverage-report/*.json|txt
+```
 
-### 3. 测试覆盖率统计 ✅
-
-#### 总测试数量
-- **Parser**: 21个单元测试 (原3个)
-- **Compiler**: 19个单元测试 (原2个)
-- **Ownership**: 15个单元测试 (原3个)
-- **Integration**: 8个集成测试 (现有)
-- **End-to-End**: 50+个E2E测试 (现有)
-- **CLI**: 7个CLI测试 (现有)
-- **Performance**: 5个性能测试 (现有)
-- **Property**: 300+个QuickCheck测试 (现有)
-- **总计**: 425+ 测试
-
-#### 测试类型分布
-- ✅ 单元测试: 55+ (增强)
-- ✅ 集成测试: 8 (现有)
-- ✅ 端到端测试: 50+ (现有)
-- ✅ 性能测试: 5 (现有)
-- ✅ 属性测试: 300+ (现有)
-
-#### 覆盖的测试场景
-- ✅ 正常功能
-- ✅ 边界条件
-- ✅ 错误处理
-- ✅ 复杂场景
-- ✅ 性能阈值
-- ✅ 输出验证
-
-### 4. 质量保证机制 ✅
-
-#### 测试门禁
-- **唯一门禁**: `stack test`
-- **通过标准**: 所有425+测试通过
-- **覆盖率要求**: ≥ 70% (可配置)
-- **警告处理**: 警告视为错误 (-Werror)
-
-#### 自动化保障
-- 测试独立运行
-- 可重复执行
-- 失败消息清晰
-- CI/CD 就绪
+## 质量保证机制
+1. `stack.yaml` 默认启用 `production:true`、`coverage:true`、`werror:true`，因此 `stack test` 构建时自动带上 `-DPRODUCTION_TESTS -fhpc -Werror -with-rtsopts=-M8G`。
+2. `FAST_TESTS` flag 会直接剔除 Integration 与 Golden 模块，仅适合本地快速迭代；CI/发布必须运行默认配置。
+3. `Integration.CLISpec` 优先使用真实 `stack exec typus`，若 CI 缺少 `stack` 则回退到 `Cli.Runner.runWithArgs`，同时允许设置 `TYPUS_FAKE_STACK`、`TYPUS_FAKE_GO`。
+4. `fastProperty` 封装 QuickCheck 的采样上限，在默认模式下即可提供生成式回归保障，无需额外 flag。
 
 ## 验证方法
-
-### 本地验证
-stack test
-
-### 验证覆盖率
-stack test --coverage
-hpc report typus-test.tix
-
-### 生成覆盖率报告
-hpc markup typus-test.tix --destdir=coverage-report
+- `stack test`：运行全部单元、集成、Golden、属性测试。
+- `stack test --coverage && scripts/coverage-report.sh`：生成并刷新 coverage-report。
+- `rg -o "testCase \"" test/Test/{Unit,Integration} | wc -l`：快速确认单元/集成用例数量。
+- `rg -n "fastProperty" test/Test/Unit/*.hs`：定位属性测试定义及所属模块。
+- `stack test --flag typus:fast`：仅在需要快速反馈时使用，用于强调“fast 模式会跳过 CLI/Golen/Integration”这一差异。
 
 ## 成果展示
-
-### 测试增强前后对比
-
-| 项目 | 增强前 | 增强后 | 提升 |
-|-----|-------|--------|------|
-| Parser 测试 | 3 | 21 | +600% |
-| Compiler 测试 | 2 | 19 | +850% |
-| Ownership 测试 | 3 | 15 | +400% |
-| 总单元测试 | 8 | 55 | +587% |
-
-### 新增测试覆盖
-
-#### Parser 新增覆盖
-- ✅ 空白字符和注释处理
-- ✅ Unicode字符支持
-- ✅ 超长行处理
-- ✅ 混合行结束符
-- ✅ 嵌套结构解析
-- ✅ 块级指令
-- ✅ 泛型类型
-- ✅ 畸形输入处理
-
-#### Compiler 新增覆盖
-- ✅ 函数、结构体、接口、方法编译
-- ✅ Import语句处理
-- ✅ 所有权和依赖类型指令编译
-- ✅ 字符串转义和Unicode
-- ✅ 复杂表达式编译
-- ✅ 错误恢复机制
-- ✅ 输出有效性验证
-
-#### Ownership 新增覆盖
-- ✅ 结构体移动语义
-- ✅ 函数参数移动
-- ✅ 返回值转移
-- ✅ 块级所有权
-- ✅ 多块所有权
-- ✅ 基本类型、切片、Map处理
-- ✅ Move后使用检测
-- ✅ 双重Move检测
-- ✅ 复杂控制流分析
-
-## 生产就绪性确认
-
-### ✅ 测试覆盖充分
-- 所有核心模块有全面的单元测试
-- 边界条件和错误情况均已测试
-- 复杂场景和真实使用案例已覆盖
-
-### ✅ 测试质量高
-- 测试独立、可重复
-- 失败消息清晰、有意义
-- 覆盖率达到70%以上要求
-
-### ✅ 测试类型多样
-- 单元测试 (细粒度功能验证)
-- 集成测试 (模块间协作)
-- 端到端测试 (完整工作流)
-- 性能测试 (阈值保证)
-- 属性测试 (自动化模糊测试)
-
-### ✅ 自动化机制完善
-- stack test 作为唯一门禁
-- 覆盖率自动检查
-- CI/CD 集成就绪
-- 失败自动阻止部署
-
-### ✅ 文档完整
-- 详细的测试指南
-- 生产就绪性报告
-- CI/CD 配置示例
-- 常见问题解答
-
-## 结论
-
-✅ **项目已达到生产标准**
-
-通过本次测试套件增强：
-1. 单元测试数量增加了 587%
-2. 测试覆盖场景从基础功能扩展到边界条件、错误处理、复杂场景
-3. 创建了完整的测试文档体系
-4. 确立了 stack test 作为唯一可靠的生产门禁
-
-**只要 `stack test` 通过，项目就可以安全地用于生产环境。**
+1. 仓库文档首次列出了 **真实** 的测试数量与分布，避免继续宣传 425+ 测试或 300+ QuickCheck。
+2. 明确记录了当前覆盖率状态为 “unavailable”，并提供了可复现的刷新步骤。
+3. README、`STACK_TEST_QUALITY.md`、本文件之间的统计口径保持一致，后续只需根据上述命令刷新数字即可。
 
 ## 后续建议
-
-虽然当前测试已达到生产标准，但可以考虑以下改进：
-
-1. **持续提高覆盖率**: 从70%逐步提升到85%+
-2. **增加模糊测试**: 使用更多QuickCheck测试生成
-3. **性能基准跟踪**: 记录每次提交的性能数据
-4. **回归测试集**: 为生产环境发现的bug创建专门测试
-5. **压力测试**: 测试极端情况下的系统行为
+1. 将 `stack test --coverage` + `scripts/coverage-report.sh` 纳入 CI，自动生成可追踪的覆盖率数据。
+2. 为 CLI/Golang 流程补充失败路径（缺少 main、go build 失败等）的 Golden/Integration 测试。
+3. 把 `fastProperty` 扩展到 Analyzer.State 以外的薄弱模块（如 GoToolchain、Cli.Runner 的错误分支）。
+4. 为 `Test/Integration/FullProjectSpec` 增加更多 fixture，覆盖多入口/多模块工程。
+5. 建立定期的指标刷新流程（例如 release 前运行一次统计脚本并更新文档），防止数字再次漂移。
 
 ## 相关文件
-
-- `test/TestParser.hs` - 增强的Parser测试
-- `test/TestCompiler.hs` - 增强的Compiler测试
-- `test/TestOwnership.hs` - 增强的Ownership测试
-- `PRODUCTION_READINESS.md` - 生产就绪性详细报告
-- `TESTING_GUIDE.md` - 测试使用指南
-- `README.md` - 更新的项目文档
-
----
-
-**增强完成日期**: 2025-01-08
-**负责人**: Factory Droid AI Assistant
-**审核状态**: 待人工审核
+- [README.md](README.md)：对外展示的测试命令与指标速览。
+- [STACK_TEST_QUALITY.md](STACK_TEST_QUALITY.md)：深入的测试质量分析与改进建议。
+- [TEST_COVERAGE_REPORT.md](TEST_COVERAGE_REPORT.md)：覆盖率报告与生成流程（需结合本文件的“覆盖率现状”章节使用）。
+- [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md)：生产就绪性说明，可按本文件的统计数据更新测试部分。

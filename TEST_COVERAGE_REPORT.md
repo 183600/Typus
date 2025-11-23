@@ -2,6 +2,11 @@
 
 生成时间: 2024
 
+> **2025-11-23 现状更新**
+> - 当前仓库的 `coverage-report/summary.json` / `module-report.txt` 均显示 `"unavailable"`，没有可信的 `.tix` 产物，因此本文件中曾提到的覆盖率百分比尚无法验证。
+> - 需要运行 `stack test --coverage`，再执行 `scripts/coverage-report.sh` 才能刷新 JSON / TXT / HTML 报告；刷新结果出来前，请勿再宣称“≥70% 覆盖率”。
+> - 最新的测试规模与指标同样写在 `README.md` 与 `TEST_ENHANCEMENT_SUMMARY.md` 中（共 212 个 HUnit `testCase` + 5 个 golden + 12 个 QuickCheck）。
+
 ## 执行摘要
 
 ✅ **测试状态**: 全部通过  
