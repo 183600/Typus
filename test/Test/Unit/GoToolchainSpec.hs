@@ -14,6 +14,7 @@ import System.FilePath ((</>), takeBaseName, takeExtension)
 import System.IO.Temp (withSystemTempDirectory)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
+import Tooling.Error (ToolingError(..))
 
 withEnvOverride :: String -> Maybe String -> IO a -> IO a
 withEnvOverride key newValue action = do
@@ -90,4 +91,15 @@ tests =
             Right _ -> pure ()
           logs <- readIORef ref
           assertBool "expected skip message" (any (isPrefixOf "Skipping Go command") logs)
+
+    , testCase "defaultGoExecutor reports missing go binary" $ do
+        withEnvOverride "TYPUS_SKIP_GO_BUILD" (Just "0") $
+          withEnvOverride "PATH" (Just "") $ do
+            exec <- defaultGoExecutor (const (pure ()))
+            result <- runExceptT (runGoCommand exec ["version"])
+            case result of
+              Left (GoToolchainUnavailable msg) ->
+                assertBool "message should mention installing Go" ("Go is not installed" `isPrefixOf` msg)
+              Left err -> assertFailure ("unexpected error: " ++ show err)
+              Right _ -> assertFailure "expected GoToolchainUnavailable when go is absent"
     ]
