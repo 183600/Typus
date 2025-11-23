@@ -1,6 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE CPP #-}
-
 module Test.Unit.TypeSystemSpec (tests) where
 
 import Control.Monad.State (execState, runState)
@@ -9,11 +7,10 @@ import qualified Data.Set as Set
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ( (@?=), assertBool, assertFailure, testCase )
 
-#if defined(PRODUCTION_TESTS) || defined(FULL_TESTS)
 import Test.Dependencies.Arbitrary ()
-import Test.Tasty.QuickCheck (testProperty)
 import qualified Test.QuickCheck as QC
-#endif
+
+import TestSupport.QuickCheck (fastProperty)
 
 import Dependencies.AST (Constraint(..), TypeExpr(..))
 import qualified Dependencies.TypeSystem as TS
@@ -100,13 +97,10 @@ tests =
         constraints @?=
           [ TS.TypeSizeGT (TS.TVVar "input") 0
           ]
-#if defined(PRODUCTION_TESTS) || defined(FULL_TESTS)
-    , testProperty "solveConstraints accepts reflexive equalities" propReflexiveConstraints
-    , testProperty "solveConstraints clears pending constraints" propPendingConstraintsCleared
-#endif
+    , fastProperty "solveConstraints accepts reflexive equalities" propReflexiveConstraints
+    , fastProperty "solveConstraints clears pending constraints" propPendingConstraintsCleared
     ]
 
-#if defined(PRODUCTION_TESTS) || defined(FULL_TESTS)
 propReflexiveConstraints :: [TS.TypeVar] -> QC.Property
 propReflexiveConstraints vars =
   let action = do
@@ -124,4 +118,3 @@ propPendingConstraintsCleared vars =
       (_, checker) = runState action TS.newDependentTypeChecker
       remaining = TS.pendingConstraints (TS.dtcTypeEnv checker)
   in QC.counterexample ("Pending constraints were not cleared: " <> show remaining) (null remaining)
-#endif

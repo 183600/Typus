@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE CPP #-}
 
 module Test.Unit.DependentTypesSpec (tests) where
 
@@ -8,11 +7,10 @@ import qualified Data.Map.Strict as Map
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ( (@?=), assertBool, assertFailure, testCase )
 
-#if defined(PRODUCTION_TESTS) || defined(FULL_TESTS)
 import Test.Dependencies.Arbitrary ()
-import Test.Tasty.QuickCheck (testProperty)
 import qualified Test.QuickCheck as QC
-#endif
+
+import TestSupport.QuickCheck (fastProperty)
 
 import Analyzer.DependentTypeBridge (extractTypeDefinitions)
 import DependentTypesParser
@@ -442,14 +440,10 @@ tests =
                   ]
                 )
               ]
-#if defined(PRODUCTION_TESTS) || defined(FULL_TESTS)
-    , testProperty "analyzeAST accepts generated safe programs" prop_generatedProgramsRoundtrip
-#endif
+    , fastProperty "analyzeAST accepts generated safe programs" prop_generatedProgramsRoundtrip
     ]
 
-#if defined(PRODUCTION_TESTS) || defined(FULL_TESTS)
 prop_generatedProgramsRoundtrip :: Dep.AST -> QC.Property
 prop_generatedProgramsRoundtrip ast =
   let errs = Dep.analyzeAST ast
   in QC.counterexample ("Unexpected dependent type errors: " <> show errs) (null errs)
-#endif
