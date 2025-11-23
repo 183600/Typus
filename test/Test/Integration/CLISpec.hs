@@ -107,7 +107,7 @@ runViaStack stackPath args = do
 runInProcess :: [String] -> IO (ExitCode, String, String)
 runInProcess args =
   withEnvOverride "TYPUS_SKIP_GO_BUILD" "1" $ do
-    (stdoutOutput, (stderrOutput, exitCode)) <- capture (hCapture stderr (CliRunner.runWithArgs args))
+    (stdoutOutput, (stderrOutput, exitCode)) <- capture (hCapture [stderr] (CliRunner.runWithArgs args))
     pure (exitCode, stdoutOutput, stderrOutput)
 
 withEnvOverride :: String -> String -> IO a -> IO a
