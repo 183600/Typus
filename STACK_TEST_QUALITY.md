@@ -79,13 +79,33 @@
 - `typus.cabal` 在 `production` flag 下固定 `-with-rtsopts=-M8G`。内存不足或 HPC 工具链缺失会直接导致 `stack test` 不稳定。
 - `fastProperty` 确保 `FAST_TESTS` 仍执行轻量属性测试，但 `fast` flag 仍会整体移除 Integration/Golden/CLI 模块，应在贡献指南中强调差异。
 
+## 风险热力图
+
+| 风险 | 影响 | 概率 | 说明 |
+| --- | --- | --- | --- |
+| 覆盖率产物缺失 | 高 | 高 | `stack.yaml` 始终启用 `-fhpc`，但 `coverage-report/summary.json` 与 `module-report.txt` 仍为空模板，CI 无法获得真实覆盖率基线。 |
+| Golden 仅覆盖成功路径 | 中高 | 中 | tasty-golden 仅验证 5 个 happy-path fixture，没有断言编译错误或资产缺失，无法防止回归到失败分支。 |
+| 模块覆盖不均 | 中 | 中高 | `Analyzer.State`、`Cli.Runner`、`GoToolchain` 等复杂模块在单元层级的断言稀疏，许多失败分支未被 HUnit/属性测试锁定。 |
+| 外部依赖脆弱 | 中 | 中 | CLI/Go 工具链测试依赖真实 `stack` 与 `go`，若缺少 `TYPUS_FAKE_STACK`/`TYPUS_FAKE_GO`，`stack test` 会随机失败。 |
+| 文档指标与现实脱节 | 中 | 高 | 多份文档仍宣称 425+ 测试、70% 覆盖率，与当前 229 条用例/coverage 缺失的事实冲突，影响对质量门槛的预期。 |
+
 ## 改进建议（按优先级）
 
 1. **恢复并自动化覆盖率产物**：在 CI 中重新启用 `stack test --coverage` + `scripts/coverage-report.sh`，把真实覆盖率写入 `coverage-report/summary.json` / `module-report.txt`，并据此设定阈值。
+   - 产出 `.tix` 后将 `coverage-report` 目录上传为 artifact，便于追踪趋势。
+   - 结合 `cabal test --enable-coverage` 或 HPC 工具，验证 `-fhpc` 与优化标志无冲突。
 2. **扩充 Golden 与 CLI 负面场景**：为所有权、依赖类型错误、多文件工程等生成新的 golden，对 CLI 的 `build/run` 增加 Go 真实失败、缺失资产、退出码断言。
+   - 在 `test/golden` 下新增失败样例，并验证诊断文本/退出码。
+   - 在 `Test.Integration.CLISpec` 中模拟 `go build` 失败、缺少 `--entry` 等场景，确保 `Cli.Runner.runWithArgs` 能返回具体诊断。
 3. **补齐薄弱模块**：针对 `Analyzer.State`、`Cli.Runner`、`GoToolchain` 错误分支、新增 `ValueAnalysis` 复合项目 fixture，避免单用例覆盖过多逻辑。
+   - 为 `Analyzer.State` 写入最小化 fixture，断言多 severity mix 下的过滤行为。
+   - 覆盖 `Cli.Runner` 对 `TYPUS_SKIP_GO_BUILD`、`TYPUS_FAKE_STACK` 组合路径的重试与日志。
 4. **增加属性测试覆盖面**：把 `fastProperty` 扩散到 Ownership/Analyzer 等模块；同时考虑让 `DependentTypes`/`TypeSystem` 的属性测试在非 PRODUCTION 模式下也能运行（降低样本量即可）。
+   - 为 `OwnershipSpec` 的 borrow checker 引入随机指令序列生成器，捕捉跨块借用冲突。
+   - 通过配置 `QuickCheckTests`/`MaxSize`，让 CI 在 FULL 模式运行高样本，开发者在 FAST 模式保留轻量抽样。
 5. **同步真实指标到文档**：更新 `README`、`TEST_ENHANCEMENT_SUMMARY.md` 等，列出真实测试数量/覆盖率，避免误导。
+   - 在测试指南中明确 `typus:fast` flag 的取舍，提示需要定期执行完整 `stack test`。
+   - 给出统计命令（如 `rg -o "testCase \"" test | wc -l`）与生成 coverage 报告的脚本，方便贡献者复现。
 
 ## 数据来源与可复现性
 
