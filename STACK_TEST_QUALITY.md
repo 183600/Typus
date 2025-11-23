@@ -5,7 +5,7 @@
 ## 结论概览
 
 - **整体评估：中等偏上** —— `stack test` 继续覆盖解析器、所有权/依赖类型分析、Go 代码生成以及 CLI 端到端路径。相比年初，多了 Go 工具链与 CLI 错误路径的断言，但覆盖率产物依旧缺失，Golden/属性测试仍然偏向 happy-path。
-- **规模现状**：`rg -o "testCase \"" test | wc -l` 得到 **199 个显式 HUnit `testCase`**；`Test.Golden.CompilerSpec` 现在包含 **5 个 tasty-golden 对拍**；QuickCheck/fastProperty 共 **8 个属性测试**（其中 3 个仅在 `PRODUCTION_TESTS`/`FULL_TESTS` 下启用，其余 5 个在所有配置中运行，`FAST_TESTS` 会自动收敛样本量）。
+- **规模现状**：`rg -o "testCase \"" test | wc -l` 得到 **212 个显式 HUnit `testCase`**；`Test.Golden.CompilerSpec` 仍包含 **5 个 tasty-golden 对拍**；QuickCheck/fastProperty 现有 **12 个属性测试**（分布在 DependentTypes、TypeSystem、Ownership、AnalyzerState、Utils、ValueAnalysis，默认配置都会运行）。
 - **执行范围**：`stack.yaml` 固定 `production:true`、`coverage:true`、`werror:true`，因此默认 `stack test` 会以 `-DPRODUCTION_TESTS -fhpc -Werror -with-rtsopts=-M8G` 构建，并运行 `Test.Unit` + `Test.Integration` + `Test.Golden` 入口。若显式传入 `--flag typus:fast`，Integration/Golden/CLI 模块与绝大多数属性测试会被剔除。
 - **质量亮点**：`Test.Integration.CLISpec` 已覆盖 `convert/check/build/run` 以及 `--strict-embed` 与缺失入口的失败路径；`Test.Unit.GoToolchainSpec` 验证 `TYPUS_SKIP_GO_BUILD`/`TYPUS_FAKE_GO` 的分支；`Test.Unit.ValueAnalysisSpec` 与 `Test.Unit.UtilsSpec` 的 fastProperty 用例为 AST/工具函数提供了生成式回归保障。
 - **主要风险**：覆盖率报告依然是空模板、Golden 测试仍只检查成功路径、`Analyzer.State`/`GoToolchain` 失败分支等模块缺乏更细粒度断言，且文档对测试数量/覆盖率的宣传与现实存在巨大偏差。
@@ -13,7 +13,7 @@
 ## stack test 运行范围
 
 1. **入口与结构**：`test/Main.hs` 聚合 `Test.Unit.tests`、`Test.Integration.tests`、`Test.Golden.tests`。只要未定义 `FAST_TESTS`（默认），所有单元、集成、golden、CLI 以及 fastProperty/QuickCheck 测试都会执行。
-2. **编译标志**：`stack.yaml` 固定 `production:true` + `coverage:true` + `werror:true`，对应 `typus.cabal` 的 `-DPRODUCTION_TESTS -fhpc -Werror`。`fastProperty` 会在 `FAST_TESTS` 模式下降低 `QuickCheckTests`/`QuickCheckMaxSize`，而 `Test.Unit.DependentTypesSpec` / `Test.Unit.TypeSystemSpec` 的 3 个重量级属性测试仅在 `PRODUCTION`/`FULL` 宏下生效。
+2. **编译标志**：`stack.yaml` 固定 `production:true` + `coverage:true` + `werror:true`，对应 `typus.cabal` 的 `-DPRODUCTION_TESTS -fhpc -Werror`。`fastProperty` 会在 `FAST_TESTS` 模式下降低 `QuickCheckTests`/`QuickCheckMaxSize`，但不会跳过属性测试；`Test.Dependencies.Arbitrary` 已在需要的模块内显式导入，因此即便未定义 `PRODUCTION_TESTS` 也能编译所需的 `Arbitrary` 实例。
 3. **覆盖率数据缺失**：`coverage-report/summary.json` 与 `module-report.txt` 仍显示 "Coverage data has not been generated yet."，仓库没有任何 `.tix` 产物，CI 无法验证宣称的 70% 覆盖率。
 4. **快速模式的缺口**：`typus:fast` flag 会直接从 `test-suite` 中移除 Golden、Integration、CLI、`Test.Dependencies.Arbitrary` 等模块；开发者若只运行 `stack test --flag typus:fast`，本地覆盖面会骤降。
 
@@ -22,6 +22,7 @@
 | 模块 (Spec) | 类型 | `testCase` 数 | 主要覆盖场景 |
 | --- | --- | --- | --- |
 | `Test/Unit/DependentTypesSpec.hs` | 单元 | 29 | 依赖类型语法、AST 校验、跨分析器桥接；PRODUCTION/FULL 下附带 1 个 QuickCheck 属性测试 |
+| `Test/Unit/AnalyzerStateSpec.hs` | 单元 | 7 | 诊断过滤、severity 分类、聚合；含 2 个 `fastProperty` 校验 filter 行为 |
 | `Test/Unit/OwnershipSpec.hs` | 单元 | 22 | 移动语义、借用冲突、loop 作用域、内置例外 |
 | `Test/Unit/UtilsSpec.hs` | 单元 | 26 | 诊断渲染、路径与 FS 工具；含 2 个 `fastProperty` 属性测试验证字符串/分割辅助函数 |
 | `Test/Unit/ErrorHandlingSpec.hs` | 单元 | 14 | 诊断分级、错误上下文拼接、Formatter 行为 |
@@ -29,13 +30,14 @@
 | `Test/Unit/TypeSystemSpec.hs` | 单元 | 11 | 约束抽取、类型推断、函数 refine；PRODUCTION/FULL 下有 2 个 QuickCheck 属性测试 |
 | `Test/Unit/EmbedAssetsSpec.hs` | 单元 | 6 | 资源嵌入、路径规范化、`--strict-embed` 行为 |
 | `Test/Unit/VerbositySpec.hs` | 单元 | 4 | CLI verbosity 与 logger 行为 |
-| `Test/Unit/ValueAnalysisSpec.hs` | 单元 | 3 | Go AST 值/引用分类；附带 3 个 `fastProperty` 断言保证 ampersand/pointer/builtin 类型识别 |
+| `Test/Unit/ValueAnalysisSpec.hs` | 单元 | 5 | Go AST 值/引用分类；附带 3 个 `fastProperty` 断言保证 ampersand/pointer/builtin 类型识别 |
 | `Test/Unit/SymbolTableSpec.hs` | 单元 | 3 | 符号注册、作用域重影、可变/不可变标记 |
 | `Test/Unit/OwnershipBridgeSpec.hs` | 单元 | 3 | 所有权错误到符号表的同步/过滤、缺失错误的合成 |
 | `Test/Unit/CompilerSpec.hs` | 单元 | 5 | 编译器 happy-path、诊断串联、错误冒泡 |
 | `Test/Unit/CommandLineDebugSpec.hs` | 单元 | 2 | `--debug` / `--emit-ast` 标志解析 |
 | `Test/Unit/CLISpec.hs` | 单元 | 11 | `convert`/`check`/`build`/`run` 子命令参数解析、`--strict-embed` 透传、`--version` |
-| `Test/Unit/GoToolchainSpec.hs` | 单元 | 6 | `TYPUS_SKIP_GO_BUILD`/`TYPUS_FAKE_GO`、临时 Go 工程生成、`runGoCommand` 日志 |
+| `Test/Unit/CliRunnerSpec.hs` | 单元 | 3 | `Cli.Runner.runWithArgs` 的回退路径、`TYPUS_FAKE_STACK`/`TYPUS_SKIP_GO_BUILD` 支持 |
+| `Test/Unit/GoToolchainSpec.hs` | 单元 | 7 | `TYPUS_SKIP_GO_BUILD`/`TYPUS_FAKE_GO`、临时 Go 工程生成、`runGoCommand` 日志 |
 | `Test/Integration/AnalyzerSpec.hs` | 集成 | 20 | 依赖类型 + 所有权联动、CrossAnalyzer 错误聚合、severity 传播 |
 | `Test/Integration/FullProjectSpec.hs` | 集成 | 6 | `batchConvert`/`batchCheck`、Go executor 三态（recording/skipping/failing）|
 | `Test/Integration/IntegratedCompilerSpec.hs` | 集成 | 4 | Integrated compiler 输出、过滤后的 diagnostics、配置项 |
@@ -44,7 +46,7 @@
 | `Test/Integration/CLISpec.hs` | 集成 | 8 | 真实 `stack exec typus` 或 `Cli.Runner.runWithArgs` 的 `--version`、`convert/check/build/run`、`--strict-embed`、缺失入口/文件失败路径 |
 | `Test/Golden/CompilerSpec.hs` | Golden | 5 | `simple_go_code`、`statements_without_package`、`generic_type`、`advanced_ownership`、`type_system_valid` 五个 fixture 的源码对拍 |
 
-> QuickCheck/fastProperty 属性测试共 8 个：`DependentTypesSpec` 1 个、`TypeSystemSpec` 2 个（均需 PRODUCTION/FULL）、`UtilsSpec` 2 个、`ValueAnalysisSpec` 3 个。`FAST_TESTS` 模式会降低采样数量，但不会跳过后者。
+> QuickCheck/fastProperty 属性测试共 12 个：`DependentTypesSpec` 1 个、`TypeSystemSpec` 2 个、`OwnershipSpec` 2 个、`AnalyzerStateSpec` 2 个、`UtilsSpec` 2 个、`ValueAnalysisSpec` 3 个。`FAST_TESTS` 模式仅降低采样数量，不会跳过这些断言。
 
 ## 质量观察
 
@@ -65,9 +67,9 @@
 
 | 指标 | 文档/来源 | 实际数据 | 备注 |
 | --- | --- | --- | --- |
-| 总测试数量 | 425+（`TEST_ENHANCEMENT_SUMMARY.md` 第 90–105 行） | 199 个 HUnit `testCase` + 5 个 tasty-golden + 8 个 QuickCheck/fastProperty ≈ **212** | `rg -o "testCase \"" test | wc -l`（2025-11-23） + `Test.Golden.CompilerSpec` + `fastProperty/testProperty` 统计 |
-| QuickCheck 属性测试 | 300+（同上） | 8 个（其中 3 个需 `PRODUCTION`/`FULL` 宏，其余 5 个使用 `fastProperty`，即使在 `FAST_TESTS` 下也运行） | `rg -n "testProperty" test`、`rg -n "fastProperty" test` |
-| 端到端 / CLI 测试 | 50+ E2E & 7 CLI（同上） | `FullProjectSpec` 6 + `PipelineSpec` 3 + `Integration.CLISpec` 8（真实 CLI 冒烟），其余集成测试聚焦分析器/所有权 | 真实命中二进制的仍是 8 个 CLI 冒烟用例 |
+| 总测试数量 | 425+（`TEST_ENHANCEMENT_SUMMARY.md` 第 90–105 行） | 212 个 HUnit `testCase` + 5 个 tasty-golden + 12 个 QuickCheck/fastProperty ≈ **229** | `rg -o "testCase \"" test | wc -l`（2025-11-23） + `Test.Golden.CompilerSpec` + `fastProperty/testProperty` 统计 |
+| QuickCheck 属性测试 | 300+（同上） | 12 个（分布在 DependentTypes、TypeSystem、Ownership、AnalyzerState、Utils、ValueAnalysis，默认构建均会运行） | `rg -n "testProperty" test`、`rg -n "fastProperty" test` |
+| 端到端 / CLI 测试 | 50+ E2E & 7 CLI（同上） | `FullProjectSpec` 6 + `PipelineSpec` 3 + `Integration.CLISpec` 8（合计 17 个 E2E/CLI 测试，其中命中真实二进制的仍是 8 个 CLI 冒烟用例） | 真实命中二进制的仍是 8 个 CLI 冒烟用例 |
 | 覆盖率 | ≥70%（`TEST_ENHANCEMENT_SUMMARY.md` 第 117–125 行） | `coverage-report/summary.json` 标记为 "unavailable"，无 `.tix` | 需要重新运行 `stack test --coverage` 并生成报告 |
 
 ### 执行稳定性与外部依赖
