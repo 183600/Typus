@@ -8,6 +8,9 @@ module Ownership
   , analyzeOwnershipDebug
   , formatOwnershipErrors
   , lexAll
+  , Token(..)
+  , TokenKind(..)
+  , Sym(..)
   , parseProgram
   , builtInFunctions
   ) where
@@ -18,12 +21,13 @@ import Ownership.Analyzer
   , analyzeOwnershipFile
   , builtInFunctions
   )
+import Ownership.Common.Lexer (Token(..), TokenKind(..))
 import Ownership.Common.Types
   ( OwnershipAnalyzer
   , OwnershipError(..)
   , OwnershipType(..)
   , newOwnershipAnalyzer
   )
-import Ownership.Lexer (lexAll)
+import Ownership.Lexer (Sym(..), lexAll)
 import Ownership.Parser (parseProgram)
 import Ownership.Reporter (formatOwnershipErrors)
