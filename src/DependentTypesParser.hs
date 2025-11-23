@@ -381,7 +381,10 @@ parseFunctionParam :: Parser (String, TypeRef)
 parseFunctionParam = do
   nm <- identifier
   mTy <- MP.optional (colon *> parseTypeReference)
+  _ <- MP.optional (MP.try inlineWhere)
   pure (nm, fromMaybe tInt mTy)
+  where
+    inlineWhere = symbol "where" *> parseConstraints
 
 -- 跳过函数体（若存在）：平衡大括号
 skipBalancedBraces :: Parser ()
@@ -397,11 +400,13 @@ parseFuncDecl = do
   _ <- symbol "func"
   name <- identifier
   params <- parens (parseFunctionParam `MP.sepBy` comma)
-  ret <- MP.option tVoid (MP.try (arrow *> parseTypeReference))
+  ret <- MP.option tVoid (MP.try parseReturnType)
   cons <- MP.option [] (MP.try parseWhereClause)
   -- 可选函数体
   _ <- MP.optional (MP.try skipBalancedBraces)
   pure $ DependentFunction name params ret cons
+  where
+    parseReturnType = (arrow *> parseTypeReference) MP.<|> (colon *> parseTypeReference)
 
 -- 顶层定义（无恢复）
 parseTopDecl :: Parser DependentType

@@ -178,7 +178,6 @@ isBoundaryStart txt =
         , "type "
         , "var "
         , "const "
-        , "}"
         ]
 
 trimLeading :: String -> String

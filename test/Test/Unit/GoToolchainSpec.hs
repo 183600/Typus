@@ -83,7 +83,7 @@ tests =
     , testCase "runGoCommand logs when Go is skipped" $ do
         withEnvOverride "TYPUS_SKIP_GO_BUILD" (Just "1") $ do
           ref <- newIORef []
-          exec <- defaultGoExecutor (modifyIORef' ref . (:[]))
+          exec <- defaultGoExecutor (\msg -> modifyIORef' ref (msg :))
           runResult <- runExceptT (runGoCommand exec ["build", "./..."])
           case runResult of
             Left err -> assertFailure ("runGoCommand failed unexpectedly: " ++ show err)

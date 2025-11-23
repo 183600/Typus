@@ -2,7 +2,7 @@ module Test.Unit.OwnershipBridgeSpec (tests) where
 
 import Analyzer.OwnershipBridge (processOwnershipErrors)
 import Analyzer.State (newIntegratedAnalyzer)
-import Analyzer.Types (AnalyzerState(..), SymbolInfo(..))
+import Analyzer.Types (AnalyzerState(..), ErrorSeverity(..), SymbolInfo(..))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.State (runStateT)
 import qualified Data.Map.Strict as Map
