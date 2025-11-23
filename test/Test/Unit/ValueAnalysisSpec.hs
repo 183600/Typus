@@ -3,40 +3,52 @@ module Test.Unit.ValueAnalysisSpec (tests) where
 import Compiler.GoAst (GoModule, parseGoModule)
 import Compiler.ValueAnalysis
 import Data.List (sort)
+import System.FilePath ((</>))
 import qualified Test.QuickCheck as QC
 import TestSupport.QuickCheck (fastProperty)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 
+fixtureRoot :: FilePath
+fixtureRoot = "test" </> "fixtures" </> "value_analysis_project"
+
 tests :: TestTree
 tests =
     testGroup "ValueAnalysis"
-        [ testCase "handles comments, strings, and multi-line references" $ do
-            goModule <- parseModule sampleSource
-            let infos = analyzeValueSemantics goModule
-                kindOf = kindsFor infos
-                sortedCopies = sort (extractValueCopyVars goModule)
+        [ testGroup "Composite fixture: values.go"
+            [ testCase "classifies literal and reference bindings" $ do
+                goModule <- loadFixtureModule "values.go"
+                let infos = analyzeValueSemantics goModule
+                    kindOf = kindsFor infos
+                kindOf "value" @?= [ValueCopy]
+                kindOf "text" @?= [ValueCopy]
+                kindOf "numbers" @?= [Reference]
+                kindOf "first" @?= [ValueCopy]
+                kindOf "second" @?= [Reference]
+                kindOf "groupedValue" @?= [ValueCopy]
+                kindOf "groupedRef" @?= [Reference]
+                kindOf "inner" @?= [Reference]
+                kindOf "lookup" @?= [Reference]
+                kindOf "fake" @?= []
 
-            kindOf "value" @?= [ValueCopy]
-            kindOf "text" @?= [ValueCopy]
-            kindOf "numbers" @?= [Reference]
-            kindOf "first" @?= [ValueCopy]
-            kindOf "second" @?= [Reference]
-            kindOf "groupedValue" @?= [ValueCopy]
-            kindOf "groupedRef" @?= [Reference]
-            kindOf "inner" @?= [Reference]
-            kindOf "lookup" @?= [Reference]
-            kindOf "fake" @?= []
-            kindOf "customStruct" @?= [ValueCopy]
-            kindOf "customAlias" @?= [ValueCopy]
-            kindOf "groupStruct" @?= [ValueCopy]
-            kindOf "groupAlias" @?= [ValueCopy]
-            kindOf "customPointer" @?= [Reference]
+            , testCase "recognises custom structs and grouped aliases" $ do
+                goModule <- loadFixtureModule "values.go"
+                let infos = analyzeValueSemantics goModule
+                    kindOf = kindsFor infos
+                kindOf "customStruct" @?= [ValueCopy]
+                kindOf "customAlias" @?= [ValueCopy]
+                kindOf "groupStruct" @?= [ValueCopy]
+                kindOf "groupAlias" @?= [ValueCopy]
+                kindOf "customPointer" @?= [Reference]
 
-            sortedCopies @?= ["customAlias", "customStruct", "first", "groupAlias", "groupStruct", "groupedValue", "text", "value"]
+            , testCase "extracts ordered value copies from the composite fixture" $ do
+                goModule <- loadFixtureModule "values.go"
+                let sortedCopies = sort (extractValueCopyVars goModule)
+                sortedCopies @?= ["customAlias", "customStruct", "first", "groupAlias", "groupStruct", "groupedValue", "text", "value"]
+            ]
 
         , testCase "classifies short declarations inside guards" $ do
-            goModule <- parseModule controlFlowSource
+            goModule <- loadFixtureModule "control_flow.go"
             let infos = analyzeValueSemantics goModule
                 kindOf = kindsFor infos
             kindOf "immediate" @?= [ValueCopy]
@@ -45,7 +57,7 @@ tests =
             kindOf "ref" @?= [Reference]
 
         , testCase "handles composite literals and builder patterns" $ do
-            goModule <- parseModule compositeLiteralSource
+            goModule <- loadFixtureModule "composites.go"
             let infos = analyzeValueSemantics goModule
                 kindOf = kindsFor infos
             kindOf "first" @?= [Reference]
@@ -62,105 +74,16 @@ tests =
             ]
         ]
 
+loadFixtureModule :: FilePath -> IO GoModule
+loadFixtureModule relative = do
+    contents <- readFile (fixtureRoot </> relative)
+    parseModule contents
+
 parseModule :: String -> IO GoModule
 parseModule source =
     case parseGoModule (lines source) of
         Left err -> assertFailure ("Failed to parse Go module: " ++ err)
         Right goMod -> pure goMod
-
-sampleSource :: String
-sampleSource = unlines
-    [ "package main"
-    , ""
-    , "var ("
-    , "    numbersList = []int{1, 2, 3}"
-    , "    lookup = map[string]int{"
-    , "        \"a\": 1,"
-    , "    }"
-    , "    groupedValue, groupedRef = 5, make([]byte, 0)"
-    , ")"
-    , ""
-    , "type MyStruct struct {"
-    , "    ID int"
-    , "}"
-    , ""
-    , "type MyAlias = MyStruct"
-    , ""
-    , "type MyNumber int"
-    , ""
-    , "type ("
-    , "    ExportedGrouped struct {"
-    , "        Name string"
-    , "    }"
-    , "    ExportedAlias = ExportedGrouped"
-    , ")"
-    , ""
-    , "func example(items []string) {"
-    , "    // fake := make([]int, 0)"
-    , "    value := 42"
-    , "    text := \"make(inside)\""
-    , "    numbers := make([]int,"
-    , "        0)"
-    , "    first, second := 1, make([]int, 1)"
-    , "    for _, entry := range items {"
-    , "        inner := make([]string, 0)"
-    , "    }"
-    , "}"
-    , ""
-    , "func custom() {"
-    , "    customStruct := MyStruct{ID: 1}"
-    , "    customAlias := MyAlias{ID: 2}"
-    , "    groupStruct := ExportedGrouped{Name: \"ok\"}"
-    , "    groupAlias := ExportedAlias{Name: \"alias\"}"
-    , "    customPointer := &MyStruct{ID: 3}"
-    , "}"
-    ]
-
-controlFlowSource :: String
-controlFlowSource = unlines
-    [ "package main"
-    , "func guard(resources []string) {"
-    , "    if immediate := \"value\"; immediate != \"\" {"
-    , "        pointer := &resources"
-    , "        println(immediate, pointer)"
-    , "    }"
-    , "    switch alias := []int{1, 2}; alias[0] {"
-    , "    case 1:"
-    , "        ref := make([]byte, 0)"
-    , "        _ = ref"
-    , "    }"
-    , "}"
-    ]
-
-compositeLiteralSource :: String
-compositeLiteralSource = unlines
-    [ "package main"
-    , ""
-    , "type Buffer struct {"
-    , "    ID int"
-    , "}"
-    , ""
-    , "func build() {"
-    , "    first, second := map[string]int{\"a\": 1}, Buffer{"
-    , "        ID: 1,"
-    , "    }"
-    , "    alias := Buffer{"
-    , "        ID: 2,"
-    , "    }"
-    , "    trailing := make([]int,"
-    , "        2,"
-    , "    )"
-    , "    _ = first"
-    , "    _ = second"
-    , "    _ = alias"
-    , "    _ = trailing"
-    , "}"
-    , ""
-    , "var ("
-    , "    pointer = new(Buffer)"
-    , "    fromMake = make([]byte, 0)"
-    , ")"
-    ]
 
 kindsFor :: [ValueInfo] -> String -> [ValueKind]
 kindsFor infos target =

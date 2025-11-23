@@ -2,6 +2,8 @@ module Test.Unit.Tests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 
+import qualified Test.Unit.AnalyzerStateSpec
+import qualified Test.Unit.CliRunnerSpec
 import qualified Test.Unit.CLISpec
 import qualified Test.Unit.CommandLineDebugSpec
 import qualified Test.Unit.CompilerSpec
@@ -23,7 +25,8 @@ import qualified Test.Unit.UtilsSpec
 tests :: TestTree
 tests =
   testGroup "Unit"
-    [ Test.Unit.ParserSpec.tests
+    [ Test.Unit.AnalyzerStateSpec.tests
+    , Test.Unit.ParserSpec.tests
     , Test.Unit.OwnershipSpec.tests
     , Test.Unit.OwnershipBridgeSpec.tests
     , Test.Unit.DependentTypesSpec.tests
@@ -35,6 +38,7 @@ tests =
     , Test.Unit.EmbedAssetsSpec.tests
     , Test.Unit.GoToolchainSpec.tests
     , Test.Unit.CommandLineDebugSpec.tests
+    , Test.Unit.CliRunnerSpec.tests
     , Test.Unit.CLISpec.tests
     , Test.Unit.VerbositySpec.tests
     , Test.Unit.UtilsSpec.tests

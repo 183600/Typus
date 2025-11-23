@@ -119,6 +119,7 @@ dmypy.json
 # Generated files
 *.go
 !test/golden/fixtures/*.go
+!test/fixtures/value_analysis_project/*.go
 *.o
 *.out
 *.so
