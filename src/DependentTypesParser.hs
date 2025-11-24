@@ -39,7 +39,7 @@ import qualified Data.List as List
 
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict (Map)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, maybeToList)
 import Data.Void (Void)
 import Text.Megaparsec
   ( Parsec, (<?>)
@@ -212,10 +212,55 @@ type DependentParseResult = Either String ([DependentType], DependentTypesParser
 
 -- 通用类型引用：Simple | Generic<...>
 parseTypeReference :: Parser TypeRef
-parseTypeReference = do
-  name <- identifier
+parseTypeReference =
+      MP.try parseFuncType
+  MP.<|> MP.try parsePointerType
+  MP.<|> MP.try parseSliceType
+  MP.<|> MP.try parseChanType
+  MP.<|> parseNamedType
+
+parseNamedType :: Parser TypeRef
+parseNamedType = do
+  name <- qualifiedTypeName
   args <- MP.option [] (angles (parseTypeReference `MP.sepBy1` comma))
   pure $ TypeRef name args
+
+parsePointerType :: Parser TypeRef
+parsePointerType = do
+  _ <- symbol "*"
+  inner <- parseTypeReference
+  pure $ TypeRef "*" [inner]
+
+parseSliceType :: Parser TypeRef
+parseSliceType = do
+  _ <- symbol "["
+  _ <- symbol "]"
+  inner <- parseTypeReference
+  pure $ TypeRef "[]" [inner]
+
+parseChanType :: Parser TypeRef
+parseChanType = do
+  _ <- symbol "chan"
+  inner <- parseTypeReference
+  pure $ TypeRef "chan" [inner]
+
+parseFuncType :: Parser TypeRef
+parseFuncType = do
+  _ <- symbol "func"
+  paramTypes <- parens (parseTypeReference `MP.sepBy` comma)
+  returnType <- MP.optional parseFuncReturnType
+  pure $ TypeRef "func" (paramTypes ++ maybeToList returnType)
+
+parseFuncReturnType :: Parser TypeRef
+parseFuncReturnType = do
+  _ <- MP.try (symbol "->") MP.<|> MP.try colon
+  parseTypeReference
+
+qualifiedTypeName :: Parser String
+qualifiedTypeName = do
+  first <- identifier
+  rest <- MP.many (char '.' >> identifier)
+  pure (List.intercalate "." (first : rest))
 
 -- 常用的内置类型便捷值
 tInt :: TypeRef
@@ -292,9 +337,24 @@ parseConstraint =
   MP.<|> MP.try nonemptyConstraint
   MP.<|> MP.try typeClassConstraint
   MP.<|> MP.try compareConstraint
-  MP.<|> do
-        raw <- lexeme $ MP.some (MP.satisfy (\c -> c /= '&' && c /= ',' && c /= '\n' && c /= '\r'))
-        pure $ CustomConstraint (trim raw) ""
+  MP.<|> customConstraint
+
+customConstraint :: Parser TypeConstraint
+customConstraint = do
+  raw <- lexeme $ MP.manyTill MP.anySingle constraintTerminator
+  pure $ CustomConstraint (trim raw) ""
+  where
+    constraintTerminator =
+      MP.lookAhead $
+            void (symbol "&")
+        MP.<|> void (symbol ",")
+        MP.<|> void (symbol "struct")
+        MP.<|> void (symbol "type")
+        MP.<|> void (symbol "func")
+        MP.<|> void (symbol "alias")
+        MP.<|> void (char '\n')
+        MP.<|> void (char '\r')
+        MP.<|> MP.eof
 
 parseConstraints :: Parser [TypeConstraint]
 parseConstraints = parseConstraint `MP.sepBy1` symbol "&"
@@ -329,11 +389,11 @@ parseTypeParameterList =
 -- 结构体解析
 --------------------------------------------------------------------------------
 
--- 字段：name : TypeRef
+-- 字段：name [:] TypeRef（冒号可选以兼容 Go 风格）
 parseField :: Parser Field
 parseField = do
   nm <- identifier
-  _  <- colon
+  _  <- MP.optional colon
   ty <- parseTypeReference
   pure $ Field nm ty
 
@@ -356,15 +416,18 @@ parseStructBody = do
 -- 顶层定义解析
 --------------------------------------------------------------------------------
 
--- type Name [<params>] struct {...} [where ...]
+-- type Name [<params>] [where ...] [struct {...}] [where ...]
 parseTypeDecl :: Parser DependentType
 parseTypeDecl = do
   _ <- symbol "type"
   name <- identifier
   params <- MP.option [] (MP.try parseTypeParameterList)
-  body <- parseStructBody
-  cons <- MP.option [] (MP.try parseWhereClause)
-  pure $ TypeDecl name params body cons
+  preCons <- MP.option [] (MP.try parseWhereClause)
+  body <- MP.optional (MP.try parseStructBody)
+  postCons <- MP.option [] (MP.try parseWhereClause)
+  let typeBody = maybe (StructBody []) id body
+      cons = preCons ++ postCons
+  pure $ TypeDecl name params typeBody cons
 
 -- alias Name = TypeRef [where ...]
 parseAlias :: Parser DependentType

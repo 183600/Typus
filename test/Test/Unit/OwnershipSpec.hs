@@ -5,9 +5,15 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ( (@?=), assertBool, testCase )
 import qualified Test.QuickCheck as QC
 
-import Ownership (OwnershipError(..), analyzeOwnership, builtInFunctions, lexAll)
-import Ownership.Common.Lexer (Token(..), TokenKind(..))
-import Ownership.Lexer (Sym(..))
+import Ownership
+  ( OwnershipError(..)
+  , Token(..)
+  , TokenKind(..)
+  , Sym(..)
+  , analyzeOwnership
+  , builtInFunctions
+  , lexAll
+  )
 import TestSupport.QuickCheck (fastProperty)
 
 tests :: TestTree
