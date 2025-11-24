@@ -168,34 +168,39 @@ analyzeStmt st = case st of
   SLetDecl name mInit _ -> do
     declareVar name
     maybe (pure ()) (analyzeExprForInitWithName name) mInit
-  SAssignStmt name op rhs _ ->
-    case op of
-      OpWalrus ->
-        case rhs of
-          EUnary UBorrow (EIdent sourceName _) _ -> do
-            borrowVar False sourceName
-            declareVar name
-            registerBorrowVar name sourceName False
-            updateVarTop sourceName (finalizeSharedBorrow name)
-          EUnary UMutBorrow (EIdent sourceName _) _ -> do
-            borrowVar True sourceName
-            declareVar name
-            registerBorrowVar name sourceName True
-            updateVarTop sourceName (finalizeMutBorrow name)
-          _ -> do
-            declareVar name
+  SAssignStmt names op rhs _ ->
+    case names of
+      [] -> pure ()
+      (name:others) ->
+        case op of
+          OpWalrus ->
             case rhs of
-              ELitStr _ _ -> updateVarTop name (\v -> v { vsIsValue = True })
-              ELitNum _ _ -> updateVarTop name (\v -> v { vsIsValue = True })
-              _           -> pure ()
+              EUnary UBorrow (EIdent sourceName _) _ -> do
+                borrowVar False sourceName
+                declareVar name
+                mapM_ declareVar others
+                registerBorrowVar name sourceName False
+                updateVarTop sourceName (finalizeSharedBorrow name)
+              EUnary UMutBorrow (EIdent sourceName _) _ -> do
+                borrowVar True sourceName
+                declareVar name
+                mapM_ declareVar others
+                registerBorrowVar name sourceName True
+                updateVarTop sourceName (finalizeMutBorrow name)
+              _ -> do
+                declareVar name
+                mapM_ declareVar others
+                case rhs of
+                  ELitStr _ _ -> updateVarTop name (\v -> v { vsIsValue = True })
+                  ELitNum _ _ -> updateVarTop name (\v -> v { vsIsValue = True })
+                  _           -> pure ()
+                analyzeAsRHS rhs
+          OpAssign -> do
+            ensureDeclared name
+            mapM_ ensureDeclared others
             analyzeAsRHS rhs
-      OpAssign -> do
-        mv <- lookupVarTop name
-        case mv of
-          Nothing -> declareVar name
-          Just _  -> pure ()
-        analyzeAsRHS rhs
-        updateVarTop name (\vv -> vv { vsMoved = False, vsBorrowedBy = [], vsMutBorrower = Nothing, vsIsValue = vsIsValue vv })
+            resetAssigned name
+            mapM_ resetAssigned others
   SExpr e _ -> analyzeExprUse e
 
 --------------------------------------------------------------------------------
@@ -340,6 +345,17 @@ declareVar n = do
   let lvl = aScope st
       initial = VarState { vsScope = lvl, vsMoved = False, vsBorrowedBy = [], vsMutBorrower = Nothing, vsIsValue = isLikelyValueVar n }
   pushVar n initial
+
+ensureDeclared :: Name -> State AState ()
+ensureDeclared name = do
+  mv <- lookupVarTop name
+  case mv of
+    Nothing -> declareVar name
+    Just _  -> pure ()
+
+resetAssigned :: Name -> State AState ()
+resetAssigned name =
+  updateVarTop name (\v -> v { vsMoved = False, vsBorrowedBy = [], vsMutBorrower = Nothing, vsIsValue = vsIsValue v })
 
 analyzeExprForInitWithName :: Name -> Expr -> State AState ()
 analyzeExprForInitWithName name expr = do
