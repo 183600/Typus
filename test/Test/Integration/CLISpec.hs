@@ -2,7 +2,7 @@ module Test.Integration.CLISpec (tests) where
 
 import qualified Cli.Runner as CliRunner
 import Control.Exception (bracket_)
-import Data.List (isInfixOf)
+import Data.List (isInfixOf, isPrefixOf)
 import System.Directory (copyFile, doesFileExist, findExecutable)
 import System.Environment (getEnvironment, lookupEnv, setEnv, unsetEnv)
 import System.Exit (ExitCode(..))
@@ -102,7 +102,12 @@ runViaStack stackPath args = do
       processSpec = (proc stackPath ("exec" : "typus" : "--" : args))
         { env = Just sanitizedEnv
         }
-  readCreateProcessWithExitCode processSpec ""
+  (exitCode, stdoutOutput, stderrOutput) <- readCreateProcessWithExitCode processSpec ""
+  let sanitizedStderr = stripStackWarnings stderrOutput
+  pure (exitCode, stdoutOutput, sanitizedStderr)
+  where
+    stripStackWarnings = unlines . filter (not . isStackNoise) . lines
+    isStackNoise line = "Stack has not been tested with" `isPrefixOf` line
 
 runInProcess :: [String] -> IO (ExitCode, String, String)
 runInProcess args =

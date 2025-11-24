@@ -46,6 +46,7 @@ data FunctionParam = FunctionParam
 data FunctionSignature = FunctionSignature
     { fsParams :: [FunctionParam]
     , fsReturns :: [Type]
+    , fsTypeParams :: [String]
     } deriving (Eq, Show)
 
 -- | Environment containing discovered variable and function types.
@@ -271,8 +272,8 @@ checkCall TypeEnv{..} context CallExpr{..} =
                 else []
             ]
 
-    checkArgumentTypes FunctionSignature{..} =
-        let params = fsParams
+    checkArgumentTypes signature =
+        let params = fsParams signature
             (fixedParams, variadicParam) =
                 case params of
                     [] -> ([], Nothing)
@@ -284,14 +285,16 @@ checkCall TypeEnv{..} context CallExpr{..} =
                 | otherwise = fpType <$> variadicParam
             indexedArgs :: [(Int, String)]
             indexedArgs = zip [0..] callArgs
-        in concatMap (checkArg expectedForIdx) indexedArgs
+        in concatMap (checkArg (fsTypeParams signature) expectedForIdx) indexedArgs
 
-    checkArg expected (idx, argText) =
+    checkArg typeParams expected (idx, argText) =
         case expected idx of
             Nothing -> []
             Just expectedType ->
                 let actualType = inferArgumentType (TypeEnv varTypes functionTypes) argText
-                in if typesCompatible expectedType actualType || actualType == UnknownType
+                    matchesGeneric = expectedMatchesGeneric typeParams expectedType
+                    matchesConcrete = typesCompatible expectedType actualType || actualType == UnknownType
+                in if matchesGeneric || matchesConcrete
                       then []
                       else [TypeError context (callName ++ " argument " ++ show (idx + 1) ++
                                 ": expected type " ++ showType expectedType ++
@@ -353,11 +356,15 @@ parseFunctionSignature rawHeader = do
     nameAndRest <- pure afterTrim
     let (namePart, rest0) = break (`elem` "([") nameAndRest
     guard (not (null namePart))
-    let rest1 = dropWhile isSpace rest0
-    afterGenericsSource <-
+    let inlineTypeParams = parseLegacyTypeParams namePart
+        rest1 = dropWhile isSpace rest0
+    (bracketTypeParams, afterGenericsSource) <-
         case rest1 of
-            '[' : _ -> fmap snd (consumeBalanced '[' ']' rest1)
-            _ -> Just rest1
+            '[' : _ -> do
+                (rawParams, afterBracket) <- consumeBalanced '[' ']' rest1
+                pure (parseBracketTypeParams rawParams, afterBracket)
+            _ -> pure ([], rest1)
+    let typeParams = if null bracketTypeParams then inlineTypeParams else bracketTypeParams
     (_, paramsSection, afterParams) <- consumeParenSection afterGenericsSource
     let paramSegments = splitTopLevel ',' paramsSection
         params = concatMap parseParamSegment paramSegments
@@ -365,6 +372,7 @@ parseFunctionSignature rawHeader = do
     pure FunctionSignature
         { fsParams = params
         , fsReturns = returns
+        , fsTypeParams = typeParams
         }
   where
     stripPrefixWith prefix s
@@ -373,6 +381,35 @@ parseFunctionSignature rawHeader = do
 
     guard True = Just ()
     guard False = Nothing
+
+    parseLegacyTypeParams :: String -> [String]
+    parseLegacyTypeParams text =
+        case break (== '<') text of
+            (_, []) -> []
+            (_, '<':rest) ->
+                case span (/= '>') rest of
+                    (inner, '>':_) -> parseTypeParamNames inner
+                    _ -> []
+            _ -> []
+
+    parseBracketTypeParams :: String -> [String]
+    parseBracketTypeParams = parseTypeParamNames
+
+    parseTypeParamNames :: String -> [String]
+    parseTypeParamNames raw =
+        [ name
+        | segment <- splitTopLevel ',' raw
+        , let name = takeParamName segment
+        , not (null name)
+        ]
+
+    takeParamName :: String -> String
+    takeParamName segment =
+        let cleaned = trim segment
+        in takeWhile isParamNameChar cleaned
+
+    isParamNameChar :: Char -> Bool
+    isParamNameChar c = isAlphaNum c || c == '_'
 
 parseParamSegment :: String -> [FunctionParam]
 parseParamSegment rawSegment =
@@ -749,6 +786,25 @@ typesCompatible :: Type -> Type -> Bool
 typesCompatible UnknownType _ = True
 typesCompatible _ UnknownType = True
 typesCompatible (TypeName a) (TypeName b) = normalizeTypeName a == normalizeTypeName b
+
+expectedMatchesGeneric :: [String] -> Type -> Bool
+expectedMatchesGeneric _ UnknownType = False
+expectedMatchesGeneric params (TypeName name) =
+    let tokens = splitTypeTokens (normalizeTypeName name)
+    in any (`elem` tokens) params
+
+splitTypeTokens :: String -> [String]
+splitTypeTokens = go [] []
+  where
+    go acc current [] =
+        let acc' = if null current then acc else reverse current : acc
+        in reverse acc'
+    go acc current (c:cs)
+        | isIdentChar c = go acc (c:current) cs
+        | null current = go acc [] cs
+        | otherwise = go (reverse current : acc) [] cs
+
+    isIdentChar ch = isAlphaNum ch || ch == '_'
 
 showType :: Type -> String
 showType (TypeName n) = n
