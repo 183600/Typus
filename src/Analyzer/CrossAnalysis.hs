@@ -128,9 +128,9 @@ collectOccurrences tracked (Program stmts) = goStmts 0 stmts
                 record name depth ++ maybe [] (goExpr depth) mInit
             SLetDecl name mInit _ ->
                 record name depth ++ maybe [] (goExpr depth) mInit
-            SAssignStmt name _ expr _ ->
-                record name depth ++ goExpr depth expr
-            SExpr expr _ ->
+            SAssignStmt names _ expr _ ->
+              concatMap (`record` depth) names ++ goExpr depth expr
+
                 goExpr depth expr
             SBlock body _ ->
                 goStmts (depth + 1) body

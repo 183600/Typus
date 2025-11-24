@@ -49,7 +49,7 @@ getExprPos e = case e of
 data Stmt
   = SVarDecl Name (Maybe Expr) Pos
   | SLetDecl Name (Maybe Expr) Pos
-  | SAssignStmt Name AssignOp Expr Pos
+  | SAssignStmt [Name] AssignOp Expr Pos
   | SExpr Expr Pos
   | SBlock [Stmt] Pos
   | SFunc [Stmt] Pos
@@ -125,11 +125,12 @@ parseStmt xs0 =
          _ -> (blockStmt, rest')
 
     (t:rest) | isKw KwIf t ->
-      let (_, afterCond) = consumeUntilLBrace rest
+      let (condTokens, afterCond) = consumeUntilLBrace rest
+          initStmts = extractLeadingInitializers condTokens
           (blockStmt, rest') = case afterCond of
             [] -> (SBlock [] (Pos 0 0), [])
             (t':rest'') -> parseStmt (t' : rest'')
-      in (blockStmt, rest')
+      in (prependInitializers initStmts blockStmt, rest')
 
     (t1:t2:rest)
       | isKw KwVar t1
@@ -149,17 +150,15 @@ parseStmt xs0 =
           let (mInit, rest') = parseOptionalInit rest
           in (SLetDecl name mInit pName, rest')
 
-    (t1:t2:rest)
-      | Just (name, pName) <- tokId t1
-      , Token (TSym SWalrus) _ <- t2 ->
-          let (rhs, rest') = parseExprUntilEnd rest
-          in (SAssignStmt name OpWalrus rhs pName, rest')
-
-    (t1:t2:rest)
-      | Just (name, pName) <- tokId t1
-      , Token (TSym SAssign) _ <- t2 ->
-          let (rhs, rest') = parseExprUntilEnd rest
-          in (SAssignStmt name OpAssign rhs pName, rest')
+    xsWithId@(Token (TId _) _ : _) ->
+      case parseIdentifierList xsWithId of
+        Just (names, pName, Token (TSym SWalrus) _ : restAfterOp) ->
+          let (rhs, rest') = parseExprUntilEnd restAfterOp
+          in (SAssignStmt names OpWalrus rhs pName, rest')
+        Just (names, pName, Token (TSym SAssign) _ : restAfterOp) ->
+          let (rhs, rest') = parseExprUntilEnd restAfterOp
+          in (SAssignStmt names OpAssign rhs pName, rest')
+        _ -> parseAsExpr xsWithId
 
     (Token (TSym SSemicolon) _ : rest) ->
       let (nextStmt, rest') = case skipNL rest of
@@ -167,10 +166,12 @@ parseStmt xs0 =
             ts -> parseStmt ts
       in (nextStmt, rest')
 
-    _ ->
-      let (e, rest) = parseExprUntilEnd xs
-          p = getExprPos e
-      in (SExpr e p, rest)
+    _ -> parseAsExpr xs
+  where
+    parseAsExpr ts =
+      let (expr, restTokens) = parseExprUntilEnd ts
+          pos = getExprPos expr
+      in (SExpr expr pos, restTokens)
 
 parseBlockBody :: [OwnershipToken] -> ([Stmt], [OwnershipToken])
 parseBlockBody xs = go [] xs (0 :: Int)
@@ -180,9 +181,9 @@ parseBlockBody xs = go [] xs (0 :: Int)
       [] -> (reverse acc, [])
       ts' ->
         if depth > 1000
-        then (reverse acc, ts')
-        else let (st, rest') = parseStmt ts'
-             in go (st:acc) rest' (depth + 1)
+          then (reverse acc, ts')
+          else let (st, rest') = parseStmt ts'
+               in go (st:acc) rest' (depth + 1)
 
 skipBalancedBlock :: [OwnershipToken] -> [OwnershipToken]
 skipBalancedBlock = go (0 :: Int) False
@@ -242,12 +243,56 @@ parseVarDeclWithOptionalType xs0 =
           _ -> (Nothing, xs0)
       _ -> (Nothing, xs0)
 
-parseExprUntilEnd :: [OwnershipToken] -> (Expr, [OwnershipToken])
-parseExprUntilEnd xs =
-  let (ts, rest) = takeExprTokens xs
-  in (tokensToExpr ts, rest)
+  parseIdentifierList :: [OwnershipToken] -> Maybe ([Name], Pos, [OwnershipToken])
+  parseIdentifierList (Token (TId name) pos : rest) = Just (collect [name] pos rest)
+        where
+          collect names firstPos (Token (TSym SComma) _ : Token (TId next) _ : xs) = collect (names ++ [next]) firstPos xs
+          collect names firstPos xs = (names, firstPos, xs)
+      parseIdentifierList _ = Nothing
 
-takeExprTokens :: [OwnershipToken] -> ([OwnershipToken], [OwnershipToken])
+  parseSimpleWalrus :: [OwnershipToken] -> Maybe ([Name], Expr, Pos)
+  parseSimpleWalrus tokens = do
+        (names, pos, restAfterNames) <- parseIdentifierList tokens
+        case restAfterNames of
+          Token (TSym SWalrus) _ : rhsTokens ->
+            let (expr, _) = parseExprUntilEnd rhsTokens
+            in Just (names, expr, pos)
+          _ -> Nothing
+
+  extractLeadingInitializers :: [OwnershipToken] -> [Stmt]
+      extractLeadingInitializers tokens =
+        case break (isSym SSemicolon) tokens of
+          (beforeSemi, _) ->
+            case parseSimpleWalrus beforeSemi of
+              Just (names, expr, pos) -> [SAssignStmt names OpWalrus expr pos]
+              Nothing -> []
+
+  parseExprUntilEnd :: [OwnershipToken] -> (Expr, [OwnershipToken])
+      parseExprUntilEnd xs =
+        let (ts, rest) = takeExprTokens xs
+        in (tokensToExpr ts, rest)
+
+  prependInitializers :: [Stmt] -> Stmt -> Stmt
+  prependInitializers [] stmt = stmt
+      prependInitializers initStmts (SBlock body p) = SBlock (initStmts ++ body) p
+      prependInitializers initStmts (SDirectiveBlock dir body p) =
+        SBlock (initStmts ++ [SDirectiveBlock dir body p]) p
+      prependInitializers initStmts stmt =
+        SBlock (initStmts ++ [stmt]) (stmtPos stmt)
+
+  stmtPos :: Stmt -> Pos
+      stmtPos st = case st of
+        SVarDecl _ _ p -> p
+        SLetDecl _ _ p -> p
+        SAssignStmt _ _ _ p -> p
+        SExpr _ p -> p
+        SBlock _ p -> p
+        SFunc _ p -> p
+        SFor _ p -> p
+        SDirectiveLine _ p -> p
+        SDirectiveBlock _ _ p -> p
+
+
 takeExprTokens = go (0 :: Int) (0 :: Int) (0 :: Int) []
   where
     stopTok t

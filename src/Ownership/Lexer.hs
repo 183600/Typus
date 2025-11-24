@@ -13,7 +13,7 @@ import Ownership.Common.Lexer (Token(..), LexerSpec(..), lexWithSpec)
 data Keyword
   = KwVar | KwLet | KwFunc | KwReturn | KwIf | KwElse | KwFor
   | KwPackage | KwImport | KwType | KwStruct | KwInterface | KwConst
-  | KwMut | KwTrue | KwFalse
+  | KwMut | KwTrue | KwFalse | KwGo | KwDefer
   deriving (Eq, Show)
 
 data Sym
@@ -42,6 +42,8 @@ kwFromStr s = case s of
   "mut"     -> Just KwMut
   "true"    -> Just KwTrue
   "false"   -> Just KwFalse
+  "go"      -> Just KwGo
+  "defer"   -> Just KwDefer
   _         -> Nothing
 
 ownershipLexerSpec :: LexerSpec Keyword Sym

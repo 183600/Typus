@@ -30,8 +30,14 @@ checkOwnership typusFile = runOwnershipAnalysis typusFile extractValueCopyVarsLe
 
 checkOwnershipWithValueInfo :: TypusFile -> [ValueInfo] -> CompilerResult ()
 checkOwnershipWithValueInfo typusFile valueInfos =
-    let valueCopyVars = [viName info | info <- valueInfos, viKind info == ValueCopy]
-    in runOwnershipAnalysis typusFile (const valueCopyVars)
+    let semanticValueCopies = [viName info | info <- valueInfos, viKind info == ValueCopy]
+        determineValueCopies content =
+            semanticValueCopies ++
+                [ legacyVar
+                | legacyVar <- extractValueCopyVarsLegacy content
+                , legacyVar `notElem` semanticValueCopies
+                ]
+    in runOwnershipAnalysis typusFile determineValueCopies
 
 runOwnershipAnalysis :: TypusFile -> (String -> [String]) -> CompilerResult ()
 runOwnershipAnalysis typusFile determineValueCopies =
@@ -168,8 +174,10 @@ extractValueCopyVarsLegacy src =
 
 isIgnorableOwnershipError :: [String] -> OwnershipError -> Bool
 isIgnorableOwnershipError valueCopyVars err = case err of
-    UseAfterMove v -> v `elem` valueCopyVars
-    OutOfScope v   -> v `elem` ownershipKeywords
+    UseAfterMove v   -> v `elem` valueCopyVars
+    DoubleMove v _   -> v `elem` valueCopyVars
+    BorrowWhileMoved v -> v `elem` valueCopyVars
+    OutOfScope v     -> v `elem` ownershipKeywords
     _ -> False
   where
     ownershipKeywords = ["owned", "mut", "borrow", "borrowed"]
