@@ -391,7 +391,9 @@ customConstraint = do
         MP.<|> MP.eof
 
 parseConstraints :: Parser [TypeConstraint]
-parseConstraints = parseConstraint `MP.sepBy1` symbol "&"
+parseConstraints = parseConstraint `MP.sepBy1` constraintSeparator
+  where
+    constraintSeparator = void (symbol "&") MP.<|> void (symbol ",")
 
 parseWhereClause :: Parser [TypeConstraint]
 parseWhereClause = do

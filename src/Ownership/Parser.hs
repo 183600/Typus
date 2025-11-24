@@ -9,8 +9,9 @@ module Ownership.Parser
   , parseProgram
   ) where
 
-import Data.Char (isSpace)
-import Data.Maybe (mapMaybe)
+import Data.Char (isSpace, isLower)
+import Data.List (nub)
+import Data.Maybe (mapMaybe, maybeToList)
 import qualified Data.Map.Strict as Map
 
 import Ownership.Common.Lexer (Pos(..), Token(..), TokenKind(..))
@@ -31,6 +32,7 @@ data Directive = Directive (Map.Map String String) deriving (Eq, Show)
 data Expr
   = EIdent Name Pos
   | ECall Name [Expr] Pos
+  | EMethodCall Name Expr [Expr] Pos
   | EUnary UnaryOp Expr Pos
   | ELitStr String Pos
   | ELitNum String Pos
@@ -39,12 +41,13 @@ data Expr
 
 getExprPos :: Expr -> Pos
 getExprPos e = case e of
-  EIdent _ p   -> p
-  ECall _ _ p  -> p
-  EUnary _ _ p -> p
-  ELitStr _ p  -> p
-  ELitNum _ p  -> p
-  EUnknown _ p -> p
+  EIdent _ p          -> p
+  ECall _ _ p         -> p
+  EMethodCall _ _ _ p -> p
+  EUnary _ _ p        -> p
+  ELitStr _ p         -> p
+  ELitNum _ p         -> p
+  EUnknown _ p        -> p
 
 data Stmt
   = SVarDecl Name (Maybe Expr) Pos
@@ -115,13 +118,15 @@ parseStmt xs0 =
       in (SExpr (EUnknown [] (Pos 0 0)) (Pos 0 0), rest')
 
     (t:rest) | isKw KwFunc t ->
-      let (_, afterSig) = consumeUntilLBrace rest
+      let (sigTokens, afterSig) = consumeUntilLBrace rest
+          paramNames = extractFunctionBindings sigTokens
+          injectParams p body = prependParamDecls paramNames p body
           (blockStmt, rest') = case afterSig of
             [] -> (SBlock [] (Pos 0 0), [])
             (t':rest'') -> parseStmt (t' : rest'')
       in case blockStmt of
-         SBlock body p -> (SFunc body p, rest')
-         SDirectiveBlock dir body p -> (SFunc [SDirectiveBlock dir body p] p, rest')
+         SBlock body p -> (SFunc (injectParams p body) p, rest')
+         SDirectiveBlock dir body p -> (SFunc (injectParams p [SDirectiveBlock dir body p]) p, rest')
          _ -> (blockStmt, rest')
 
     (t:rest) | isKw KwIf t ->
@@ -204,6 +209,108 @@ consumeUntilLBrace xs = go [] xs
       | isSym SLBrace t = (reverse acc, t:rest)
       | otherwise = go (t:acc) rest
     go acc [] = (reverse acc, [])
+
+extractFunctionBindings :: [OwnershipToken] -> [Name]
+extractFunctionBindings tokens =
+  let trimmed = dropNoiseTokens tokens
+      (afterReceiver, receiverNames) = extractReceiverBinding trimmed
+      afterName = dropFunctionNameTokens afterReceiver
+      (paramTokens, _) = extractParamTokens afterName
+  in receiverNames ++ collectParamNames paramTokens
+
+extractReceiverBinding :: [OwnershipToken] -> ([OwnershipToken], [Name])
+extractReceiverBinding toks@(Token (TSym SLParen) _ : _) =
+  let (inside, rest) = consumeParenGroup toks
+      binding = findBindingName inside
+  in (dropNoiseTokens rest, maybeToList binding)
+extractReceiverBinding toks = (toks, [])
+
+consumeParenGroup :: [OwnershipToken] -> ([OwnershipToken], [OwnershipToken])
+consumeParenGroup (Token (TSym SLParen) _ : rest) = go (1 :: Int) [] rest
+  where
+    go _ acc [] = (reverse acc, [])
+    go depth acc (tok:ts)
+      | isSym SLParen tok = go (depth + 1) (tok:acc) ts
+      | isSym SRParen tok =
+          if depth == 1
+             then (reverse acc, ts)
+             else go (depth - 1) (tok:acc) ts
+      | otherwise = go depth (tok:acc) ts
+consumeParenGroup ts = ([], ts)
+
+dropFunctionNameTokens :: [OwnershipToken] -> [OwnershipToken]
+dropFunctionNameTokens [] = []
+dropFunctionNameTokens (Token (TId _) _ : rest) = dropNoiseTokens rest
+dropFunctionNameTokens (_:rest) = dropFunctionNameTokens rest
+
+extractParamTokens :: [OwnershipToken] -> ([OwnershipToken], [OwnershipToken])
+extractParamTokens tokens =
+  case dropUntilParamStart tokens of
+    [] -> ([], tokens)
+    ts -> consumeParenGroup ts
+  where
+    dropUntilParamStart [] = []
+    dropUntilParamStart xs@(tok:rest)
+      | isSym SLParen tok = xs
+      | otherwise = dropUntilParamStart rest
+
+collectParamNames :: [OwnershipToken] -> [Name]
+collectParamNames [] = []
+collectParamNames tokens =
+  [ name
+  | chunk <- filter (not . null) (splitParamEntries tokens)
+  , Just name <- [findBindingName chunk]
+  ]
+
+splitParamEntries :: [OwnershipToken] -> [[OwnershipToken]]
+splitParamEntries = go [] [] (0 :: Int) (0 :: Int)
+  where
+    go acc cur _ _ [] =
+      let chunk = reverse cur
+      in if null chunk then reverse acc else reverse (chunk : acc)
+    go acc cur paren bracket (tok:rest)
+      | isSym SLParen tok = go acc (tok:cur) (paren + 1) bracket rest
+      | isSym SRParen tok = go acc (tok:cur) (paren - 1) bracket rest
+      | isSym SLBracket tok = go acc (tok:cur) paren (bracket + 1) rest
+      | isSym SRBracket tok = go acc (tok:cur) paren (bracket - 1) rest
+      | isSym SComma tok && paren == 0 && bracket == 0 =
+          go (reverse cur : acc) [] paren bracket rest
+      | otherwise = go acc (tok:cur) paren bracket rest
+
+findBindingName :: [OwnershipToken] -> Maybe Name
+findBindingName tokens =
+  case [ s | Token (TId s) _ <- tokens, isCandidateBinding s ] of
+    (name:_) -> Just name
+    [] -> Nothing
+
+isCandidateBinding :: Name -> Bool
+isCandidateBinding name =
+  case name of
+    [] -> False
+    (c:_) -> (isLower c || c == '_') && not (name `elem` builtInTypeNames)
+
+builtInTypeNames :: [Name]
+builtInTypeNames =
+  [ "int", "int8", "int16", "int32", "int64"
+  , "uint", "uint8", "uint16", "uint32", "uint64"
+  , "float32", "float64", "complex64", "complex128"
+  , "bool", "byte", "rune", "string"
+  , "error", "map", "chan"
+  ]
+
+dropNoiseTokens :: [OwnershipToken] -> [OwnershipToken]
+dropNoiseTokens = dropWhile isNoiseToken
+  where
+    isNoiseToken (Token (TSym SNewline) _)   = True
+    isNoiseToken (Token (TSym SSemicolon) _) = True
+    isNoiseToken (Token (TComment _ _) _)    = True
+    isNoiseToken _                           = False
+
+prependParamDecls :: [Name] -> Pos -> [Stmt] -> [Stmt]
+prependParamDecls names pos body =
+  let uniqueNames = nub [ n | n <- names, not (null n), n /= "_" ]
+      decls = map (\n -> SVarDecl n Nothing pos) uniqueNames
+  in decls ++ body
 
 parseOptionalLeadingDirective :: [OwnershipToken] -> (Maybe Directive, [OwnershipToken])
 parseOptionalLeadingDirective xs0 =
@@ -289,7 +396,7 @@ tokensToExpr (t:ts) =
         Just (argsTs, afterRParen)
           | null afterRParen ->
               let exprs = map tokensToExpr argsTs
-              in ECall meth (EIdent base p : exprs) p
+              in EMethodCall meth (EIdent base p) exprs p
         _ -> EUnknown (t:ts) p
     (Token (TId x) p, []) -> EIdent x p
     (Token (TString s) p, []) -> ELitStr s p

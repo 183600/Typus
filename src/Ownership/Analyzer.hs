@@ -69,6 +69,18 @@ builtInUseSemantics =
   , "Lock", "Unlock", "RLock", "RUnlock"
   ]
 
+reservedIdentifiers :: [String]
+reservedIdentifiers =
+  [ "go", "defer", "select", "case", "default"
+  , "break", "continue", "fallthrough", "range"
+  , "map", "chan", "func", "var", "const"
+  , "type", "struct", "interface", "package", "import"
+  , "switch", "if", "else", "for", "return", "goto"
+  ]
+
+isReservedIdentifier :: String -> Bool
+isReservedIdentifier name = name `elem` reservedIdentifiers
+
 data Config = Config
   { cfgOwnershipOn :: !Bool
   } deriving (Show, Eq)
@@ -355,10 +367,8 @@ analyzeAsRHS e = case e of
   EIdent x _ -> moveVar x
   EUnary UBorrow (EIdent x _) _ -> borrowVar False x
   EUnary UMutBorrow (EIdent x _) _ -> borrowVar True x
-  ECall f args _ ->
-    if f `elem` builtInUseSemantics
-      then mapM_ analyzeExprUse args
-      else mapM_ (analyzeAsArgForFunc f) args
+  ECall f args _ -> analyzeFunctionCall f args
+  EMethodCall f receiver args _ -> analyzeMethodCall f receiver args
   EUnknown ts _  -> scanUnknownAsUse ts
   _ -> pure ()
 
@@ -369,7 +379,8 @@ analyzeAsArgForFunc _f e = case e of
     borrowVar True x
     releasePendingMutBorrow x
   EIdent x _                       -> moveVarForce x
-  ECall _ args _                   -> mapM_ (analyzeAsArgForFunc _f) args
+  ECall f args _                   -> analyzeFunctionCall f args
+  EMethodCall f receiver args _    -> analyzeMethodCall f receiver args
   EUnknown ts _                    -> scanUnknownAsArg ts
   _                                -> pure ()
 
@@ -377,12 +388,21 @@ analyzeExprUse :: Expr -> State AState ()
 analyzeExprUse e = case e of
   EIdent x _ -> useVar x
   EUnary _ inner _ -> analyzeExprUse inner
-  ECall f args _ ->
-    if f `elem` builtInUseSemantics
-      then mapM_ analyzeExprUse args
-      else mapM_ (analyzeAsArgForFunc f) args
+  ECall f args _ -> analyzeFunctionCall f args
+  EMethodCall f receiver args _ -> analyzeMethodCall f receiver args
   EUnknown ts _ -> scanUnknownAsUse ts
   _ -> pure ()
+
+analyzeFunctionCall :: Name -> [Expr] -> State AState ()
+analyzeFunctionCall f args =
+  if f `elem` builtInUseSemantics
+    then mapM_ analyzeExprUse args
+    else mapM_ (analyzeAsArgForFunc f) args
+
+analyzeMethodCall :: Name -> Expr -> [Expr] -> State AState ()
+analyzeMethodCall f receiver args = do
+  analyzeExprUse receiver
+  analyzeFunctionCall f args
 
 
 --------------------------------------------------------------------------------
@@ -426,6 +446,7 @@ collectPlainIdents ts = go Nothing ts
        in case cur of
             Token (TId s) _
               | isLowerIdent s
+                && not (isReservedIdentifier s)
                 && not (isDot mPrev)
                 && not (isReturn mPrev)
                 && not (isDot next)
@@ -452,7 +473,7 @@ collectSelectorBases = go []
   where
     go acc [] = reverse acc
     go acc (Token (TId s) _ : Token (TSym SDot) _ : Token (TId _) _ : rest)
-      | isLowerStart s = go (s:acc) rest
+      | isLowerStart s && not (isReservedIdentifier s) = go (s:acc) rest
     go acc (_:rest) = go acc rest
 
     isLowerStart xs = case xs of
@@ -594,10 +615,14 @@ useVar name = do
 
 isLikelyValueVar :: Name -> Bool
 isLikelyValueVar name =
-  name `elem` ["x","y","z","a","b","c","i","j","k","n","m"]
+  name `elem` baseNames
   || any (`isPrefixOfSafe` name) ["num","count","size","len","idx","flag","val","tmp"]
   || name == "s"
   where
+    baseNames =
+      [ "x","y","z","a","b","c","i","j","k","n","m"
+      , "value","values","err","error","result","data","rc","wg"
+      ]
     isPrefixOfSafe pre xs = take (length pre) xs == pre
 
 isValueType :: Name -> Bool

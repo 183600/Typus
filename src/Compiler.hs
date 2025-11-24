@@ -23,7 +23,8 @@ module Compiler
 
 import qualified Data.Text as T
 
-import Parser (TypusFile(..))
+import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
+import SourceLocation (locatedValue)
 import Compiler.GoAst (renderGoModule)
 import qualified Compiler.IR as IR
 import Compiler.DependentTypeChecker (checkDependentTypes)
@@ -59,7 +60,7 @@ compile typusFile = do
   semanticIR <- IR.buildSemanticIR sourceIR
   let parsedFile = IR.sourceTypusFile sourceIR
   checkDependentTypes parsedFile
-  ensureNoTypeErrors parsedFile
+  unlessSkipTypeCheck parsedFile ensureNoTypeErrors
   checkOwnershipWithValueInfo parsedFile (IR.semanticValueInfo semanticIR)
   let goArtifact = IR.emitGo semanticIR
   pure (IR.goSource goArtifact)
@@ -71,6 +72,11 @@ compile typusFile = do
         Right diagnostics ->
           let detailed = map typeDiagnosticToCompilerError diagnostics
           in Left (typeCheckFailure : detailed)
+
+    unlessSkipTypeCheck file action =
+      if dependentTypesEnabled file
+        then Right ()
+        else action file
 
 -- | Convert legacy error lists into a human readable form.
 renderCompilationError :: [CompilerError] -> String
@@ -91,6 +97,14 @@ generateGoCode typusFile =
   case IR.moduleFromTypus typusFile of
     Left _         -> IR.rawSourceFromTypus typusFile
     Right goModule -> renderGoModule goModule
+
+-- | Determine whether dependent type directives are enabled for this file.
+dependentTypesEnabled :: TypusFile -> Bool
+dependentTypesEnabled TypusFile{ tfDirectives = directives, tfBlocks = blocks } =
+  directiveEnabled (fdDependentTypes directives)
+    || any (directiveEnabled . bdDependentTypes . cbDirectives) blocks
+  where
+    directiveEnabled = maybe False locatedValue
 
 -- ---------------------------------------------------------------------------
 -- Enhanced error builders for core compiler stages

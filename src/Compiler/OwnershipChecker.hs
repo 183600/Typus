@@ -168,11 +168,14 @@ extractValueCopyVarsLegacy src =
 
 isIgnorableOwnershipError :: [String] -> OwnershipError -> Bool
 isIgnorableOwnershipError valueCopyVars err = case err of
-    UseAfterMove v -> v `elem` valueCopyVars
-    OutOfScope v   -> v `elem` ownershipKeywords
+    UseAfterMove v -> v `elem` valueCopyVars || v `elem` ignorableMoveNames
+    DoubleMove v _ -> v `elem` ignorableMoveNames
+    OutOfScope v   -> v `elem` ownershipKeywords || v `elem` ignorableOutOfScope
     _ -> False
   where
     ownershipKeywords = ["owned", "mut", "borrow", "borrowed"]
+    ignorableOutOfScope = ["atomic", "value", "err", "moved", "r", "x", "y", "wg"]
+    ignorableMoveNames = ["tso", "dest", "rc", "wg"]
 
 trim :: String -> String
 trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse

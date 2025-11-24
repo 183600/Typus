@@ -149,6 +149,8 @@ collectOccurrences tracked (Program stmts) = goStmts 0 stmts
                 record name depth
             ECall name args _ ->
                 record name depth ++ concatMap (goExpr depth) args
+            EMethodCall _ receiver args _ ->
+                goExpr depth receiver ++ concatMap (goExpr depth) args
             EUnary _ inner _ ->
                 goExpr depth inner
             EUnknown toks _ ->
