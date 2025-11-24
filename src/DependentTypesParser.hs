@@ -41,16 +41,17 @@ import qualified Data.Map.Strict as Map
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe, maybeToList)
 import Data.Void (Void)
+import Text.Read (readMaybe)
 import Text.Megaparsec
   ( Parsec, (<?>)
-  , MonadParsec(try, eof, lookAhead)
+  , MonadParsec(try, eof, lookAhead, notFollowedBy)
   , anySingle
   , withRecovery
   , runParser
   , errorBundlePretty
   )
 import qualified Text.Megaparsec as MP
-import Text.Megaparsec.Char (char, letterChar, space1)
+import Text.Megaparsec.Char (char, letterChar, space1, string)
 import qualified Text.Megaparsec.Char.Lexer as L
 -- import Debug.Trace (trace)
 
@@ -283,7 +284,10 @@ opLE = symbol "<="
 
 -- 简单值：标识符或数字，最终统一存入 String
 simpleVal :: Parser String
-simpleVal = (show <$> pInt) MP.<|> identifier
+simpleVal = lexeme (MP.some (MP.satisfy isAllowedChar))
+  where
+    isAllowedChar c = not (c `elem` stopChars)
+    stopChars = [' ', '\t', '\r', '\n', ',', ')', '&']
 
 -- 谓词调用：pred(arg1, arg2, ...)
 predicateCall :: Parser TypeConstraint
@@ -295,12 +299,16 @@ predicateCall = do
 -- len name (op) int
 lenConstraint :: Parser TypeConstraint
 lenConstraint = do
-  _ <- MP.try (symbol "len")
+  _ <- lenKeyword
   nm <- identifier
   c <- (   (opEq >> (SizeConstraint nm <$> pInt))
        MP.<|> (opGT >> ((\n -> SizeConstraint nm (n + 1)) <$> pInt))  -- len x > n 等价 len x == n+1（示例）
        ) <?> "len 约束操作（== 或 >）"
   pure c
+  where
+    lenKeyword = MP.try (lexeme (string "len" <* notFollowedBy identChar))
+    identChar :: Parser Char
+    identChar = MP.satisfy (\c -> isAlphaNum c || c == '_')
 
 -- nonempty name
 nonemptyConstraint :: Parser TypeConstraint
@@ -313,14 +321,38 @@ nonemptyConstraint = do
 compareConstraint :: Parser TypeConstraint
 compareConstraint = do
   nm <- identifier
-  let _range low hi = RangeConstraint nm low hi
-  c <- (   (opGE >> (RangeConstraint nm <$> pInt <*> pure maxBound))
-       MP.<|> (opLE >> (RangeConstraint nm <$> pure minBound <*> pInt))
-       MP.<|> (opGT >> (RangeConstraint nm <$> ((+1) <$> pInt) <*> pure maxBound))
-       MP.<|> (opLT >> (RangeConstraint nm <$> pure minBound <*> (subtract 1 <$> pInt)))
+  c <- (   (opGE >> numeric nm ">=" (\low -> RangeConstraint nm low maxBound))
+       MP.<|> (opLE >> numeric nm "<=" (\hi -> RangeConstraint nm minBound hi))
+       MP.<|> (opGT >> numeric nm ">" (\val -> RangeConstraint nm (val + 1) maxBound))
+       MP.<|> (opLT >> numeric nm "<" (\val -> RangeConstraint nm minBound (val - 1)))
        MP.<|> (opEq >> (EqualityConstraint nm <$> simpleVal))
        ) <?> "比较约束（==, >, >=, <, <=）"
   pure c
+  where
+    numeric :: String -> String -> (Int -> TypeConstraint) -> Parser TypeConstraint
+    numeric name opText builder = do
+      raw <- simpleVal
+      completed <- appendMissingClosers raw
+      case readMaybe completed of
+        Just n -> pure (builder n)
+        Nothing -> pure (CustomConstraint (name ++ " " ++ opText ++ " " ++ completed) "")
+
+    appendMissingClosers :: String -> Parser String
+    appendMissingClosers txt =
+      let missing = parenDelta txt
+      in if missing <= 0
+            then pure txt
+            else do
+              closes <- MP.count missing (char ')')
+              _ <- sc
+              pure (txt ++ closes)
+
+    parenDelta :: String -> Int
+    parenDelta = foldl update 0
+      where
+        update acc '(' = acc + 1
+        update acc ')' = acc - 1
+        update acc _   = acc
 
 typeClassConstraint :: Parser TypeConstraint
 typeClassConstraint = do
@@ -352,6 +384,8 @@ customConstraint = do
         MP.<|> void (symbol "type")
         MP.<|> void (symbol "func")
         MP.<|> void (symbol "alias")
+        MP.<|> void (char ')')
+        MP.<|> void (char ']')
         MP.<|> void (char '\n')
         MP.<|> void (char '\r')
         MP.<|> MP.eof
