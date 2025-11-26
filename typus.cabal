@@ -200,6 +200,7 @@ test-suite typus-test
         Test.Unit.DependentTypesSpec,
         Test.Unit.ErrorHandlingSpec,
         Test.Unit.EmbedAssetsSpec,
+        Test.Unit.GoToolchainSpec,
         Test.Unit.OwnershipSpec,
         Test.Unit.OwnershipBridgeSpec,
         Test.Unit.ParserSpec,
