@@ -52,4 +52,12 @@ tests =
     , testCase "parses run command with additional arguments" $ do
         result <- withArgs ["run", "main.typus", "input.txt", "--verbose"] parseArgs
         result @?= Run False ["main.typus", "input.txt", "--verbose"]
+
+    , testCase "parses build command with repeated strict embed flags" $ do
+        result <- withArgs ["build", "--strict-embed", "fmt", "--strict-embed", "-v"] parseArgs
+        result @?= Build True ["fmt", "-v"]
+
+    , testCase "parses run strict embed flag before and after sentinel" $ do
+        result <- withArgs ["run", "--strict-embed", "main.typus", "--", "--strict-embed", "--extra"] parseArgs
+        result @?= Run True ["main.typus", "--strict-embed", "--extra"]
     ]
