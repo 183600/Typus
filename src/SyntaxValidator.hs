@@ -127,11 +127,10 @@ validateFile content = validateSyntax content
 
 validateSyntax :: String -> [SyntaxError]
 validateSyntax content = 
-    let lang = detectLanguage content
-        validator = newSyntaxValidator { language = lang }
-        tokens = tokenize content
-        validator' = validator { tokens = tokens }
-        finalValidator = performValidation validator' tokens
+    let tokens = tokenize content
+        lang = detectLanguage content tokens
+        validator = newSyntaxValidator { language = lang, tokens = tokens }
+        finalValidator = performValidation validator tokens
         errors = reverse $ validatorErrors finalValidator
         -- Filter out errors that are not applicable to valid Go code
         filteredErrors = filter (not . isFalsePositive) errors
@@ -149,11 +148,30 @@ getSyntaxErrors = reverse . validatorErrors
 
 -- ================== Language Detection ==================
 
-detectLanguage :: String -> Language
-detectLanguage content
-    | "package " `isInfixOf` content && "func " `isInfixOf` content = Go
-    | "//!" `isInfixOf` content || "{//!" `isInfixOf` content = Typus
+detectLanguage :: String -> [Token] -> Language
+detectLanguage content tokens
+    | isTypusContent = Typus
+    | hasGoMarkers = Go
     | otherwise = Unknown
+  where
+    isTypusContent = any (`isInfixOf` content) ["//!", "{//!"]
+    hasGoMarkers = any isGoKeywordToken tokens
+
+isGoKeywordToken :: Token -> Bool
+isGoKeywordToken (TKeyword kw _ _) = kw `elem` goDetectionKeywords
+isGoKeywordToken _ = False
+
+goDetectionKeywords :: [String]
+goDetectionKeywords =
+    [ "package"
+    , "func"
+    , "import"
+    , "var"
+    , "const"
+    , "type"
+    , "struct"
+    , "interface"
+    ]
 
 -- ================== Tokenization ==================
 
@@ -453,9 +471,7 @@ validateGoSpecific validator tokens =
                      else validator
     in validator'
   where
-    hasGoCode toks = any isGoSpecific toks
-    isGoSpecific (TKeyword k _ _) = k `elem` ["func", "package", "import"]
-    isGoSpecific _ = False
+    hasGoCode toks = any isGoKeywordToken toks
 
 validateTypusSpecific :: SyntaxValidator -> [Token] -> SyntaxValidator
 validateTypusSpecific validator tokens =
