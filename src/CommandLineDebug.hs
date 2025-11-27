@@ -3,6 +3,8 @@
 module CommandLineDebug
     ( CommandLineDebugConfig(..)
     , defaultCLIDebugConfig
+    , enableDebugConsoleOutput
+    , disableDebugConsoleOutput
     , runWithCLIDebug
     , checkBreakpoint
     , setBreakpoint
@@ -29,6 +31,7 @@ data CommandLineDebugConfig = CommandLineDebugConfig
     , cldBreakpoints :: IORef (Set String)
     , cldBreakConditions :: IORef (Map String (String -> Bool))
     , cldInteractive :: IORef Bool
+    , cldOutput :: IORef (Bool -> String -> IO ())
     }
 
 -- Default command line debug configuration
@@ -39,7 +42,44 @@ defaultCLIDebugConfig = do
     breakpointsRef <- newIORef Set.empty
     breakConditionsRef <- newIORef Map.empty
     interactiveRef <- newIORef True
-    return $ CommandLineDebugConfig enabledRef logLevelRef breakpointsRef breakConditionsRef interactiveRef
+    outputRef <- newIORef silentOutput
+    return $ CommandLineDebugConfig enabledRef logLevelRef breakpointsRef breakConditionsRef interactiveRef outputRef
+
+type OutputWriter = Bool -> String -> IO ()
+
+silentOutput :: OutputWriter
+silentOutput _ _ = pure ()
+
+consoleOutput :: OutputWriter
+consoleOutput newline message =
+    if newline
+        then putStrLn message
+        else do
+            putStr message
+            hFlush stdout
+
+setDebugOutputChannel :: CommandLineDebugConfig -> OutputWriter -> IO ()
+setDebugOutputChannel config writer = writeIORef (cldOutput config) writer
+
+enableDebugConsoleOutput :: CommandLineDebugConfig -> IO ()
+enableDebugConsoleOutput config = setDebugOutputChannel config consoleOutput
+
+disableDebugConsoleOutput :: CommandLineDebugConfig -> IO ()
+disableDebugConsoleOutput config = setDebugOutputChannel config silentOutput
+
+logWith :: CommandLineDebugConfig -> Bool -> String -> IO ()
+logWith config newline message = do
+    writer <- readIORef (cldOutput config)
+    writer newline message
+
+logLine :: CommandLineDebugConfig -> String -> IO ()
+logLine config = logWith config True
+
+logPrompt :: CommandLineDebugConfig -> String -> IO ()
+logPrompt config = logWith config False
+
+logLines :: CommandLineDebugConfig -> [String] -> IO ()
+logLines config = mapM_ (logLine config)
 
 -- Run action with command line debugging
 runWithCLIDebug :: CommandLineDebugConfig -> String -> IO a -> IO a
@@ -69,28 +109,31 @@ handleBreakpoint config location = do
     interactive <- readIORef (cldInteractive config)
     if interactive
         then do
-            putStrLn $ "\n=== BREAKPOINT HIT ==="
-            putStrLn $ "Location: " ++ location
-            putStrLn "Available commands:"
-            putStrLn "  c, continue - Continue execution"
-            putStrLn "  s, step - Step to next breakpoint"
-            putStrLn "  l, list - List all breakpoints"
-            putStrLn "  d, disable - Disable debugging"
-            putStrLn "  e, enable - Enable debugging"
-            putStrLn "  q, quit - Quit program"
-            putStrLn "  h, help - Show this help"
+            logLines config
+                [ "\n=== BREAKPOINT HIT ==="
+                , "Location: " ++ location
+                , "Available commands:"
+                , "  c, continue - Continue execution"
+                , "  s, step - Step to next breakpoint"
+                , "  l, list - List all breakpoints"
+                , "  d, disable - Disable debugging"
+                , "  e, enable - Enable debugging"
+                , "  q, quit - Quit program"
+                , "  h, help - Show this help"
+                ]
             handleDebugCommands config location
         else do
-            putStrLn $ "\n=== BREAKPOINT: " ++ location ++ " ==="
-            putStrLn "Press Enter to continue..."
+            logLines config
+                [ "\n=== BREAKPOINT: " ++ location ++ " ==="
+                , "Press Enter to continue..."
+                ]
             _ <- getLine
             return ()
 
 -- Handle debug commands
 handleDebugCommands :: CommandLineDebugConfig -> String -> IO ()
 handleDebugCommands config location = do
-    putStr "debug> "
-    hFlush stdout
+    logPrompt config "debug> "
     line <- getLine
     result <- processDebugCommand config location (words line)
     case result of
@@ -123,13 +166,13 @@ processDebugCommand config _ tokens =
         ["q"] -> error "Program terminated by user at breakpoint"
         ["quit"] -> error "Program terminated by user at breakpoint"
         ["h"] -> do
-            showDebugHelp
+            showDebugHelp config
             return AwaitMoreInput
         ["help"] -> do
-            showDebugHelp
+            showDebugHelp config
             return AwaitMoreInput
         _ -> do
-            putStrLn "Unknown command. Type 'h' for help."
+            logLine config "Unknown command. Type 'h' for help."
             return AwaitMoreInput
   where
     disableDebugging = applyState False "Debugging disabled"
@@ -137,55 +180,57 @@ processDebugCommand config _ tokens =
 
     applyState newState statusMessage = do
         writeIORef (cldEnabled config) newState
-        putStrLn $ "Debug output " ++ if newState then "enabled" else "disabled"
-        putStrLn statusMessage
+        logLine config $ "Debug output " ++ if newState then "enabled" else "disabled"
+        logLine config statusMessage
 
 -- Show debug help
-showDebugHelp :: IO ()
-showDebugHelp = do
-    putStrLn "Available commands:"
-    putStrLn "  c, continue - Continue execution"
-    putStrLn "  s, step - Step to next breakpoint"
-    putStrLn "  l, list - List all breakpoints"
-    putStrLn "  d, disable - Disable debugging"
-    putStrLn "  e, enable - Enable debugging"
-    putStrLn "  q, quit - Quit program"
-    putStrLn "  h, help - Show this help"
+showDebugHelp :: CommandLineDebugConfig -> IO ()
+showDebugHelp config =
+    logLines config
+        [ "Available commands:"
+        , "  c, continue - Continue execution"
+        , "  s, step - Step to next breakpoint"
+        , "  l, list - List all breakpoints"
+        , "  d, disable - Disable debugging"
+        , "  e, enable - Enable debugging"
+        , "  q, quit - Quit program"
+        , "  h, help - Show this help"
+        ]
 
 -- Set breakpoint at location
 setBreakpoint :: CommandLineDebugConfig -> String -> IO ()
 setBreakpoint config location = do
     modifyIORef (cldBreakpoints config) (Set.insert location)
-    putStrLn $ "Breakpoint set at: " ++ location
+    logLine config $ "Breakpoint set at: " ++ location
 
 -- List all breakpoints
 listBreakpoints :: CommandLineDebugConfig -> IO ()
 listBreakpoints config = do
     breakpoints <- readIORef (cldBreakpoints config)
     if Set.null breakpoints
-        then putStrLn "No breakpoints set"
+        then logLine config "No breakpoints set"
         else do
-            putStrLn "Current breakpoints:"
-            mapM_ (\bp -> putStrLn $ "  " ++ bp) (Set.toList breakpoints)
+            logLine config "Current breakpoints:"
+            mapM_ (logLine config . ("  " ++)) (Set.toList breakpoints)
 
 -- Clear all breakpoints
 clearBreakpoints :: CommandLineDebugConfig -> IO ()
 clearBreakpoints config = do
     writeIORef (cldBreakpoints config) Set.empty
-    putStrLn "All breakpoints cleared"
+    logLine config "All breakpoints cleared"
 
 -- Toggle debug output
 toggleDebugOutput :: CommandLineDebugConfig -> IO ()
 toggleDebugOutput config = do
     modifyIORef (cldEnabled config) not
     enabled <- readIORef (cldEnabled config)
-    putStrLn $ "Debug output " ++ (if enabled then "enabled" else "disabled")
+    logLine config $ "Debug output " ++ (if enabled then "enabled" else "disabled")
 
 -- Set debug level
 setDebugLevel :: CommandLineDebugConfig -> Int -> IO ()
 setDebugLevel config level = do
     writeIORef (cldLogLevel config) level
-    putStrLn $ "Debug level set to: " ++ show level
+    logLine config $ "Debug level set to: " ++ show level
 
 -- Show debug status
 showDebugStatus :: CommandLineDebugConfig -> IO ()
@@ -195,16 +240,18 @@ showDebugStatus config = do
     breakpoints <- readIORef (cldBreakpoints config)
     interactive <- readIORef (cldInteractive config)
 
-    putStrLn "=== Debug Status ==="
-    putStrLn $ "Debug enabled: " ++ show enabled
-    putStrLn $ "Log level: " ++ show logLevel
-    putStrLn $ "Interactive mode: " ++ show interactive
-    putStrLn $ "Active breakpoints: " ++ show (Set.size breakpoints)
+    logLines config
+        [ "=== Debug Status ==="
+        , "Debug enabled: " ++ show enabled
+        , "Log level: " ++ show logLevel
+        , "Interactive mode: " ++ show interactive
+        , "Active breakpoints: " ++ show (Set.size breakpoints)
+        ]
     if not (Set.null breakpoints)
         then do
-            putStrLn "Breakpoints:"
-            mapM_ (\bp -> putStrLn $ "  " ++ bp) (Set.toList breakpoints)
-        else putStrLn "No breakpoints set"
+            logLine config "Breakpoints:"
+            mapM_ (logLine config . ("  " ++)) (Set.toList breakpoints)
+        else logLine config "No breakpoints set"
 
 -- Check conditional breakpoint
 checkConditionalBreakpoint :: CommandLineDebugConfig -> String -> (String -> Bool) -> IO ()
@@ -216,24 +263,27 @@ checkConditionalBreakpoint config location condition = do
             interactive <- readIORef (cldInteractive config)
             if interactive
                 then do
-                    putStrLn $ "\n=== CONDITIONAL BREAKPOINT: " ++ location ++ " ==="
-                    putStrLn "Condition met. Available commands:"
-                    putStrLn "  c, continue - Continue execution"
-                    putStrLn "  s, step - Step to next breakpoint"
-                    putStrLn "  i, info - Show debug info"
-                    putStrLn "  h, help - Show help"
+                    logLines config
+                        [ "\n=== CONDITIONAL BREAKPOINT: " ++ location ++ " ==="
+                        , "Condition met. Available commands:"
+                        , "  c, continue - Continue execution"
+                        , "  s, step - Step to next breakpoint"
+                        , "  i, info - Show debug info"
+                        , "  h, help - Show help"
+                        ]
                     handleConditionalBreakpointCommands config location
                 else do
-                    putStrLn $ "\n=== CONDITIONAL BREAKPOINT: " ++ location ++ " ==="
-                    putStrLn "Press Enter to continue..."
+                    logLines config
+                        [ "\n=== CONDITIONAL BREAKPOINT: " ++ location ++ " ==="
+                        , "Press Enter to continue..."
+                        ]
                     _ <- getLine
                     return ()
 
 -- Handle conditional breakpoint commands
 handleConditionalBreakpointCommands :: CommandLineDebugConfig -> String -> IO ()
 handleConditionalBreakpointCommands config location = do
-    putStr "debug> "
-    hFlush stdout
+    logPrompt config "debug> "
     line <- getLine
     case words line of
         ["c"] -> return ()
@@ -241,32 +291,34 @@ handleConditionalBreakpointCommands config location = do
         ["s"] -> return ()
         ["step"] -> return ()
         ["i"] -> do
-            showDebugInfo location
+            showDebugInfo config location
             handleConditionalBreakpointCommands config location
         ["info"] -> do
-            showDebugInfo location
+            showDebugInfo config location
             handleConditionalBreakpointCommands config location
         ["h"] -> do
-            showConditionalBreakpointHelp
+            showConditionalBreakpointHelp config
             handleConditionalBreakpointCommands config location
         ["help"] -> do
-            showConditionalBreakpointHelp
+            showConditionalBreakpointHelp config
             handleConditionalBreakpointCommands config location
         _ -> do
-            putStrLn "Unknown command. Type 'h' for help."
+            logLine config "Unknown command. Type 'h' for help."
             handleConditionalBreakpointCommands config location
 
 -- Show conditional breakpoint help
-showConditionalBreakpointHelp :: IO ()
-showConditionalBreakpointHelp = do
-    putStrLn "Available commands:"
-    putStrLn "  c, continue - Continue execution"
-    putStrLn "  s, step - Step to next breakpoint"
-    putStrLn "  i, info - Show debug info"
-    putStrLn "  h, help - Show help"
+showConditionalBreakpointHelp :: CommandLineDebugConfig -> IO ()
+showConditionalBreakpointHelp config =
+    logLines config
+        [ "Available commands:"
+        , "  c, continue - Continue execution"
+        , "  s, step - Step to next breakpoint"
+        , "  i, info - Show debug info"
+        , "  h, help - Show help"
+        ]
 
 -- Show debug info
-showDebugInfo :: String -> IO ()
+showDebugInfo :: CommandLineDebugConfig -> String -> IO ()
 showDebugInfo location = do
     putStrLn $ "Location: " ++ location
     putStrLn "Debug info available at this location"
