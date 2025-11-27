@@ -12,6 +12,7 @@ import qualified Test.Unit.GoToolchainSpec
 import qualified Test.Unit.OwnershipSpec
 import qualified Test.Unit.OwnershipBridgeSpec
 import qualified Test.Unit.ParserSpec
+import qualified Test.Unit.SyntaxValidatorSpec
 import qualified Test.Unit.TypeSystemSpec
 import qualified Test.Unit.SymbolTableSpec
 import qualified Test.Unit.ValueAnalysisSpec
@@ -24,6 +25,7 @@ tests :: TestTree
 tests =
   testGroup "Unit"
     [ Test.Unit.ParserSpec.tests
+    , Test.Unit.SyntaxValidatorSpec.tests
     , Test.Unit.OwnershipSpec.tests
     , Test.Unit.OwnershipBridgeSpec.tests
     , Test.Unit.DependentTypesSpec.tests

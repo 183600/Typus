@@ -204,6 +204,7 @@ test-suite typus-test
         Test.Unit.OwnershipSpec,
         Test.Unit.OwnershipBridgeSpec,
         Test.Unit.ParserSpec,
+        Test.Unit.SyntaxValidatorSpec,
         Test.Unit.TypeSystemSpec,
         Test.Unit.SymbolTableSpec,
         Test.Unit.ValueAnalysisSpec,
