@@ -66,17 +66,18 @@ normalizeArgs args =
 
 adjustCommandArgs :: [String] -> [String]
 adjustCommandArgs args =
-  let (strictFlags, remainder) = consumeStrictEmbed args
+  let (hasStrictEmbed, remainder) = consumeStrictEmbed args
+      strictFlags = ["--strict-embed" | hasStrictEmbed]
   in strictFlags ++ addSentinel remainder
 
-consumeStrictEmbed :: [String] -> ([String], [String])
-consumeStrictEmbed = go [] [] False
+consumeStrictEmbed :: [String] -> (Bool, [String])
+consumeStrictEmbed = go False [] False
   where
-    go strictFlags acc _ [] = (reverse strictFlags, reverse acc)
-    go strictFlags acc seen (arg:rest)
-      | arg == "--" = go strictFlags (arg : acc) True rest
-      | arg == "--strict-embed" && not seen = go ("--strict-embed" : strictFlags) acc seen rest
-      | otherwise = go strictFlags (arg : acc) seen rest
+    go found acc _ [] = (found, reverse acc)
+    go found acc seen (arg:rest)
+      | arg == "--" = go found acc True rest
+      | arg == "--strict-embed" && not seen = go True acc seen rest
+      | otherwise = go found (arg : acc) seen rest
 
 addSentinel :: [String] -> [String]
 addSentinel [] = []
