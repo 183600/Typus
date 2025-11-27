@@ -205,16 +205,16 @@ validateGoStructure linesOfCode =
 -- Validate individual Go line
 validateGoLine :: Int -> String -> String -> [SyntaxError]
 validateGoLine lineNum fullLine trimmed
-    | "package " `isPrefixOf` trimmed = validatePackageLine lineNum fullLine trimmed
-    | "import " `isPrefixOf` trimmed = validateImportLine lineNum fullLine trimmed  
-    | "func " `isPrefixOf` trimmed = validateFunctionLine lineNum fullLine trimmed
-    | "var " `isPrefixOf` trimmed = validateVarLine lineNum fullLine trimmed
-    | "const " `isPrefixOf` trimmed = validateVarLine lineNum fullLine trimmed
-    | "type " `isPrefixOf` trimmed = validateTypeLine lineNum fullLine trimmed
-    | "for " `isPrefixOf` trimmed = validateControlLine lineNum fullLine trimmed "for"
-    | "if " `isPrefixOf` trimmed = validateControlLine lineNum fullLine trimmed "if"
-    | "switch " `isPrefixOf` trimmed = validateControlLine lineNum fullLine trimmed "switch"
-    | "return " `isPrefixOf` trimmed = validateReturnLine lineNum fullLine trimmed
+    | startsWithKeyword "package" trimmed = validatePackageLine lineNum fullLine trimmed
+    | startsWithKeyword "import" trimmed = validateImportLine lineNum fullLine trimmed  
+    | startsWithKeyword "func" trimmed = validateFunctionLine lineNum fullLine trimmed
+    | startsWithKeyword "var" trimmed = validateVarLine lineNum fullLine trimmed
+    | startsWithKeyword "const" trimmed = validateVarLine lineNum fullLine trimmed
+    | startsWithKeyword "type" trimmed = validateTypeLine lineNum fullLine trimmed
+    | startsWithKeyword "for" trimmed = validateControlLine lineNum fullLine trimmed "for"
+    | startsWithKeyword "if" trimmed = validateControlLine lineNum fullLine trimmed "if"
+    | startsWithKeyword "switch" trimmed = validateControlLine lineNum fullLine trimmed "switch"
+    | startsWithKeyword "return" trimmed = validateReturnLine lineNum fullLine trimmed
     | otherwise = validateGeneralStatement lineNum fullLine trimmed
 
 -- Validation functions for specific constructs
@@ -303,6 +303,13 @@ countBraces content =
                     (opens, closes + 1)
                 _ -> (opens, closes)
         in countBracesInState cs state' opens' closes'
+
+startsWithKeyword :: String -> String -> Bool
+startsWithKeyword keyword text =
+    keyword `isPrefixOf` text &&
+        case drop (length keyword) text of
+            [] -> True
+            c:_ -> isSpace c
 
 -- Utility: trim whitespace
 trim :: String -> String
