@@ -1,6 +1,6 @@
 cabal-version: 2.2
 name:          typus
-version:       0.11.0
+version:       0.11.1
 synopsis:      Typus compiler with dependent types and ownership analysis
 description:   A compiler for the Typus language with support for dependent types and ownership analysis
 license:       MIT

@@ -11,17 +11,17 @@ help:
     @echo "  clean                 - Clean build artifacts"
 
 build:
-    stack build --flag typus:werror
+    cabal build --flag typus:werror
 
 test: build
-    stack test
+    cabal test
 
 test-comprehensive: build
-    stack run comprehensive-stack-test
+    cabal run comprehensive-stack-test
 
 test-shell: build
     ./scripts/test_typus_comprehensive.sh
 
 clean:
-    stack clean
+    cabal clean
     rm -rf test_typus_comprehensive.sh 2>/dev/null || true
