@@ -263,5 +263,12 @@ test-suite typus-test
     else
         ghc-options:   -fno-warn-unused-imports -fno-warn-unused-matches -fno-warn-unused-binds -fno-warn-unused-top-binds -fno-warn-unused-type-patterns -fno-warn-missing-signatures -Wno-name-shadowing -Wno-missing-export-lists -Wno-compat-unqualified-imports -Wno-type-defaults -Wno-misplaced-pragmas -Wno-monomorphism-restriction
     if flag(coverage)
-        ghc-options:   -fhpc -fno-warn-unused-imports -fno-warn-unused-matches -fno-warn-unused-binds -fno-warn-unused-top-binds -fno-warn-unused-type-patterns
+        ghc-options:
+            -fhpc
+            -hpcdir .stack-work/stack-hpc/typus-test
+            -fno-warn-unused-imports
+            -fno-warn-unused-matches
+            -fno-warn-unused-binds
+            -fno-warn-unused-top-binds
+            -fno-warn-unused-type-patterns
 
