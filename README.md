@@ -54,7 +54,6 @@ make install
    # 或
    typus -v
    ```
-```
 
 ## 环境变量
 
@@ -82,7 +81,6 @@ cabal test --flags="-fast coverage"
 
 # 运行特定测试模块
 cabal test --test-options="--pattern \"Parser\""
-```
 
 更多测试相关信息请参考:
 - [QUICK_TEST_GUIDE.md](QUICK_TEST_GUIDE.md) - 快速测试指南
