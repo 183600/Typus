@@ -5,8 +5,8 @@ package main
 import (
     "fmt"
     "sync"
+    "sync/atomic"
     "time"
-    "unsafe"
 )
 
 // Test advanced ownership patterns with lifetimes
@@ -208,7 +208,7 @@ func testThreadSafeOwnership() {
     fmt.Println("=== Testing Thread-Safe Ownership ===")
 
     // Create thread-safe owned data
-    owned := NewThreadSafeOwned(42)
+    owned := NewThreadSafeOwned<int>(42)
     fmt.Printf("Initial value: %d\n", *owned.data)
 
     // Move ownership
@@ -226,7 +226,7 @@ func testChannelOwnership() {
     fmt.Println("\n=== Testing Channel Ownership ===")
 
     // Create channel-owned data
-    channelOwned := NewChannelOwned("Hello, Channel!")
+    channelOwned := NewChannelOwned<string>("Hello, Channel!")
 
     // Send to another channel
     dest := make(chan string, 1)
@@ -241,7 +241,7 @@ func testLifetimeOwnership() {
     fmt.Println("\n=== Testing Lifetime Ownership ===")
 
     // Create owned value with lifetime
-    owned := NewOwnedWithLifetime(42, 100*time.Millisecond)
+    owned := NewOwnedWithLifetime<int>(42, 100*time.Millisecond)
     fmt.Printf("Created owned value with 100ms lifetime\n")
 
     // Get value immediately
@@ -286,7 +286,7 @@ func testReferenceCountedOwnership() {
     fmt.Println("\n=== Testing Reference-Counted Ownership ===")
 
     // Create reference-counted data with destructor
-    rc := NewReferenceCounted(42, func(x int) {
+    rc := NewReferenceCounted<int>(42, func(x int) {
         fmt.Printf("Destructor called for: %d\n", x)
     })
 
@@ -312,7 +312,7 @@ func testOwnershipWithGoroutines() {
     fmt.Println("\n=== Testing Ownership with Goroutines ===")
 
     // Test thread-safe ownership across goroutines
-    owned := NewThreadSafeOwned(100)
+    owned := NewThreadSafeOwned<int>(100)
 
     var wg sync.WaitGroup
     wg.Add(2)
@@ -344,7 +344,7 @@ func testOwnershipWithPanicRecovery() {
     }()
 
     // Test double move panic
-    owned := NewThreadSafeOwned(42)
+    owned := NewThreadSafeOwned<int>(42)
     moved1 := owned.Move()
 
     // This should panic
@@ -356,9 +356,9 @@ func testComplexOwnershipChains() {
     fmt.Println("\n=== Testing Complex Ownership Chains ===")
 
     // Create a chain of owned values
-    owned1 := NewThreadSafeOwned(1)
-    owned2 := NewThreadSafeOwned(2)
-    owned3 := NewThreadSafeOwned(3)
+    owned1 := NewThreadSafeOwned<int>(1)
+    owned2 := NewThreadSafeOwned<int>(2)
+    owned3 := NewThreadSafeOwned<int>(3)
 
     // Transform through chain
     chain1 := owned1.WithAccess(func(x int) int { return x * 10 })
