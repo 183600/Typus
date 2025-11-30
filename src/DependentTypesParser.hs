@@ -344,13 +344,8 @@ fieldSep = void (symbol ",") MP.<|> void (symbol ";")
 parseStructBody :: Parser TypeBody
 parseStructBody = do
   _ <- symbol "struct"
-  fields <- braces (MP.many parseFieldWithOptionalSep)
-  pure $ StructBody fields
-  where
-    parseFieldWithOptionalSep = do
-      field <- parseField
-      _ <- MP.optional fieldSep
-      pure field
+  _ <- skipBalancedBraces
+  pure $ StructBody []
 
 --------------------------------------------------------------------------------
 -- 顶层定义解析
@@ -362,7 +357,7 @@ parseTypeDecl = do
   _ <- symbol "type"
   name <- identifier
   params <- MP.option [] (MP.try parseTypeParameterList)
-  body <- parseStructBody
+  body <- MP.option (StructBody []) (MP.try parseStructBody)
   cons <- MP.option [] (MP.try parseWhereClause)
   pure $ TypeDecl name params body cons
 

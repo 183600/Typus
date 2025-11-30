@@ -2,7 +2,8 @@ module Test.Integration.CLISpec (tests) where
 
 import qualified Cli.Runner as CliRunner
 import Control.Exception (bracket_)
-import Data.List (isInfixOf)
+import Data.Char (isSpace)
+import Data.List (dropWhileEnd, isInfixOf, isPrefixOf)
 import System.Directory (copyFile, doesFileExist, findExecutable)
 import System.Environment (getEnvironment, lookupEnv, setEnv, unsetEnv)
 import System.Exit (ExitCode(..))
@@ -102,13 +103,42 @@ runViaStack stackPath args = do
       processSpec = (proc stackPath ("exec" : "typus" : "--" : args))
         { env = Just sanitizedEnv
         }
-  readCreateProcessWithExitCode processSpec ""
+  (exitCode, stdoutOutput, stderrOutput) <- readCreateProcessWithExitCode processSpec ""
+  pure (exitCode, stdoutOutput, sanitizeStackWarnings stderrOutput)
 
 runInProcess :: [String] -> IO (ExitCode, String, String)
 runInProcess args =
   withEnvOverride "TYPUS_SKIP_GO_BUILD" "1" $ do
     (stdoutOutput, (stderrOutput, exitCode)) <- capture (hCapture [stderr] (CliRunner.runWithArgs args))
     pure (exitCode, stdoutOutput, stderrOutput)
+
+sanitizeStackWarnings :: String -> String
+sanitizeStackWarnings stderrOutput =
+  let filtered = filterStackWarnings False (lines stderrOutput)
+      trimmed = dropWhile null (dropWhileEnd null filtered)
+  in if null trimmed then "" else unlines trimmed
+
+filterStackWarnings :: Bool -> [String] -> [String]
+filterStackWarnings _ [] = []
+filterStackWarnings suppress (line:rest)
+  | isStackWarning line = filterStackWarnings True rest
+  | suppress && shouldSkipContinuation line = filterStackWarnings True rest
+  | otherwise = line : filterStackWarnings False rest
+
+isStackWarning :: String -> Bool
+isStackWarning line =
+  let stripped = dropWhile isSpace line
+  in any (`isPrefixOf` stripped) stackWarningPrefixes
+
+shouldSkipContinuation :: String -> Bool
+shouldSkipContinuation line =
+  all isSpace line || "this may fail." `isInfixOf` line
+
+stackWarningPrefixes :: [String]
+stackWarningPrefixes =
+  [ "Warning: Stack has not been tested with GHC versions above"
+  , "Warning: Stack has not been tested with Cabal versions above"
+  ]
 
 withEnvOverride :: String -> String -> IO a -> IO a
 withEnvOverride key value action = do
