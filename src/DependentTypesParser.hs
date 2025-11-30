@@ -344,8 +344,14 @@ fieldSep = void (symbol ",") MP.<|> void (symbol ";")
 parseStructBody :: Parser TypeBody
 parseStructBody = do
   _ <- symbol "struct"
-  _ <- skipBalancedBraces
-  pure $ StructBody []
+  fields <- braces parseFields
+  pure $ StructBody fields
+  where
+    parseFields = MP.many fieldParser
+    fieldParser = do
+      f <- parseField
+      _ <- MP.optional fieldSep
+      pure f
 
 --------------------------------------------------------------------------------
 -- 顶层定义解析

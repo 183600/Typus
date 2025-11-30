@@ -159,6 +159,7 @@ detectLanguage content =
          (False, True) -> Go
          _ -> Unknown
   where
+    typusMarkers, goMarkers :: [String]
     typusMarkers = ["//!", "{//!"]
     goMarkers = ["package ", "func ", "var ", "const ", "type ", "import "]
 
