@@ -213,9 +213,15 @@ type DependentParseResult = Either String ([DependentType], DependentTypesParser
 -- 通用类型引用：Simple | Generic<...>
 parseTypeReference :: Parser TypeRef
 parseTypeReference = do
-  name <- identifier
-  args <- MP.option [] (angles (parseTypeReference `MP.sepBy1` comma))
-  pure $ TypeRef name args
+  prefixes <- MP.many (MP.try (symbol "[]"))
+  base <- parseBaseType
+  pure (foldr (const wrapSlice) base prefixes)
+  where
+    parseBaseType = do
+      name <- identifier
+      args <- MP.option [] (angles (parseTypeReference `MP.sepBy1` comma))
+      pure (TypeRef name args)
+    wrapSlice inner = TypeRef "[]" [inner]
 
 -- 常用的内置类型便捷值
 tInt :: TypeRef
@@ -229,12 +235,13 @@ tVoid = TypeRef "void" []
 --------------------------------------------------------------------------------
 
 -- 操作符解析
-opEq, opGT, opLT, opGE, opLE :: Parser String
+opEq, opGT, opLT, opGE, opLE, opNE :: Parser String
 opEq = symbol "=="
 opGT = symbol ">"
 opLT = symbol "<"
 opGE = symbol ">="
 opLE = symbol "<="
+opNE = symbol "!="
 
 -- 简单值：标识符或数字，最终统一存入 String
 simpleVal :: Parser String
@@ -268,13 +275,13 @@ nonemptyConstraint = do
 compareConstraint :: Parser TypeConstraint
 compareConstraint = do
   nm <- identifier
-  let _range low hi = RangeConstraint nm low hi
   c <- (   (opGE >> (RangeConstraint nm <$> pInt <*> pure maxBound))
        MP.<|> (opLE >> (RangeConstraint nm <$> pure minBound <*> pInt))
        MP.<|> (opGT >> (RangeConstraint nm <$> ((+1) <$> pInt) <*> pure maxBound))
        MP.<|> (opLT >> (RangeConstraint nm <$> pure minBound <*> (subtract 1 <$> pInt)))
        MP.<|> (opEq >> (EqualityConstraint nm <$> simpleVal))
-       ) <?> "比较约束（==, >, >=, <, <=）"
+       MP.<|> (opNE >> fmap (\rhs -> PredicateConstraint "!=" [nm, rhs]) simpleVal)
+       ) <?> "比较约束（==, !=, >, >=, <, <=）"
   pure c
 
 typeClassConstraint :: Parser TypeConstraint
@@ -297,7 +304,10 @@ parseConstraint =
         pure $ CustomConstraint (trim raw) ""
 
 parseConstraints :: Parser [TypeConstraint]
-parseConstraints = parseConstraint `MP.sepBy1` symbol "&"
+parseConstraints = parseConstraint `MP.sepBy1` constraintSeparator
+
+constraintSeparator :: Parser String
+constraintSeparator = symbol "&" MP.<|> symbol ","
 
 parseWhereClause :: Parser [TypeConstraint]
 parseWhereClause = do

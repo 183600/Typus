@@ -78,6 +78,22 @@ tests =
                 )
               ]
 
+    , testCase "parses comma-separated constraints in where clause" $ do
+        let source = unlines
+              [ "type Bag<T> struct {"
+              , "    values: T"
+              , "}"
+              , "where len values > 0, len values > 1"
+              ]
+        extractTypeDefinitions source
+          @?= [ ( "Bag"
+                , ["T"]
+                , [ Dep.TypeSizeGE (Dep.TVVar "values") 1
+                  , Dep.TypeSizeGE (Dep.TVVar "values") 2
+                  ]
+                )
+              ]
+
     , testCase "collects parameter and declaration constraints" $ do
         let source = unlines
               [ "type Matrix<T: Slice<int> | len T > 1 & T == Number & ensure(T)> struct {"
@@ -358,6 +374,34 @@ tests =
               [ RangeConstraint "limit" 1 maxBound
               , PredicateConstraint "requires" ["input", "limit"]
               ]
+          Right _ ->
+            assertFailure "parseDependentType did not return a dependent function"
+
+    , testCase "parseDependentType supports inequality constraints in parameters" $ do
+        let source = unlines
+              [ "func divide(x: int, y: int where y != 0) -> float64 {"
+              , "    return float64(x) / float64(y)"
+              , "}"
+              ]
+        case parseDependentType source of
+          Left err ->
+            assertFailure ("failed to parse function with inequality constraint: " ++ err)
+          Right (DependentFunction _ _ _ cons, _) ->
+            cons @?= [PredicateConstraint "!=" ["y", "0"]]
+          Right _ ->
+            assertFailure "parseDependentType did not return a dependent function"
+
+    , testCase "parseDependentType parses slice return types" $ do
+        let source = unlines
+              [ "func build(limit: int where limit > 0) -> []int {"
+              , "    return []int{}"
+              , "}"
+              ]
+        case parseDependentType source of
+          Left err ->
+            assertFailure ("failed to parse function with slice return: " ++ err)
+          Right (DependentFunction _ _ ret _, _) ->
+            ret @?= TypeRef "[]" [TypeRef "int" []]
           Right _ ->
             assertFailure "parseDependentType did not return a dependent function"
 
