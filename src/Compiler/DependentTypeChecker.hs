@@ -3,7 +3,7 @@ module Compiler.DependentTypeChecker (
     extractDependentTypeContent
 ) where
 
-import Data.Char (isSpace)
+import Data.Char (isAlpha, isAlphaNum, isSpace)
 import Data.List (intercalate, isInfixOf, isPrefixOf)
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
@@ -71,6 +71,7 @@ extractDependentTypeContent typusFile =
                 , bdDependentTypes blockDirs == Nothing
                 , segment <- extractImplicitDependentSegments (cbContent block)
                 , hasMeaningfulContent segment
+                , isLikelyDependentSegment segment
                 ]
     in intercalate "\n" (explicitSegments ++ implicitSegments)
 
@@ -285,6 +286,93 @@ spanForLine lineNumber =
 
 hasMeaningfulContent :: String -> Bool
 hasMeaningfulContent = not . T.null . T.strip . T.pack
+
+isLikelyDependentSegment :: String -> Bool
+isLikelyDependentSegment segment =
+    let trimmed = trimLeading segment
+    in if not ("type " `isPrefixOf` trimmed)
+          then True
+          else
+            case extractStructBody trimmed of
+              Nothing -> True
+              Just body ->
+                  let bodyLines = lines body
+                      hasDependentFields = any looksLikeDependentField bodyLines
+                      hasGoFields = any looksLikeGoField bodyLines
+                  in hasDependentFields || not hasGoFields
+
+extractStructBody :: String -> Maybe String
+extractStructBody input = do
+    structStart <- findStructKeyword input
+    let afterStruct = drop (length structKeyword) structStart
+    afterBrace <- dropUntilChar '{' afterStruct
+    collectStructBody 1 afterBrace []
+  where
+    structKeyword = "struct"
+
+findStructKeyword :: String -> Maybe String
+findStructKeyword [] = Nothing
+findStructKeyword str@(_:rest)
+    | structKeyword `isPrefixOf` str = Just str
+    | otherwise = findStructKeyword rest
+  where
+    structKeyword = "struct"
+
+dropUntilChar :: Char -> String -> Maybe String
+dropUntilChar _ [] = Nothing
+dropUntilChar target xs =
+    case dropWhile (/= target) xs of
+        [] -> Nothing
+        (_:rest) -> Just rest
+
+collectStructBody :: Int -> String -> String -> Maybe String
+collectStructBody _ [] _ = Nothing
+collectStructBody depth (c:cs) acc
+    | c == '{' = collectStructBody (depth + 1) cs (c:acc)
+    | c == '}' =
+        let depth' = depth - 1
+        in if depth' == 0
+              then Just (reverse acc)
+              else collectStructBody depth' cs ('}':acc)
+    | otherwise = collectStructBody depth cs (c:acc)
+
+looksLikeDependentField :: String -> Bool
+looksLikeDependentField line =
+    case trimLeading line of
+        [] -> False
+        trimmed | isCommentLine trimmed -> False
+        trimmed ->
+            let (ident, rest) = span isIdentifierChar trimmed
+            in not (null ident)
+                && isIdentifierStart (head ident)
+                && case trimLeading rest of
+                     ':' : after ->
+                         case trimLeading after of
+                             '=' : _ -> False
+                             _ -> True
+                     _ -> False
+
+looksLikeGoField :: String -> Bool
+looksLikeGoField line =
+    case trimLeading line of
+        [] -> False
+        trimmed | isCommentLine trimmed -> False
+        trimmed ->
+            let (ident, rest) = span isIdentifierChar trimmed
+                next = trimLeading rest
+            in not (null ident)
+                && isIdentifierStart (head ident)
+                && not (null next)
+                && head next /= ':'
+
+isIdentifierStart :: Char -> Bool
+isIdentifierStart c = isAlpha c || c == '_'
+
+isIdentifierChar :: Char -> Bool
+isIdentifierChar c = isAlphaNum c || c == '_'
+
+isCommentLine :: String -> Bool
+isCommentLine txt = "//" `isPrefixOf` txt
 
 nonEmpty :: String -> Maybe String
 nonEmpty s = if null s then Nothing else Just s
