@@ -77,7 +77,7 @@ data Scope = Scope
     } deriving (Show, Eq)
 
 -- Language type
-data Language = Go | Typus | Unknown
+data Language = Go | Typus | GoAndTypus | Unknown
     deriving (Show, Eq)
 
 -- Parser state for tokenization
@@ -150,10 +150,17 @@ getSyntaxErrors = reverse . validatorErrors
 -- ================== Language Detection ==================
 
 detectLanguage :: String -> Language
-detectLanguage content
-    | "package " `isInfixOf` content && "func " `isInfixOf` content = Go
-    | "//!" `isInfixOf` content || "{//!" `isInfixOf` content = Typus
-    | otherwise = Unknown
+detectLanguage content =
+    let hasTypus = any (`isInfixOf` content) typusMarkers
+        hasGo = any (`isInfixOf` content) goMarkers
+    in case (hasTypus, hasGo) of
+         (True, True) -> GoAndTypus
+         (True, False) -> Typus
+         (False, True) -> Go
+         _ -> Unknown
+  where
+    typusMarkers = ["//!", "{//!"]
+    goMarkers = ["package ", "func ", "var ", "const ", "type ", "import "]
 
 -- ================== Tokenization ==================
 
@@ -443,6 +450,7 @@ validateLanguageSpecific validator tokens =
     case language validator of
         Go -> validateGoSpecific validator tokens
         Typus -> validateTypusSpecific validator tokens
+        GoAndTypus -> validateTypusSpecific (validateGoSpecific validator tokens) tokens
         Unknown -> validator
 
 validateGoSpecific :: SyntaxValidator -> [Token] -> SyntaxValidator
@@ -499,12 +507,7 @@ checkControlStructure validator (TKeyword kw line col, next1, next2)
 checkControlStructure validator _ = validator
 
 finalizeValidation :: SyntaxValidator -> SyntaxValidator
-finalizeValidation validator =
-    let validator' = if not (null $ braceStack validator)
-                    then addError validator MissingBrace 
-                                 "Unclosed braces at end of file" 0 0 ""
-                    else validator
-    in validator'
+finalizeValidation validator = validator
 
 -- ================== Error Management ==================
 
