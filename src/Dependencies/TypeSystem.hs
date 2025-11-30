@@ -117,6 +117,9 @@ newDependentTypeCheckerWithTypes typeDefs =
         , tcErrors = []
         }
 
+builtinTypeConstructors :: [String]
+builtinTypeConstructors = ["[]"]
+
 -- Conversion ------------------------------------------------------------------
 
 convertTypeExprAndRefinements :: Set.Set String -> TypeExpr -> (TypeVar, [TypeConstraint])
@@ -205,30 +208,34 @@ checkType tv = case tv of
         when (not (null ps)) $
           addTypeError (InvalidTypeArgument n)
   TVVar _ -> pure ()
-  TVApp n args -> do
-    mdef <- lookupTypeDef n
-    case mdef of
-      Nothing -> addTypeError (TypeNotFound n)
-      Just (TypeDefDecl ps cs) -> do
-        when (length ps /= length args) $
-          addTypeError (InvalidTypeArgument n)
-        mapM_ checkType args
-        let subst = zip ps args
-        mapM_ (checkTypeConstraint subst) cs
+  TVApp n args
+    | n `elem` builtinTypeConstructors -> mapM_ checkType args
+    | otherwise -> do
+        mdef <- lookupTypeDef n
+        case mdef of
+          Nothing -> addTypeError (TypeNotFound n)
+          Just (TypeDefDecl ps cs) -> do
+            when (length ps /= length args) $
+              addTypeError (InvalidTypeArgument n)
+            mapM_ checkType args
+            let subst = zip ps args
+            mapM_ (checkTypeConstraint subst) cs
   TVFun ps rt -> mapM_ checkType ps >> checkType rt
   TVTuple xs -> mapM_ checkType xs
 
 checkTypeInstantiation :: String -> [TypeVar] -> State DependentTypeChecker ()
-checkTypeInstantiation n args = do
-  mdef <- lookupTypeDef n
-  case mdef of
-    Nothing -> addTypeError (TypeNotFound n)
-    Just (TypeDefDecl ps cs) -> do
-      when (length ps /= length args) $
-        addTypeError (InvalidTypeArgument n)
-      mapM_ checkType args
-      let subst = zip ps args
-      mapM_ (checkTypeConstraint subst) cs
+checkTypeInstantiation n args
+  | n `elem` builtinTypeConstructors = mapM_ checkType args
+  | otherwise = do
+      mdef <- lookupTypeDef n
+      case mdef of
+        Nothing -> addTypeError (TypeNotFound n)
+        Just (TypeDefDecl ps cs) -> do
+          when (length ps /= length args) $
+            addTypeError (InvalidTypeArgument n)
+          mapM_ checkType args
+          let subst = zip ps args
+          mapM_ (checkTypeConstraint subst) cs
 
 solveConstraints :: State DependentTypeChecker Bool
 solveConstraints = do
