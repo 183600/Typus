@@ -207,6 +207,8 @@ test-suite typus-test
         Test.Unit.ParserSpec,
         Test.Unit.TypeSystemSpec,
         Test.Unit.SymbolTableSpec,
+        Test.Unit.SourceLocationSpec,
+        Test.Unit.SyntaxValidatorSpec,
         Test.Unit.ValueAnalysisSpec,
         Test.Unit.GoToolchainSpec,
         Test.Unit.VerbositySpec,
