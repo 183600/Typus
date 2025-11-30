@@ -93,10 +93,10 @@ tests =
             locatedValue loc @?= "payload"
 
         , testCase "mapLocated transforms the payload while preserving the span" $ do
-            let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 5 4)
-                loc = Located span "value"
+            let testSpan = SourceSpan (SourcePos 1 1 0) (SourcePos 1 5 4)
+                loc = Located testSpan "value"
                 mapped = mapLocated length loc
-            locatedSpan mapped @?= span
+            locatedSpan mapped @?= testSpan
             locatedValue mapped @?= length (locatedValue loc)
         ]
 
@@ -125,8 +125,8 @@ tests =
             endColumn errLoc @?= Nothing
 
         , testCase "toErrorLocationWithSpan preserves both ends of the span" $ do
-            let span = SourceSpan (SourcePos 1 2 0) (SourcePos 3 5 10)
-                errLoc = toErrorLocationWithSpan span
+            let testSpan = SourceSpan (SourcePos 1 2 0) (SourcePos 3 5 10)
+                errLoc = toErrorLocationWithSpan testSpan
             line errLoc @?= 1
             column errLoc @?= 2
             endLine errLoc @?= Just 3
