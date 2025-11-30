@@ -343,14 +343,16 @@ looksLikeDependentField line =
         trimmed | isCommentLine trimmed -> False
         trimmed ->
             let (ident, rest) = span isIdentifierChar trimmed
-            in not (null ident)
-                && isIdentifierStart (head ident)
-                && case trimLeading rest of
-                     ':' : after ->
-                         case trimLeading after of
-                             '=' : _ -> False
-                             _ -> True
-                     _ -> False
+            in case ident of
+                first : _ ->
+                    isIdentifierStart first
+                    && case trimLeading rest of
+                        ':' : after ->
+                            case trimLeading after of
+                                '=' : _ -> False
+                                _ -> True
+                        _ -> False
+                _ -> False
 
 looksLikeGoField :: String -> Bool
 looksLikeGoField line =
@@ -360,10 +362,14 @@ looksLikeGoField line =
         trimmed ->
             let (ident, rest) = span isIdentifierChar trimmed
                 next = trimLeading rest
-            in not (null ident)
-                && isIdentifierStart (head ident)
-                && not (null next)
-                && head next /= ':'
+            in case ident of
+                first : _ ->
+                    isIdentifierStart first
+                    && case next of
+                        [] -> False
+                        ':' : _ -> False
+                        _ -> True
+                _ -> False
 
 isIdentifierStart :: Char -> Bool
 isIdentifierStart c = isAlpha c || c == '_'
