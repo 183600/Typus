@@ -6,6 +6,7 @@ import Test.Tasty.HUnit (assertBool, assertFailure, (@?=), testCase)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.State (runStateT)
 import Data.List (isInfixOf)
+import qualified Data.Map.Strict as Map
 
 import AnalyzerIntegration
   ( AnalysisContext(..)
@@ -366,19 +367,14 @@ tests =
                   , "    process(s)"
                   , "}"
                   ]
-            let helperCode = unlines
-                  [ "package main"
-                  , ""
-                  , "func process(x owned String) {"
-                  , "    println(x)"
-                  , "}"
-                  ]
             let state = newIntegratedAnalyzer True True
             result <- runAnalysis mainCode state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
-                assertBool "Should complete full analysis" True
+                assertBool "Should not report ownership errors" (null $ ownershipErrors analysisRes)
+                assertBool "Should not report dependent type errors" (null $ dependentTypeErrors analysisRes)
+                assertBool "Should not surface integration warnings" (null $ analysisWarnings analysisRes)
 
         , testCase "selective feature enabling" $ do
             let ownershipOnlyCode = unlines
@@ -462,12 +458,16 @@ tests =
                   , "    println(global)"
                   , "}"
                   ]
-            let state = newIntegratedAnalyzer True True
-            result <- runAnalysis code state
-            case result of
+                state = newIntegratedAnalyzer True True
+                input = mkAnalysisInput code
+            runResult <- runExceptT $ runStateT (analyzeCodeWithBothAnalyzers input) state
+            case runResult of
               Left err -> assertFailure $ "Analysis failed: " ++ err
-              Right analysisRes -> do
-                assertBool "Symbol table should be consistent" True
+              Right (analysisRes, finalState) -> do
+                let symbols = symbolTable finalState
+                assertBool "Global variable should be tracked in the symbol table" (Map.member "global" symbols)
+                assertBool "Symbol table run should not produce ownership errors" (null $ ownershipErrors analysisRes)
+                assertBool "Symbol table run should not produce dependent type errors" (null $ dependentTypeErrors analysisRes)
 
         , testCase "type environment preservation" $ do
             let code = unlines
