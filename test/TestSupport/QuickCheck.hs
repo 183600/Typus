@@ -5,8 +5,19 @@ module TestSupport.QuickCheck
   ) where
 
 import Test.QuickCheck (Testable)
-import Test.Tasty (TestTree, localOption)
-import Test.Tasty.QuickCheck (QuickCheckMaxSize(..), QuickCheckTests(..), testProperty)
+import Test.Tasty
+  ( TestTree
+#if defined(FAST_TESTS)
+  , localOption
+#endif
+  )
+import Test.Tasty.QuickCheck
+  ( testProperty
+#if defined(FAST_TESTS)
+  , QuickCheckMaxSize(..)
+  , QuickCheckTests(..)
+#endif
+  )
 
 -- | Wrap 'testProperty' so that fast test runs keep a lightweight sampling
 -- strategy while comprehensive/production runs continue to use the full

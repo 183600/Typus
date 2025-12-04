@@ -3,9 +3,7 @@ module Cli.Runner (runWithArgs) where
 import Cli (Args(..), parseArgsFromList)
 import CompilerUtils (CompilerContext(..), Logger(..), defaultLogger, newCompilerContext)
 import qualified CompilerUtils as CU
-import Control.Monad (forM_, unless)
 import Control.Monad.Except
-import Control.Monad.IO.Class (liftIO)
 import Data.List (partition)
 import EmbedAssets (copyEmbeddedForBuild, handleMissingEmbeds, mirrorEmbeddedResources)
 import GoToolchain (IOResult, createTempGoFile, withTemporaryGoProject)
