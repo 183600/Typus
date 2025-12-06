@@ -13,7 +13,6 @@ import Compiler.GoAst
 import Compiler.GoParsing (nestingDelta, splitTopLevel, stripLineComment)
 import qualified Compiler.GoVarSpec as GoVar
 import Data.Char (isAlphaNum, isDigit, isSpace, isUpper, toLower)
-import Data.List (dropWhileEnd, intercalate, isInfixOf, isPrefixOf, stripPrefix)
 import qualified Data.List as List
 import Data.Maybe (fromMaybe, maybeToList)
 import qualified Data.Set as Set
@@ -126,7 +125,7 @@ collectExpression :: String -> [(Int, String)] -> (String, [(Int, String)])
 collectExpression initial rest = go [initial] (max 0 (nestingDelta initial)) rest
   where
     go parts depth remaining =
-        let combined = intercalate "\n" parts
+        let combined = List.intercalate "\n" parts
             trimmed = trim combined
         in if endsWithBlockStart trimmed
             then (combined, remaining)
@@ -141,7 +140,7 @@ collectExpression initial rest = go [initial] (max 0 (nestingDelta initial)) res
 
 endsWithBlockStart :: String -> Bool
 endsWithBlockStart txt =
-    case reverse (dropWhileEnd isSpace txt) of
+    case reverse (List.dropWhileEnd isSpace txt) of
         '{' : ' ' : _ -> True
         _ -> False
 
@@ -255,9 +254,9 @@ isValueInit valueTypes expr =
 isReferenceInit :: String -> Bool
 isReferenceInit expr =
     let e = trim expr
-    in "&" `isPrefixOf` e
-        || "make(" `isPrefixOf` e
-        || "new(" `isPrefixOf` e
+    in "&" `List.isPrefixOf` e
+        || "make(" `List.isPrefixOf` e
+        || "new(" `List.isPrefixOf` e
         || isArrayLiteral e
         || isMapLiteral e
 
@@ -383,14 +382,14 @@ parseGroupedSpecs lines0 =
     shouldStartNewSpec stripped lowerStripped =
         any isSpace stripped
             || '=' `elem` stripped
-            || "struct" `isInfixOf` lowerStripped
-            || "interface" `isInfixOf` lowerStripped
+            || "struct" `List.isInfixOf` lowerStripped
+            || "interface" `List.isInfixOf` lowerStripped
 
 firstMeaningfulTypeLine :: [String] -> Maybe String
 firstMeaningfulTypeLine [] = Nothing
 firstMeaningfulTypeLine (line:rest) =
     let stripped = trim (stripLineComment line)
-    in if null stripped || "//" `isPrefixOf` stripped
+    in if null stripped || "//" `List.isPrefixOf` stripped
         then firstMeaningfulTypeLine rest
         else Just stripped
 
@@ -398,7 +397,7 @@ parseTypeSpecSummary :: String -> Maybe TypeSpecSummary
 parseTypeSpecSummary raw =
     let cleaned = trim raw
         withoutKeyword =
-            if "type " `isPrefixOf` cleaned
+            if "type " `List.isPrefixOf` cleaned
                 then dropWhile isSpace (drop (length "type") cleaned)
                 else cleaned
         (namePart, restAfterName) = span isTypeNameChar withoutKeyword
@@ -440,9 +439,9 @@ typeSummaryIndicatesValue :: String -> Bool
 typeSummaryIndicatesValue remainder =
     let cleaned = dropWhile isSpace remainder
         lowered = map toLower cleaned
-        hasStruct = "struct" `isInfixOf` lowered
-        hasInterface = "interface" `isInfixOf` lowered
-        hasFunc = "func" `isPrefixOf` lowered
+        hasStruct = "struct" `List.isInfixOf` lowered
+        hasInterface = "interface" `List.isInfixOf` lowered
+        hasFunc = "func" `List.isPrefixOf` lowered
     in if hasStruct
         then True
         else if hasInterface || hasFunc
