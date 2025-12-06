@@ -5,7 +5,7 @@ module Test.Unit.GoToolchainSpec (tests) where
 import Control.Exception (bracket_)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class (liftIO)
-import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
+import Data.IORef (modifyIORef', newIORef, readIORef)
 import Data.List (isPrefixOf)
 import GoToolchain
 import System.Directory (doesDirectoryExist, doesFileExist)
