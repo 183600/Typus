@@ -21,7 +21,6 @@ import Control.Monad.Except (throwError)
 import Control.Monad.State
 import qualified Data.Map.Strict as Map
 import Data.Char (isSpace, isAlphaNum, isDigit, toLower)
-import Data.List (dropWhileEnd, isPrefixOf, mapAccumL)
 import qualified Data.List as List
 import Data.Maybe (catMaybes, fromMaybe, listToMaybe)
 
@@ -53,7 +52,7 @@ collectSymbolsFromAST GoModule{..} = do
     validateSymbolTable combinedSymbols
   where
     annotateDecls :: [GoDecl] -> [(Int, GoDecl)]
-    annotateDecls decls = snd $ mapAccumL step 1 decls
+    annotateDecls decls = snd $ List.mapAccumL step 1 decls
       where
         step lineStart decl =
             let lineCount = max 1 (length (flattenDeclLines decl))
@@ -167,7 +166,7 @@ parseSingleTypeSpec start lines0 = do
 parseGroupedTypeSpecs :: Maybe Int -> [String] -> [RawTypeSpec]
 parseGroupedTypeSpecs start lines0 =
     let annotated = annotateWithLines start lines0
-        inner = drop 1 (dropWhileEnd isGroupClosing annotated)
+        inner = drop 1 (List.dropWhileEnd isGroupClosing annotated)
     in reverse (collectSpecs inner Nothing "" 0 [])
   where
     isGroupClosing (_, line) = trim (stripLineComment line) == ")"
@@ -224,7 +223,7 @@ parseTypeSpecHeader :: String -> Maybe (String, [String])
 parseTypeSpecHeader raw = do
     let cleaned = trim raw
         withoutKeyword =
-            if "type " `isPrefixOf` cleaned
+            if "type " `List.isPrefixOf` cleaned
                 then dropWhile isSpace (drop (length "type") cleaned)
                 else cleaned
     (namePart, rest) <- parseTypeName withoutKeyword

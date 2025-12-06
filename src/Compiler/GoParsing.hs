@@ -8,7 +8,6 @@ module Compiler.GoParsing (
 ) where
 
 import Data.Char (isAlphaNum, isSpace)
-import Data.List (dropWhileEnd)
 import qualified Data.List as List
 import Utils (trim)
 
@@ -139,7 +138,7 @@ nestingDelta = List.foldl' step 0
 
 -- | Remove a trailing comma from the given string.
 removeTrailingComma :: String -> String
-removeTrailingComma = dropWhileEnd (== ',')
+removeTrailingComma = List.dropWhileEnd (== ',')
 
 -- | Locate the index of the first standalone '=' assignment operator.
 findAssignmentIndex :: String -> Maybe Int

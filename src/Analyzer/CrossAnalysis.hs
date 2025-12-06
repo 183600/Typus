@@ -12,7 +12,6 @@ import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Char (isDigit, isLower)
-import Data.List (isPrefixOf)
 import Data.Maybe (mapMaybe, fromMaybe)
 import Compiler.GoAst (parseGoModule)
 import Ownership.Common.Lexer (Token(..), TokenKind(..))
@@ -206,8 +205,8 @@ extractVariablesFromLine line =
             not (null word)
                 && not (isKeyword word)
                 && not (isOperator word)
-                && not ("\"" `isPrefixOf` word)
-                && not ("'" `isPrefixOf` word)
+                && not ("\"" `List.isPrefixOf` word)
+                && not ("'" `List.isPrefixOf` word)
                 && case word of
                     [] -> False
                     (c : _) -> not (isDigit c)
