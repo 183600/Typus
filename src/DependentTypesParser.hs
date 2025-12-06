@@ -169,6 +169,7 @@ data TypeParameter = TypeParameter
 -- 类型约束
 data TypeConstraint
     = EqualityConstraint String String
+    | InequalityConstraint String String
     | RangeConstraint String Int Int
     | SizeConstraint String Int
     | NonEmptyConstraint String
@@ -229,16 +230,29 @@ tVoid = TypeRef "void" []
 --------------------------------------------------------------------------------
 
 -- 操作符解析
-opEq, opGT, opLT, opGE, opLE :: Parser String
+opEq, opNE, opGT, opLT, opGE, opLE :: Parser String
 opEq = symbol "=="
+opNE = symbol "!="
 opGT = symbol ">"
 opLT = symbol "<"
 opGE = symbol ">="
 opLE = symbol "<="
 
--- 简单值：标识符或数字，最终统一存入 String
+-- 简单值：标识符、数字、限定标识符或函数调用，最终统一存入 String
 simpleVal :: Parser String
-simpleVal = (show <$> pInt) MP.<|> identifier
+simpleVal = qualifiedOrCall MP.<|> (show <$> pInt) MP.<|> identifier
+  where
+    qualifiedOrCall = do
+      base <- identifier
+      rest <- MP.many (MP.try dotPart MP.<|> MP.try callPart)
+      pure $ base ++ concat rest
+    dotPart = do
+      _ <- symbol "."
+      next <- identifier
+      pure $ "." ++ next
+    callPart = do
+      args <- parens (simpleVal `MP.sepBy` comma)
+      pure $ "(" ++ List.intercalate ", " args ++ ")"
 
 -- 谓词调用：pred(arg1, arg2, ...)
 predicateCall :: Parser TypeConstraint
@@ -264,7 +278,7 @@ nonemptyConstraint = do
   nm <- identifier
   pure $ NonEmptyConstraint nm
 
--- 一般比较：x >= 3 / x > 0 / x == y ...
+-- 一般比较：x >= 3 / x > 0 / x == y / x != y ...
 compareConstraint :: Parser TypeConstraint
 compareConstraint = do
   nm <- identifier
@@ -273,8 +287,9 @@ compareConstraint = do
        MP.<|> (opLE >> (RangeConstraint nm <$> pure minBound <*> pInt))
        MP.<|> (opGT >> (RangeConstraint nm <$> ((+1) <$> pInt) <*> pure maxBound))
        MP.<|> (opLT >> (RangeConstraint nm <$> pure minBound <*> (subtract 1 <$> pInt)))
+       MP.<|> (opNE >> (InequalityConstraint nm <$> simpleVal))
        MP.<|> (opEq >> (EqualityConstraint nm <$> simpleVal))
-       ) <?> "比较约束（==, >, >=, <, <=）"
+       ) <?> "比较约束（==, !=, >, >=, <, <=）"
   pure c
 
 typeClassConstraint :: Parser TypeConstraint
@@ -297,7 +312,7 @@ parseConstraint =
         pure $ CustomConstraint (trim raw) ""
 
 parseConstraints :: Parser [TypeConstraint]
-parseConstraints = parseConstraint `MP.sepBy1` symbol "&"
+parseConstraints = parseConstraint `MP.sepBy1` (symbol "&" MP.<|> comma)
 
 parseWhereClause :: Parser [TypeConstraint]
 parseWhereClause = do
