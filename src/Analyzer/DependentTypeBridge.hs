@@ -111,6 +111,8 @@ extractTypeDefinitions code =
         case constraint of
             EqualityConstraint lhs rhs ->
                 [Dep.Equal (Dep.TVVar lhs) (valueToTypeVar scope rhs)]
+            InequalityConstraint lhs rhs ->
+                [Dep.Predicate ("neq_" ++ lhs ++ "_" ++ rhs) [Dep.TVVar lhs, valueToTypeVar scope rhs]]
             RangeConstraint name low high ->
                 [Dep.TypeRange (Dep.TVVar name) low high]
             SizeConstraint name threshold ->
