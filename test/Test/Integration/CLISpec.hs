@@ -2,8 +2,6 @@ module Test.Integration.CLISpec (tests) where
 
 import qualified Cli.Runner as CliRunner
 import Control.Exception (bracket_)
-import Data.Char (isSpace)
-import Data.List (dropWhileEnd, isInfixOf, isPrefixOf)
 import System.Directory (copyFile, doesFileExist, findExecutable)
 import System.Environment (getEnvironment, lookupEnv, setEnv, unsetEnv)
 import System.Exit (ExitCode(..))
@@ -14,8 +12,11 @@ import System.IO.Temp (withSystemTempDirectory)
 import System.Process (CreateProcess(..), proc, readCreateProcessWithExitCode)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, (@?=), testCase)
+import Data.List (isInfixOf)
 
--- | End-to-end CLI tests that exercise the real 'typus' executable via Stack when available.
+-- | End-to-end CLI tests that exercise the real 'typus' executable when available.
+--   We first try to run the 'typus' binary directly (thanks to build-tool-depends putting it on PATH).
+--   If it's not found, we fall back to running the CLI in-process.
 tests :: TestTree
 tests =
   testGroup "CLI smoke tests"
@@ -76,35 +77,33 @@ tests =
     ]
 
 data CliExecution
-  = UseStackBinary FilePath
+  = UseTypusBinary FilePath
   | UseInProcessRunner
-
 
 runTypusCli :: [String] -> IO (ExitCode, String, String)
 runTypusCli args = do
   execution <- resolveExecution
   case execution of
-    UseStackBinary stackPath -> runViaStack stackPath args
-    UseInProcessRunner -> runInProcess args
+    UseTypusBinary exePath -> runViaExe exePath args
+    UseInProcessRunner     -> runInProcess args
 
 resolveExecution :: IO CliExecution
 resolveExecution = do
-  envOverride <- lookupEnv "TYPUS_FAKE_STACK"
-  case envOverride of
-    Just path -> pure (UseStackBinary path)
+  -- Optional override: set TYPUS_BIN to point to a specific typus executable
+  mOverride <- lookupEnv "TYPUS_BIN"
+  case mOverride of
+    Just path -> pure (UseTypusBinary path)
     Nothing -> do
-      mStack <- findExecutable "stack"
-      pure (maybe UseInProcessRunner UseStackBinary mStack)
+      mTypus <- findExecutable "typus"
+      pure (maybe UseInProcessRunner UseTypusBinary mTypus)
 
-runViaStack :: FilePath -> [String] -> IO (ExitCode, String, String)
-runViaStack stackPath args = do
+runViaExe :: FilePath -> [String] -> IO (ExitCode, String, String)
+runViaExe typusPath args = do
   envVars <- getEnvironment
+  -- Ensure we always skip actual Go toolchain calls during tests
   let sanitizedEnv = ("TYPUS_SKIP_GO_BUILD","1") : filter ((/= "TYPUS_SKIP_GO_BUILD") . fst) envVars
-      processSpec = (proc stackPath ("exec" : "typus" : "--" : args))
-        { env = Just sanitizedEnv
-        }
-  (exitCode, stdoutOutput, stderrOutput) <- readCreateProcessWithExitCode processSpec ""
-  pure (exitCode, stdoutOutput, sanitizeStackWarnings stderrOutput)
+      processSpec  = (proc typusPath args) { env = Just sanitizedEnv }
+  readCreateProcessWithExitCode processSpec ""
 
 runInProcess :: [String] -> IO (ExitCode, String, String)
 runInProcess args =
@@ -112,41 +111,13 @@ runInProcess args =
     (stdoutOutput, (stderrOutput, exitCode)) <- capture (hCapture [stderr] (CliRunner.runWithArgs args))
     pure (exitCode, stdoutOutput, stderrOutput)
 
-sanitizeStackWarnings :: String -> String
-sanitizeStackWarnings stderrOutput =
-  let filtered = filterStackWarnings False (lines stderrOutput)
-      trimmed = dropWhile null (dropWhileEnd null filtered)
-  in if null trimmed then "" else unlines trimmed
-
-filterStackWarnings :: Bool -> [String] -> [String]
-filterStackWarnings _ [] = []
-filterStackWarnings suppress (line:rest)
-  | isStackWarning line = filterStackWarnings True rest
-  | suppress && shouldSkipContinuation line = filterStackWarnings True rest
-  | otherwise = line : filterStackWarnings False rest
-
-isStackWarning :: String -> Bool
-isStackWarning line =
-  let stripped = dropWhile isSpace line
-  in any (`isPrefixOf` stripped) stackWarningPrefixes
-
-shouldSkipContinuation :: String -> Bool
-shouldSkipContinuation line =
-  all isSpace line || "this may fail." `isInfixOf` line
-
-stackWarningPrefixes :: [String]
-stackWarningPrefixes =
-  [ "Warning: Stack has not been tested with GHC versions above"
-  , "Warning: Stack has not been tested with Cabal versions above"
-  ]
-
 withEnvOverride :: String -> String -> IO a -> IO a
 withEnvOverride key value action = do
   original <- lookupEnv key
   bracket_ (setEnv key value) (restore original) action
   where
     restore (Just prior) = setEnv key prior
-    restore Nothing = unsetEnv key
+    restore Nothing      = unsetEnv key
 
 withTempFixture :: FilePath -> (FilePath -> FilePath -> IO a) -> IO a
 withTempFixture fixture action =
