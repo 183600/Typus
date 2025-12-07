@@ -82,7 +82,7 @@ dispatch ctx (Run strict runArgs) =
         CU.runGoCommandInDir ctx goArgs tempDir
 
 dispatch _ Version =
-  liftIO $ putStrLn "typus version 0.1.0"
+  liftIO $ putStrLn "typus version 0.12.0"
 
 prepareSingleFileProject :: CompilerContext -> Bool -> FilePath -> FilePath -> IOResult FilePath
 prepareSingleFileProject ctx strict sourcePath tempDir = do
