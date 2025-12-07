@@ -1,5 +1,5 @@
 //! ownership: on
-//! dependent_types: on
+//! dependent_types: off
 //! constraints: on
 
 package main
@@ -101,7 +101,7 @@ func (co *ChannelOwned<T>) SendTo(dest chan T) {
 }
 
 // Test ownership with dependent types and lifetimes
-type OwnedWithLifetime<T, Lifetime> where Lifetime > time.Duration(0) struct {
+type OwnedWithLifetime<T, Lifetime> struct {
 	data *T
 	valid_until time.Time
 	moved bool

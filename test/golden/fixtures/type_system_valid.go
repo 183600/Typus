@@ -1,15 +1,16 @@
-//! dependent_types: off
-//! ownership: on
+package main
+
+import "fmt"
 
 // Basic type definitions
 type SimpleType
-type GenericType<T>
-type ParametricType<T, U>
+type GenericType[T any]
+type ParametricType[T any] U>
 
 // Dependent types with constraints
 type PositiveInt where value > 0
 type BoundedInt where value >= 0, value < 100
-type NonEmptyList<T> where length > 0
+type NonEmptyList[T any] where length > 0
 
 // Function declarations with types
 func identity(x: T): T
@@ -18,12 +19,12 @@ func add(x: int, y: int): int {
     return x + y
 }
 
-func head(list: NonEmptyList<T>): T
+func head(list: NonEmptyList[T]): T
 
 // Generic functions
-func map(f: func(T): U, list: List<T>): List<U>
+func map(f: func(T): U, list: List[T]): List[U]
 
-func filter(pred: func(T): bool, list: List<T>): List<T>
+func filter(pred: func(T): bool, list: List[T]): List[T]
 
 // Functions with dependent types
 func divide(x: int, y: int where y != 0): float64 {
@@ -44,16 +45,16 @@ func borrow(data *[]int) {
 }
 
 // Complex types
-type Matrix<T, M, N> where M > 0, N > 0
+type Matrix[T any] M, N> where M > 0, N > 0
 
-func multiply(a: Matrix<int, M, N>, b: Matrix<int, N, P>): Matrix<int, M, P>
+func multiply(a: Matrix[int, M, N], b: Matrix[int, N, P]): Matrix[int, M, P]
 
 // Main function
 func main() {
     x := 42
     y := add(x, 10)
     fmt.Println(y)
-    
+
     data := []int{1, 2, 3}
     borrow(&data)
     fmt.Println(data)
