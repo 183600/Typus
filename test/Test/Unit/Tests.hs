@@ -19,6 +19,10 @@ import qualified Test.Unit.SyntaxValidatorSpec
 import qualified Test.Unit.ValueAnalysisSpec
 import qualified Test.Unit.VerbositySpec
 import qualified Test.Unit.UtilsSpec
+import qualified Test.Unit.AdvancedParserSpec
+import qualified Test.Unit.IntegrationSpec
+import qualified Test.Unit.PerformanceSpec
+import qualified Test.Unit.EdgeCaseSpec
 
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
@@ -42,4 +46,8 @@ tests =
     , Test.Unit.CLISpec.tests
     , Test.Unit.VerbositySpec.tests
     , Test.Unit.UtilsSpec.tests
+    , Test.Unit.AdvancedParserSpec.tests
+    , Test.Unit.IntegrationSpec.tests
+    , Test.Unit.PerformanceSpec.tests
+    , Test.Unit.EdgeCaseSpec.tests
     ]

@@ -1,6 +1,7 @@
 module Cli.Runner (runWithArgs) where
 
 import Cli (Args(..), parseArgsFromList)
+import Cli.DebugRunner (processDebugArgs)
 import CompilerUtils (CompilerContext(..), Logger(..), defaultLogger, newCompilerContext)
 import qualified CompilerUtils as CU
 import Control.Monad (forM_, unless)
@@ -80,6 +81,10 @@ dispatch ctx (Run strict runArgs) =
         tempGoPath <- prepareSingleFileProject ctx strict inputFile tempDir
         let goArgs = "run" : takeFileName tempGoPath : restArgs
         CU.runGoCommandInDir ctx goArgs tempDir
+
+dispatch _ (DebugMode debugArgs) = do
+  liftIO $ processDebugArgs debugArgs
+  pure ()
 
 dispatch _ Version =
   liftIO $ putStrLn "typus version 0.12.0"

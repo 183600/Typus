@@ -1,270 +1,232 @@
-# Typus Compiler Debugging Guide
+# Typus 调试功能使用指南
 
-This guide explains how to use the debugging capabilities added to the Typus compiler.
+## 概述
 
-## Overview
+Typus 编译器现在提供了强大的调试功能，包括：
 
-The debugging system includes:
-1. **Debug Module**: Basic logging and breakpoint functionality
-2. **CommandLineDebug Module**: Interactive command-line debugging
-3. **DebugIntegration Module**: Integration hooks for compiler phases
-4. **Debug CLI Tool**: Command-line interface for debugging management
+1. **调试日志记录** - 不同级别的日志输出
+2. **命令行断点调试** - 在关键位置设置断点
+3. **交互式调试模式** - 实时控制程序执行
+4. **性能监控** - 执行时间和统计信息
 
-## Key Features
+## 启动调试模式
 
-### 1. Debug Logging
-
-The `Debug` module provides several logging functions:
-
-```haskell
-import Debug
-
--- Basic logging with location and message
-debugLog "parser" "Starting parsing of file"
-debugInfo "compiler" "Compilation phase started"
-debugWarn "typechecker" "Potential type issue detected"
-debugError "generator" "Code generation failed"
-debugTrace "analyzer" "Detailed execution trace"
-```
-
-### 2. Breakpoints
-
-Interactive breakpoints can be set using the `CommandLineDebug` module:
-
-```haskell
-import CommandLineDebug
-
-config <- defaultCLIDebugConfig
-
--- Set breakpoints at specific locations
-setBreakpoint config "parse:main"
-setBreakpoint config "compile:fixtures/reference/example.typus"
-setBreakpoint config "ownership:analysis"
-
--- List all breakpoints
-listBreakpoints config
-
--- Clear all breakpoints
-clearBreakpoints config
-```
-
-### 3. Command-Line Debug Tool
-
-Use the `examples/debug/debug-cli.hs` script for interactive debugging:
+### 交互式调试模式
 
 ```bash
-# Start the debug CLI
-runhaskell examples/debug/debug-cli.hs
-
-# Available commands in debug CLI:
-help           - Show help
-status         - Show debug status
-set breakpoint LOC - Set breakpoint at location
-break LOC      - Set breakpoint at location
-list           - List all breakpoints
-clear          - Clear all breakpoints
-toggle         - Toggle debug output
-level N        - Set debug level (0-4)
-enable/disable - Enable/disable debugging
-test LOC       - Test breakpoint at location
+# 进入交互式调试模式
+./dist-newstyle/build/x86_64-linux/ghc-9.6.3/typus-0.12.0/x/typus/build/typus/typus debug
 ```
 
-### 4. Compiler Integration
-
-The `DebugIntegration` module provides hooks for compiler phases:
-
-```haskell
-import DebugIntegration
-
-config <- setupCompilerDebugging
-
--- Wrap compiler phases with debugging
-withDebugging config "parse" $ do
-    -- Parse logic here
-    return ()
-
-let exampleFile = "fixtures/reference/example.typus"
-
-debugParseStep config exampleFile $ do
-    -- Parse with breakpoint support
-    return ()
-
-debugCompileStep config exampleFile $ do
-    -- Compile with breakpoint support
-    return ()
-```
-
-## Using the Debug System
-
-### Step 1: Enable Debugging
-
-```haskell
-import DebugIntegration
-
--- Initialize debugging with default configuration
-config <- setupCompilerDebugging
-```
-
-### Step 2: Set Breakpoints
+### 命令行调试参数
 
 ```bash
-# In the debug CLI
-set breakpoint parse:main
-set breakpoint compile:fixtures/reference/example.typus
-set breakpoint ownership:analysis
+# 显示调试帮助
+./dist-newstyle/build/x86_64-linux/ghc-9.6.3/typus-0.12.0/x/typus/build/typus/typus debug help
+
+# 设置断点
+./dist-newstyle/build/x86_64-linux/ghc-9.6.3/typus-0.12.0/x/typus/build/typus/typus debug breakpoint set Parser.parseTypus
+
+# 列出断点
+./dist-newstyle/build/x86_64-linux/ghc-9.6.3/typus-0.12.0/x/typus/build/typus/typus debug breakpoint list
+
+# 设置日志级别
+./dist-newstyle/build/x86_64-linux/ghc-9.6.3/typus-0.12.0/x/typus/build/typus/typus debug log level debug
 ```
 
-### Step 3: Run Compiler with Debugging
+## 调试命令参考
 
-```haskell
--- Compiler execution will stop at breakpoints
-main = do
-    config <- setupCompilerDebugging
+### 断点命令
 
-    let exampleFile = "fixtures/reference/example.typus"
+- `breakpoint set <location>` - 在指定位置设置断点
+- `bp set <location>` - 设置断点（简写）
+- `breakpoint list` - 列出所有断点
+- `bp list` - 列出断点（简写）
+- `breakpoint clear` - 清除所有断点
+- `bp clear` - 清除断点（简写）
 
-    debugCompilerStart config exampleFile
+### 日志命令
 
-    debugParseStep config exampleFile $ do
-        -- Parse logic - will stop at parse:main breakpoint
-        parseFile exampleFile
+- `log level <level>` - 设置日志级别（debug/info/warning/error）
+- `log debug` - 启用调试跟踪
+- `log info` - 设置信息级别（禁用调试跟踪）
+- `trace on` - 启用跟踪
+- `trace off` - 禁用跟踪
 
-    debugCompileStep config exampleFile $ do
-        -- Compile logic - will stop at compile:fixtures/reference/example.typus breakpoint
-        compileAST ast
+### 其他命令
 
-    debugOwnershipStep config exampleFile $ do
-        -- Ownership analysis - will stop at ownership:analysis breakpoint
-        analyzeOwnership ast
+- `stats` - 显示调试统计信息
+- `run <filename>` - 运行文件并启用调试
+- `help` - 显示帮助信息
+- `h` - 显示帮助信息（简写）
+- `exit` / `quit` / `q` - 退出调试模式
 
-    debugCompilerEnd config exampleFile
+## 常用调试位置
+
+以下是一些常用的断点位置：
+
+- `Parser.parseTypus` - 解析器入口点
+- `Compiler.compile` - 编译器入口点
+- `Ownership.analyze` - 所有权分析入口点
+- `DependentTypesParser.parseDependentType` - 依赖类型解析
+- `TypeSystem.checkType` - 类型检查
+
+## 调试示例
+
+### 示例 1：基本调试
+
+```bash
+# 启动调试模式
+./dist-newstyle/build/x86_64-linux/ghc-9.6.3/typus-0.12.0/x/typus/build/typus/typus debug
+
+# 在调试模式中
+debug> breakpoint set Parser.parseTypus
+debug> breakpoint set Compiler.compile
+debug> log level debug
+debug> run debug_example.typus
 ```
 
-### Step 4: Interactive Debugging
+### 示例 2：性能分析
 
-When a breakpoint is hit, the debugger will pause and show:
+```bash
+# 启动调试模式
+./dist-newstyle/build/x86_64-linux/ghc-9.6.3/typus-0.12.0/x/typus/build/typus/typus debug
+
+# 在调试模式中
+debug> log level debug
+debug> run large_file.typus
+debug> stats
+```
+
+## 调试输出说明
+
+### 断点命中
+
+当断点被命中时，会显示：
 
 ```
-=== BREAKPOINT HIT ===
-Location: parse:main
-Available commands:
+=== REGULAR BREAKPOINT ===
+Location: Parser.parseTypus
+Function stack:
+  Compiler.compile
+  main
+Execution count: 1
+
+Breakpoint commands:
   c, continue - Continue execution
-  s, step - Step to next breakpoint
-  l, list - List all breakpoints
-  d, disable - Disable debugging
-  e, enable - Enable debugging
+  s, stack - Show function stack
+  i, info - Show debug info
+  t, trace - Enable/disable tracing
+  h, help - Show help
   q, quit - Quit program
-  h, help - Show this help
-debug>
 ```
 
-## Debug Levels
+### 调试统计
 
-The debugging system supports multiple log levels:
+```
+=== Debug Statistics ===
 
-- **0**: Off
-- **1**: Error only
-- **2**: Warning and above
-- **3**: Info and above (default)
-- **4**: Debug and above (includes trace)
+Execution Counts:
+  Parser.parseTypus: 1
+  Compiler.compile: 1
 
-Set the debug level:
+Timings:
+  Parser.parseTypus: 0.123s
+  Compiler.compile: 0.456s
+
+Log Counts:
+  Debug: 15
+  Info: 8
+  Warning: 2
+  Error: 0
+```
+
+## 集成到开发工作流
+
+### 1. 日常开发
 
 ```bash
-# In debug CLI
-level 4  # Show all debug information
-level 2  # Show warnings and errors only
-level 0  # Disable debugging
+# 开发时启用调试日志
+./typus debug log level debug
+./typus check your_file.typus
 ```
 
-## Examples
+### 2. 问题诊断
 
-### Example 1: Basic Debugging
+```bash
+# 遇到问题时设置断点
+./typus debug breakpoint set Parser.parseTypus
+./typus debug run problematic_file.typus
+```
+
+### 3. 性能优化
+
+```bash
+# 分析性能瓶颈
+./typus debug log level debug
+./typus debug run large_file.typus
+./typus debug stats
+```
+
+## 注意事项
+
+1. **性能影响**：启用调试功能会影响性能，仅在开发时使用
+2. **日志级别**：合理设置日志级别，避免过多输出
+3. **断点位置**：确保断点位置正确，避免在无效位置设置断点
+4. **交互模式**：交互式调试模式适合深度调试，命令行参数适合快速检查
+
+## 故障排除
+
+### 问题：调试模式无法启动
+
+**解决方案**：
+1. 确保项目正确构建：`cabal build`
+2. 检查可执行文件路径
+3. 确保有足够的权限
+
+### 问题：断点不生效
+
+**解决方案**：
+1. 检查断点位置是否正确
+2. 确保代码路径经过断点位置
+3. 使用 `breakpoint list` 检查断点是否正确设置
+
+### 问题：日志输出过多
+
+**解决方案**：
+1. 调整日志级别：`log level info`
+2. 使用 `log info` 禁用调试跟踪
+3. 仅在必要时启用调试日志
+
+## 扩展调试功能
+
+### 添加自定义断点
+
+在代码中添加自定义断点：
 
 ```haskell
-import Debug
-import DebugIntegration
+import EnhancedDebug
 
-main = do
-    config <- setupCompilerDebugging
-
-    debugLog "main" "Starting compiler"
-    debugInfo "main" "Loading configuration"
-
-    -- Your compiler logic here
-
-    debugLog "main" "Compiler finished"
+-- 在函数中添加断点
+myFunction args = do
+    debugConfig <- defaultEnhancedDebugConfig
+    checkAndHandleBreakpoint debugConfig "myFunction"
+    -- 函数逻辑
 ```
 
-### Example 2: Breakpoint Debugging
+### 添加自定义日志
 
 ```haskell
-import CommandLineDebug
-import DebugIntegration
+import EnhancedDebug
 
-main = do
-    config <- setupCompilerDebugging
-
-    -- Set breakpoints for critical sections
-    setBreakpoint config "parse:error"
-    setBreakpoint config "compile:optimize"
-
-    -- Run with debugging
-    runWithCLIDebug config "main" $ do
-        -- Compiler logic that may hit breakpoints
-        return ()
+-- 添加调试日志
+myFunction args = do
+    debugConfig <- defaultEnhancedDebugConfig
+    logDebug debugConfig "Entering myFunction"
+    -- 函数逻辑
+    logDebug debugConfig "Exiting myFunction"
 ```
 
-### Example 3: Phase Debugging
+## 总结
 
-```haskell
-import DebugIntegration
-
-main = do
-    config <- setupCompilerDebugging
-
-    debugParseStep config "input.typus" $ do
-        -- Parse with full debugging support
-        parseResult <- parseFile "input.typus"
-        return parseResult
-
-    debugCompileStep config "input.typus" $ do
-        -- Compile with full debugging support
-        compileResult <- compileAST parseResult
-        return compileResult
-```
-
-## Files Added
-
-1. **`src/Debug.hs`**: Core debugging functionality with logging and breakpoints
-2. **`src/CommandLineDebug.hs`**: Interactive command-line debugging system
-3. **`src/DebugIntegration.hs`**: Integration hooks for compiler phases
-4. **`examples/debug/debug-cli.hs`**: Command-line tool for debugging management
-5. **`DEBUG_GUIDE.md`**: This guide
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Breakpoints not hitting**: Ensure debugging is enabled with `enable` command
-2. **No debug output**: Check debug level with `status` command, increase with `level 4`
-3. **Interactive mode not working**: Make sure `cldInteractive` is set to `True`
-4. **Import errors**: Ensure all debug modules are properly imported and exported
-
-### Debug Commands Reference
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `help` | Show help | `help` |
-| `status` | Show debug status | `status` |
-| `set breakpoint LOC` | Set breakpoint | `set breakpoint parse:main` |
-| `break LOC` | Set breakpoint (short) | `break compile:main` |
-| `list` | List breakpoints | `list` |
-| `clear` | Clear all breakpoints | `clear` |
-| `toggle` | Toggle debug output | `toggle` |
-| `level N` | Set debug level | `level 4` |
-| `enable` | Enable debugging | `enable` |
-| `disable` | Disable debugging | `disable` |
-| `test LOC` | Test breakpoint | `test parse:main` |
-
-This debugging system provides comprehensive support for debugging the Typus compiler with interactive breakpoints, detailed logging, and phase-specific debugging hooks.
+Typus 的调试功能提供了强大的工具来帮助开发者理解程序行为、诊断问题和优化性能。通过合理使用断点、日志和统计信息，可以大大提高开发效率。

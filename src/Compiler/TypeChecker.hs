@@ -23,10 +23,12 @@ import qualified Compiler.IR as IR
 
 import Control.Applicative ((<|>))
 import Data.Char (isAlphaNum, isDigit, isSpace)
-import Data.List (intercalate, isPrefixOf, stripPrefix)
+import Data.List (intercalate, isPrefixOf, stripPrefix, (\\))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Utils (trim)
 
 -- | Lightweight representation of a type in the simplified checker.
@@ -140,11 +142,23 @@ buildTypeEnv :: GoModule -> TypeEnv
 buildTypeEnv GoModule{..} =
     let funcEntries = mapMaybe functionEntry gmDecls
         varEntries = concatMap varEntry gmDecls
+        builtinEntries = map builtinFunctionEntry builtinFunctions
+        importEntries = concatMap importFunctionEntry gmImports
+        allFunctions = funcEntries ++ builtinEntries ++ importEntries
     in TypeEnv
         { varTypes = Map.fromList varEntries
-        , functionTypes = Map.fromList funcEntries
+        , functionTypes = Map.fromList allFunctions
         }
   where
+    builtinFunctions = ["println", "print", "len", "cap", "append", "make", "new"]
+    
+    builtinFunctionEntry name = (name, builtinSignature)
+    
+    builtinSignature = FunctionSignature
+        { fsParams = [FunctionParam Nothing UnknownType False] -- Simplified: accept any type
+        , fsReturns = []
+        }
+    
     functionEntry (GoFunc decl) = do
         info <- parseFunctionInfo decl
         pure (fiName info, fiSignature info)
@@ -153,6 +167,24 @@ buildTypeEnv GoModule{..} =
     varEntry (GoVar decl) = extractVarTypes decl
     varEntry (GoConst decl) = extractConstTypes decl
     varEntry _ = []
+
+    importFunctionEntry :: ImportDecl -> [(String, FunctionSignature)]
+    importFunctionEntry (ImportDecl _ path) =
+        -- Handle common standard library packages
+        case path of
+            "fmt" -> [ ("Println", fmtSignature)
+                     , ("Printf", fmtSignature)
+                     , ("Print", fmtSignature)
+                     , ("Sprintln", fmtSignature)
+                     , ("Sprintf", fmtSignature)
+                     , ("Sprint", fmtSignature)
+                     ]
+            _ -> []
+      where
+        fmtSignature = FunctionSignature
+            { fsParams = [FunctionParam Nothing UnknownType False] -- Simplified: accept any type
+            , fsReturns = []
+            }
 
 -- | Legacy line-based API maintained for compatibility.
 checkTypeError :: TypeEnv -> String -> Bool
@@ -194,7 +226,8 @@ gatherTypeErrors env GoModule{..} =
         functionErrors = concatMap (checkFunction env) functionInfos
         statementErrors = concatMap (checkStatement env) [ls | GoStatement (StatementBlock ls) <- gmDecls]
         topVarErrors = concatMap (checkTopLevelVar env) gmDecls
-    in functionErrors ++ statementErrors ++ topVarErrors
+        circularDeps = checkCircularDependencies functionInfos
+    in functionErrors ++ statementErrors ++ topVarErrors ++ circularDeps
 
 checkFunction :: TypeEnv -> FunctionInfo -> [TypeError]
 checkFunction env FunctionInfo{..} =
@@ -233,7 +266,7 @@ checkVarSpec env context VarSpec{..} =
 checkCall :: TypeEnv -> Maybe String -> CallExpr -> [TypeError]
 checkCall TypeEnv{..} context CallExpr{..} =
     case lookupSignature callName of
-        Nothing -> []
+        Nothing -> [TypeError context ("Undefined function or variable: " ++ callName)]
         Just signature ->
             let arityErrors = checkArity signature
                 typeErrors = checkArgumentTypes signature
@@ -245,7 +278,7 @@ checkCall TypeEnv{..} context CallExpr{..} =
     lastSegment n =
         case break (== '.') (reverse n) of
             (revSuffix, []) -> reverse revSuffix
-            (_, _:revPrefix) -> reverse revPrefix
+            (revSuffix, _:_) -> reverse revSuffix
 
     checkArity FunctionSignature{..} =
         let params = fsParams
@@ -706,7 +739,7 @@ inferArgumentType TypeEnv{..} rawExpr =
     lastSegment n =
         case break (== '.') (reverse n) of
             (revSuffix, []) -> reverse revSuffix
-            (_, _:revPrefix) -> reverse revPrefix
+            (revSuffix, _:_) -> reverse revSuffix
 
 startsWithChar :: Char -> String -> Bool
 startsWithChar _ [] = False
@@ -753,5 +786,56 @@ typesCompatible (TypeName a) (TypeName b) = normalizeTypeName a == normalizeType
 showType :: Type -> String
 showType (TypeName n) = n
 showType UnknownType = "unknown"
+
+-- | Check for circular dependencies between functions
+checkCircularDependencies :: [FunctionInfo] -> [TypeError]
+checkCircularDependencies functionInfos =
+    let callGraph = buildCallGraph functionInfos
+        cycles = findCycles callGraph
+    in map cycleToError cycles
+  where
+    buildCallGraph :: [FunctionInfo] -> Map String [String]
+    buildCallGraph = Map.fromList . map (\FunctionInfo{..} -> (fiName, extractCalledFunctions fiBody))
+    
+    extractCalledFunctions :: String -> [String]
+    extractCalledFunctions body = map callName (extractCallExpressions body)
+    
+    findCycles :: Map String [String] -> [[String]]
+    findCycles graph = 
+        let visited = Set.empty
+            recStack = Set.empty
+        in dfsAll graph visited recStack []
+    
+    dfsAll :: Map String [String] -> Set String -> Set String -> [[String]] -> [[String]]
+    dfsAll graph visited recStack acc =
+        case Map.keys graph \\ Set.toList visited of
+            [] -> acc
+            (node:_) ->
+                let (cycles', visited', recStack') = dfs node visited recStack [] graph
+                in dfsAll graph visited' recStack' (acc ++ cycles')
+    
+    dfs :: String -> Set String -> Set String -> [String] -> Map String [String] -> ([[String]], Set String, Set String)
+    dfs node visited recStack path graph
+        | node `Set.member` recStack = 
+            let cyclePath = dropWhile (/= node) (reverse path) ++ [node]
+            in ([cyclePath], visited, recStack)
+        | node `Set.member` visited = ([], visited, recStack)
+        | otherwise = 
+            let visited' = Set.insert node visited
+                recStack' = Set.insert node recStack
+                neighbors = Map.findWithDefault [] node graph
+                (allCycles, visited'', recStack'') = 
+                    foldl (\(cycles, vis, rs) neighbor ->
+                        let (newCycles, vis', rs') = dfs neighbor vis rs (node:path) graph
+                        in (cycles ++ newCycles, vis', rs')
+                    ) ([], visited', recStack') neighbors
+                recStackFinal = Set.delete node recStack''
+            in (allCycles, visited'', recStackFinal)
+    
+    cycleToError :: [String] -> TypeError
+    cycleToError cyclePath = 
+        case cyclePath of
+            [] -> TypeError Nothing "Circular dependency detected: empty cycle"
+            (firstNode:_) -> TypeError Nothing ("Circular dependency detected: " ++ intercalate " -> " cyclePath ++ " -> " ++ firstNode)
 
 

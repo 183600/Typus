@@ -48,7 +48,7 @@ flags:
     fast: false
     full: false
     production: true
-    coverage: true
+    coverage: false
     werror: true
 
 

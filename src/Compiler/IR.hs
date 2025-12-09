@@ -8,7 +8,10 @@ module Compiler.IR (
     buildSemanticIR,
     emitGo,
     rawSourceFromTypus,
-    moduleFromTypus
+    moduleFromTypus,
+    ensurePackageDecl,
+    ensureMainFunction,
+    attachInferredImports
 ) where
 
 import Parser (TypusFile(..), CodeBlock(..))
@@ -388,10 +391,11 @@ customDetector alias path predicate = ImportDetector alias path predicate
 detectImports :: String -> [ImportDecl]
 detectImports content =
   let usage = buildImportUsage content
-  in [ ImportDecl (detectorAlias det) (detectorPath det)
-     | det <- importDetectors
-     , detectorPredicate det usage
-     ]
+      detected = [ ImportDecl (detectorAlias det) (detectorPath det)
+                 | det <- importDetectors
+                 , detectorPredicate det usage
+                 ]
+  in detected
 
 buildImportUsage :: String -> ImportUsage
 buildImportUsage raw =

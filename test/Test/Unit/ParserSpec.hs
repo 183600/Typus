@@ -175,4 +175,222 @@ tests =
         case parseTypus source of
           Left err -> assertBool ("error should mention missing closing brace: " <> err) ("Unclosed directive block" `isInfixOf` err)
           Right _ -> assertFailure "expected parse failure for unterminated directive block"
+
+    -- Additional test cases
+    , testCase "parses complex function signatures" $ do
+        let source = unlines
+              [ "package main"
+              , "func complex<T, R>(x T, y func(T) R, z ...R) (R, error) {"
+              , "    return y(x), nil"
+              , "}"
+              , "func main() {}"
+              ]
+        case parseTypus source of
+          Left err -> assertFailure $ "parseTypus failed: " <> err
+          Right typusFile -> do
+            assertBool "should parse complex function signatures" (not $ null $ tfBlocks typusFile)
+
+    , testCase "handles interface definitions" $ do
+        let source = unlines
+              [ "package main"
+              , "type Writer interface {"
+              , "    Write([]byte) (int, error)"
+              , "    Close() error"
+              , "}"
+              , "func main() {}"
+              ]
+        case parseTypus source of
+          Left err -> assertFailure $ "parseTypus failed: " <> err
+          Right typusFile -> do
+            assertBool "should parse interface definitions" (not $ null $ tfBlocks typusFile)
+
+    , testCase "parses struct definitions with multiple fields" $ do
+        let source = unlines
+              [ "package main"
+              , "type Person struct {"
+              , "    name string"
+              , "    age int"
+              , "    address string"
+              , "}"
+              , "func main() {}"
+              ]
+        case parseTypus source of
+          Left err -> assertFailure $ "parseTypus failed: " <> err
+          Right typusFile -> do
+            assertBool "should parse struct definitions" (not $ null $ tfBlocks typusFile)
+
+    , testCase "handles method definitions" $ do
+        let source = unlines
+              [ "package main"
+              , "type Counter struct {"
+              , "    value int"
+              , "}"
+              , "func (c *Counter) Increment() {"
+              , "    c.value++"
+              , "}"
+              , "func (c Counter) Value() int {"
+              , "    return c.value"
+              , "}"
+              , "func main() {}"
+              ]
+        case parseTypus source of
+          Left err -> assertFailure $ "parseTypus failed: " <> err
+          Right typusFile -> do
+            assertBool "should parse method definitions" (not $ null $ tfBlocks typusFile)
+
+    , testCase "parses channel operations" $ do
+        let source = unlines
+              [ "package main"
+              , "func main() {"
+              , "    ch := make(chan int, 10)"
+              , "    ch <- 42"
+              , "    value := <-ch"
+              , "    select {"
+              , "    case v := <-ch:"
+              , "        println(v)"
+              , "    default:"
+              , "        println(\"no value\")"
+              , "    }"
+              , "}"
+              ]
+        case parseTypus source of
+          Left err -> assertFailure $ "parseTypus failed: " <> err
+          Right typusFile -> do
+            assertBool "should parse channel operations" (not $ null $ tfBlocks typusFile)
+
+    , testCase "handles go statements and goroutines" $ do
+        let source = unlines
+              [ "package main"
+              , "func worker() {"
+              , "    println(\"working\")"
+              , "}"
+              , "func main() {"
+              , "    go worker()"
+              , "    go func() {"
+              , "        println(\"anonymous goroutine\")"
+              , "    }()"
+              , "}"
+              ]
+        case parseTypus source of
+          Left err -> assertFailure $ "parseTypus failed: " <> err
+          Right typusFile -> do
+            assertBool "should parse goroutines" (not $ null $ tfBlocks typusFile)
+
+    , testCase "parses defer statements" $ do
+        let source = unlines
+              [ "package main"
+              , "func main() {"
+              , "    defer println(\"first\")"
+              , "    defer func() {"
+              , "        println(\"second\")"
+              , "    }()"
+              , "    println(\"main\")"
+              , "}"
+              ]
+        case parseTypus source of
+          Left err -> assertFailure $ "parseTypus failed: " <> err
+          Right typusFile -> do
+            assertBool "should parse defer statements" (not $ null $ tfBlocks typusFile)
+
+    , testCase "handles complex literals" $ do
+        let source = unlines
+              [ "package main"
+              , "func main() {"
+              , "    numbers := []int{1, 2, 3, 4, 5}"
+              , "    mapping := map[string]int{\"a\": 1, \"b\": 2}"
+              , "    point := struct {"
+              , "        x, y int"
+              , "    }{x: 10, y: 20}"
+              , "    println(numbers, mapping, point)"
+              , "}"
+              ]
+        case parseTypus source of
+          Left err -> assertFailure $ "parseTypus failed: " <> err
+          Right typusFile -> do
+            assertBool "should parse complex literals" (not $ null $ tfBlocks typusFile)
+
+    , testCase "parses generic types and functions" $ do
+        let source = unlines
+              [ "package main"
+              , "type Container[T any] struct {"
+              , "    value T"
+              , "}"
+              , "func New[T any](v T) Container[T] {"
+              , "    return Container[T]{value: v}"
+              , "}"
+              , "func (c Container[T]) Get() T {"
+              , "    return c.value"
+              , "}"
+              , "func main() {}"
+              ]
+        case parseTypus source of
+          Left err -> assertFailure $ "parseTypus failed: " <> err
+          Right typusFile -> do
+            assertBool "should parse generic types" (not $ null $ tfBlocks typusFile)
+
+    , testCase "handles embedded structs" $ do
+        let source = unlines
+              [ "package main"
+              , "type Base struct {"
+              , "    id int"
+              , "}"
+              , "type Derived struct {"
+              , "    Base"
+              , "    name string"
+              , "}"
+              , "func main() {}"
+              ]
+        case parseTypus source of
+          Left err -> assertFailure $ "parseTypus failed: " <> err
+          Right typusFile -> do
+            assertBool "should parse embedded structs" (not $ null $ tfBlocks typusFile)
+
+    , testCase "parses import statements" $ do
+        let source = unlines
+              [ "package main"
+              , "import \"fmt\""
+              , "import ("
+              , "    \"os\""
+              , "    \"strings\""
+              , "    mypkg \"github.com/example/mypkg\""
+              , ")"
+              , "func main() {"
+              , "    fmt.Println(\"hello\")"
+              , "}"
+              ]
+        case parseTypus source of
+          Left err -> assertFailure $ "parseTypus failed: " <> err
+          Right typusFile -> do
+            assertBool "should parse import statements" (not $ null $ tfBlocks typusFile)
+
+    , testCase "handles multiple package declarations" $ do
+        let source = unlines
+              [ "package main"
+              , "package secondary"  -- This should cause an error
+              , "func main() {}"
+              ]
+        case parseTypus source of
+          Left _ -> return ()  -- Expected to fail
+          Right _ -> assertFailure "expected parsing to fail with multiple package declarations"
+
+    , testCase "parses constants and variables" $ do
+        let source = unlines
+              [ "package main"
+              , "const PI = 3.14159"
+              , "const ("
+              , "    A = 1"
+              , "    B = 2"
+              , "    C = 3"
+              , ")"
+              , "var x int = 10"
+              , "var ("
+              , "    y int = 20"
+              , "    z string = \"hello\""
+              , ")"
+              , "func main() {}"
+              ]
+        case parseTypus source of
+          Left err -> assertFailure $ "parseTypus failed: " <> err
+          Right typusFile -> do
+            assertBool "should parse constants and variables" (not $ null $ tfBlocks typusFile)
     ]

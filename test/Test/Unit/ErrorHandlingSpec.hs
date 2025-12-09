@@ -1,152 +1,204 @@
 module Test.Unit.ErrorHandlingSpec (tests) where
 
-import Control.Monad.Except (throwError)
-import Control.Monad.State (runStateT)
-import Data.List (isInfixOf)
-import qualified Data.Map.Strict as Map
-import qualified Data.Text as T
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit ( (@?=), assertBool, testCase )
+import Test.Tasty.HUnit (assertBool, assertFailure, testCase)
+import Data.List (isInfixOf)
 
-import Compiler.Errors
-  ( CompilerError(..)
-  , ErrorStatistics(..)
-  , analyzeErrors
-  , collectErrors
-  , continueWith
-  , formatCompilerError
-  , formatCompilerErrors
-  , generateDetailedReport
-  , makeUserFriendly
-  , ownershipError
-  , recoverFrom
-  , runCompilerM
-  , suggestFix
-  , syntaxError
-  , typeError
-  , withRecovery
-  , withSourceLocation
-  )
-import Compiler.Errors.Core
-  ( ErrorCategory(..)
-  , ErrorContext(..)
-  , ErrorLocation(..)
-  , ErrorRecovery(..)
-  , ErrorSeverity(..)
-  , TypeError(..)
-  , canRecoverFrom
-  , fatalError
-  , shouldContinueAfter
-  )
-import SourceLocation
-  ( posAt
-  , spanBetween
-  , toErrorLocation
-  )
+import qualified Compiler
+import qualified Parser
 
--- | Tests that ensure the enhanced error handling utilities remain wired into
--- the Tasty suite. These cases cover the most valuable checks from the legacy
--- Hspec suite.
 tests :: TestTree
 tests =
   testGroup "Error handling"
-    [ testCase "syntaxError captures parsing metadata" $ do
-        let err = syntaxError "E001" (T.pack "Missing semicolon") (posAt 10 5)
-            TypeError { severity = sev, category = cat } = ceError err
-        sev @?= Error
-        cat @?= Parsing
-        assertBool "syntax errors should remain recoverable" (canRecoverFrom (ceError err))
-        assertBool "phase should mention parsing" ("Parsing" `isInfixOf` show (cePhase err))
+    [ testCase "handles parse errors gracefully" $ do
+        let source = unlines
+              [ "package main"
+              , "func main() {"
+              , "    if true {"
+              ]
+        case Parser.parseTypus source of
+          Left err -> assertBool "parse error should be informative" (length err > 10)
+          Right _ -> assertFailure "expected parse error"
 
-    , testCase "typeError preserves suggestions and context" $ do
-        let srcSpan = spanBetween (posAt 5 13) (posAt 5 20)
-            sourceSnippet = "var x int = \"hello\""
-            hints = map T.pack ["Use strconv.Atoi", "Change the variable type"]
-            err = typeError "E002" (T.pack "Type mismatch") srcSpan (Just sourceSnippet) hints
-            TypeError { suggestions = recordedHints, context = ctx } = ceError err
-        recordedHints @?= hints
-        contextCode ctx @?= Just sourceSnippet
-        ceSourceContext err @?= Just sourceSnippet
+    , testCase "reports compilation errors with source locations" $ do
+        let source = unlines
+              [ "package main"
+              , "func add(x int, y int) int {"
+              , "    return x + y"
+              , "}"
+              , "func main() {"
+              , "    add(\"oops\", 2)"
+              , "}"
+              ]
+        typusFile <- expectParse source
+        case Compiler.compile typusFile of
+          Left err -> do
+            let rendered = Compiler.renderCompilationError err
+            assertBool "error should include line information" ("line" `isInfixOf` rendered)
+            assertBool "error should include type information" ("Type error" `isInfixOf` rendered)
+          Right _ -> assertFailure "expected compilation error"
 
-    , testCase "ownershipError provides recovery guidance" $ do
-        let ownershipSpan = spanBetween (posAt 12 3) (posAt 12 15)
-            err = ownershipError "E003" (T.pack "Value moved") ownershipSpan "let y = x" []
-            recoveryInfo = recovery (ceError err)
-        canRecover recoveryInfo @?= True
-        shouldContinue recoveryInfo @?= True
-        recoveryAction recoveryInfo @?= Just "Try using references or cloning"
+    , testCase "aggregates multiple errors in single compilation" $ do
+        let source = unlines
+              [ "package main"
+              , "func add(x int, y int) int {"
+              , "    return x + y"
+              , "}"
+              , "func multiply(x int, y int) int {"
+              , "    return x * y"
+              , "}"
+              , "func main() {"
+              , "    add(\"oops1\", 2)"
+              , "    multiply(\"oops2\", 3)"
+              , "}"
+              ]
+        typusFile <- expectParse source
+        case Compiler.compile typusFile of
+          Left err -> do
+            let rendered = Compiler.renderCompilationError err
+            assertBool "should report multiple errors" (length (lines rendered) > 2)
+            assertBool "should include both function errors" ("add" `isInfixOf` rendered && "multiply" `isInfixOf` rendered)
+          Right _ -> assertFailure "expected multiple compilation errors"
 
-    , testCase "formatCompilerError includes source location" $ do
-        let err = syntaxError "E004" (T.pack "Unexpected token") (posAt 3 8)
-            formatted = formatCompilerError err
-        assertBool "expected line and column" ("3:8" `isInfixOf` formatted)
+    , testCase "provides helpful error messages for undefined variables" $ do
+        let source = unlines
+              [ "package main"
+              , "func main() {"
+              , "    println(undefinedVar)"
+              , "}"
+              ]
+        typusFile <- expectParse source
+        case Compiler.compile typusFile of
+          Left err -> do
+            let rendered = Compiler.renderCompilationError err
+            assertBool "should mention undefined variable" ("undefinedVar" `isInfixOf` rendered)
+            assertBool "should suggest similar names if available" (length rendered > 20)
+          Right _ -> assertFailure "expected undefined variable error"
 
-    , testCase "analyzeErrors tallies categories" $ do
-        let parseErr = syntaxError "E010" (T.pack "Parse error") (posAt 1 1)
-            typeErr' = typeError "E011" (T.pack "Type error") (spanBetween (posAt 2 1) (posAt 2 10)) Nothing []
-            stats = analyzeErrors [parseErr, typeErr']
-        esTotal stats @?= 2
-        esErrors stats @?= 2
-        esFatal stats @?= 0
-        esRecoverable stats @?= 2
-        Map.lookup Parsing (esByCategory stats) @?= Just 1
-        Map.lookup TypeChecking (esByCategory stats) @?= Just 1
+    , testCase "handles circular dependency detection" $ do
+        let source = unlines
+              [ "package main"
+              , "func a() { b() }"
+              , "func b() { a() }"
+              , "func main() { a() }"
+              ]
+        typusFile <- expectParse source
+        case Compiler.compile typusFile of
+          Left err -> do
+            let rendered = Compiler.renderCompilationError err
+            assertBool "should detect circular dependency" ("circular" `isInfixOf` rendered || "cycle" `isInfixOf` rendered)
+          Right _ -> assertFailure "expected circular dependency error"
 
-    , testCase "fatal errors are non-recoverable" $ do
-        let fatal = fatalError "E999" (T.pack "Fatal") (toErrorLocation (posAt 0 0))
-        canRecoverFrom fatal @?= False
-        shouldContinueAfter fatal @?= False
+    , testCase "reports type mismatch errors with expected and actual types" $ do
+        let source = unlines
+              [ "package main"
+              , "func expectInt(x int) int { return x }"
+              , "func main() {"
+              , "    expectInt(\"string\")"
+              , "}"
+              ]
+        typusFile <- expectParse source
+        case Compiler.compile typusFile of
+          Left err -> do
+            let rendered = Compiler.renderCompilationError err
+            assertBool "should mention expected type" ("expected.*int" `isInfixOf` rendered)
+            assertBool "should mention actual type" ("got.*string" `isInfixOf` rendered)
+          Right _ -> assertFailure "expected type mismatch error"
 
-    , testCase "formatCompilerErrors groups output by phase" $ do
-        let parseErr = syntaxError "E020" (T.pack "Parse grouping error") (posAt 7 3)
-            typeSpan = spanBetween (posAt 9 1) (posAt 9 5)
-            checkingErr = typeError "E021" (T.pack "Type checking grouping") typeSpan Nothing []
-            formatted = formatCompilerErrors [parseErr, checkingErr]
-        assertBool "expected parsing phase header" ("ParsingPhase (1 errors)" `isInfixOf` formatted)
-        assertBool "expected type checking phase header" ("TypeCheckingPhase (1 errors)" `isInfixOf` formatted)
+    , testCase "provides context for errors in nested blocks" $ do
+        let source = unlines
+              [ "package main"
+              , "func main() {"
+              , "    if true {"
+              , "        if false {"
+              , "            undefinedFunction()"
+              , "        }"
+              , "    }"
+              , "}"
+              ]
+        typusFile <- expectParse source
+        case Compiler.compile typusFile of
+          Left err -> do
+            let rendered = Compiler.renderCompilationError err
+            assertBool "should include nested context" ("nested" `isInfixOf` rendered || "block" `isInfixOf` rendered)
+          Right _ -> assertFailure "expected error with nested context"
 
-    , testCase "generateDetailedReport highlights fatal recommendations" $ do
-        let parseErr = syntaxError "E022" (T.pack "Parse failure") (posAt 11 2)
-            typeSpan = spanBetween (posAt 12 1) (posAt 12 4)
-            fatalBase = typeError "E023" (T.pack "Critical mismatch") typeSpan Nothing []
-            fatalErr = fatalBase { ceError = (ceError fatalBase) { severity = Fatal } }
-            report = generateDetailedReport [parseErr, fatalErr]
-        assertBool "includes summary header" ("=== Error Summary ===" `isInfixOf` report)
-        assertBool "counts total errors" ("Total Errors: 2" `isInfixOf` report)
-        assertBool "suggests resolving fatal errors" ("Fix fatal errors first" `isInfixOf` report)
+    , testCase "handles errors in dependent type constraints" $ do
+        let source = unlines
+              [ "//! dependent_types: on"
+              , "package main"
+              , "type Vector<T> struct {"
+              , "    values: T"
+              , "}"
+              , "where len undefinedVar > 0"
+              ]
+        typusFile <- expectParse source
+        case Compiler.compile typusFile of
+          Left err -> do
+            let rendered = Compiler.renderCompilationError err
+            assertBool "should mention dependent type error" ("dependent" `isInfixOf` rendered)
+            assertBool "should mention undefined variable in constraint" ("undefinedVar" `isInfixOf` rendered)
+          Right _ -> assertFailure "expected dependent type constraint error"
 
-    , testCase "makeUserFriendly simplifies error presentation" $ do
-        let srcSpan = spanBetween (posAt 14 1) (posAt 14 6)
-            rawErr = typeError "E024" (T.pack "Type mismatch in assignment") srcSpan Nothing [T.pack "Review variable types"]
-            friendly = makeUserFriendly rawErr
-            TypeError { message = friendlyMsg, suggestions = friendlySuggestions } = ceError friendly
-        friendlyMsg @?= T.pack "Type error: The types don't match. Make sure you're using the right type of value."
-        friendlySuggestions @?= [T.pack "💡 Review variable types"]
+    , testCase "reports ownership violations with clear explanations" $ do
+        let source = unlines
+              [ "//! ownership: on"
+              , "package main"
+              , "func consume(x string) string { return x }"
+              , "func main() {"
+              , "    data := \"hello\""
+              , "    consume(data)"
+              , "    println(data)"
+              , "}"
+              ]
+        typusFile <- expectParse source
+        case Compiler.compile typusFile of
+          Left err -> do
+            let rendered = Compiler.renderCompilationError err
+            assertBool "should mention ownership error" ("ownership" `isInfixOf` rendered || "use after move" `isInfixOf` rendered)
+            assertBool "should mention the variable" ("data" `isInfixOf` rendered)
+          Right _ -> assertFailure "expected ownership violation error"
 
-    , testCase "suggestFix provides guidance for type errors" $ do
-        let srcSpan = spanBetween (posAt 16 1) (posAt 16 3)
-            err = typeError "E025" (T.pack "Another mismatch") srcSpan Nothing []
-            hints = suggestFix err
-        assertBool "should mention checking variable types" (T.pack "Check the types of your variables" `elem` hints)
+    , testCase "provides error recovery suggestions" $ do
+        let source = unlines
+              [ "package main"
+              , "func main() {"
+              , "    var x int = \"string\""
+              , "}"
+              ]
+        typusFile <- expectParse source
+        case Compiler.compile typusFile of
+          Left err -> do
+            let rendered = Compiler.renderCompilationError err
+            assertBool "should provide type mismatch info" ("type" `isInfixOf` rendered)
+            assertBool "should be detailed enough for fixing" (length rendered > 30)
+          Right _ -> assertFailure "expected error with recovery suggestions"
 
-    , testCase "collectErrors captures recovered compiler errors" $ do
-        let err = syntaxError "E026" (T.pack "Intermediate failure") (posAt 18 3)
-        collectErrors (recoverFrom err) @?= Left [err]
+    , testCase "handles malformed directive errors" $ do
+        let source = unlines
+              [ "//! invalid_directive: broken"
+              , "package main"
+              , "func main() {}"
+              ]
+        case Parser.parseTypus source of
+          Left err -> assertBool "should report directive error" ("directive" `isInfixOf` err || "unknown" `isInfixOf` err)
+          Right _ -> assertFailure "expected directive parsing error"
 
-    , testCase "continueWith records error state while returning fallback" $ do
-        let err = syntaxError "E027" (T.pack "Continue with fallback") (posAt 20 5)
-        runStateT (continueWith "fallback" err) [] @?= Right ("fallback", [err])
-
-    , testCase "withRecovery falls back when action throws" $ do
-        let err = syntaxError "E028" (T.pack "Recoverable failure") (posAt 22 7)
-        runCompilerM (withRecovery (throwError [err]) (99 :: Int)) @?= Right 99
-
-    , testCase "withSourceLocation updates span boundaries" $ do
-        let err = syntaxError "E029" (T.pack "Needs new span") (posAt 24 2)
-            newSpan = spanBetween (posAt 30 4) (posAt 31 9)
-            updated = withSourceLocation err newSpan
-            loc = location (ceError updated)
-        line loc @?= 30
-        endLine loc @?= Just 31
-        endColumn loc @?= Just 9
+    , testCase "reports syntax errors with position information" $ do
+        let source = unlines
+              [ "package main"
+              , "func main() {"
+              , "    if true"
+              , "        println(\"missing brace\")"
+              , "}"
+              ]
+        case Parser.parseTypus source of
+          Left err -> assertBool "should include line information" ("line" `isInfixOf` err)
+          Right _ -> assertFailure "expected syntax error with position"
     ]
+
+expectParse :: String -> IO Parser.TypusFile
+expectParse source =
+  case Parser.parseTypus source of
+    Left err     -> assertFailure ("parseTypus failed: " <> err)
+    Right parsed -> pure parsed

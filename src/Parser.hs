@@ -163,6 +163,8 @@ toSourcePos pos offset = SourcePos
 
 buildTypusFile :: [ParsedLine] -> Either String TypusFile
 buildTypusFile lines0 = do
+    -- Check for multiple package declarations
+    checkMultiplePackageDeclarations lines0
     (fileDirs, buildTags, rest) <- parseFileDirectivesFromParsedLines lines0
     blocks <- parseBlocksFromParsedLines rest
     pure TypusFile
@@ -170,6 +172,20 @@ buildTypusFile lines0 = do
       , tfBuildTags = buildTags
       , tfBlocks = blocks
       }
+
+-- Check for multiple package declarations
+checkMultiplePackageDeclarations :: [ParsedLine] -> Either String ()
+checkMultiplePackageDeclarations lines' = do
+    let packageLines = filter (isPackageDeclaration . plText) lines'
+    if length packageLines > 1
+        then Left "Multiple package declarations found"
+        else Right ()
+  where
+    isPackageDeclaration line = 
+        let trimmed = trim line
+        in "package" `isPrefixOf` trimmed && 
+           not (isPrefixOf "//!" trimmed) && 
+           not (isPrefixOf "//" trimmed)
 
 -- ============================================================================
 -- File directive parsing (top-of-file)

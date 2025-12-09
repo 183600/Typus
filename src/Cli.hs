@@ -8,6 +8,7 @@ data Args
     | Check FilePath
     | Build Bool [String]
     | Run Bool [String]
+    | DebugMode [String]
     | Version
     deriving (Eq, Show)
 
@@ -35,6 +36,10 @@ runOptions = Run
     <$> strictEmbedSwitch
     <*> many (argument str (metavar "FILE [ARGS...]"))
 
+debugOptions :: Parser Args
+debugOptions = DebugMode
+    <$> many (argument str (metavar "DEBUG_ARGS..."))
+
 versionOption :: Parser Args
 versionOption = flag' Version
     (long "version" <> short 'v' <> help "Show version information")
@@ -45,6 +50,7 @@ argsParser = subparser
    <> command "check" (info checkOptions (progDesc "Check Typus syntax"))
    <> command "build" (info buildOptions (progDesc "Build a Typus project (calls go build)"))
    <> command "run" (info runOptions (progDesc "Run a Typus project (calls go run)"))
+   <> command "debug" (info debugOptions (progDesc "Enter debug mode"))
     ) <|> versionOption
 
 parseArgs :: IO Args
