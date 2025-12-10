@@ -1,0 +1,15 @@
+package main
+const PI = 3.14159
+const (
+    A = 1
+    B = 2
+    C = 3
+)
+var x int = 10
+var (
+    y int = 20
+    z string = "hello"
+)
+func main() {
+    println(PI, A, B, C, x, y, z)
+}

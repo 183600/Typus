@@ -30,6 +30,7 @@ import Text.Megaparsec (Parsec, errorBundlePretty)
 import qualified Text.Megaparsec.Char as MC
 import qualified Text.Megaparsec.Char.Lexer as L
 import Utils (trim)
+import qualified SyntaxValidator
 
 -- ============================================================================
 -- Data Types
@@ -89,13 +90,17 @@ identifier = lexeme (T.pack <$> MP.some (MP.satisfy isIdentifierChar))
 isIdentifierChar :: Char -> Bool
 isIdentifierChar c = isAlphaNum c || c == '_' || c == '-'
 
-fileDirectiveParser :: DirectiveParser (T.Text, T.Text)
+fileDirectiveParser :: DirectiveParser [(T.Text, T.Text)]
 fileDirectiveParser = do
   _ <- symbol "//!"
-  key <- identifier
-  _ <- symbol ":"
-  value <- identifier
-  pure (key, value)
+  pairs <- MP.sepBy directive (symbol ",")
+  pure pairs
+  where
+    directive = do
+      key <- identifier
+      _ <- symbol ":"
+      value <- identifier
+      pure (key, value)
 
 blockDirectiveParser :: DirectiveParser [(T.Text, T.Text)]
 blockDirectiveParser = do
@@ -165,13 +170,25 @@ buildTypusFile :: [ParsedLine] -> Either String TypusFile
 buildTypusFile lines0 = do
     -- Check for multiple package declarations
     checkMultiplePackageDeclarations lines0
-    (fileDirs, buildTags, rest) <- parseFileDirectivesFromParsedLines lines0
-    blocks <- parseBlocksFromParsedLines rest
-    pure TypusFile
-      { tfDirectives = fileDirs
-      , tfBuildTags = buildTags
-      , tfBlocks = blocks
-      }
+    -- Check for syntax errors
+    let content = unlines (map plText lines0)
+        syntaxErrors = SyntaxValidator.validateSyntax content
+        -- Only report critical syntax errors (like unclosed braces)
+        criticalErrors = filter (\e -> SyntaxValidator.errorType e == SyntaxValidator.MissingBrace) syntaxErrors
+    if not (null criticalErrors)
+       then case head criticalErrors of
+                SyntaxValidator.SyntaxError{..} -> 
+                  if errorMessage == "Unclosed {"
+                     then Left "Unclosed directive block"
+                     else Left $ "Syntax error: " ++ show (head criticalErrors)
+       else do
+         (fileDirs, buildTags, rest) <- parseFileDirectivesFromParsedLines lines0
+         blocks <- parseBlocksFromParsedLines rest
+         pure TypusFile
+           { tfDirectives = fileDirs
+           , tfBuildTags = buildTags
+           , tfBlocks = blocks
+           }
 
 -- Check for multiple package declarations
 checkMultiplePackageDeclarations :: [ParsedLine] -> Either String ()
@@ -183,9 +200,10 @@ checkMultiplePackageDeclarations lines' = do
   where
     isPackageDeclaration line = 
         let trimmed = trim line
-        in "package" `isPrefixOf` trimmed && 
-           not (isPrefixOf "//!" trimmed) && 
-           not (isPrefixOf "//" trimmed)
+            wordsList = words trimmed
+        in case wordsList of
+            ("package":_) -> not (isPrefixOf "//" trimmed)
+            _ -> False
 
 -- ============================================================================
 -- File directive parsing (top-of-file)
@@ -203,8 +221,8 @@ parseFileDirectivesFromParsedLines = go defaultFileDirectives []
            then go acc buildTagsRev rest
            else if isPrefixOf "//!" trimmed
              then do
-               (key, val) <- parseFileDirectiveLine line
-               acc' <- updateFileDirective acc key val
+               directives <- parseFileDirectiveLine line
+               acc' <- foldM (\fd (key, val) -> updateFileDirective fd key val) acc directives
                go acc' buildTagsRev rest
            else if isBuildTagLine trimmed
              then let tag = locatedWithSpan (plSpan line) (plText line)
@@ -214,7 +232,7 @@ parseFileDirectivesFromParsedLines = go defaultFileDirectives []
     isBuildTagLine t =
       isPrefixOf "//go:build" t || isPrefixOf "// +build" t
 
-parseFileDirectiveLine :: ParsedLine -> Either String (String, Located Bool)
+parseFileDirectiveLine :: ParsedLine -> Either String [(String, Located Bool)]
 parseFileDirectiveLine ParsedLine{..} = do
     let stripped = T.stripStart (T.pack plText)
         filePrefix = T.pack "//!"
@@ -223,10 +241,13 @@ parseFileDirectiveLine ParsedLine{..} = do
       else
         case MP.runParser (fileDirectiveParser <* MP.eof) "<file directive>" stripped of
           Left _ -> Left $ "Invalid file directive format: " ++ plText
-          Right (keyText, valueText) ->
-            case parseBool (T.unpack valueText) of
-              Left err      -> Left err
-              Right boolVal -> pure (T.unpack keyText, locatedWithSpan plSpan boolVal)
+          Right pairs -> do
+            let boolPairs = map (\(keyText, valueText) ->
+                  case parseBool (T.unpack valueText) of
+                    Left err -> Left err
+                    Right boolVal -> Right (T.unpack keyText, locatedWithSpan plSpan boolVal)
+                  ) pairs
+            sequence boolPairs
 
 updateFileDirective :: FileDirectives -> String -> Located Bool -> Either String FileDirectives
 updateFileDirective fd key value = case key of
@@ -381,7 +402,7 @@ parseBool s = case trim s of
     "off" -> Right False
     "true" -> Right True
     "false" -> Right False
-    v -> Left $ "Invalid boolean value: " ++ v
+    v -> Left $ "Invalid boolean value for directive: " ++ v
 
 -- ============================================================================
 -- Utility Functions

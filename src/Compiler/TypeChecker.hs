@@ -5,13 +5,16 @@ module Compiler.TypeChecker (
     TypeCheckDiagnostic(..),
     hasTypeErrors,
     diagnoseTypeErrors,
+    diagnoseTypeErrorsWithPackage,
     extractDeclarations,
     extractFunctionCalls,
+    extractCallExpressions,
+    CallExpr(..),
+    TypeError(..),
     buildTypeEnv,
     isMethodDeclaration,
     checkTypeError,
-    hasMalformedSyntax,
-    trim
+    hasMalformedSyntax
 ) where
 
 import Parser (TypusFile(..))
@@ -22,8 +25,9 @@ import qualified Compiler.GoVarSpec as GoVar
 import qualified Compiler.IR as IR
 
 import Control.Applicative ((<|>))
+import Control.Monad (forM)
 import Data.Char (isAlphaNum, isDigit, isSpace)
-import Data.List (intercalate, isPrefixOf, stripPrefix, (\\))
+import Data.List (intercalate, isInfixOf, isPrefixOf, stripPrefix, (\\))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -109,6 +113,73 @@ diagnoseTypeErrors typusFile =
         , tcdMessage = teMessage
         }
 
+-- | Collect detailed diagnostics for type errors with package context.
+diagnoseTypeErrorsWithPackage :: TypusFile -> [(FilePath, TypusFile)] -> Either [CompilerError] [TypeCheckDiagnostic]
+diagnoseTypeErrorsWithPackage mainFile packageFiles = do
+    -- 收集所有文件的Go模块
+    goModules <- forM packageFiles $ \(_, typusFile) -> do
+        case IR.moduleFromTypus typusFile of
+            Left errs -> Left errs
+            Right goModule -> Right goModule
+    
+    -- 构建包含所有文件函数和变量的类型环境
+    let allDecls = concatMap gmDecls goModules
+        allImports = concatMap gmImports goModules
+        combinedModule = case goModules of
+            (firstModule:_) -> GoModule 
+                { gmPackage = gmPackage firstModule
+                , gmImports = allImports
+                , gmDecls = allDecls
+                , gmBuildTags = []
+                }
+            [] -> GoModule 
+                { gmPackage = Just (PackageDecl "main")
+                , gmImports = []
+                , gmDecls = []
+                , gmBuildTags = []
+                }
+        env = buildTypeEnv combinedModule
+        errors = gatherTypeErrors env combinedModule
+    
+    -- 过滤出只属于主文件的错误
+    let mainFileErrors = filterErrorsForFile mainFile errors
+        -- 过滤掉"Undefined function or variable"错误，因为函数可能在同一包的其他文件中定义
+        filteredErrors = filter (\err -> not ("Undefined function or variable:" `isInfixOf` teMessage err)) mainFileErrors
+        diagnostics = map toDiagnostic filteredErrors
+    
+    Right diagnostics
+  where
+    toDiagnostic TypeError{..} = TypeCheckDiagnostic
+        { tcdContext = teContext
+        , tcdMessage = teMessage
+        }
+    
+    -- 过滤出只属于特定文件的错误
+    filterErrorsForFile file errors = 
+        let fileContent = IR.rawSourceFromTypus file
+            fileFunctions = extractFunctionsFromTypus file
+        in filter (\err -> isErrorInFile err fileContent fileFunctions) errors
+    
+    -- 检查错误是否属于特定文件
+    isErrorInFile TypeError{..} fileContent fileFunctions =
+        case teContext of
+            Just ctx -> ctx `elem` fileFunctions
+            Nothing -> teMessage `isInfixOf` fileContent
+    
+    -- 从Typus文件中提取函数名
+    extractFunctionsFromTypus typusFile = 
+        let source = IR.rawSourceFromTypus typusFile
+            linesList = lines source
+        in concatMap extractFunctionFromLine linesList
+    
+    -- 从一行中提取函数名
+    extractFunctionFromLine line =
+        if "func " `isInfixOf` line
+            then case words line of
+                ("func":name:_) -> [takeWhile (\c -> isAlphaNum c || c == '_') name]
+                _ -> []
+            else []
+
 -- | Extract top-level declarations (function headers, var/const specs).
 extractDeclarations :: String -> [String]
 extractDeclarations content =
@@ -155,7 +226,7 @@ buildTypeEnv GoModule{..} =
     builtinFunctionEntry name = (name, builtinSignature)
     
     builtinSignature = FunctionSignature
-        { fsParams = [FunctionParam Nothing UnknownType False] -- Simplified: accept any type
+        { fsParams = [FunctionParam Nothing UnknownType True] -- Variadic: accept any number of arguments
         , fsReturns = []
         }
     
@@ -179,11 +250,16 @@ buildTypeEnv GoModule{..} =
                      , ("Sprintf", fmtSignature)
                      , ("Sprint", fmtSignature)
                      ]
+            "errors" -> [ ("New", errorsNewSignature) ]
             _ -> []
       where
         fmtSignature = FunctionSignature
-            { fsParams = [FunctionParam Nothing UnknownType False] -- Simplified: accept any type
+            { fsParams = [FunctionParam Nothing UnknownType True] -- Variadic: accept any number of arguments
             , fsReturns = []
+            }
+        errorsNewSignature = FunctionSignature
+            { fsParams = [FunctionParam Nothing (TypeName "string") False] -- New takes a string
+            , fsReturns = [TypeName "error"] -- and returns an error
             }
 
 -- | Legacy line-based API maintained for compatibility.
@@ -231,14 +307,86 @@ gatherTypeErrors env GoModule{..} =
 
 checkFunction :: TypeEnv -> FunctionInfo -> [TypeError]
 checkFunction env FunctionInfo{..} =
-    let calls = extractCallExpressions fiBody
-    in concatMap (checkCall env (Just fiName)) calls
+    let -- Extract variable declarations from the function body
+        varDecls = extractVariableDeclarations fiBody
+        -- Update environment with local variables
+        envWithLocals = foldl addLocalVars env varDecls
+        calls = extractCallExpressions fiBody
+    in concatMap (checkCall envWithLocals (Just fiName)) calls
+  where
+    addLocalVars envVar varDecl =
+        let varEntries = extractVarTypes varDecl
+            oldVarTypes = varTypes envVar
+            functionTypes' = functionTypes envVar
+            updatedVarTypes = Map.union (Map.fromList varEntries) oldVarTypes
+        in TypeEnv { varTypes = updatedVarTypes, functionTypes = functionTypes' }
+    
+    extractVariableDeclarations :: String -> [VarDecl]
+    extractVariableDeclarations body = 
+        let linesList = lines body
+        in concatMap extractVarDeclFromLine linesList
+      where
+        extractVarDeclFromLine line = 
+            case parseVarDecl line of
+                Just decl -> [decl]
+                Nothing -> 
+                    case parseShortVarDecl line of
+                        Just decl -> [decl]
+                        Nothing -> []
+    
+    parseVarDecl :: String -> Maybe VarDecl
+    parseVarDecl stmt = 
+        let trimmed = trim stmt
+        in if "var " `isPrefixOf` trimmed
+               then Just $ VarDecl { varLines = [trimmed], varIsGroup = False }
+               else Nothing
+               
+    parseShortVarDecl :: String -> Maybe VarDecl
+    parseShortVarDecl stmt = 
+        let trimmed = trim stmt
+        in if ":=" `isInfixOf` trimmed
+               then Just $ VarDecl { varLines = [trimmed], varIsGroup = False }
+               else Nothing
 
 checkStatement :: TypeEnv -> [String] -> [TypeError]
 checkStatement env lines0 =
     let text = unlines lines0
+        -- Extract variable declarations from the statement
+        varDecls = extractVariableDeclarationsFromStatement text
+        -- Update environment with local variables
+        envWithLocals = foldl addLocalVars env varDecls
         calls = extractCallExpressions text
-    in concatMap (checkCall env Nothing) calls
+    in concatMap (checkCall envWithLocals Nothing) calls
+  where
+    addLocalVars envVar varDecl =
+        let varEntries = extractVarTypes varDecl
+            oldVarTypes = varTypes envVar
+            functionTypes' = functionTypes envVar
+            updatedVarTypes = Map.union (Map.fromList varEntries) oldVarTypes
+        in TypeEnv { varTypes = updatedVarTypes, functionTypes = functionTypes' }
+    
+    extractVariableDeclarationsFromStatement :: String -> [VarDecl]
+    extractVariableDeclarationsFromStatement stmt = 
+        case parseVarDecl stmt of
+            Just decl -> [decl]
+            Nothing -> 
+                case parseShortVarDecl stmt of
+                    Just decl -> [decl]
+                    Nothing -> []
+    
+    parseVarDecl :: String -> Maybe VarDecl
+    parseVarDecl stmt = 
+        let trimmed = trim stmt
+        in if "var " `isPrefixOf` trimmed
+               then Just $ VarDecl { varLines = [trimmed], varIsGroup = False }
+               else Nothing
+               
+    parseShortVarDecl :: String -> Maybe VarDecl
+    parseShortVarDecl stmt = 
+        let trimmed = trim stmt
+        in if ":=" `isInfixOf` trimmed
+               then Just $ VarDecl { varLines = [trimmed], varIsGroup = False }
+               else Nothing
 
 checkTopLevelVar :: TypeEnv -> GoDecl -> [TypeError]
 checkTopLevelVar env decl = case decl of
@@ -265,15 +413,21 @@ checkVarSpec env context VarSpec{..} =
 
 checkCall :: TypeEnv -> Maybe String -> CallExpr -> [TypeError]
 checkCall TypeEnv{..} context CallExpr{..} =
-    case lookupSignature callName of
-        Nothing -> [TypeError context ("Undefined function or variable: " ++ callName)]
+    case lookupFunctionSignature callName of
         Just signature ->
             let arityErrors = checkArity signature
                 typeErrors = checkArgumentTypes signature
             in arityErrors ++ typeErrors
+        Nothing ->
+            case lookupVariable callName of
+                Just _ -> []  -- Variable exists, no error
+                Nothing -> [TypeError context ("Undefined function or variable: " ++ callName)]
   where
-    lookupSignature name =
+    lookupFunctionSignature name =
         Map.lookup name functionTypes <|> Map.lookup (lastSegment name) functionTypes
+    
+    lookupVariable name =
+        Map.lookup name varTypes <|> Map.lookup (lastSegment name) varTypes
 
     lastSegment n =
         case break (== '.') (reverse n) of
@@ -324,11 +478,18 @@ checkCall TypeEnv{..} context CallExpr{..} =
             Nothing -> []
             Just expectedType ->
                 let actualType = inferArgumentType (TypeEnv varTypes functionTypes) argText
-                in if typesCompatible expectedType actualType || actualType == UnknownType
-                      then []
-                      else [TypeError context (callName ++ " argument " ++ show (idx + 1) ++
-                                ": expected type " ++ showType expectedType ++
-                                ", got " ++ showType actualType)]
+                    -- Check if the argument is an undefined variable
+                    isUndefinedVar = actualType == UnknownType && 
+                                     isSimpleIdentifier argText && 
+                                     not (Map.member argText varTypes) &&
+                                     not (isLiteral argText)
+                in if isUndefinedVar
+                      then [TypeError context ("Undefined variable: " ++ argText)]
+                      else if typesCompatible expectedType actualType || actualType == UnknownType
+                           then []
+                           else [TypeError context (callName ++ " argument " ++ show (idx + 1) ++
+                                     ": expected type " ++ showType expectedType ++
+                                     ", got " ++ showType actualType)]
 
 --------------------------------------------------------------------------------
 -- Parsing helpers
@@ -458,17 +619,57 @@ extractConstTypes :: ConstDecl -> [(String, Type)]
 extractConstTypes decl =
     [ (name, ty)
     | VarSpec{..} <- parseConstDeclSpecs decl
-    , Just ty <- [vsType]
+    , let ty = case vsType of
+                 Just t -> t
+                 Nothing -> UnknownType  -- Use UnknownType for untyped constants
     , name <- vsNames
     ]
 
 extractVarTypes :: VarDecl -> [(String, Type)]
 extractVarTypes decl =
-    [ (name, ty)
-    | VarSpec{..} <- parseVarDeclSpecs decl
-    , Just ty <- [vsType]
-    , name <- vsNames
-    ]
+    let varSpecs = parseVarDeclSpecs decl
+        -- Only process actual var declarations, not short var declarations
+        actualVarSpecs = filter isActualVarDecl varSpecs
+        shortVarSpecs = parseShortVarDeclSpecs decl
+        allSpecs = actualVarSpecs ++ shortVarSpecs
+    in [ (name, ty)
+       | VarSpec{..} <- allSpecs
+       , let ty = case vsType of
+                     Just t -> t
+                     Nothing -> UnknownType  -- For short var declarations, we'll use UnknownType
+       , name <- vsNames
+       ]
+  where
+    isActualVarDecl VarSpec{..} = not (any (":=" `isInfixOf`) vsValues)
+       
+parseShortVarDeclSpecs :: VarDecl -> [VarSpec]
+parseShortVarDeclSpecs VarDecl{..} =
+    concatMap parseShortVarSpec varLines
+  where
+    parseShortVarSpec line =
+        let trimmed = trim line
+        in if ":=" `isInfixOf` trimmed
+               then 
+                   let parts = splitOn ":=" trimmed
+                   in case parts of
+                        [namePart, valuePart] ->
+                            let names = splitOn "," (trim namePart)
+                                -- Infer type from value
+                                inferredType = inferLiteralType valuePart
+                            in [VarSpec { vsNames = names, vsType = Just inferredType, vsValues = [valuePart] }]
+                        _ -> []
+               else []
+    
+    splitOn [] s = [s]
+    splitOn sep s = case break (== sep !! 0) s of
+        (a, c:b) -> a : splitOn sep (dropWhile (== c) b)
+        (a, "") -> [a]
+        
+    inferLiteralType value
+        | isNumericLiteral value = numericType value
+        | isStringLiteral value = TypeName "string"
+        | isBoolLiteral value = TypeName "bool"
+        | otherwise = UnknownType
 
 --------------------------------------------------------------------------------
 -- Low level parsing utilities
@@ -600,15 +801,8 @@ extractCallExpressions input = go 0 NoStringState' 0 []
 
     collectCallableName startIdx
         | startIdx < 0 = Nothing
-        | otherwise =
-            let j = skipSpaces startIdx
-            in if j < 0 then Nothing else extractName j j
+        | otherwise = extractName startIdx (startIdx - 1)
       where
-        skipSpaces j
-            | j < 0 = j
-            | isSpace (input !! j) = skipSpaces (j - 1)
-            | otherwise = j
-
         extractName endIdx currentIdx
             | currentIdx < 0 = takeName 0 endIdx
             | otherwise =
@@ -618,18 +812,23 @@ extractCallExpressions input = go 0 NoStringState' 0 []
                                 Nothing -> Nothing
                                 Just start -> extractName (endIdx) (start - 1)
                       | isValidNameChar c -> extractName endIdx (currentIdx - 1)
-                      | isSpace c -> extractName endIdx (currentIdx - 1)
+                      | isSpace c -> takeName (currentIdx + 1) endIdx
                       | otherwise -> takeName (currentIdx + 1) endIdx
 
         takeName start end
             | start > end = Nothing
             | otherwise =
-                let name = trim (slice start end)
+                let rawName = slice start end
+                    -- Remove all whitespace including newlines
+                    name = filter (not . isSpace) rawName
                 in if null name || name `elem` keywords
                       then Nothing
                       else Just name
 
-        slice start end = take (end - start + 1) (drop start input)
+        slice start end = 
+            if end >= start
+                then take (end - start + 1) (drop start input)
+                else take (start - end + 1) (drop end input)
 
         keywords = ["if", "for", "switch", "return", "func", "type", "var", "const", "go", "defer"]
 
@@ -837,5 +1036,13 @@ checkCircularDependencies functionInfos =
         case cyclePath of
             [] -> TypeError Nothing "Circular dependency detected: empty cycle"
             (firstNode:_) -> TypeError Nothing ("Circular dependency detected: " ++ intercalate " -> " cyclePath ++ " -> " ++ firstNode)
+
+-- | Check if a string is a simple identifier (no dots, no parentheses, etc.)
+isSimpleIdentifier :: String -> Bool
+isSimpleIdentifier s = all (\c -> isAlphaNum c || c == '_') s && not (null s)
+
+-- | Check if a string is a literal value
+isLiteral :: String -> Bool
+isLiteral s = isStringLiteral s || isRuneLiteral s || isBoolLiteral s || isNumericLiteral s
 
 

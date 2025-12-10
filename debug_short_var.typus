@@ -1,0 +1,6 @@
+package main
+
+func main() {
+    result := 42
+    println(result)
+}

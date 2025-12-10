@@ -4,6 +4,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase)
 import Data.List (isInfixOf)
 import qualified Compiler
+import qualified CompilerUtils
 import qualified Parser
 
 tests :: TestTree
@@ -167,9 +168,13 @@ tests =
               ]
         typusFile1 <- expectParse source1
         typusFile2 <- expectParse source2
-        goCode1 <- expectCompile typusFile1
-        goCode2 <- expectCompile typusFile2
-        assertBool "both files should compile" ("package main" `isInfixOf` goCode1 && "package main" `isInfixOf` goCode2)
+        -- 使用compileWithPackage编译多个文件
+        let packageFiles = [("helper.typus", typusFile1), ("main.typus", typusFile2)]
+        goCode <- case CompilerUtils.compileWithPackage typusFile2 packageFiles of
+            Left err -> assertFailure ("compile failed: " <> Compiler.renderCompilationError err)
+            Right code -> pure code
+        assertBool "should contain helper function" ("func helper()" `isInfixOf` goCode)
+        assertBool "should contain main function" ("func main()" `isInfixOf` goCode)
 
     , testCase "maintains type safety across compilation phases" $ do
         let source = unlines

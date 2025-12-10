@@ -77,7 +77,8 @@ tests =
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right TypusFile { tfBuildTags = buildTags } -> do
             length buildTags @?= 3
-            all (isInfixOf "go:build" . locatedValue) buildTags @?= True
+            -- Check that all build tags are either go:build or +build format
+            all (\tag -> isInfixOf "go:build" (locatedValue tag) || isInfixOf "+build" (locatedValue tag)) buildTags @?= True
 
     , testCase "parses deeply nested code blocks" $ do
         let source = unlines

@@ -4,12 +4,21 @@ module Compiler.DependentTypeChecker (
 ) where
 
 import Data.Char (isSpace)
-import Data.List (intercalate, isInfixOf, isPrefixOf)
+import Data.List (intercalate, isInfixOf, isPrefixOf, (\\))
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 
 import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
-import DependentTypesParser (DependentTypeError(..), runDependentTypesParser, parserErrors)
+import DependentTypesParser 
+    ( DependentTypeError(..)
+    , DependentType(..)
+    , TypeConstraint(..)
+    , TypeParameter(..)
+    , TypeBody(..)
+    , Field(..)
+    , runDependentTypesParser
+    , parserErrors
+    )
 import Compiler.Errors
     ( CompilerError
     , CompilerResult
@@ -29,6 +38,45 @@ import SourceLocation
 directiveEnabled :: Maybe (Located Bool) -> Bool
 directiveEnabled = maybe False locatedValue
 
+-- | Validate that variables referenced in constraints are defined
+validateConstraintVariables :: [DependentType] -> [DependentTypeError]
+validateConstraintVariables types =
+    let definedVars = collectDefinedVariables types
+        constraintVars = collectConstraintVariables types
+        undefinedVars = constraintVars \\ definedVars
+    in map (\var -> TypeVariableError ("dependent type error: undefined variable: " ++ var)) undefinedVars
+
+-- | Collect all defined variables (type parameters and struct fields)
+collectDefinedVariables :: [DependentType] -> [String]
+collectDefinedVariables types = concatMap extractVars types
+  where
+    extractVars (TypeDecl _ params body _) = 
+        map paramName params ++ extractFieldVars body
+    extractVars (DependentFunction _ args _ _) = 
+        map fst args
+    extractVars (TypeAlias _ _ _) = []
+    
+    extractFieldVars (StructBody fields) = map fieldName fields
+
+-- | Collect all variables referenced in constraints
+collectConstraintVariables :: [DependentType] -> [String]
+collectConstraintVariables types = concatMap extractConstraintVars types
+  where
+    extractConstraintVars (TypeDecl _ _ _ constraints) = 
+        concatMap getConstraintVar constraints
+    extractConstraintVars (DependentFunction _ _ _ constraints) = 
+        concatMap getConstraintVar constraints
+    extractConstraintVars (TypeAlias _ _ _) = []
+    
+    getConstraintVar (EqualityConstraint var _) = [var]
+    getConstraintVar (InequalityConstraint var _) = [var]
+    getConstraintVar (RangeConstraint var _ _) = [var]
+    getConstraintVar (SizeConstraint var _) = [var]
+    getConstraintVar (NonEmptyConstraint var) = [var]
+    getConstraintVar (PredicateConstraint var _) = [var]
+    getConstraintVar (TypeClassConstraint var _) = [var]
+    getConstraintVar (CustomConstraint var _) = [var]
+
 checkDependentTypes :: TypusFile -> CompilerResult ()
 checkDependentTypes typusFile =
     let directives = tfDirectives typusFile
@@ -42,11 +90,13 @@ checkDependentTypes typusFile =
            then Right ()
            else case runDependentTypesParser dependentContent of
                Left err -> Left [parserFailure err]
-               Right (_, parser) ->
-                   let errors = parserErrors parser
-                   in if null errors
+               Right (types, parser) ->
+                   let parseErrors = parserErrors parser
+                       validationErrors = validateConstraintVariables types
+                       allErrors = parseErrors ++ validationErrors
+                   in if null allErrors
                          then Right ()
-                         else Left (map toCompilerError errors)
+                         else Left (map toCompilerError allErrors)
 
 extractDependentTypeContent :: TypusFile -> String
 extractDependentTypeContent typusFile =

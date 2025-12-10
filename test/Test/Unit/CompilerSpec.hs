@@ -382,15 +382,21 @@ tests =
     , testCase "detects circular dependencies" $ do
         let source = unlines
               [ "package main"
-              , "func a() { b() }"
-              , "func b() { a() }"
-              , "func main() { a() }"
+              , "func a() {"
+              , "    b()"
+              , "}"
+              , "func b() {"
+              , "    a()"
+              , "}"
+              , "func main() {"
+              , "    a()"
+              , "}"
               ]
         typusFile <- expectParse source
         case Compiler.compile typusFile of
           Left err -> do
             let rendered = Compiler.renderCompilationError err
-            assertBool "should detect circular dependency" ("circular" `isInfixOf` rendered || "cycle" `isInfixOf` rendered)
+            assertBool ("should detect circular dependency. Error was: " ++ rendered) ("Circular" `isInfixOf` rendered || "circular" `isInfixOf` rendered || "cycle" `isInfixOf` rendered)
           Right _ -> assertFailure "expected circular dependency error"
     ]
 

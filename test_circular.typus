@@ -1,0 +1,4 @@
+package main
+func a() { b() }
+func b() { a() }
+func main() { a() }

@@ -34,7 +34,7 @@ tests =
         case Compiler.compile typusFile of
           Left err -> do
             let rendered = Compiler.renderCompilationError err
-            assertBool "error should include line information" ("line" `isInfixOf` rendered)
+            assertBool "error should include line information" ("1:" `isInfixOf` rendered)
             assertBool "error should include type information" ("Type error" `isInfixOf` rendered)
           Right _ -> assertFailure "expected compilation error"
 

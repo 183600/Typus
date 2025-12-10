@@ -18,6 +18,9 @@ module Compiler
   , hasMalformedSyntax
   , checkDependentTypes
   , checkOwnership
+  , ensureSourceIR
+  , typeCheckFailure
+  , typeDiagnosticToCompilerError
   , generateGoCode
   ) where
 

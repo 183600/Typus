@@ -6,6 +6,7 @@ module Compiler.IR (
     GoIR(..),
     buildSourceIR,
     buildSemanticIR,
+    buildSemanticIRWithPackage,
     emitGo,
     rawSourceFromTypus,
     moduleFromTypus,
@@ -31,6 +32,7 @@ import SourceLocation (locatedValue)
 import Data.Char (isSpace)
 import Data.Function (on)
 import Data.List (intercalate, isInfixOf, isPrefixOf, nubBy)
+import Control.Monad (forM)
 import qualified Data.Set as Set
 import qualified Data.Text as T
 
@@ -69,6 +71,28 @@ buildSemanticIR ir = do
         { semanticTypusFile = sourceTypusFile ir
         , semanticModule = goMod
         , semanticValueInfo = analyzeValueSemantics goMod
+        }
+
+buildSemanticIRWithPackage :: SourceIR -> [(FilePath, TypusFile)] -> CompilerResult SemanticIR
+buildSemanticIRWithPackage ir packageFiles = do
+    mainGoMod <- moduleFromTypus (sourceTypusFile ir)
+    
+    -- 收集所有文件的Go模块
+    packageGoModules <- forM packageFiles $ \(_, typusFile) -> do
+        moduleFromTypus typusFile
+    
+    -- 合并所有模块的声明和导入
+    let allDecls = concatMap gmDecls packageGoModules
+        allImports = concatMap gmImports packageGoModules
+        combinedModule = mainGoMod
+            { gmDecls = gmDecls mainGoMod ++ allDecls
+            , gmImports = gmImports mainGoMod ++ allImports
+            }
+    
+    pure SemanticIR
+        { semanticTypusFile = sourceTypusFile ir
+        , semanticModule = combinedModule
+        , semanticValueInfo = analyzeValueSemantics combinedModule
         }
 
 emitGo :: SemanticIR -> GoIR

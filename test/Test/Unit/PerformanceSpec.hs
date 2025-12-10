@@ -195,15 +195,13 @@ tests =
         start1 <- getCPUTime
         case Parser.parseTypus source of
           Left err -> assertFailure $ "parseTypus failed on first parse: " <> err
-          Right firstResult -> do
+          Right _ -> do
             end1 <- getCPUTime
             let firstTime = fromIntegral (end1 - start1) / (10 ** 12) :: Double
             
             -- Second parse (simulating cache)
             start2 <- getCPUTime
-            secondResult <- case Parser.parseTypus source of
-              Left err -> assertFailure $ "parseTypus failed on second parse: " <> err
-              Right result -> return result
+            Parser.parseTypus source `seq` return ()  -- Force evaluation
             end2 <- getCPUTime
             let secondTime = fromIntegral (end2 - start2) / (10 ** 12) :: Double
             

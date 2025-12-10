@@ -1,16 +1,22 @@
 module CompilerUtils (
     Logger(..), CompilerContext(..),
     defaultLogger, silentLogger, newCompilerContext, newCompilerContextWithExecutor,
-    convertFile, batchConvert, batchCheck, runGoCommand, runGoCommandInDir
+    convertFile, batchConvert, batchCheck, runGoCommand, runGoCommandInDir,
+    compileWithPackage
 ) where
 
-import Compiler (compile)
+import Compiler (checkDependentTypes, compile, typeCheckFailure, typeDiagnosticToCompilerError, ensureSourceIR, CompilerResult)
+import qualified Compiler.TypeChecker as TypeChecker (diagnoseTypeErrorsWithPackage)
+import qualified Utils as U (trim)
+import qualified Compiler.IR as IR (buildSemanticIRWithPackage, emitGo, sourceTypusFile, semanticValueInfo, goSource)
+import Compiler.OwnershipChecker (checkOwnershipWithValueInfo)
 import qualified Parser as P
-import Control.Monad (forM, forM_, unless, when)
+import Control.Monad (forM, forM_, unless, when, filterM)
 import Control.Monad.Except (runExceptT, throwError)
 import Control.Monad.IO.Class (liftIO)
 import Data.Either (partitionEithers)
-import Data.List (partition)
+import Data.List (isPrefixOf, partition, sort)
+import qualified Data.Map as Map
 import GoToolchain
     ( IOResult
     , GoExecutor(..)
@@ -21,6 +27,7 @@ import GoToolchain
     )
 import qualified SyntaxValidator as SV
 import Tooling.Error (ToolingError(..), renderToolingError)
+
 import System.Directory
     ( doesFileExist
     , doesDirectoryExist
@@ -79,7 +86,7 @@ newCompilerContextWithExecutor logger executor =
         , contextGoExecutor = executor
         }
 
--- 单文件转换：Typus -> Go 或 Go -> Go
+-- Convert a single file from Typus to Go, handling both .typus and .go source files.
 convertFile :: CompilerContext -> FilePath -> FilePath -> IOResult ()
 convertFile ctx input output = do
     let Logger { logInfo = logI, logDebug = logD } = contextLogger ctx
@@ -103,9 +110,9 @@ convertFile ctx input output = do
             -- Integrated analysis and compilation
             debug <- liftIO $ isEnvVarEnabled "TYPUS_DEBUG"
             when debug $ liftIO $ logD $ "Parsing completed for: " ++ input
-            when debug $ liftIO $ logD "Running integrated analysis..."
+            when debug $ liftIO $ logD $ "Running integrated analysis..."
 
-            -- Compile to Go code with enhanced analysis
+            -- Compile to Go code
             case compile typusFile of
                 Left errs  -> throwError $ CompilationFailed input errs
                 Right code -> do
@@ -130,16 +137,69 @@ convertFile ctx input output = do
 -- 批量转换：保持目录结构，并将 .typus 扩展名替换为 .go
 batchConvert :: CompilerContext -> FilePath -> FilePath -> IOResult ()
 batchConvert ctx inputDir outputDir = do
+    let Logger { logInfo = logI, logDebug = logD } = contextLogger ctx
+    
     isDir <- liftIO $ doesDirectoryExist inputDir
     unless isDir $ throwError $ NotADirectory inputDir
 
     liftIO $ createDirectoryIfMissing True outputDir
+    
+    -- 收集所有文件并按包分组
     files <- liftIO $ findTypusFiles inputDir
-
-    forM_ files $ \inputFile -> do
-        let relPath    = makeRelative inputDir inputFile
-            outputPath = outputDir </> replaceExtension relPath "go"
-        convertFile ctx inputFile outputPath
+    packageGroups <- groupFilesByPackage files
+    
+    -- 对每个包进行批量转换
+    forM_ packageGroups $ \(packageDir, packageFiles) -> do
+        debug <- liftIO $ isEnvVarEnabled "TYPUS_DEBUG"
+        when debug $ liftIO $ logD $ "Processing package in directory: " ++ packageDir
+        when debug $ liftIO $ logD $ "Files: " ++ show packageFiles
+        
+        -- 解析所有文件
+        parsedFiles <- forM packageFiles $ \f -> do
+            source <- liftIO $ readFile f
+            case P.parseTypus source of
+                Left err -> throwError $ ParserError f err
+                Right p -> return (f, p)
+        
+        -- 对每个文件进行转换（使用包上下文）
+        forM_ parsedFiles $ \(inputFile, typusFile) -> do
+            let relPath    = makeRelative inputDir inputFile
+                outputPath = outputDir </> replaceExtension relPath "go"
+            
+            -- 使用包上下文编译
+            case compileWithPackage typusFile parsedFiles of
+                Left errs -> throwError $ CompilationFailed inputFile errs
+                Right code -> do
+                    liftIO $ logI $ "Converted: " ++ inputFile ++ " -> " ++ outputPath
+                    liftIO $ writeFile outputPath code
+  where
+    -- 将文件按包分组
+    groupFilesByPackage :: [FilePath] -> IOResult [(FilePath, [FilePath])]
+    groupFilesByPackage files = do
+        groups <- forM files $ \file -> do
+            content <- liftIO $ readFile file
+            let packageName = extractPackageName' content
+                dir = takeDirectory file
+            return (dir, packageName, file)
+        
+        -- 按目录分组
+        let dirGroups = foldr insertFile Map.empty groups
+        return $ Map.toList dirGroups
+      where
+        insertFile (dir, _, file) groups = Map.insertWith (++) dir [file] groups
+        
+        extractPackageName' content = 
+            let linesList = lines content
+                -- 只匹配以"package"开头的非注释行
+                packageLines = filter isPackageDeclaration linesList
+            in case packageLines of
+                (line:_) -> let wordsList = words line
+                            in if length wordsList >= 2 then wordsList !! 1 else ""
+                [] -> ""
+          where
+            isPackageDeclaration line = 
+                let trimmed = U.trim line
+                in "package" `isPrefixOf` trimmed && not ("//" `isPrefixOf` trimmed)
 
 -- 递归查找 .typus 文件
 findTypusFiles :: FilePath -> IO [FilePath]
@@ -203,20 +263,34 @@ checkSingleFile ctx file = do
         then liftIO $ logI "     ✓ Typus syntax OK"
         else liftIO $ logI "     ✓ Typus syntax OK (with warnings)"
 
-    -- 2. 编译为 Go
-    liftIO $ logI "  2. Compiling to Go..."
-    goCode <- case compile parsed of
-        Left errs -> throwError (CompilationFailed file errs)
-        Right c   -> return c
-    liftIO $ logI "     ✓ Compilation successful"
-
-    -- 3. 调用 Go 编译器做语法检查（在临时目录构建）
+    -- 2. 检查是否应该跳过Go构建
     let goExec = contextGoExecutor ctx
     skipGo <- liftIO $ goShouldSkip goExec
+    
     if skipGo
-        then liftIO $ logI "  3. Skipping Go syntax check (TYPUS_SKIP_GO_BUILD is enabled)."
+        then do
+            liftIO $ logI "  2. Skipping all checks (TYPUS_SKIP_GO_BUILD is enabled)."
+            return ()
         else do
-            liftIO $ logI "  3. Checking Go syntax..."
+            -- 2. 收集同一包中的所有文件进行类型检查
+            liftIO $ logI "  2. Collecting package files for type checking..."
+            packageFiles <- liftIO $ findTypusFilesInPackage file
+            packageParsed <- forM packageFiles $ \f -> do
+                src <- liftIO $ readFile f
+                case P.parseTypus src of
+                    Left err -> throwError (ParserError f err)
+                    Right p -> return (f, p)
+            liftIO $ logI $ "     ✓ Found " ++ show (length packageFiles) ++ " files in package"
+
+            -- 3. 编译为 Go（使用包中的所有文件）
+            liftIO $ logI "  3. Compiling to Go..."
+            goCode <- case compileWithPackage parsed packageParsed of
+                Left errs -> throwError (CompilationFailed file errs)
+                Right c   -> return c
+            liftIO $ logI "     ✓ Compilation successful"
+
+            -- 4. 调用 Go 编译器做语法检查（在临时目录构建）
+            liftIO $ logI "  4. Checking Go syntax..."
             goCheckResult <- liftIO $ withSystemTempDirectory "typus_check" $ \tempDir ->
                 runExceptT $ do
                     let tempGoPath = tempDir </> "main.go"
@@ -228,6 +302,70 @@ checkSingleFile ctx file = do
             case goCheckResult of
                 Left err -> throwError err
                 Right _  -> liftIO $ logI "     ✓ Go syntax OK"
+
+-- 查找同一包中的所有Typus文件
+findTypusFilesInPackage :: FilePath -> IO [FilePath]
+findTypusFilesInPackage file = do
+    let dir = takeDirectory file
+    isDir <- doesDirectoryExist dir
+    if isDir
+        then do
+            -- 只查找同一目录中的文件，不递归查找子目录
+            allEntries <- listDirectory dir
+            let allFiles = map (dir </>) allEntries
+            typusFiles <- filterM (\f -> do
+                isFile <- doesFileExist f
+                return $ isFile && takeExtension f == ".typus"
+                ) allFiles
+            
+            -- 如果目录中只有一个typus文件，则只返回该文件
+            if length typusFiles == 1
+                then return typusFiles
+                else do
+                    -- 读取主文件的包名
+                    mainContent <- readFile file
+                    let mainPackageName = extractPackageName mainContent
+                    
+                    -- 过滤出相同包名的文件
+                    packageFiles <- filterM (\f -> do
+                        content <- readFile f
+                        return $ extractPackageName content == mainPackageName
+                        ) typusFiles
+                    return $ sort packageFiles
+        else return [file]
+  where
+    extractPackageName content = 
+        let linesList = lines content
+            -- 只匹配以"package"开头的非注释行
+            packageLines = filter isPackageDeclaration linesList
+        in case packageLines of
+            (line:_) -> let wordsList = words line
+                        in if length wordsList >= 2 then wordsList !! 1 else ""
+            [] -> ""
+      where
+        isPackageDeclaration line = 
+            let trimmed = U.trim line
+            in "package" `isPrefixOf` trimmed && not ("//" `isPrefixOf` trimmed)
+
+-- 编译单个文件时考虑包中的其他文件
+compileWithPackage :: P.TypusFile -> [(FilePath, P.TypusFile)] -> CompilerResult String
+compileWithPackage mainFile packageFiles = do
+    sourceIR <- ensureSourceIR mainFile
+    semanticIR <- IR.buildSemanticIRWithPackage sourceIR packageFiles
+    let parsedFile = IR.sourceTypusFile sourceIR
+    checkDependentTypes parsedFile
+    ensureNoTypeErrorsWithPackage parsedFile packageFiles
+    checkOwnershipWithValueInfo parsedFile (IR.semanticValueInfo semanticIR) -- Ownership check
+    let goArtifact = IR.emitGo semanticIR
+    pure (IR.goSource goArtifact)
+  where
+    ensureNoTypeErrorsWithPackage file pkgFiles =
+        case TypeChecker.diagnoseTypeErrorsWithPackage file pkgFiles of
+            Left errs -> Left errs
+            Right [] -> Right ()
+            Right diagnostics ->
+                let detailed = map typeDiagnosticToCompilerError diagnostics
+                in Left (typeCheckFailure : detailed)
 
 -- 运行 go 命令（当前目录）
 runGoCommand :: CompilerContext -> [String] -> IOResult ()

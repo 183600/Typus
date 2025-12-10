@@ -172,7 +172,7 @@ isIgnorableOwnershipError valueCopyVars err = case err of
     OutOfScope v   -> v `elem` ownershipKeywords
     _ -> False
   where
-    ownershipKeywords = ["owned", "mut", "borrow", "borrowed"]
+    ownershipKeywords = ["owned", "mut", "borrow", "borrowed", "where", "data"]
 
 trim :: String -> String
 trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
