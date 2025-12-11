@@ -1,0 +1,121 @@
+name: iflow-cabal-autoloop
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - iflow/autoflow   # 你也可以改成别的工作分支
+
+concurrency:
+  group: iflow-autoflow
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  run-5h:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360   # 给 5 小时任务预留提交与合并缓冲
+    env:
+      RUN_HOURS: 5
+      WORK_BRANCH: iflow/autoflow
+      DEFAULT_BRANCH: main
+      # iflow CLI 的无交互认证（与社区帖一致：把 Key 放在仓库 Secret 里）
+      IFLOW_API_KEY: ${{ secrets.IFLOW_API_KEY }}   # 见 topic/87
+      IFLOW_BASE_URL: https://apis.iflow.cn/v1
+      IFLOW_MODEL_NAME: qwen3-coder-plus
+    steps:
+      - name: Checkout (use PAT so next push can trigger workflows)
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.IFLOW_PAT }}
+          fetch-depth: 0
+
+      - name: Ensure work branch exists and checked out
+        shell: bash
+        run: |
+          git fetch origin
+          if ! git rev-parse --verify --quiet "origin/${WORK_BRANCH}"; then
+            git switch -c "${WORK_BRANCH}" "$(git symbolic-ref --short refs/remotes/origin/HEAD | sed 's@^origin/@@')"
+            git push --set-upstream origin "${WORK_BRANCH}"
+          else
+            git switch "${WORK_BRANCH}"
+            git pull --ff-only
+          fi
+
+      - name: Setup Node (for iflow CLI)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install iFlow CLI
+        run: |
+          npm i -g @iflow-ai/iflow-cli@latest
+          iflow --version
+
+      - name: Setup Haskell (GHC + Cabal)
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: 'latest'
+          cabal-version: 'latest'
+
+      - name: Cache cabal store
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cabal
+            dist-newstyle
+          key: cabal-${{ runner.os }}-${{ hashFiles('**/*.cabal','cabal.project*') }}
+          restore-keys: |
+            cabal-${{ runner.os }}-
+
+      - name: Make loop script executable
+        run: |
+          chmod +x scripts/typus_cabal_loop.sh
+          git config user.name "iflow-bot"
+          git config user.email "iflow-bot@users.noreply.github.com"
+
+      - name: Run for ${{ env.RUN_HOURS }} hours
+        shell: bash
+        run: |
+          # 运行 5 小时；到时发送 TERM，脚本会清理退出
+          timeout --signal=TERM $(( ${RUN_HOURS} * 3600 )) bash scripts/typus_cabal_loop.sh || true
+
+      - name: Commit & push after ${RUN_HOURS}h
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.IFLOW_PAT }}
+        shell: bash
+        run: |
+          set -e
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "ci: ${RUN_HOURS}h batch update (run $GITHUB_RUN_ID)"
+            git push origin "${WORK_BRANCH}"
+          fi
+
+      - name: Open or update PR to ${DEFAULT_BRANCH} and try auto-merge
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.IFLOW_PAT }}
+        shell: bash
+        run: |
+          set -e
+          if [[ "${WORK_BRANCH}" == "${DEFAULT_BRANCH}" ]]; then
+            echo "Working directly on default branch, skip PR/merge."
+            exit 0
+          fi
+          # 创建或复用 PR
+          PR_NUM=$(gh pr list --head "${WORK_BRANCH}" --base "${DEFAULT_BRANCH}" --state open --json number --jq '.[0].number')
+          if [[ -z "$PR_NUM" ]]; then
+            gh pr create --head "${WORK_BRANCH}" --base "${DEFAULT_BRANCH}" \
+              -t "Auto: ${WORK_BRANCH} -> ${DEFAULT_BRANCH}" \
+              -b "Automated update by iflow-cabal loop (run $GITHUB_RUN_ID)"
+            PR_NUM=$(gh pr list --head "${WORK_BRANCH}" --base "${DEFAULT_BRANCH}" --state open --json number --jq '.[0].number')
+          fi
+          # 尝试合并（需要有权限且分支保护允许）
+          gh pr merge "$PR_NUM" --squash --delete-branch --admin || gh pr merge "$PR_NUM" --squash --auto || true
