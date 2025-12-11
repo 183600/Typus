@@ -58,6 +58,7 @@ data TypusFile = TypusFile
     { tfDirectives :: FileDirectives
     , tfBuildTags :: [Located String]
     , tfBlocks :: [CodeBlock]
+    , tfSyntaxErrors :: [SyntaxValidator.SyntaxError]
     } deriving (Show, Eq)
 
 -- Default values
@@ -175,20 +176,15 @@ buildTypusFile lines0 = do
         syntaxErrors = SyntaxValidator.validateSyntax content
         -- Only report critical syntax errors (like unclosed braces)
         criticalErrors = filter (\e -> SyntaxValidator.errorType e == SyntaxValidator.MissingBrace) syntaxErrors
-    if not (null criticalErrors)
-       then case head criticalErrors of
-                SyntaxValidator.SyntaxError{..} -> 
-                  if errorMessage == "Unclosed {"
-                     then Left "Unclosed directive block"
-                     else Left $ "Syntax error: " ++ show (head criticalErrors)
-       else do
-         (fileDirs, buildTags, rest) <- parseFileDirectivesFromParsedLines lines0
-         blocks <- parseBlocksFromParsedLines rest
-         pure TypusFile
-           { tfDirectives = fileDirs
-           , tfBuildTags = buildTags
-           , tfBlocks = blocks
-           }
+    -- Always try to parse, even with syntax errors
+    (fileDirs, buildTags, rest) <- parseFileDirectivesFromParsedLines lines0
+    blocks <- parseBlocksFromParsedLines rest
+    pure TypusFile
+      { tfDirectives = fileDirs
+      , tfBuildTags = buildTags
+      , tfBlocks = blocks
+      , tfSyntaxErrors = criticalErrors
+      }
 
 -- Check for multiple package declarations
 checkMultiplePackageDeclarations :: [ParsedLine] -> Either String ()

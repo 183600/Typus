@@ -3,6 +3,8 @@ module Compiler.TypeChecker (
     Type(..),
     TypeEnv(..),
     TypeCheckDiagnostic(..),
+    FunctionInfo(..),
+    FunctionSignature(..),
     hasTypeErrors,
     diagnoseTypeErrors,
     diagnoseTypeErrorsWithPackage,
@@ -14,7 +16,9 @@ module Compiler.TypeChecker (
     buildTypeEnv,
     isMethodDeclaration,
     checkTypeError,
-    hasMalformedSyntax
+    hasMalformedSyntax,
+    checkCircularDependencies,
+    parseFunctionInfoFromDecl
 ) where
 
 import Parser (TypusFile(..))
@@ -87,7 +91,8 @@ data TypeCheckDiagnostic = TypeCheckDiagnostic
 hasMalformedSyntax :: TypusFile -> Bool
 hasMalformedSyntax typusFile =
     let source = IR.rawSourceFromTypus typusFile
-    in null (trim source) || case parseGoModule (lines source) of
+        hasParserErrors = not (null (Parser.tfSyntaxErrors typusFile))
+    in hasParserErrors || null (trim source) || case parseGoModule (lines source) of
         Left _ -> True
         Right _ -> False
 
@@ -538,7 +543,8 @@ extractFunctionName header = do
 
 parseFunctionSignature :: String -> Maybe FunctionSignature
 parseFunctionSignature rawHeader = do
-    (_, afterFunc) <- stripPrefixWith "func" (trim rawHeader)
+    let headerWithoutBody = takeWhile (/= '{') rawHeader
+    (_, afterFunc) <- stripPrefixWith "func" (trim headerWithoutBody)
     let afterTrim = dropWhile isSpace afterFunc
     guard (case afterTrim of
         [] -> False

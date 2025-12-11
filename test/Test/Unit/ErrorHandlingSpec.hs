@@ -17,8 +17,12 @@ tests =
               , "    if true {"
               ]
         case Parser.parseTypus source of
-          Left err -> assertBool "parse error should be informative" (length err > 10)
-          Right _ -> assertFailure "expected parse error"
+          Right typusFile -> do
+            assertBool "should have syntax errors" (not (null (Parser.tfSyntaxErrors typusFile)))
+            case Compiler.compile typusFile of
+              Left err -> assertBool "compile error should be informative" (length (Compiler.renderCompilationError err) > 10)
+              Right _ -> assertFailure "expected compilation error"
+          Left _ -> assertFailure "parse should succeed with errors"
 
     , testCase "reports compilation errors with source locations" $ do
         let source = unlines
@@ -78,15 +82,21 @@ tests =
     , testCase "handles circular dependency detection" $ do
         let source = unlines
               [ "package main"
-              , "func a() { b() }"
-              , "func b() { a() }"
-              , "func main() { a() }"
+              , "func a() {"
+              , "    b()"
+              , "}"
+              , "func b() {"
+              , "    a()"
+              , "}"
+              , "func main() {"
+              , "    a()"
+              , "}"
               ]
         typusFile <- expectParse source
         case Compiler.compile typusFile of
           Left err -> do
             let rendered = Compiler.renderCompilationError err
-            assertBool "should detect circular dependency" ("circular" `isInfixOf` rendered || "cycle" `isInfixOf` rendered)
+            assertBool "should detect circular dependency" ("Circular dependency" `isInfixOf` rendered)
           Right _ -> assertFailure "expected circular dependency error"
 
     , testCase "reports type mismatch errors with expected and actual types" $ do
