@@ -82,13 +82,13 @@ while true; do
       else
         git commit -m "测试通过" || true
       fi
-      iflow "给这个项目增加大量的测试用例" --yolo
+      iflow "给这个项目增加大量的测试用例 think:high" --yolo
     } >> "$LOG_FILE" 2>&1
     cat "$LOG_FILE"
   else
     {
       echo "⚠️ 发现问题或 warning（退出码=$CABAL_STATUS），调用 iflow 修复..."
-      iflow '解决cabal test --flags="-fast production" --test-show-details=direct显示的所有问题（包括warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点' --yolo
+      iflow '解决cabal test --flags="-fast production" --test-show-details=direct显示的所有问题（包括warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点 think:high' --yolo
     } >> "$LOG_FILE" 2>&1
     cat "$LOG_FILE"
   fi
