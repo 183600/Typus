@@ -14,6 +14,16 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# ==================== 工具：获取文件修改时间（兼容 Linux/macOS） ====================
+get_mtime() {
+  # Linux: stat -c%Y; macOS/BSD: stat -f %m
+  if stat -c%Y "$1" >/dev/null 2>&1; then
+    stat -c%Y "$1" 2>/dev/null || echo 0
+  else
+    stat -f %m "$1" 2>/dev/null || echo 0
+  fi
+}
+
 # ==================== 监控函数 ====================
 monitor_watchdog() {
   master_pid="$1"; timeout="$2"; hb_file="$3"; shift 3
@@ -25,7 +35,7 @@ monitor_watchdog() {
     sleep $CHECK_INTERVAL
 
     if [[ -f "$hb_file" ]]; then
-      current_time=$(stat -c%Y "$hb_file" 2>/dev/null || echo 0)
+      current_time=$(get_mtime "$hb_file")
       (( current_time > last_heartbeat )) && last_heartbeat=$current_time
     fi
 
@@ -51,7 +61,11 @@ fi
 # ==================== 工具：带心跳的命令执行（逐行刷新心跳） ====================
 run_with_heartbeat() {
   stdbuf -oL -eL "$@" 2>&1 | awk -v hb="$HEARTBEAT_FILE" '{ print; fflush(); system("touch " hb) }'
-  return ${PIPESTATUS[0]}
+  # 在 set -u 下安全读取 PIPESTATUS
+  set +u
+  local status=${PIPESTATUS[0]:-127}
+  set -u
+  return "$status"
 }
 
 # ==================== 主循环 ====================
@@ -65,7 +79,6 @@ while true; do
   echo "===================="
 
   # 运行测试：不写入日志文件，实时检测 warning，并按行刷新心跳
-  HAS_WARNINGS=0
   stdbuf -oL -eL cabal test --flags="-fast production" --test-show-details=direct 2>&1 | \
     awk -v hb="$HEARTBEAT_FILE" '
       BEGIN { found=0 }
@@ -78,22 +91,38 @@ while true; do
         if (l ~ /(warn(ing)?|警告)/) found=1
       }
       END {
-        # 若发现 warning 用 0 退出，外层用 PIPESTATUS[1] 判断
+        # 0=发现warning，1=未发现（用退出码传递给外层）
         exit found ? 0 : 1
       }
     '
-  CABAL_STATUS=${PIPESTATUS[0]}
-  AWK_STATUS=${PIPESTATUS[1]}
-  if [[ $AWK_STATUS -eq 0 ]]; then HAS_WARNINGS=1; else HAS_WARNINGS=0; fi
+
+  # 在 set -u 下安全读取 PIPESTATUS
+  set +u
+  ps0=${PIPESTATUS[0]:-255}  # cabal 的退出码，默认255表示未知
+  ps1=${PIPESTATUS[1]:-255}  # awk 的退出码，默认255表示未知
+  set -u
+
+  CABAL_STATUS=$ps0
+  AWK_STATUS=$ps1
+
+  # 计算 HAS_WARNINGS（保守处理：拿不到 awk 退出码则认为有 warning）
+  if [[ $AWK_STATUS -eq 0 ]]; then
+    HAS_WARNINGS=1
+  elif [[ $AWK_STATUS -eq 1 ]]; then
+    HAS_WARNINGS=0
+  else
+    echo "⚠️ 未能获取 awk 退出码（AWK_STATUS=$AWK_STATUS），保守起见认为存在 warning"
+    HAS_WARNINGS=1
+  fi
 
   touch "$HEARTBEAT_FILE"
 
   if [[ $CABAL_STATUS -eq 0 && $HAS_WARNINGS -eq 0 ]]; then
     echo "✅ 未发现任何问题（包括 warning）——进行提交并增加测试用例"
 
-    # 新增：在 git add . 之前，先用 iflow 清理根目录多余的 .md/.txt 文件
+    # 在 git add . 之前，先用 iflow 清理根目录多余的 .md/.txt 文件
     echo "🧹 正在清理项目根目录多余的 .md/.txt 文件（如 TEST_ENHANCEMENT_SUMMARY.md、test_wall_production.txt）..."
-    run_with_heartbeat iflow '删除项目根目录多余的.md文件或者.txt文件（像TEST_ENHANCEMENT_SUMMARY.md和test_wall_production.txt这样的） think:high' --yolo || true
+    run_with_heartbeat iflow '删除项目根目录多余的.md文件或者.txt文件（像TEST_ENHANCEMENT_SUMMARY.md和test_wall_production.txt这样的）' --yolo || true
 
     git add .
     if git diff --cached --quiet; then
