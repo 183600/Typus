@@ -1,0 +1,19 @@
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (configuration changed)
+ - typus-0.12.0 (exe:typus) (configuration changed)
+Configuring library for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+on the commandline: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wmissing-pattern-synonyms
+
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Preprocessing library for typus-0.12.0...
+Building library for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/tmp/ghc112003-0.rsp: error: [GHC-93741] [-Wunrecognised-warning-flags, Werror=unrecognised-warning-flags]
+    unrecognised warning flag: -Wmissing-pattern-synonyms
+
+Error: [Cabal-7125]
+Failed to build typus-0.12.0 (which is required by exe:typus from typus-0.12.0).
+

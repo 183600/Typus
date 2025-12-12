@@ -1,8 +1,11 @@
 Build profile: -w ghc-9.12.2 -O1
 In order, the following will be built (use -v for more details):
  - typus-0.12.0 (test:typus-test) (first run)
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
 Preprocessing test suite 'typus-test' for typus-0.12.0...
 Building test suite 'typus-test' for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
 Running 1 test suites...
 Test suite typus-test: RUNNING...
 Typus
@@ -202,10 +205,6 @@ Typus
       runGoCommand logs when Go is skipped:                                                 OK
     CommandLineDebug
       does not trigger breakpoint when condition is False:                                  OK
-Debug output disabled
-Debugging disabled
-Debug output disabled
-Debugging disabled
       disable command keeps debugging disabled when already disabled:                       OK
     CLI argument parsing
       parses convert command:                                                               OK
@@ -292,10 +291,10 @@ Debugging disabled
       preserves comments and formatting:                                                    OK
     Performance tests
       parses large files efficiently:                                                       OK
-      compiles complex types efficiently:                                                   OK (0.01s)
+      compiles complex types efficiently:                                                   OK
       handles deeply nested structures efficiently:                                         OK
-      processes many small functions efficiently:                                           OK (0.14s)
-      memory usage remains reasonable for large files:                                      OK (0.09s)
+      processes many small functions efficiently:                                           OK (0.08s)
+      memory usage remains reasonable for large files:                                      OK (0.06s)
       compilation time scales linearly with file size:                                      OK
       error handling doesn't significantly impact performance:                              OK
       parallel processing potential:                                                        OK
@@ -304,7 +303,7 @@ Debugging disabled
       handles empty input:                                                                  OK
       handles whitespace-only input:                                                        OK
       handles comments-only input:                                                          OK
-      handles extremely long lines:                                                         OK (0.01s)
+      handles extremely long lines:                                                         OK
       handles deeply nested parentheses:                                                    OK
       handles unusual unicode characters:                                                   OK
       handles escape sequences:                                                             OK
@@ -323,7 +322,7 @@ Debugging disabled
       handles memory pressure simulation:                                                   OK
   Integration
     Integration
-      compiles sample program and optionally builds with Go:                                OK (0.12s)
+      compiles sample program and optionally builds with Go:                                OK (0.13s)
       ownership analysis flags complex violations:                                          OK
       dependent type directives propagate from fixture:                                     OK
     Integrated Analyzer
@@ -387,7 +386,7 @@ Debugging disabled
       statements without package/import infer a runnable main:                              OK
       generic type parameters render Go square bracket notation:                            OK
 
-All 319 tests passed (0.51s)
+All 319 tests passed (0.40s)
 Test suite typus-test: PASS
 Test suite logged to:
 /home/runner/work/Typus/Typus/./dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/test/typus-0.12.0-typus-test.log

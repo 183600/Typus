@@ -1,3 +1,5 @@
+{-# LANGUAGE DerivingStrategies #-}
+
 module Cli (Args(..), parseArgs, parseArgsFromList) where
 
 import Options.Applicative
@@ -10,7 +12,7 @@ data Args
     | Run Bool [String]
     | DebugMode [String]
     | Version
-    deriving (Eq, Show)
+    deriving stock (Eq, Show)
 
 convertOptions :: Parser Args
 convertOptions = Convert

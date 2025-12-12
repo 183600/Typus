@@ -268,8 +268,8 @@ formatRecoveryInfo :: ErrorRecovery -> String
 formatRecoveryInfo rec =
     let canRecStr :: String
         canRecStr = if canRecover rec
-            then "\n✓ Recoverable error - compilation can continue"
-            else "\n✗ Fatal error - compilation stopped"
+            then "\n[OK] Recoverable error - compilation can continue"
+            else "\n[FATAL] Fatal error - compilation stopped"
         actionStr :: String
         actionStr = case recoveryAction rec of
             Just action -> "\nRecovery Action: " ++ action

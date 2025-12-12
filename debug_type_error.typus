@@ -1,7 +1,5 @@
 package main
-func add(x int, y int) int {
-    return x + y
-}
+func expectInt(x int) int { return x }
 func main() {
-    add("oops", 2)
+    expectInt("string")
 }

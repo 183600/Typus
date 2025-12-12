@@ -1,6 +1,6 @@
 Build profile: -w ghc-9.12.2 -O1
 In order, the following will be built (use -v for more details):
- - typus-0.12.0 (test:typus-test) (first run)
+ - typus-0.12.0 (test:typus-test) (file /home/runner/work/Typus/Typus/dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/cache/build changed)
 /bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
 Preprocessing test suite 'typus-test' for typus-0.12.0...
 Building test suite 'typus-test' for typus-0.12.0...
@@ -181,121 +181,13 @@ Typus
       reports compilation errors with source locations:                                     OK
       aggregates multiple errors in single compilation:                                     OK
       provides helpful error messages for undefined variables:                              OK
-Actual error message: === Compilation Errors ===
-
-
---- TypeCheckingPhase (2 errors) ---
-1:1-1:1: [ERROR] [TypeChecking] Type errors detected during semantic analysis
-Suggestions:
-  - Inspect intermediate type-checking diagnostics for precise locations
-  - Add explicit type annotations to clarify intent
-
-Phase: TypeCheckingPhase
-
-Stack Trace:
-  Compiler.ensureNoTypeErrors
-
-[OK] Recoverable error - compilation can continue
-Recovery Confidence: 70%
-      handles circular dependency detection:                                                1:1-1:1: [ERROR] [TypeChecking] Type error in 'main': expectInt argument 1: expected type int, got string
-Suggestions:
-  - Inspect intermediate type-checking diagnostics for precise locations
-OK  - Add explicit type annotations to clarify intent
-
-
-Phase: TypeCheckingPhase
-
-Stack Trace:
-  Compiler.ensureNoTypeErrors
-  Type context: main
-      reports type mismatch errors with expected and actual types:                          
-[OK] Recoverable error - compilation can continue
-Recovery Confidence: 70%
-
-
-OK
-Actual error message: === Compilation Errors ===
-
-
---- TypeCheckingPhase (2 errors) ---
-1:1-1:1: [ERROR] [TypeChecking] Type errors detected during semantic analysis
-Suggestions:
-  - Inspect intermediate type-checking diagnostics for precise locations
-  - Add explicit type annotations to clarify intent
-
-Phase: TypeCheckingPhase
-
-Stack Trace:
-  Compiler.ensureNoTypeErrors
-
-[OK] Recoverable error - compilation can continue
-Recovery Confidence: 70%
-1:1-1:1: [ERROR] [TypeChecking] Type error in 'main': Undefined function or variable: undefinedFunction
-Suggestions:
-  - Inspect intermediate type-checking diagnostics for precise locations
-  - Add explicit type annotations to clarify intent
-
-Phase: TypeCheckingPhase
-
-Stack Trace:
-      provides context for errors in nested blocks:                                           Compiler.ensureNoTypeErrors
-  Type context: main
-
-[OK] Recoverable error - compilation can continue
-Recovery Confidence: 70%
-
-
-OK
-Actual error message: === Compilation Errors ===
-
-
---- OwnershipAnalysisPhase (1 errors) ---
-?:?: [ERROR] [Ownership] Value 'data' used after move
-Suggestions:
-  - Use a reference (&value) if you need to reuse it
-  - Consider cloning the value before moving
-
-Phase: OwnershipAnalysisPhase
-[OK] Recoverable error - compilation can continue
-Recovery Confidence: 70%
-
-
+      handles circular dependency detection:                                                OK
+      reports type mismatch errors with expected and actual types:                          OK
+      provides context for errors in nested blocks:                                         OK
       handles errors in dependent type constraints:                                         OK
-Actual error message: === Compilation Errors ===
-
-
---- TypeCheckingPhase (2 errors) ---
-1:1-1:1: [ERROR] [TypeChecking] Type errors detected during semantic analysis
-Suggestions:
-  - Inspect intermediate type-checking diagnostics for precise locations
-  - Add explicit type annotations to clarify intent
-
-Phase: TypeCheckingPhase
-
-Stack Trace:
-      reports ownership violations with clear explanations:                                   Compiler.ensureNoTypeErrors
-
-[OK] Recoverable error - compilation can continue
-OKRecovery Confidence: 70%
-1:1-1:1: [ERROR] [TypeChecking] Type error in 'main': Variable 'x': expected type int, got string
-
-Suggestions:
-  - Inspect intermediate type-checking diagnostics for precise locations
-  - Add explicit type annotations to clarify intent
-      provides error recovery suggestions:                                                  
-Phase: TypeCheckingPhase
-
-Stack Trace:
-  Compiler.ensureNoTypeErrors
-  Type context: main
-
-[OK] Recoverable error - compilation can continue
-Recovery Confidence: 70%
-
-
-OK
+      reports ownership violations with clear explanations:                                 OK
+      provides error recovery suggestions:                                                  OK
       handles malformed directive errors:                                                   OK
-Actual error message: Line 3:5 [UnterminatedBlock] if statement missing opening brace
       reports syntax errors with position information:                                      OK
     Embedded assets
       handleMissingEmbeds warns but succeeds in non-strict mode:                            OK
@@ -312,11 +204,7 @@ Actual error message: Line 3:5 [UnterminatedBlock] if statement missing opening 
       withTemporaryGoProject writes go.mod and reuses the provided prefix:                  OK
       runGoCommand logs when Go is skipped:                                                 OK
     CommandLineDebug
-      does not trigger breakpoint when condition is False:                                  OKDebug output disabled
-Debugging disabled
-Debug output disabled
-Debugging disabled
-
+      does not trigger breakpoint when condition is False:                                  OK
       disable command keeps debugging disabled when already disabled:                       OK
     CLI argument parsing
       parses convert command:                                                               OK
@@ -403,10 +291,10 @@ Debugging disabled
       preserves comments and formatting:                                                    OK
     Performance tests
       parses large files efficiently:                                                       OK
-      compiles complex types efficiently:                                                   OK (0.01s)
+      compiles complex types efficiently:                                                   OK
       handles deeply nested structures efficiently:                                         OK
-      processes many small functions efficiently:                                           OK (0.15s)
-      memory usage remains reasonable for large files:                                      OK (0.10s)
+      processes many small functions efficiently:                                           OK (0.08s)
+      memory usage remains reasonable for large files:                                      OK (0.05s)
       compilation time scales linearly with file size:                                      OK
       error handling doesn't significantly impact performance:                              OK
       parallel processing potential:                                                        OK
@@ -498,7 +386,7 @@ Debugging disabled
       statements without package/import infer a runnable main:                              OK
       generic type parameters render Go square bracket notation:                            OK
 
-All 319 tests passed (0.52s)
+All 319 tests passed (0.39s)
 Test suite typus-test: PASS
 Test suite logged to:
 /home/runner/work/Typus/Typus/./dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/test/typus-0.12.0-typus-test.log

@@ -366,19 +366,14 @@ tests =
                   , "    process(s)"
                   , "}"
                   ]
-            let helperCode = unlines
-                  [ "package main"
-                  , ""
-                  , "func process(x owned String) {"
-                  , "    println(x)"
-                  , "}"
-                  ]
+            -- Helper code defined but not used in this test
             let state = newIntegratedAnalyzer True True
             result <- runAnalysis mainCode state
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
-                assertBool "Should complete full analysis" True
+                assertBool "Should complete full analysis - ownership" (null $ ownershipErrors analysisRes)
+                assertBool "Should complete full analysis - dependent types" (null $ dependentTypeErrors analysisRes)
 
         , testCase "selective feature enabling" $ do
             let ownershipOnlyCode = unlines
@@ -396,6 +391,7 @@ tests =
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
                 assertBool "Should analyze ownership only" (null $ dependentTypeErrors analysisRes)
+                assertBool "Should have ownership analysis results" (not (null $ typeEnvironment analysisRes))
 
         , testCase "complex nested ownership transfer" $ do
             let code = unlines
@@ -467,7 +463,7 @@ tests =
             case result of
               Left err -> assertFailure $ "Analysis failed: " ++ err
               Right analysisRes -> do
-                assertBool "Symbol table should be consistent" True
+                assertBool "Symbol table should be consistent" (not $ null $ typeEnvironment analysisRes)
 
         , testCase "type environment preservation" $ do
             let code = unlines

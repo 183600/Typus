@@ -1,0 +1,14 @@
+Resolving dependencies...
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (configuration changed)
+ - typus-0.12.0 (exe:typus) (configuration changed)
+ - typus-0.12.0 (test:typus-test) (configuration changed)
+Configuring library for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Error: [Cabal-5559]
+[duplicate-modules] Duplicate modules in library: Dependencies.AST, Dependencies.TypeSystem
+
+Error: [Cabal-7125]
+Failed to build typus-0.12.0 (which is required by test:typus-test from typus-0.12.0). The failure occurred during the configure step.
+

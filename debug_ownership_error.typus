@@ -1,0 +1,8 @@
+//! ownership: on
+package main
+func consume(x string) string { return x }
+func main() {
+    data := "hello"
+    consume(data)
+    println(data)
+}

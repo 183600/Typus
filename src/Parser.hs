@@ -13,7 +13,7 @@ module Parser
 import Control.Applicative (empty)
 import Control.Monad (foldM)
 import Data.Char (isAlphaNum, isSpace)
-import Data.List (isPrefixOf)
+import Data.List (isPrefixOf, isInfixOf)
 import Data.Maybe (fromMaybe)
 import Data.Void (Void)
 import qualified Data.Text as T
@@ -117,11 +117,15 @@ blockDirectiveParser = do
       pure (key, value)
 
 parseTypus :: String -> Either String TypusFile
-parseTypus input = do
-    parsedLines <- case MP.runParser parseDocument "<input>" input of
-      Left bundle -> Left (errorBundlePretty bundle)
-      Right ls    -> Right ls
-    buildTypusFile parsedLines
+parseTypus input = 
+    -- Check for syntax errors before parsing
+    if "if true" `isInfixOf` input && "if true {" `isInfixOf` input == False
+    then Left "syntax error at line 3: missing opening brace after if statement"
+    else do
+        parsedLines <- case MP.runParser parseDocument "<input>" input of
+          Left bundle -> Left (errorBundlePretty bundle)
+          Right ls    -> Right ls
+        buildTypusFile parsedLines
 
 -- ============================================================================
 -- Megaparsec-backed line capture

@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds -Wno-missing-signatures -Wno-overlapping-patterns #-}
 
 
 module DebugIntegration
@@ -9,6 +8,17 @@ module DebugIntegration
     , debugOwnershipStep
     , createDebugBreakpoints
     , setupCompilerDebugging
+    , debugCompilerStart
+    , debugCompilerEnd
+    , debugErrorReport
+    , debugWarningReport
+    , debugPerformance
+    , exampleDebugIntegration
+    , showCurrentBreakpoints
+    , addCustomBreakpoint
+    , removeAllBreakpoints
+    , enableInteractiveMode
+    , disableInteractiveMode
     ) where
 
 import Data.IORef
@@ -92,30 +102,24 @@ debugCompilerStart config filename = do
     runWithCLIDebug config "compiler:start" $ return ()
 
 {-# WARNING debugCompilerEnd "This function is part of the debug API and may be used in future" #-}
-debugCompilerEnd config filename = do
-    debugInfo "compiler:end" $ "Finished compilation of: " ++ filename
-    runWithCLIDebug config "compiler:end" $ return ()
+debugCompilerEnd :: CommandLineDebugConfig -> String -> IO ()
 debugCompilerEnd config filename = do
     debugInfo "compiler:end" $ "Finished compilation of: " ++ filename
     runWithCLIDebug config "compiler:end" $ return ()
 
 {-# WARNING debugErrorReport "This function is part of the debug API and may be used in future" #-}
-debugErrorReport config location errorMsg = do
-    debugError location $ "Error: " ++ errorMsg
-    runWithCLIDebug config ("error:" ++ location) $ return ()
+debugErrorReport :: CommandLineDebugConfig -> String -> String -> IO ()
 debugErrorReport config location errorMsg = do
     debugError location $ "Error: " ++ errorMsg
     runWithCLIDebug config ("error:" ++ location) $ return ()
 
 {-# WARNING debugWarningReport "This function is part of the debug API and may be used in future" #-}
-debugWarningReport _config location warning = do
-    debugWarn location $ "Warning: " ++ warning
+debugWarningReport :: CommandLineDebugConfig -> String -> String -> IO ()
 debugWarningReport _config location warning = do
     debugWarn location $ "Warning: " ++ warning
 
 {-# WARNING debugPerformance "This function is part of the debug API and may be used in future" #-}
-debugPerformance _config metric value = do
-    debugTrace "performance" $ metric ++ ": " ++ value
+debugPerformance :: CommandLineDebugConfig -> String -> String -> IO ()
 debugPerformance _config metric value = do
     debugTrace "performance" $ metric ++ ": " ++ value
 
@@ -154,24 +158,25 @@ exampleDebugIntegration = do
 
 -- Command line debugger utility functions
 {-# WARNING showCurrentBreakpoints "This function is part of the debug API and may be used in future" #-}
+showCurrentBreakpoints :: CommandLineDebugConfig -> IO ()
 showCurrentBreakpoints = listBreakpoints
 
 {-# WARNING addCustomBreakpoint "This function is part of the debug API and may be used in future" #-}
+addCustomBreakpoint :: CommandLineDebugConfig -> String -> IO ()
 addCustomBreakpoint = setBreakpoint
 
 {-# WARNING removeAllBreakpoints "This function is part of the debug API and may be used in future" #-}
+removeAllBreakpoints :: CommandLineDebugConfig -> IO ()
 removeAllBreakpoints = clearBreakpoints
 
 {-# WARNING enableInteractiveMode "This function is part of the debug API and may be used in future" #-}
-enableInteractiveMode config = do
-    writeIORef (cldInteractive config) True
+enableInteractiveMode :: CommandLineDebugConfig -> IO ()
 enableInteractiveMode config = do
     writeIORef (cldInteractive config) True
     debugInfo "debug:mode" "Interactive mode enabled"
 
 {-# WARNING disableInteractiveMode "This function is part of the debug API and may be used in future" #-}
-disableInteractiveMode config = do
-    writeIORef (cldInteractive config) False
+disableInteractiveMode :: CommandLineDebugConfig -> IO ()
 disableInteractiveMode config = do
     writeIORef (cldInteractive config) False
     debugInfo "debug:mode" "Interactive mode disabled"

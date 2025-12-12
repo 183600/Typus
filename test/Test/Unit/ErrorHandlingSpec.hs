@@ -111,8 +111,8 @@ tests =
         case Compiler.compile typusFile of
           Left err -> do
             let rendered = Compiler.renderCompilationError err
-            assertBool "should mention expected type" ("expected.*int" `isInfixOf` rendered)
-            assertBool "should mention actual type" ("got.*string" `isInfixOf` rendered)
+            assertBool "should mention expected type" ("expected type int" `isInfixOf` rendered)
+            assertBool "should mention actual type" ("got string" `isInfixOf` rendered)
           Right _ -> assertFailure "expected type mismatch error"
 
     , testCase "provides context for errors in nested blocks" $ do

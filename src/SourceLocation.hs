@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveFunctor #-}
 module SourceLocation (
@@ -62,7 +63,7 @@ data SourcePos = SourcePos
     { posLine :: Int
     , posColumn :: Int
     , posOffset :: Int
-    } deriving (Show, Eq, Ord)
+    } deriving stock (Show, Eq, Ord)
 
 -- Start position (1-based)
 startPos :: SourcePos
@@ -99,7 +100,7 @@ posAtLineCol = SourcePos
 data SourceSpan = SourceSpan
     { spanStart :: SourcePos
     , spanEnd :: SourcePos
-    } deriving (Show, Eq, Ord)
+    } deriving stock (Show, Eq, Ord)
 
 -- Empty span at a position
 emptySpan :: SourcePos -> SourceSpan

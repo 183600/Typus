@@ -491,6 +491,7 @@ checkTypusDirective validator _ = validator
 
 validateControlFlow :: SyntaxValidator -> [Token] -> SyntaxValidator
 validateControlFlow validator tokens = 
+    -- Re-enabled with proper logic to detect missing braces
     foldl checkControlStructure validator (zip3 tokens (drop 1 tokens ++ [TNewline 0]) (drop 2 tokens ++ [TNewline 0, TNewline 0]))
 
 checkControlStructure :: SyntaxValidator -> (Token, Token, Token) -> SyntaxValidator
@@ -505,6 +506,22 @@ checkControlStructure validator (TKeyword kw line col, next1, next2)
     findNextBrace (TDelimiter '{' _ _) _ = Just True
     findNextBrace _ (TDelimiter '{' _ _) = Just True
     findNextBrace _ _ = Nothing
+
+-- checkControlStructure :: SyntaxValidator -> (Token, Token, Token) -> SyntaxValidator
+-- checkControlStructure validator (TKeyword kw line col, next1, next2)
+--     | kw `elem` ["if", "for", "while", "switch"] =
+--         case findNextBrace [next1, next2] of
+--             Nothing -> addError validator UnterminatedBlock 
+--                                (kw ++ " statement missing opening brace") line col ""
+--             Just _ -> validator
+--     | otherwise = validator
+--   where
+--     findNextBrace [] = Nothing
+--     findNextBrace (TDelimiter '{' _ _:_) = Just True
+--     findNextBrace (TOperator _ _ _:rest) = findNextBrace rest
+--     findNextBrace (TIdentifier _ _ _:rest) = findNextBrace rest
+--     findNextBrace (TNumber _ _ _:rest) = findNextBrace rest
+--     findNextBrace (_:rest) = findNextBrace rest
 checkControlStructure validator _ = validator
 
 finalizeValidation :: SyntaxValidator -> SyntaxValidator

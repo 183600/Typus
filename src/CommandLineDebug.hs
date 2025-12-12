@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module CommandLineDebug
@@ -11,10 +12,12 @@ module CommandLineDebug
     , toggleDebugOutput
     , DebugCommandResult(..)
     , processDebugCommand
+    , processDebugCommandWithOutput
     , setDebugLevel
     , showDebugStatus
     ) where
 
+import Control.Monad (when)
 import Data.IORef
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -101,20 +104,24 @@ handleDebugCommands config location = do
 data DebugCommandResult
     = ResumeExecution
     | AwaitMoreInput
-    deriving (Eq, Show)
+    deriving stock (Eq, Show)
 
 processDebugCommand :: CommandLineDebugConfig -> String -> [String] -> IO DebugCommandResult
-processDebugCommand config _ tokens =
+processDebugCommand = processDebugCommandWithOutput True
+
+-- Internal version with output control
+processDebugCommandWithOutput :: Bool -> CommandLineDebugConfig -> String -> [String] -> IO DebugCommandResult
+processDebugCommandWithOutput enableOutput config _ tokens =
     case tokens of
         ["c"] -> return ResumeExecution
         ["continue"] -> return ResumeExecution
         ["s"] -> return ResumeExecution
         ["step"] -> return ResumeExecution
         ["l"] -> do
-            listBreakpoints config
+            when enableOutput $ listBreakpoints config
             return AwaitMoreInput
         ["list"] -> do
-            listBreakpoints config
+            when enableOutput $ listBreakpoints config
             return AwaitMoreInput
         ["d"] -> disableDebugging >> return AwaitMoreInput
         ["disable"] -> disableDebugging >> return AwaitMoreInput
@@ -123,13 +130,13 @@ processDebugCommand config _ tokens =
         ["q"] -> error "Program terminated by user at breakpoint"
         ["quit"] -> error "Program terminated by user at breakpoint"
         ["h"] -> do
-            showDebugHelp
+            when enableOutput $ showDebugHelp
             return AwaitMoreInput
         ["help"] -> do
-            showDebugHelp
+            when enableOutput $ showDebugHelp
             return AwaitMoreInput
         _ -> do
-            putStrLn "Unknown command. Type 'h' for help."
+            when enableOutput $ putStrLn "Unknown command. Type 'h' for help."
             return AwaitMoreInput
   where
     disableDebugging = applyState False "Debugging disabled"
@@ -137,8 +144,9 @@ processDebugCommand config _ tokens =
 
     applyState newState statusMessage = do
         writeIORef (cldEnabled config) newState
-        putStrLn $ "Debug output " ++ if newState then "enabled" else "disabled"
-        putStrLn statusMessage
+        when enableOutput $ do
+            putStrLn $ "Debug output " ++ if newState then "enabled" else "disabled"
+            putStrLn statusMessage
 
 -- Show debug help
 showDebugHelp :: IO ()

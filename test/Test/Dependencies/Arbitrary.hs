@@ -1,5 +1,6 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE OverloadedStrings #-}
+-- Orphan instances are acceptable in test code to keep test utilities separate from production code
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Dependencies.Arbitrary () where
 
