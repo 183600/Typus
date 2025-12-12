@@ -170,6 +170,7 @@ parseGroupedTypeSpecs start lines0 =
         inner = drop 1 (dropWhileEnd isGroupClosing annotated)
     in reverse (collectSpecs inner Nothing "" 0 [])
   where
+    isGroupClosing :: (a, String) -> Bool
     isGroupClosing (_, line) = trim (stripLineComment line) == ")"
 
     collectSpecs [] currentStart current _ acc
@@ -410,6 +411,7 @@ augmentSymbolTableWithLocals source initialSymbols =
     braceDeltaLine :: String -> Int
     braceDeltaLine = List.foldl' update 0
       where
+        update :: Num a => a -> Char -> a
         update acc '{' = acc + 1
         update acc '}' = acc - 1
         update acc _   = acc

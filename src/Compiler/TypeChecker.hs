@@ -167,6 +167,7 @@ diagnoseTypeErrorsWithPackage mainFile packageFiles = do
         in filter (\err -> isErrorInFile err fileContent fileFunctions) errors
     
     -- 检查错误是否属于特定文件
+    isErrorInFile :: TypeError -> String -> [String] -> Bool
     isErrorInFile TypeError{..} fileContent fileFunctions =
         case teContext of
             Just ctx -> ctx `elem` fileFunctions
@@ -229,6 +230,7 @@ buildTypeEnv GoModule{..} =
   where
     builtinFunctions = ["println", "print", "len", "cap", "append", "make", "new"]
     
+    builtinFunctionEntry :: String -> (String, FunctionSignature)
     builtinFunctionEntry name = (name, builtinSignature)
     
     builtinSignature = FunctionSignature
@@ -375,6 +377,7 @@ checkStatement env lines0 =
             else baseErrors
     in contextualizedErrors
   where
+    hasPrefix :: Eq a => [a] -> [a] -> Bool
     hasPrefix prefix str = take (length prefix) str == prefix
     
     addLocalVars envVar varDecl =
@@ -514,6 +517,7 @@ checkCall TypeEnv{..} context CallExpr{..} =
             indexedArgs = zip [0..] callArgs
         in concatMap (checkArg expectedForIdx) indexedArgs
 
+    checkArg :: (Int -> Maybe Type) -> (Int, String) -> [TypeError]
     checkArg expected (idx, argText) =
         case expected idx of
             Nothing -> []
@@ -603,6 +607,7 @@ parseFunctionSignature rawHeader = do
         , fsReturns = returns
         }
   where
+    stripPrefixWith :: Eq a => [a] -> [a] -> Maybe ([a], [a])
     stripPrefixWith prefix s
         | prefix `isPrefixOf` s = Just (prefix, drop (length prefix) s)
         | otherwise = Nothing
@@ -1043,7 +1048,9 @@ checkCircularDependencies functionInfos =
     
     findCycles :: Map String [String] -> [[String]]
     findCycles graph = 
-        let visited = Set.empty
+        let visited :: Set String
+            visited = Set.empty
+            recStack :: Set String
             recStack = Set.empty
         in dfsAll graph visited recStack []
     

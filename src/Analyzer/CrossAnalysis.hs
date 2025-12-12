@@ -120,8 +120,10 @@ computeUsageSummary trackedNames tokens =
 collectOccurrences :: Set.Set String -> Program -> [(String, Int)]
 collectOccurrences tracked (Program stmts) = goStmts 0 stmts
   where
+    goStmts :: Int -> [Stmt] -> [(String, Int)]
     goStmts depth = concatMap (goStmt depth)
 
+    goStmt :: Int -> Stmt -> [(String, Int)]
     goStmt depth stmt =
         case stmt of
             SVarDecl name mInit _ ->
@@ -143,6 +145,7 @@ collectOccurrences tracked (Program stmts) = goStmts 0 stmts
             SDirectiveLine _ _ ->
                 []
 
+    goExpr :: Int -> Expr -> [(String, Int)]
     goExpr depth expr =
         case expr of
             EIdent name _ ->
@@ -156,12 +159,14 @@ collectOccurrences tracked (Program stmts) = goStmts 0 stmts
             _ ->
                 []
 
+    collectFromTokens :: Int -> [OwnershipToken] -> [(String, Int)]
     collectFromTokens depth toks =
         [ (name, depth)
         | name <- collectPlainIdentifiers toks ++ collectSelectorBases toks
         , Set.member name tracked
         ]
 
+    record :: String -> Int -> [(String, Int)]
     record name depth
         | Set.member name tracked = [(name, depth)]
         | otherwise = []
@@ -188,6 +193,7 @@ collectPlainIdentifiers tokens = go Nothing tokens
 collectSelectorBases :: [OwnershipToken] -> [String]
 collectSelectorBases = go []
   where
+    go :: [String] -> [OwnershipToken] -> [String]
     go acc (Token (TId ident) _ : Token (TSym SDot) _ : Token (TId _) _ : rest) =
         go (ident : acc) rest
     go acc (_:rest) = go acc rest
@@ -196,6 +202,7 @@ collectSelectorBases = go []
 isSymbolToken :: Sym -> Maybe OwnershipToken -> Bool
 isSymbolToken sym = maybe False matches
   where
+    matches :: OwnershipToken -> Bool
     matches (Token (TSym sym') _) = sym == sym'
     matches _ = False
 

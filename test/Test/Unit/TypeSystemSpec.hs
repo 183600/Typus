@@ -62,7 +62,8 @@ tests =
           Just _ -> assertFailure "expected occurs check to reject infinite type"
 
     , testCase "convertTypeExprAndRefinements accumulates refinement constraints" $ do
-        let params = Set.fromList ["T"]
+        let params :: Set.Set String
+            params = Set.fromList ["T"]
             typeExpr =
               RefineT
                 (GenericT "Vector" [SimpleT "T"])
@@ -77,7 +78,8 @@ tests =
           ]
 
     , testCase "convertConstraint preserves nested generic predicate arguments" $ do
-        let params = Set.fromList ["Element"]
+        let params :: Set.Set String
+            params = Set.fromList ["Element"]
             constraint =
               PredC "EnsureOrder"
                 [ GenericT "List" [SimpleT "Element"]
@@ -90,7 +92,8 @@ tests =
                 ]
 
     , testCase "convertTypeExprAndRefinements handles refined function returns" $ do
-        let params = Set.fromList ["T"]
+        let params :: Set.Set String
+            params = Set.fromList ["T"]
             funcType =
               FuncT
                 [("input", SimpleT "T")]

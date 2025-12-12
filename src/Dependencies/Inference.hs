@@ -175,6 +175,7 @@ generalize level tv = do
       nonGenericVars = filter (not . isGenericLevel level) freeVars
   pure $ Forall nonGenericVars tv
   where
+    isGenericLevel :: p1 -> p2 -> Bool
     isGenericLevel _ _ = True
 
 instantiate :: TypeScheme -> TypeInference TypeVar
@@ -231,6 +232,7 @@ checkPolyType tv = do
 solveTypeConstraints :: [TypeConstraint] -> TypeInference ()
 solveTypeConstraints constraints = mapM_ solveSingle constraints
   where
+    solveSingle :: Applicative f => TypeConstraint -> f ()
     solveSingle constraint =
       case validateConstraint constraint of
         Right () -> pure ()

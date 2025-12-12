@@ -74,6 +74,7 @@ parseProgram toks = Program (parseManyTop toks)
 parseManyTop :: [OwnershipToken] -> [Stmt]
 parseManyTop = go (0 :: Int)
   where
+    go :: (Ord t, Num t) => t -> [OwnershipToken] -> [Stmt]
     go depth xs = case skipNL xs of
       [] -> []
       ts ->
@@ -175,6 +176,7 @@ parseStmt xs0 =
 parseBlockBody :: [OwnershipToken] -> ([Stmt], [OwnershipToken])
 parseBlockBody xs = go [] xs (0 :: Int)
   where
+    go :: (Ord t, Num t) => [Stmt] -> [OwnershipToken] -> t -> ([Stmt], [OwnershipToken])
     go acc ts depth = case skipNL ts of
       (t:rest) | isSym SRBrace t -> (reverse acc, rest)
       [] -> (reverse acc, [])
@@ -187,6 +189,7 @@ parseBlockBody xs = go [] xs (0 :: Int)
 skipBalancedBlock :: [OwnershipToken] -> [OwnershipToken]
 skipBalancedBlock = go (0 :: Int) False
   where
+    go :: (Ord a, Num a) => a -> Bool -> [OwnershipToken] -> [OwnershipToken]
     go _ _ [] = []
     go depth started (tok:rest)
       | isSym SLBrace tok = go (depth + 1) True rest
@@ -255,6 +258,8 @@ takeExprTokens = go (0 :: Int) (0 :: Int) (0 :: Int) []
       | isSym SSemicolon t = True
       | otherwise          = False
 
+    go :: (Num t1, Num t2, Num t3, Ord t1, Ord t2, Ord t3) => 
+          t1 -> t2 -> t3 -> [OwnershipToken] -> [OwnershipToken] -> ([OwnershipToken], [OwnershipToken])
     go _ _ _ acc [] = (reverse acc, [])
     go paren bracket brace acc ts@(t:rest)
       | (stopTok t || isSym SRBrace t) && paren == 0 && bracket == 0 && brace == 0
@@ -365,6 +370,7 @@ tokComment _ = Nothing
 dropTrailingNoise :: [OwnershipToken] -> [OwnershipToken]
 dropTrailingNoise = reverse . dropWhile isNoise . reverse
   where
+    isNoise :: Token kw Sym -> Bool
     isNoise (Token (TComment _ _) _)    = True
     isNoise (Token (TSym SSemicolon) _) = True
     isNoise (Token (TSym SNewline) _)   = True
@@ -373,6 +379,9 @@ dropTrailingNoise = reverse . dropWhile isNoise . reverse
 splitTopLevelArgs :: [OwnershipToken] -> Maybe ([[OwnershipToken]], [OwnershipToken])
 splitTopLevelArgs ts = go [] [] (0 :: Int) (0 :: Int) ts
   where
+    go :: (Eq t1, Eq t2, Num t1, Num t2) => 
+          [[OwnershipToken]] -> [OwnershipToken] -> t1 -> t2 -> [OwnershipToken] -> 
+          Maybe ([[OwnershipToken]], [OwnershipToken])
     go acc cur paren bracket xs = case xs of
       [] -> Nothing
       (t:rest)

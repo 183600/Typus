@@ -1,0 +1,63 @@
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (first run)
+ - typus-0.12.0 (exe:typus) (first run)
+Preprocessing library for typus-0.12.0...
+Building library for typus-0.12.0...
+[ 4 of 54] Compiling Compiler.GoAst   ( src/Compiler/GoAst.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoAst.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoAst.dyn_o )
+src/Compiler/GoAst.hs:124:13: error: [GHC-25897]
+    * Couldn't match expected type `a1 -> Bool' with actual type `p'
+      `p' is a rigid type variable bound by
+        the inferred type of takeWhileInclusive :: p -> [a] -> ([a], [a])
+        at src/Compiler/GoAst.hs:(119,5)-(125,41)
+    * In the expression: p y
+      In a stmt of a pattern guard for
+                     an equation for `go':
+        p y
+      In an equation for `go':
+          go acc xs@(y : ys)
+            | p y = go (y : acc) ys
+            | otherwise = (reverse acc, xs)
+    * Relevant bindings include
+        ys :: [a1] (bound at src/Compiler/GoAst.hs:123:22)
+        y :: a1 (bound at src/Compiler/GoAst.hs:123:20)
+        xs :: [a1] (bound at src/Compiler/GoAst.hs:123:16)
+        acc :: [a1] (bound at src/Compiler/GoAst.hs:123:12)
+        go :: [a1] -> [a1] -> ([a1], [a1])
+          (bound at src/Compiler/GoAst.hs:122:9)
+        p :: p (bound at src/Compiler/GoAst.hs:119:24)
+        takeWhileInclusive :: p -> [a] -> ([a], [a])
+          (bound at src/Compiler/GoAst.hs:119:5)
+    |
+124 |           | p y = go (y:acc) ys
+    |             ^^^
+
+src/Compiler/GoAst.hs:152:27: error: [GHC-25897]
+    * Couldn't match expected type `a1 -> Maybe b1'
+                  with actual type `p'
+      `p' is a rigid type variable bound by
+        the inferred type of mapMaybe :: Foldable t => p -> t a -> [b]
+        at src/Compiler/GoAst.hs:(149,5)-(154,28)
+    * In the expression: f x
+      In the expression:
+        case f x of
+          Nothing -> acc
+          Just y -> y : acc
+      In an equation for `step':
+          step x acc
+            = case f x of
+                Nothing -> acc
+                Just y -> y : acc
+    * Relevant bindings include
+        acc :: [b1] (bound at src/Compiler/GoAst.hs:152:16)
+        x :: a1 (bound at src/Compiler/GoAst.hs:152:14)
+        step :: a1 -> [b1] -> [b1] (bound at src/Compiler/GoAst.hs:152:9)
+        f :: p (bound at src/Compiler/GoAst.hs:149:14)
+        mapMaybe :: p -> t a -> [b] (bound at src/Compiler/GoAst.hs:149:5)
+    |
+152 |         step x acc = case f x of
+    |                           ^^^
+
+Error: [Cabal-7125]
+Failed to build typus-0.12.0 (which is required by exe:typus from typus-0.12.0).
+

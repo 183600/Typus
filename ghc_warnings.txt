@@ -1,0 +1,57 @@
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+compilation IS NOT required
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+compilation IS NOT required
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+src/Dependencies.hs:71:1: error: [GHC-87110]
+    Could not find module `Dependencies.AST'.
+    Use -v to see a list of the files searched for.
+   |
+71 | import Dependencies.AST
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Dependencies.hs:72:1: error: [GHC-87110]
+    Could not find module `Dependencies.Analyzer'.
+    Use -v to see a list of the files searched for.
+   |
+72 | import Dependencies.Analyzer (analyzeAST, analyzeDependentTypes, validateASTSemantics, validateStatement)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Dependencies.hs:73:1: error: [GHC-87110]
+    Could not find module `Dependencies.Inference'.
+    Use -v to see a list of the files searched for.
+   |
+73 | import Dependencies.Inference
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Dependencies.hs:74:1: error: [GHC-87110]
+    Could not find module `Dependencies.Parser'.
+    Use -v to see a list of the files searched for.
+   |
+74 | import Dependencies.Parser (grammarDefinition, parseProgram, runParser)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Dependencies.hs:75:1: error: [GHC-87110]
+    Could not find module `Dependencies.TypeSystem'.
+    Use -v to see a list of the files searched for.
+   |
+75 | import Dependencies.TypeSystem
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+compilation IS NOT required
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+src/GoToolchain.hs:25:1: error: [GHC-87110]
+    Could not find module `System.IO.Temp'.
+    Use -v to see a list of the files searched for.
+   |
+25 | import System.IO.Temp (withSystemTempDirectory, openTempFile)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/GoToolchain.hs:28:1: error: [GHC-87110]
+    Could not find module `Tooling.Error'.
+    Use -v to see a list of the files searched for.
+   |
+28 | import Tooling.Error (ToolingError(..), goCommandFailed)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+

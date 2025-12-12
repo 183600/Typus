@@ -1,0 +1,15 @@
+Typus Project Makefile
+======================
+Available targets:
+  build            - Build the project
+  test             - Run all tests
+  stack-test       - Run all tests via Stack (uses flags in stack.yaml)
+  test-quick       - Run quick tests without performance tests
+  test-unit        - Run only unit tests
+  test-performance - Run only performance tests
+  test-integration - Run only integration tests
+  coverage         - Generate test coverage report
+  coverage-report  - Open coverage report in browser
+  clean            - Clean generated files
+  install          - Install dependencies
+  help             - Show this help message

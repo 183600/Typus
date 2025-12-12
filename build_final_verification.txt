@@ -1,0 +1,80 @@
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (configuration changed)
+ - typus-0.12.0 (exe:typus) (configuration changed)
+Configuring library for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+on the commandline: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wderiving-strategies
+
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Preprocessing library for typus-0.12.0...
+Building library for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/tmp/ghc336224-0.rsp: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wderiving-strategies
+
+[14 of 54] Compiling DependentTypesParser ( src/DependentTypesParser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DependentTypesParser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DependentTypesParser.dyn_o ) [Source file changed]
+[19 of 54] Compiling Compiler.Errors.Core ( src/Compiler/Errors/Core.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Core.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Core.dyn_o ) [Source file changed]
+[27 of 54] Compiling Analyzer.State   ( src/Analyzer/State.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/State.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/State.dyn_o ) [Source file changed]
+[28 of 54] Compiling Analyzer.CrossAnalysis ( src/Analyzer/CrossAnalysis.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/CrossAnalysis.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/CrossAnalysis.dyn_o ) [Source file changed]
+[36 of 54] Compiling Parser           ( src/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Parser.dyn_o ) [Source file changed]
+[37 of 54] Compiling Compiler.DependentTypeChecker ( src/Compiler/DependentTypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/DependentTypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/DependentTypeChecker.dyn_o ) [Source file changed]
+[43 of 54] Compiling Compiler.TypeChecker ( src/Compiler/TypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/TypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/TypeChecker.dyn_o ) [Source file changed]
+src/Compiler/TypeChecker.hs:1053:13: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        recStack :: forall {a}. Set a
+    * In the expression:
+        let
+          visited :: Set String
+          visited = Set.empty
+          recStack = Set.empty
+        in dfsAll graph visited recStack []
+      In an equation for `findCycles':
+          findCycles graph
+            = let
+                visited :: Set String
+                visited = Set.empty
+                ....
+              in dfsAll graph visited recStack []
+      In an equation for `checkCircularDependencies':
+          checkCircularDependencies functionInfos
+            = let
+                callGraph = buildCallGraph functionInfos
+                cycles = findCycles callGraph
+              in map cycleToError cycles
+            where
+                buildCallGraph :: [FunctionInfo] -> Map String [String]
+                buildCallGraph
+                  = Map.fromList
+                      . map
+                          (\ FunctionInfo {..} -> (fiName, extractCalledFunctions fiBody))
+                extractCalledFunctions :: String -> [String]
+                extractCalledFunctions body
+                  = map callName (extractCallExpressions body)
+                ....
+     |
+1053 |             recStack = Set.empty
+     |             ^^^^^^^^^^^^^^^^^^^^
+
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/tmp/ghc336224-1.rsp: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wderiving-strategies
+
+Configuring executable 'typus' for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+on the commandline: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wderiving-strategies
+
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Preprocessing executable 'typus' for typus-0.12.0...
+Building executable 'typus' for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/tmp/ghc336350-0.rsp: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wderiving-strategies
+
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/tmp/ghc336350-1.rsp: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wderiving-strategies
+
+[2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus [Library changed]

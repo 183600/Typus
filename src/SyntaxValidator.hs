@@ -462,6 +462,7 @@ validateGoSpecific validator tokens =
                      else validator
     in validator'
   where
+    hasGoCode :: Foldable t => t Token -> Bool
     hasGoCode toks = any isGoSpecific toks
     isGoSpecific (TKeyword k _ _) = k `elem` ["func", "package", "import"]
     isGoSpecific _ = False

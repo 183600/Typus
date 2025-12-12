@@ -158,6 +158,7 @@ classifySegmentStart line =
     isFuncCandidate txt =
         "func " `isPrefixOf` txt
         && (containsArrow txt || hasWhereClause txt)
+    hasAngleGenerics :: String -> Bool
     hasAngleGenerics txt = '<' `elem` txt && '>' `elem` txt
     hasWhereClause txt = " where " `isInfixOf` txt
     containsArrow txt = "->" `isInfixOf` txt
@@ -209,6 +210,7 @@ shouldStop bodyRequired depth seenBody nextLine =
 braceDelta :: String -> Int
 braceDelta = go 0 False False
   where
+    go :: Int -> Bool -> Bool -> String -> Int
     go acc _ _ [] = acc
     go acc inString escaped (c:cs)
         | escaped = go acc inString False cs

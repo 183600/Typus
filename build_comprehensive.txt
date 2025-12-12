@@ -1,0 +1,28 @@
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (configuration changed)
+ - typus-0.12.0 (exe:typus) (configuration changed)
+Configuring library for typus-0.12.0...
+on the commandline: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wincomplete-export-lists
+
+Preprocessing library for typus-0.12.0...
+Building library for typus-0.12.0...
+/tmp/ghc312770-0.rsp: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wincomplete-export-lists
+
+/tmp/ghc312770-1.rsp: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wincomplete-export-lists
+
+Configuring executable 'typus' for typus-0.12.0...
+on the commandline: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wincomplete-export-lists
+
+Preprocessing executable 'typus' for typus-0.12.0...
+Building executable 'typus' for typus-0.12.0...
+/tmp/ghc312863-0.rsp: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wincomplete-export-lists
+
+/tmp/ghc312863-1.rsp: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wincomplete-export-lists
+

@@ -1,0 +1,19 @@
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (test:typus-test) (file test/Test/Unit/VerbositySpec.hs changed)
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Preprocessing test suite 'typus-test' for typus-0.12.0...
+Building test suite 'typus-test' for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+[17 of 38] Compiling Test.Unit.DependentTypesSpec ( test/Test/Unit/DependentTypesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/DependentTypesSpec.o ) [Source file changed]
+[30 of 38] Compiling Test.Unit.TypeSystemSpec ( test/Test/Unit/TypeSystemSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeSystemSpec.o ) [Source file changed]
+[35 of 38] Compiling Test.Unit.VerbositySpec ( test/Test/Unit/VerbositySpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/VerbositySpec.o ) [Source file changed]
+test/Test/Unit/VerbositySpec.hs:44:27: error: [GHC-76037]
+    Not in scope: type constructor or class `IORef'
+    Suggested fix:
+      Add `IORef' to the import list in the import of `Data.IORef'
+      (at test/Test/Unit/VerbositySpec.hs:4:1-53).
+   |
+44 |     increment :: Num a => IORef a -> IO ()
+   |                           ^^^^^
+

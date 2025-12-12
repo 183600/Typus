@@ -249,6 +249,7 @@ solveConstraints = do
       let cs' = map (applySubstC subst) others
           results = map validateConstraint cs'
           (errs, _) = partitionEithers (map toEither results)
+          toEither :: Either a b -> Either a b
           toEither (Left e)  = Left e
           toEither (Right x) = Right x
       mapM_ addTypeError errs

@@ -105,6 +105,7 @@ getAnalysisSummary state' =
     countBySeverity :: [CombinedError] -> (Int, Int, Int)
     countBySeverity = foldr add (0, 0, 0)
       where
+        add :: CombinedError -> (Int, Int, Int) -> (Int, Int, Int)
         add ce (e, w, i) =
             case combinedErrorSeverity ce of
                 Fatal -> (e + 1, w, i)

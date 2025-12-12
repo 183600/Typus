@@ -132,6 +132,7 @@ _toBasicSeverity = baseSeverity
 detailedSeverityPriority :: DetailedSeverity -> Int
 detailedSeverityPriority ds = severityPriority (baseSeverity ds) + subLevelPriority (subLevel ds)
   where
+    subLevelPriority :: ErrorSubLevel -> Int
     subLevelPriority Critical = 50
     subLevelPriority High = 30
     subLevelPriority Medium = 15

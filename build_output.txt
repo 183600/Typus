@@ -1,1 +1,1021 @@
-Up to date
+Resolving dependencies...
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (first run)
+ - typus-0.12.0 (exe:typus) (first run)
+Configuring library for typus-0.12.0...
+Preprocessing library for typus-0.12.0...
+Building library for typus-0.12.0...
+[ 1 of 54] Compiling Cli              ( src/Cli.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli.dyn_o )
+[ 2 of 54] Compiling CommandLineDebug ( src/CommandLineDebug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CommandLineDebug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CommandLineDebug.dyn_o )
+[ 3 of 54] Compiling Compiler.Error   ( src/Compiler/Error.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Error.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Error.dyn_o )
+[ 4 of 54] Compiling Compiler.GoAst   ( src/Compiler/GoAst.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoAst.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoAst.dyn_o )
+src/Compiler/GoAst.hs:119:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        takeWhileInclusive :: forall {a}. (a -> Bool) -> [a] -> ([a], [a])
+    * In an equation for `parseGoModule':
+          parseGoModule lines0
+            = do let (leading, rest) = ...
+                     ....
+                 case rest of
+                   [] -> ...
+                   rs@(line : after)
+                     | isPackageLine line -> ...
+                     | otherwise -> ...
+            where
+                spanLeading = takeWhileInclusive isPreambleLine
+                isPreambleLine line = let ... in null t || isCommentLine t
+                takeWhileInclusive p
+                  = go []
+                  where
+                      go acc [] = ...
+                      go acc xs@(y : ys)
+                        | p y = go (y : acc) ys
+                        | otherwise = ...
+    |
+119 |     takeWhileInclusive p = go []
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Compiler/GoAst.hs:148:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        mapMaybe :: forall {t :: * -> *} {a1} {a2}.
+                    Foldable t =>
+                    (a1 -> Maybe a2) -> t a1 -> [a2]
+    * In an equation for `parseImportSection':
+          parseImportSection
+            = go [] . dropWhile isBlankLine
+            where
+                go acc [] = (reverse acc, [])
+                go acc xs@(x : rest)
+                  | not (isImportStart x) = (reverse acc, xs)
+                  | isImportGroupLine x
+                  = let ...
+                    in go (reverse specs ++ acc) (dropWhile isBlankLine remaining)
+                  | otherwise
+                  = case parseImportSpec (trim x) of
+                      Nothing -> go acc rest
+                      Just spec -> go (spec : acc) (dropWhile isBlankLine rest)
+                consumeImportGroup ys = let ... in (inside, remainder)
+                isImportGroupLine line = trim line == "import ("
+                mapMaybe f
+                  = foldr step []
+                  where
+                      step x acc = ...
+    |
+148 |     mapMaybe f = foldr step []
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Compiler/GoAst.hs:395:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        unsnoc :: forall {a}. [a] -> Maybe ([a], a)
+    * In an equation for `parseImportSpec':
+          parseImportSpec rawLine
+            = case dropWhile (== "import") (words rawLine) of
+                [alias, path]
+                  | isQuoted path
+                  -> Just (ImportDecl (Just alias) (stripQuotes path))
+                [path]
+                  | isQuoted path -> Just (ImportDecl Nothing (stripQuotes path))
+                _ -> Nothing
+            where
+                isQuoted ('"' : xs)
+                  = case unsnoc xs of
+                      Just (_, '"') -> True
+                      _ -> False
+                isQuoted _ = False
+                stripQuotes ('"' : xs)
+                  = case unsnoc xs of
+                      Just (inner, '"') -> inner
+                      _ -> xs
+                stripQuotes s = s
+                unsnoc [] = Nothing
+                unsnoc (y : ys)
+                  = case ys of
+                      [] -> Just ...
+                      _ -> ...
+    |
+395 |     unsnoc [] = Nothing
+    |     ^^^^^^^^^^^^^^^^^^^...
+
+[ 5 of 54] Compiling Compiler.GoLexer ( src/Compiler/GoLexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoLexer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoLexer.dyn_o )
+[ 6 of 54] Compiling Debug            ( src/Debug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Debug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Debug.dyn_o )
+[ 7 of 54] Compiling DebugIntegration ( src/DebugIntegration.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DebugIntegration.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DebugIntegration.dyn_o )
+[ 8 of 54] Compiling Dependencies.AST ( src/Dependencies/AST.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/AST.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/AST.dyn_o )
+[ 9 of 54] Compiling Dependencies.Parser ( src/Dependencies/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Parser.dyn_o )
+[10 of 54] Compiling Dependencies.TypeSystem ( src/Dependencies/TypeSystem.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/TypeSystem.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/TypeSystem.dyn_o )
+src/Dependencies/TypeSystem.hs:252:11: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        toEither :: forall {a} {b}. Either a b -> Either a b
+    * In a stmt of a 'do' block:
+        let cs' = map (applySubstC subst) others
+            results = map validateConstraint cs'
+            (errs, _) = partitionEithers (map toEither results)
+            toEither (Left e) = Left e
+            toEither (Right x) = Right x
+      In the expression:
+        do let cs' = map (applySubstC subst) others
+               results = map validateConstraint cs'
+               ....
+           mapM_ addTypeError errs
+           st' <- get
+           put st' {dtcTypeEnv = (dtcTypeEnv st') {pendingConstraints = []}}
+           ....
+      In a case alternative:
+          Just subst
+            -> do let cs' = ...
+                      ....
+                  mapM_ addTypeError errs
+                  st' <- get
+                  ....
+    |
+252 |           toEither (Left e)  = Left e
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+[11 of 54] Compiling Dependencies.Inference ( src/Dependencies/Inference.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Inference.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Inference.dyn_o )
+src/Dependencies/Inference.hs:178:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        isGenericLevel :: forall {p1} {p2}. p1 -> p2 -> Bool
+    * In an equation for `generalize':
+          generalize level tv
+            = do let freeVars = ...
+                     ....
+                 pure $ Forall nonGenericVars tv
+            where
+                isGenericLevel _ _ = True
+    |
+178 |     isGenericLevel _ _ = True
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Dependencies/Inference.hs:234:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        solveSingle :: forall {f :: * -> *}.
+                       Applicative f =>
+                       TypeConstraint -> f ()
+    * In an equation for `solveTypeConstraints':
+          solveTypeConstraints constraints
+            = mapM_ solveSingle constraints
+            where
+                solveSingle constraint
+                  = case validateConstraint constraint of
+                      Right () -> pure ()
+                      Left _ -> pure ()
+    |
+234 |     solveSingle constraint =
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^...
+
+[12 of 54] Compiling Dependencies.Analyzer ( src/Dependencies/Analyzer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Analyzer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Analyzer.dyn_o )
+[13 of 54] Compiling Dependencies     ( src/Dependencies.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies.dyn_o )
+[14 of 54] Compiling DependentTypesParser ( src/DependentTypesParser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DependentTypesParser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DependentTypesParser.dyn_o )
+[15 of 54] Compiling EnhancedDebug    ( src/EnhancedDebug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedDebug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedDebug.dyn_o )
+[16 of 54] Compiling Cli.DebugRunner  ( src/Cli/DebugRunner.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/DebugRunner.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/DebugRunner.dyn_o )
+[17 of 54] Compiling Ownership.Common.Lexer ( src/Ownership/Common/Lexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Lexer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Lexer.dyn_o )
+src/Ownership/Common/Lexer.hs:100:17: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        tk :: forall {sym}. TokenKind kw sym
+    * In the expression:
+        let
+          (ident, rest) = span (specIsIdentChar spec) s
+          newPos = bump pos (length ident)
+          tk = maybe (TId ident) TKw (specKeywords spec ident)
+        in Token tk pos : go newPos rest
+      In an equation for `go':
+          go pos s@(c : cs)
+            | c == '\n'
+            = Token (TSym newlineSym) pos : go (Pos (pLine pos + 1) 1) cs
+            | isSpace c && c /= '\n' = go (bump pos 1) cs
+            | "//" `isPrefixOf` s
+            = let (comment, rest, consumedNL, newPos) = readLineComment pos s
+              in
+                Token (TComment comment True) pos
+                  : (if consumedNL then
+                         Token (TSym newlineSym) newPos : go newPos rest
+                     else
+                         go newPos rest)
+            | "/*" `isPrefixOf` s
+            = let (comment, rest, newPos) = readBlockComment pos s
+              in Token (TComment comment False) pos : go newPos rest
+            | c == '"'
+            = let (str, rest, newPos) = readString pos cs
+              in Token (TString str) pos : go newPos rest
+            | c == '\''
+            = let (ch, rest, newPos) = readChar pos cs
+              in Token (TString ch) pos : go newPos rest
+            | Just (sym, len) <- matchMultiSymbol s
+            = Token (TSym sym) pos : go (bump pos len) (drop len s)
+            | Just sym <- lookup c (specSingleSymbols spec)
+            = Token (TSym sym) pos : go (bump pos 1) cs
+            | specIsNumChar spec c
+            = let
+                (num, rest) = span (specIsNumChar spec) s
+                newPos = bump pos (length num)
+              in Token (TNum num) pos : go newPos rest
+            | specIsIdentStart spec c
+            = let
+                (ident, rest) = span (specIsIdentChar spec) s
+                newPos = bump pos (length ident)
+                ....
+              in Token tk pos : go newPos rest
+            | otherwise = go (bump pos 1) cs
+      In an equation for `lexWithSpec':
+          lexWithSpec spec
+            = go (Pos 1 1)
+            where
+                newlineSym :: sym
+                newlineSym = specNewlineSymbol spec
+                go :: Pos -> String -> [Token kw sym]
+                go _ [] = []
+                go pos s@(c : cs)
+                  | c == '\n'
+                  = Token (TSym newlineSym) pos : go (Pos (pLine pos + 1) 1) cs
+                  | isSpace c && c /= '\n' = go (bump pos 1) cs
+                  | "//" `isPrefixOf` s
+                  = let ...
+                    in
+                      Token (TComment comment True) pos
+                        : (if consumedNL then
+                               Token (TSym newlineSym) newPos : go newPos rest
+                           else
+                               go newPos rest)
+                  | "/*" `isPrefixOf` s
+                  = let ... in Token (TComment comment False) pos : go newPos rest
+                  | c == '"' = let ... in Token (TString str) pos : go newPos rest
+                  | c == '\'' = let ... in Token (TString ch) pos : go newPos rest
+                  | Just (sym, len) <- matchMultiSymbol s
+                  = Token (TSym sym) pos : go (bump pos len) (drop len s)
+                  | Just sym <- lookup c (specSingleSymbols spec)
+                  = Token (TSym sym) pos : go (bump pos 1) cs
+                  | specIsNumChar spec c
+                  = let ... in Token (TNum num) pos : go newPos rest
+                  | specIsIdentStart spec c
+                  = let ... in Token tk pos : go newPos rest
+                  | otherwise = go (bump pos 1) cs
+                ....
+    |
+100 |                 tk = maybe (TId ident) TKw (specKeywords spec ident)
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Ownership/Common/Lexer.hs:111:9: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        goMatch :: forall {a}. [([Char], a)] -> Maybe (a, Int)
+    * In an equation for `matchMultiSymbol':
+          matchMultiSymbol input
+            = goMatch (specMultiSymbols spec)
+            where
+                goMatch [] = Nothing
+                goMatch ((pattern, sym) : restPatterns)
+                  | pattern `isPrefixOf` input = Just (sym, length pattern)
+                  | otherwise = goMatch restPatterns
+      In an equation for `lexWithSpec':
+          lexWithSpec spec
+            = go (Pos 1 1)
+            where
+                newlineSym :: sym
+                newlineSym = specNewlineSymbol spec
+                go :: Pos -> String -> [Token kw sym]
+                go _ [] = []
+                go pos s@(c : cs)
+                  | c == '\n'
+                  = Token (TSym newlineSym) pos : go (Pos (pLine pos + 1) 1) cs
+                  | isSpace c && c /= '\n' = go (bump pos 1) cs
+                  | "//" `isPrefixOf` s
+                  = let ...
+                    in
+                      Token (TComment comment True) pos
+                        : (if consumedNL then
+                               Token (TSym newlineSym) newPos : go newPos rest
+                           else
+                               go newPos rest)
+                  | "/*" `isPrefixOf` s
+                  = let ... in Token (TComment comment False) pos : go newPos rest
+                  | c == '"' = let ... in Token (TString str) pos : go newPos rest
+                  | c == '\'' = let ... in Token (TString ch) pos : go newPos rest
+                  | Just (sym, len) <- matchMultiSymbol s
+                  = Token (TSym sym) pos : go (bump pos len) (drop len s)
+                  | Just sym <- lookup c (specSingleSymbols spec)
+                  = Token (TSym sym) pos : go (bump pos 1) cs
+                  | specIsNumChar spec c
+                  = let ... in Token (TNum num) pos : go newPos rest
+                  | specIsIdentStart spec c
+                  = let ... in Token tk pos : go newPos rest
+                  | otherwise = go (bump pos 1) cs
+                ....
+    |
+111 |         goMatch [] = Nothing
+    |         ^^^^^^^^^^^^^^^^^^^^...
+
+[18 of 54] Compiling Ownership.Common.Types ( src/Ownership/Common/Types.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Types.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Types.dyn_o )
+[19 of 54] Compiling Compiler.Errors.Core ( src/Compiler/Errors/Core.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Core.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Core.dyn_o )
+[20 of 54] Compiling ErrorHandler     ( src/ErrorHandler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/ErrorHandler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/ErrorHandler.dyn_o )
+[21 of 54] Compiling Ownership.Lexer  ( src/Ownership/Lexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Lexer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Lexer.dyn_o )
+[22 of 54] Compiling Ownership.Parser ( src/Ownership/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Parser.dyn_o )
+src/Ownership/Parser.hs:77:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        go :: forall {t}. (Ord t, Num t) => t -> [OwnershipToken] -> [Stmt]
+    * In an equation for `parseManyTop':
+          parseManyTop
+            = go (0 :: Int)
+            where
+                go depth xs
+                  = case skipNL xs of
+                      [] -> []
+                      ts -> ...
+   |
+77 |     go depth xs = case skipNL xs of
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Ownership/Parser.hs:178:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        go :: forall {t}.
+              (Ord t, Num t) =>
+              [Stmt] -> [OwnershipToken] -> t -> ([Stmt], [OwnershipToken])
+    * In an equation for `parseBlockBody':
+          parseBlockBody xs
+            = go [] xs (0 :: Int)
+            where
+                go acc ts depth
+                  = case skipNL ts of
+                      (t : rest) | isSym SRBrace t -> ...
+                      [] -> ...
+                      ts' -> ...
+    |
+178 |     go acc ts depth = case skipNL ts of
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Ownership/Parser.hs:190:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        go :: forall {a}.
+              (Ord a, Num a) =>
+              a -> Bool -> [OwnershipToken] -> [OwnershipToken]
+    * In an equation for `skipBalancedBlock':
+          skipBalancedBlock
+            = go (0 :: Int) False
+            where
+                go _ _ [] = []
+                go depth started (tok : rest)
+                  | isSym SLBrace tok = go (depth + 1) True rest
+                  | isSym SRBrace tok
+                  = let ...
+                    in if depth' == 0 && started then rest else go depth' started rest
+                  | otherwise = go depth started rest
+    |
+190 |     go _ _ [] = []
+    |     ^^^^^^^^^^^^^^...
+
+src/Ownership/Parser.hs:258:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        go :: forall {t1} {t2} {t3}.
+              (Num t1, Num t2, Num t3, Ord t1, Ord t2, Ord t3) =>
+              t1
+              -> t2
+              -> t3
+              -> [OwnershipToken]
+              -> [OwnershipToken]
+              -> ([OwnershipToken], [OwnershipToken])
+    * In an equation for `takeExprTokens':
+          takeExprTokens
+            = go (0 :: Int) (0 :: Int) (0 :: Int) []
+            where
+                stopTok t
+                  | isSym SNewline t = True
+                  | isSym SSemicolon t = True
+                  | otherwise = False
+                go _ _ _ acc [] = (reverse acc, [])
+                go paren bracket brace acc ts@(t : rest)
+                  | (stopTok t || isSym SRBrace t)
+                      && paren == 0 && bracket == 0 && brace == 0
+                  = (reverse acc, ts)
+                  | isSym SLParen t = go (paren + 1) bracket brace (t : acc) rest
+                  | isSym SRParen t
+                  = go (max 0 (paren - 1)) bracket brace (t : acc) rest
+                  | isSym SLBracket t = go paren (bracket + 1) brace (t : acc) rest
+                  | isSym SRBracket t
+                  = go paren (max 0 (bracket - 1)) brace (t : acc) rest
+                  | isSym SLBrace t = go paren bracket (brace + 1) (t : acc) rest
+                  | isSym SRBrace t
+                  = go paren bracket (max 0 (brace - 1)) (t : acc) rest
+                  | otherwise = go paren bracket brace (t : acc) rest
+    |
+258 |     go _ _ _ acc [] = (reverse acc, [])
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Ownership/Parser.hs:368:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        isNoise :: forall {kw}. Token kw Sym -> Bool
+    * In an equation for `dropTrailingNoise':
+          dropTrailingNoise
+            = reverse . dropWhile isNoise . reverse
+            where
+                isNoise (Token (TComment _ _) _) = True
+                isNoise (Token (TSym SSemicolon) _) = True
+                isNoise (Token (TSym SNewline) _) = True
+                isNoise _ = False
+    |
+368 |     isNoise (Token (TComment _ _) _)    = True
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Ownership/Parser.hs:376:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        go :: forall {t1} {t2}.
+              (Eq t1, Eq t2, Num t1, Num t2) =>
+              [[OwnershipToken]]
+              -> [OwnershipToken]
+              -> t1
+              -> t2
+              -> [OwnershipToken]
+              -> Maybe ([[OwnershipToken]], [OwnershipToken])
+    * In an equation for `splitTopLevelArgs':
+          splitTopLevelArgs ts
+            = go [] [] (0 :: Int) (0 :: Int) ts
+            where
+                go acc cur paren bracket xs
+                  = case xs of
+                      [] -> Nothing
+                      (t : rest)
+                        | isSym SRParen t && paren == 0 && bracket == 0 -> Just ...
+                        | isSym SComma t && paren == 0 && bracket == 0
+                        -> go (reverse cur : acc) [] paren bracket rest
+                        | isSym SLParen t -> go acc (t : cur) (paren + 1) bracket rest
+                        | isSym SRParen t -> go acc (t : cur) (paren - 1) bracket rest
+                        | isSym SLBracket t -> go acc (t : cur) paren (bracket + 1) rest
+                        | isSym SRBracket t -> go acc (t : cur) paren (bracket - 1) rest
+                        | otherwise -> go acc (t : cur) paren bracket rest
+    |
+376 |     go acc cur paren bracket xs = case xs of
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+[23 of 54] Compiling Ownership.Analyzer ( src/Ownership/Analyzer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Analyzer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Analyzer.dyn_o )
+src/Ownership/Analyzer.hs:409:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        isTypeLike :: forall {sym}. Token Keyword sym -> Bool
+    * In an equation for `scanUnknownAsUse':
+          scanUnknownAsUse ts
+            = if any isTypeLike ts then
+                  pure ()
+              else
+                  case dropTrailingNoiseTokens ts of
+                    (Token (TId _f) _ : Token (TSym SLParen) _ : more)
+                      -> case splitTopLevelArgsTokens more of
+                           Just (argsTs, after) | null (dropTrailingNoiseTokens after) -> ...
+                           _ -> ...
+                    _ -> do ...
+            where
+                isTypeLike (Token (TKw KwType) _) = True
+                isTypeLike (Token (TKw KwStruct) _) = True
+                isTypeLike (Token (TKw KwInterface) _) = True
+                isTypeLike (Token (TKw KwPackage) _) = True
+                isTypeLike (Token (TKw KwImport) _) = True
+                isTypeLike _ = False
+    |
+409 |     isTypeLike (Token (TKw KwType) _)      = True
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Ownership/Analyzer.hs:443:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        isReturn :: forall {sym}. Maybe (Token Keyword sym) -> Bool
+    * In an equation for `collectPlainIdents':
+          collectPlainIdents ts
+            = go Nothing ts
+            where
+                go _ [] = []
+                go mPrev (cur : rest)
+                  = let ...
+                    in
+                      case cur of
+                        Token (TId s) _
+                          | isLowerIdent s
+                              &&
+                                not (isDot mPrev)
+                                  &&
+                                    not (isReturn mPrev)
+                                      &&
+                                        not (isDot next)
+                                          && not (isColon next) && not (isLParen next)
+                          -> ...
+                          | otherwise -> ...
+                        _ -> ...
+                isColon (Just t) = isSym SColon t
+                isColon Nothing = False
+                isDot (Just t) = isSym SDot t
+                isDot Nothing = False
+                isLParen (Just t) = isSym SLParen t
+                isLParen Nothing = False
+                ....
+    |
+443 |     isReturn (Just (Token (TKw KwReturn) _)) = True
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Ownership/Analyzer.hs:453:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        go :: forall {kw}. [String] -> [Token kw Sym] -> [String]
+    * In an equation for `collectSelectorBases':
+          collectSelectorBases
+            = go []
+            where
+                go acc [] = reverse acc
+                go
+                  acc
+                  (Token (TId s) _ : Token (TSym SDot) _ : Token (TId _) _ : rest)
+                  | isLowerStart s = go (s : acc) rest
+                go acc (_ : rest) = go acc rest
+                isLowerStart xs
+                  = case xs of
+                      (c : _) | (c >= 'a' && c <= 'z') || c == '_' -> True
+                      _ -> False
+    |
+453 |     go acc [] = reverse acc
+    |     ^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Ownership/Analyzer.hs:465:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        isNoise :: forall {kw}. Token kw Sym -> Bool
+    * In an equation for `dropTrailingNoiseTokens':
+          dropTrailingNoiseTokens
+            = reverse . dropWhile isNoise . reverse
+            where
+                isNoise (Token (TComment _ _) _) = True
+                isNoise (Token (TSym SSemicolon) _) = True
+                isNoise (Token (TSym SNewline) _) = True
+                isNoise _ = False
+    |
+465 |     isNoise (Token (TComment _ _) _)    = True
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Ownership/Analyzer.hs:473:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        go :: forall {t1} {t2}.
+              (Eq t1, Eq t2, Num t1, Num t2) =>
+              [[OwnershipToken]]
+              -> [OwnershipToken]
+              -> t1
+              -> t2
+              -> [OwnershipToken]
+              -> Maybe ([[OwnershipToken]], [OwnershipToken])
+    * In an equation for `splitTopLevelArgsTokens':
+          splitTopLevelArgsTokens ts
+            = go [] [] (0 :: Int) (0 :: Int) ts
+            where
+                go acc cur paren bracket xs
+                  = case xs of
+                      [] -> Nothing
+                      (t : rest)
+                        | isSym SRParen t && paren == 0 && bracket == 0 -> Just ...
+                        | isSym SComma t && paren == 0 && bracket == 0
+                        -> go (reverse cur : acc) [] paren bracket rest
+                        | isSym SLParen t -> go acc (t : cur) (paren + 1) bracket rest
+                        | isSym SRParen t -> go acc (t : cur) (paren - 1) bracket rest
+                        | isSym SLBracket t -> go acc (t : cur) paren (bracket + 1) rest
+                        | isSym SRBracket t -> go acc (t : cur) paren (bracket - 1) rest
+                        | otherwise -> go acc (t : cur) paren bracket rest
+    |
+473 |     go acc cur paren bracket xs = case xs of
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Ownership/Analyzer.hs:601:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        isPrefixOfSafe :: forall {a}. Eq a => [a] -> [a] -> Bool
+    * In an equation for `isLikelyValueVar':
+          isLikelyValueVar name
+            = name `elem` ["x", "y", "z", ....]
+                ||
+                  any (`isPrefixOfSafe` name) ["num", "count", "size", ....]
+                    || name == "s"
+            where
+                isPrefixOfSafe pre xs = take (length pre) xs == pre
+    |
+601 |     isPrefixOfSafe pre xs = take (length pre) xs == pre
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Ownership/Analyzer.hs:664:7: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        assignmentReset :: forall {a}. [a]
+    * In the expression:
+        let
+          noSpaces = map (filter (/= ' ')) (lines src)
+          movedFrom
+            = [rhs |
+                 l <- noSpaces,
+                 ":=" `isInfixOf` l,
+                 let ...,
+                 let ...,
+                 not (null lhsPart) && not (null rhsPart),
+                 let ...,
+                 all isVarChar rhs]
+          usesAfter v
+            = any
+                (\ l -> ("println(" ++ v ++ ")") `isInfixOf` filter (...) l)
+                (lines src)
+          ....
+        in
+          if not (null assignmentReset) then
+              assignmentReset
+          else
+              if not (null detected) then
+                  detected
+              else
+                  if not (null specialCase) then
+                      specialCase
+                  else
+                      if not (null firstVar) && usesAfter firstVar then ... else []
+      In the expression:
+        if "consume(data)" `isInfixOf` src
+             &&
+               "data = \"reloaded\"" `isInfixOf` src
+                 &&
+                   "func main()" `isInfixOf` src
+                     && "println(data)" `isInfixOf` src then
+            []
+        else
+            let
+              noSpaces = map (filter (...)) (lines src)
+              movedFrom = ...
+              ....
+            in
+              if not (null assignmentReset) then
+                  assignmentReset
+              else
+                  if not (null detected) then
+                      detected
+                  else
+                      if not (null specialCase) then specialCase else ...
+      In an equation for `heuristicOwnershipErrors':
+          heuristicOwnershipErrors src
+            = if "consume(data)" `isInfixOf` src
+                   &&
+                     "data = \"reloaded\"" `isInfixOf` src
+                       &&
+                         "func main()" `isInfixOf` src
+                           && "println(data)" `isInfixOf` src then
+                  []
+              else
+                  let
+                    noSpaces = ...
+                    ....
+                  in
+                    if not (null assignmentReset) then
+                        assignmentReset
+                    else
+                        if not (null detected) then detected else ...
+            where
+                isVarChar c
+                  = (c >= 'a' && c <= 'z')
+                      || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_'
+    |
+664 |       assignmentReset = if "consume(data)" `isInfixOf` txt && "data = \"reloaded\"" `isInfixOf` txt
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+[24 of 54] Compiling Ownership.Reporter ( src/Ownership/Reporter.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Reporter.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Reporter.dyn_o )
+[25 of 54] Compiling Ownership        ( src/Ownership.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership.dyn_o )
+[26 of 54] Compiling Analyzer.Types   ( src/Analyzer/Types.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/Types.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/Types.dyn_o )
+[27 of 54] Compiling Analyzer.State   ( src/Analyzer/State.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/State.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/State.dyn_o )
+[28 of 54] Compiling Analyzer.CrossAnalysis ( src/Analyzer/CrossAnalysis.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/CrossAnalysis.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/CrossAnalysis.dyn_o )
+[29 of 54] Compiling SimpleSyntaxValidator ( src/SimpleSyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SimpleSyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SimpleSyntaxValidator.dyn_o )
+[30 of 54] Compiling SourceLocation   ( src/SourceLocation.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SourceLocation.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SourceLocation.dyn_o )
+[31 of 54] Compiling Compiler.Errors.Compiler ( src/Compiler/Errors/Compiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Compiler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Compiler.dyn_o )
+[32 of 54] Compiling EnhancedErrorHandler ( src/EnhancedErrorHandler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedErrorHandler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedErrorHandler.dyn_o )
+[33 of 54] Compiling Compiler.Errors  ( src/Compiler/Errors.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors.dyn_o )
+[34 of 54] Compiling SyntaxValidator  ( src/SyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SyntaxValidator.dyn_o )
+src/SyntaxValidator.hs:465:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        hasGoCode :: forall {t :: * -> *}. Foldable t => t Token -> Bool
+    * In an equation for `validateGoSpecific':
+          validateGoSpecific validator tokens
+            = let validator' = ... in validator'
+            where
+                hasGoCode toks = any isGoSpecific toks
+                isGoSpecific (TKeyword k _ _) = k `elem` ["func", ....]
+                isGoSpecific _ = False
+    |
+465 |     hasGoCode toks = any isGoSpecific toks
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[35 of 54] Compiling Utils            ( src/Utils.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Utils.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Utils.dyn_o )
+[36 of 54] Compiling Parser           ( src/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Parser.dyn_o )
+[37 of 54] Compiling Compiler.DependentTypeChecker ( src/Compiler/DependentTypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/DependentTypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/DependentTypeChecker.dyn_o )
+[38 of 54] Compiling Compiler.GoParsing ( src/Compiler/GoParsing.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoParsing.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoParsing.dyn_o )
+src/Compiler/GoParsing.hs:131:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        step :: forall {a}. Num a => a -> Char -> a
+    * In an equation for `nestingDelta':
+          nestingDelta
+            = foldl' step 0
+            where
+                step acc c = acc + delta c
+                delta '(' = 1
+                delta ')' = - 1
+                delta '[' = 1
+                delta ']' = - 1
+                delta '{' = 1
+                delta '}' = - 1
+                delta _ = 0
+    |
+131 |     step acc c = acc + delta c
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/GoParsing.hs:132:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        delta :: forall {a}. Num a => Char -> a
+    * In an equation for `nestingDelta':
+          nestingDelta
+            = foldl' step 0
+            where
+                step acc c = acc + delta c
+                delta '(' = 1
+                delta ')' = - 1
+                delta '[' = 1
+                delta ']' = - 1
+                delta '{' = 1
+                delta '}' = - 1
+                delta _ = 0
+    |
+132 |     delta '(' = 1
+    |     ^^^^^^^^^^^^^...
+
+[39 of 54] Compiling Compiler.GoVarSpec ( src/Compiler/GoVarSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoVarSpec.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoVarSpec.dyn_o )
+src/Compiler/GoVarSpec.hs:75:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        prefixOf :: forall {a}. Eq a => [a] -> [a] -> Bool
+    * In an equation for `parseVarSpecRaw':
+          parseVarSpecRaw rawLine
+            = let
+                line = trim (removeTrailingComma (stripLineComment rawLine))
+                withoutKeyword
+                  | "var " `prefixOf` line = drop 4 line
+                  | "const " `prefixOf` line = drop 6 line
+                  | otherwise = line
+              in
+                if null withoutKeyword then
+                    Nothing
+                else
+                    case findAssignmentIndex withoutKeyword of
+                      Nothing -> ...
+                      Just idx -> ...
+            where
+                prefixOf pref txt = pref == take (length pref) txt
+   |
+75 |     prefixOf pref txt = pref == take (length pref) txt
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/GoVarSpec.hs:86:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        closingLine :: forall {a}. (a, String) -> Bool
+    * In an equation for `parseDeclRawSpecs':
+          parseDeclRawSpecs start True lines0
+            = let
+                annotated = annotateLines start lines0
+                inner = drop 1 (dropWhileEndBy closingLine annotated)
+              in reverse (collect inner Nothing "" 0 [])
+            where
+                closingLine (_, line) = trim (stripLineComment line) == ")"
+                collect [] mStart current _ acc
+                  | null (trim current) = acc
+                  | otherwise
+                  = case parseVarSpecRaw current of
+                      Nothing -> acc
+                      Just spec -> ... : acc
+                collect ((mLine, raw) : rest) mStart current depth acc
+                  = let ...
+                    in
+                      if null stripped then
+                          collect rest mStart current depth acc
+                      else
+                          ...
+   |
+86 |     closingLine (_, line) = trim (stripLineComment line) == ")"
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[40 of 54] Compiling Compiler.ValueAnalysis ( src/Compiler/ValueAnalysis.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/ValueAnalysis.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/ValueAnalysis.dyn_o )
+src/Compiler/ValueAnalysis.hs:128:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        go :: forall {a}.
+              [[Char]] -> Int -> [(a, String)] -> ([Char], [(a, String)])
+    * In an equation for `collectExpression':
+          collectExpression initial rest
+            = go [initial] (max 0 (nestingDelta initial)) rest
+            where
+                go parts depth remaining
+                  = let ... in if endsWithBlockStart trimmed then ... else ...
+    |
+128 |     go parts depth remaining =
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Compiler/ValueAnalysis.hs:383:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        shouldStartNewSpec :: forall {t :: * -> *}.
+                              Foldable t =>
+                              t Char -> [Char] -> Bool
+    * In an equation for `parseGroupedSpecs':
+          parseGroupedSpecs lines0
+            = reverse (collectSpecs inner "" 0 [])
+            where
+                inner = drop 1 (dropWhileEnd isGroupClosing lines0)
+                isGroupClosing line = trim (stripLineComment line) == ")"
+                collectSpecs [] current _ acc
+                  | null (trim current) = acc
+                  | otherwise = maybeAdd current acc
+                collectSpecs (raw : rest) current depth acc
+                  = let ...
+                    in
+                      if null stripped || "//" `isPrefixOf` stripped then
+                          collectSpecs rest current depth acc
+                      else
+                          ...
+                maybeAdd text acc
+                  = let ...
+                    in
+                      case parseTypeSpecSummary candidate of
+                        Just summary -> ...
+                        Nothing -> ...
+                ....
+    |
+383 |     shouldStartNewSpec stripped lowerStripped =
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+[41 of 54] Compiling Compiler.OwnershipChecker ( src/Compiler/OwnershipChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/OwnershipChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/OwnershipChecker.dyn_o )
+[42 of 54] Compiling Compiler.IR      ( src/Compiler/IR.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/IR.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/IR.dyn_o )
+[43 of 54] Compiling Compiler.TypeChecker ( src/Compiler/TypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/TypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/TypeChecker.dyn_o )
+[44 of 54] Compiling Compiler         ( src/Compiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler.dyn_o )
+[45 of 54] Compiling Tooling.Error    ( src/Tooling/Error.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Tooling/Error.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Tooling/Error.dyn_o )
+[46 of 54] Compiling GoToolchain      ( src/GoToolchain.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/GoToolchain.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/GoToolchain.dyn_o )
+[47 of 54] Compiling CompilerUtils    ( src/CompilerUtils.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CompilerUtils.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CompilerUtils.dyn_o )
+src/CompilerUtils.hs:189:9: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        insertFile :: forall {k} {b} {a}.
+                      Ord k =>
+                      (k, b, a) -> Map.Map k [a] -> Map.Map k [a]
+    * In an equation for `groupFilesByPackage':
+          groupFilesByPackage files
+            = do groups <- forM files $ \ file -> ...
+                 let dirGroups = ...
+                 return $ Map.toList dirGroups
+            where
+                insertFile (dir, _, file) groups
+                  = Map.insertWith (++) dir [file] groups
+                extractPackageName' content
+                  = let ...
+                    in
+                      case packageLines of
+                        (line : _) -> ...
+                        [] -> ...
+                  where
+                      isPackageDeclaration line = ...
+      In an equation for `batchConvert':
+          batchConvert ctx inputDir outputDir
+            = do let Logger {logInfo = logI, logDebug = logD} = ...
+                 isDir <- liftIO $ doesDirectoryExist inputDir
+                 unless isDir $ throwError $ NotADirectory inputDir
+                 ....
+            where
+                groupFilesByPackage ::
+                  [FilePath] -> IOResult [(FilePath, [FilePath])]
+                groupFilesByPackage files
+                  = do groups <- forM files $ ...
+                       ....
+                  where
+                      insertFile (dir, _, file) groups
+                        = Map.insertWith (++) dir ... groups
+                      extractPackageName' content
+                        = ...
+                        where
+                            ...
+    |
+189 |         insertFile (dir, _, file) groups = Map.insertWith (++) dir [file] groups
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[48 of 54] Compiling EmbedAssets      ( src/EmbedAssets.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EmbedAssets.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EmbedAssets.dyn_o )
+[49 of 54] Compiling Cli.Runner       ( src/Cli/Runner.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/Runner.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/Runner.dyn_o )
+[50 of 54] Compiling Analyzer.SymbolTable ( src/Analyzer/SymbolTable.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/SymbolTable.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/SymbolTable.dyn_o )
+src/Analyzer/SymbolTable.hs:173:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        isGroupClosing :: forall {a}. (a, String) -> Bool
+    * In an equation for `parseGroupedTypeSpecs':
+          parseGroupedTypeSpecs start lines0
+            = let
+                annotated = annotateWithLines start lines0
+                inner = drop 1 (dropWhileEnd isGroupClosing annotated)
+              in reverse (collectSpecs inner Nothing "" 0 [])
+            where
+                isGroupClosing (_, line) = trim (stripLineComment line) == ")"
+                collectSpecs [] currentStart current _ acc
+                  | null (trim current) = acc
+                  | otherwise
+                  = case finalizeSpec currentStart current of
+                      Nothing -> acc
+                      Just spec -> spec : acc
+                collectSpecs ((mLine, raw) : rest) currentStart current depth acc
+                  = let ...
+                    in
+                      if null stripped then
+                          collectSpecs rest currentStart current depth acc
+                      else
+                          ...
+                maybeAddSpec startLine fallback text acc
+                  = case finalizeSpec (startLine <|> fallback) text of
+                      Nothing -> acc
+                      Just spec -> spec : acc
+                finalizeSpec mLine text
+                  = do (name, params) <- parseTypeSpecHeader text
+                       ....
+    |
+173 |     isGroupClosing (_, line) = trim (stripLineComment line) == ")"
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/SymbolTable.hs:413:9: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        update :: forall {a}. Num a => a -> Char -> a
+    * In an equation for `braceDeltaLine':
+          braceDeltaLine
+            = foldl' update 0
+            where
+                update acc '{' = acc + 1
+                update acc '}' = acc - 1
+                update acc _ = acc
+      In an equation for `augmentSymbolTableWithLocals':
+          augmentSymbolTableWithLocals source initialSymbols
+            = snd $ foldl' processLine (0, initialSymbols) (lines source)
+            where
+                processLine (depth, acc) rawLine = let ... in (depthAfter, acc')
+                isVarDeclLine txt = "var " `isPrefixOf` txt
+                addLocalVarSymbols depthBefore line acc
+                  = case GoVar.parseVarSpecRaw line of
+                      Nothing -> acc
+                      Just spec
+                        | not (declaresOwned spec) -> acc
+                        | otherwise
+                        -> foldl'
+                             (insertLocalSymbol depthBefore spec) acc (GoVar.rvsNames spec)
+                insertLocalSymbol depthBefore spec acc name
+                  | Map.member name acc = acc
+                  | otherwise = let ... in Map.insert name info acc
+                ....
+    |
+413 |         update acc '{' = acc + 1
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^...
+
+[51 of 54] Compiling Analyzer.OwnershipBridge ( src/Analyzer/OwnershipBridge.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/OwnershipBridge.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/OwnershipBridge.dyn_o )
+[52 of 54] Compiling Analyzer.DependentTypeBridge ( src/Analyzer/DependentTypeBridge.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/DependentTypeBridge.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/DependentTypeBridge.dyn_o )
+[53 of 54] Compiling AnalyzerIntegration ( src/AnalyzerIntegration.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/AnalyzerIntegration.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/AnalyzerIntegration.dyn_o )
+[54 of 54] Compiling IntegratedCompiler ( src/IntegratedCompiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/IntegratedCompiler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/IntegratedCompiler.dyn_o )
+src/IntegratedCompiler.hs:189:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        parseHeader :: forall {a} {b}.
+                       (Num a, Num b, Read a, Read b) =>
+                       [Char] -> (a, b)
+    * In an equation for `parserErrorToSyntaxError':
+          parserErrorToSyntaxError msg
+            = let
+                ls = lines msg
+                (lineNum, colNum) = positionFromHeader ls
+                ....
+              in
+                SV.SyntaxError
+                  {SV.errorType = SV.UnexpectedToken, SV.errorMessage = messageText,
+                   SV.lineNumber = lineNum, SV.columnNumber = colNum,
+                   SV.lineContent = lineContent}
+            where
+                positionFromHeader :: [String] -> (Int, Int)
+                positionFromHeader entries
+                  = case entries of
+                      (header : _) -> parseHeader header
+                      _ -> ...
+                parseHeader header
+                  = case splitOnColon header of
+                      (_ : lineStr : colStr : _) -> ...
+                      _ -> ...
+                extractCodeLine line
+                  = case break (== '|') line of
+                      (_, []) -> dropLeadingSpace line
+                      (_, _ : rest) -> dropLeadingSpace rest
+                ....
+    |
+189 |     parseHeader header =
+    |     ^^^^^^^^^^^^^^^^^^^^...
+
+src/IntegratedCompiler.hs:291:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        analysisStatus :: forall {a1} {a2}.
+                          (Eq a1, Eq a2, Num a1, Num a2) =>
+                          a1 -> a2 -> String
+    * In an equation for `getDetailedAnalysisSummary':
+          getDetailedAnalysisSummary
+            AnalysisResult {ownershipErrors = ownershipErrs,
+                            dependentTypeErrors = dependentErrs, analysisWarnings = warnings,
+                            analysisInfo = infoMessages, typeEnvironment = typeEnv}
+            = let
+                ownershipErrorCount = length ownershipErrs
+                dependentErrorCount = length dependentErrs
+                ....
+              in unlines ["Analysis Summary", "================", ....]
+            where
+                analysisStatus 0 0 = "All analyses passed"
+                analysisStatus _ 0 = "Ownership analysis reported issues"
+                analysisStatus 0 _ = "Dependent type analysis reported issues"
+                analysisStatus _ _ = "Multiple analyses reported issues"
+    |
+291 |     analysisStatus 0 0 = "All analyses passed"
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+Configuring executable 'typus' for typus-0.12.0...
+Preprocessing executable 'typus' for typus-0.12.0...
+Building executable 'typus' for typus-0.12.0...
+[1 of 1] Compiling Main             ( app/Main.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus-tmp/Main.o )
+[2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus

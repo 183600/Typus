@@ -128,7 +128,9 @@ splitTopLevel delim input = reverse (finalise current pieces)
 nestingDelta :: String -> Int
 nestingDelta = List.foldl' step 0
   where
+    step :: Num a => a -> Char -> a
     step acc c = acc + delta c
+    delta :: Num a => Char -> a
     delta '(' = 1
     delta ')' = -1
     delta '[' = 1

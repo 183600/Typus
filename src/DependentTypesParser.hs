@@ -118,6 +118,7 @@ identifier = (lexeme . try) (p >>= check)
     identStart = letterChar MP.<|> char '_'
     identChar :: Parser Char
     identChar  = MP.satisfy (\c -> isAlphaNum c || c == '_')
+    check :: String -> Parser String
     check x = if x `elem` reservedWords
               then fail $ "关键字不能作为标识符: " ++ show x
               else return x

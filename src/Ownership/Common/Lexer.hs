@@ -97,6 +97,7 @@ lexWithSpec spec = go (Pos 1 1)
         | specIsIdentStart spec c =
             let (ident, rest) = span (specIsIdentChar spec) s
                 newPos = bump pos (length ident)
+                tk :: TokenKind kw sym
                 tk = maybe (TId ident) TKw (specKeywords spec ident)
             in Token tk pos : go newPos rest
         -- Fallback: skip unrecognised character
@@ -108,6 +109,7 @@ lexWithSpec spec = go (Pos 1 1)
     matchMultiSymbol :: String -> Maybe (sym, Int)
     matchMultiSymbol input = goMatch (specMultiSymbols spec)
       where
+        goMatch :: [([Char], a)] -> Maybe (a, Int)
         goMatch [] = Nothing
         goMatch ((pattern, sym):restPatterns)
             | pattern `isPrefixOf` input = Just (sym, length pattern)

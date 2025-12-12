@@ -51,6 +51,9 @@ library
         DebugIntegration,
         Dependencies,
         Dependencies.AST,
+        Dependencies.Analyzer,
+        Dependencies.Inference,
+        Dependencies.Parser,
         Dependencies.TypeSystem,
         DependentTypesParser,
         EmbedAssets,
@@ -74,9 +77,6 @@ library
         Analyzer.CrossAnalysis,
         ErrorHandler,
         EnhancedErrorHandler,
-        Dependencies.Parser,
-        Dependencies.Analyzer,
-        Dependencies.Inference,
         Ownership.Common.Lexer,
         Ownership.Common.Types,
         Ownership.Lexer,
@@ -215,7 +215,18 @@ test-suite typus-test
         Test.Unit.PerformanceSpec,
         Test.Unit.EdgeCaseSpec,
         TestSupport.Verbosity,
-        TestSupport.QuickCheck
+        TestSupport.QuickCheck,
+        Test.Golden,
+        Test.Golden.Tests,
+        Test.Golden.CompilerSpec,
+        Test.Integration,
+        Test.Integration.Tests,
+        Test.Integration.PipelineSpec,
+        Test.Integration.AnalyzerSpec,
+        Test.Integration.OwnershipSpec,
+        Test.Integration.IntegratedCompilerSpec,
+        Test.Integration.FullProjectSpec,
+        Test.Integration.CLISpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
@@ -240,18 +251,6 @@ test-suite typus-test
         tasty-golden >= 2.3
     default-language: Haskell2010
     ghc-options:      -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-M4G
-    other-modules:
-        Test.Golden,
-        Test.Golden.Tests,
-        Test.Golden.CompilerSpec,
-        Test.Integration,
-        Test.Integration.Tests,
-        Test.Integration.PipelineSpec,
-        Test.Integration.AnalyzerSpec,
-        Test.Integration.OwnershipSpec,
-        Test.Integration.IntegratedCompilerSpec,
-        Test.Integration.FullProjectSpec,
-        Test.Integration.CLISpec
     if flag(fast)
         cpp-options:   -DFAST_TESTS
     if flag(full)

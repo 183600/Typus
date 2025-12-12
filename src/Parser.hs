@@ -310,6 +310,7 @@ flushCodeBuf linesRev =
                         , cbSpan = blockSpan
                         }
   where
+    foldLast :: a -> [a] -> a
     foldLast current [] = current
     foldLast _ (x:xs) = foldLast x xs
 
@@ -384,6 +385,7 @@ computeBlockSpan directiveSpan closingSpan blockLines =
         in SourceSpan (spanStart (plSpan firstLine))
                       (spanEnd (plSpan lastLine))
   where
+    foldLastLine :: a -> [a] -> a
     foldLastLine current [] = current
     foldLastLine _ (x:xs) = foldLastLine x xs
 

@@ -125,6 +125,7 @@ collectShortVarInits = go []
 collectExpression :: String -> [(Int, String)] -> (String, [(Int, String)])
 collectExpression initial rest = go [initial] (max 0 (nestingDelta initial)) rest
   where
+    go :: [[Char]] -> Int -> [(a, String)] -> ([Char], [(a, String)])
     go parts depth remaining =
         let combined = intercalate "\n" parts
             trimmed = trim combined
@@ -380,6 +381,7 @@ parseGroupedSpecs lines0 =
             Just summary -> summary : acc
             Nothing -> acc
 
+    shouldStartNewSpec :: Foldable t => t Char -> [Char] -> Bool
     shouldStartNewSpec stripped lowerStripped =
         any isSpace stripped
             || '=' `elem` stripped

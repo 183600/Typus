@@ -1,5 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
+{-# LANGUAGE ScopedTypeVariables #-}
 module Compiler.GoAst
   ( GoModule(..)
   , PackageDecl(..)
@@ -116,8 +117,10 @@ parseGoModule lines0 = do
       let t = trim line
       in null t || isCommentLine t
 
+    takeWhileInclusive :: forall a. (a -> Bool) -> [a] -> ([a], [a])
     takeWhileInclusive p = go []
       where
+        go :: [a] -> [a] -> ([a], [a])
         go acc [] = (reverse acc, [])
         go acc xs@(y:ys)
           | p y = go (y:acc) ys
@@ -145,8 +148,10 @@ parseImportSection = go [] . dropWhile isBlankLine
 
     isImportGroupLine line = trim line == "import ("
 
+    mapMaybe :: forall t a b. Foldable t => (a -> Maybe b) -> t a -> [b]
     mapMaybe f = foldr step []
       where
+        step :: a -> [b] -> [b]
         step x acc = case f x of
           Nothing -> acc
           Just y  -> y : acc
@@ -392,6 +397,7 @@ parseImportSpec rawLine =
         _                 -> xs
     stripQuotes s = s
 
+    unsnoc :: [a] -> Maybe ([a], a)
     unsnoc [] = Nothing
     unsnoc (y:ys) =
       case ys of

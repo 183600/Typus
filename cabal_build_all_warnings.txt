@@ -1,0 +1,818 @@
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (configuration changed)
+ - typus-0.12.0 (exe:typus) (configuration changed)
+Configuring library for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+on the commandline: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wderiving-strategies
+
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Preprocessing library for typus-0.12.0...
+Building library for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/tmp/ghc335054-0.rsp: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wderiving-strategies
+
+[ 1 of 54] Compiling Cli              ( src/Cli.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli.dyn_o ) [Options.Applicative package changed]
+[ 9 of 54] Compiling Dependencies.Parser ( src/Dependencies/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Parser.dyn_o ) [Text.Megaparsec.Char.Lexer package changed]
+[12 of 54] Compiling Dependencies.Analyzer ( src/Dependencies/Analyzer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Analyzer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Analyzer.dyn_o ) [Dependencies.Parser changed]
+[13 of 54] Compiling Dependencies     ( src/Dependencies.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies.dyn_o ) [Dependencies.Analyzer changed]
+[14 of 54] Compiling DependentTypesParser ( src/DependentTypesParser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DependentTypesParser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DependentTypesParser.dyn_o ) [Text.Megaparsec.Char.Lexer package changed]
+src/DependentTypesParser.hs:121:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        check :: forall {m :: * -> *}. MonadFail m => String -> m String
+    * In an equation for `identifier':
+          identifier
+            = (lexeme . try) (p >>= check)
+            where
+                p = (:) <$> identStart <*> MP.many identChar
+                identStart :: Parser Char
+                identStart = letterChar MP.<|> char '_'
+                identChar :: Parser Char
+                ....
+    |
+121 |     check x = if x `elem` reservedWords
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+[19 of 54] Compiling Compiler.Errors.Core ( src/Compiler/Errors/Core.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Core.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Core.dyn_o ) [Data.Aeson package changed]
+src/Compiler/Errors/Core.hs:135:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        subLevelPriority :: forall {a}. Num a => ErrorSubLevel -> a
+    * In an equation for `detailedSeverityPriority':
+          detailedSeverityPriority ds
+            = severityPriority (baseSeverity ds)
+                + subLevelPriority (subLevel ds)
+            where
+                subLevelPriority Critical = 50
+                subLevelPriority High = 30
+                subLevelPriority Medium = 15
+                subLevelPriority Low = 5
+                subLevelPriority Notification = 0
+    |
+135 |     subLevelPriority Critical = 50
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+[20 of 54] Compiling ErrorHandler     ( src/ErrorHandler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/ErrorHandler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/ErrorHandler.dyn_o ) [Compiler.Errors.Core changed]
+[26 of 54] Compiling Analyzer.Types   ( src/Analyzer/Types.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/Types.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/Types.dyn_o ) [Compiler.Errors.Core changed]
+[27 of 54] Compiling Analyzer.State   ( src/Analyzer/State.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/State.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/State.dyn_o ) [Analyzer.Types changed]
+src/Analyzer/State.hs:108:9: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        add :: forall {a} {b} {c}.
+               (Num a, Num b, Num c) =>
+               CombinedError -> (a, b, c) -> (a, b, c)
+    * In an equation for `countBySeverity':
+          countBySeverity
+            = foldr add (0, 0, 0)
+            where
+                add ce (e, w, i)
+                  = case combinedErrorSeverity ce of
+                      Fatal -> ...
+                      Error -> ...
+                      Warning -> ...
+                      Info -> ...
+      In an equation for `getAnalysisSummary':
+          getAnalysisSummary state'
+            = let
+                (errorCount, warningCount, infoCount)
+                  = countBySeverity (combinedErrorsAcc state')
+              in unlines ["Analysis Summary:", "=================", ....]
+            where
+                countBySeverity :: [CombinedError] -> (Int, Int, Int)
+                countBySeverity
+                  = foldr add (0, 0, 0)
+                  where
+                      add ce (e, w, i) = ...
+    |
+108 |         add ce (e, w, i) =
+    |         ^^^^^^^^^^^^^^^^^^...
+
+[28 of 54] Compiling Analyzer.CrossAnalysis ( src/Analyzer/CrossAnalysis.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/CrossAnalysis.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/CrossAnalysis.dyn_o ) [Analyzer.State changed]
+src/Analyzer/CrossAnalysis.hs:123:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        goStmt :: forall {b}. Num b => b -> Stmt -> [(String, b)]
+    * In an equation for `collectOccurrences':
+          collectOccurrences tracked (Program stmts)
+            = goStmts 0 stmts
+            where
+                goStmts depth = concatMap (goStmt depth)
+                goStmt depth stmt
+                  = case stmt of
+                      SVarDecl name mInit _
+                        -> record name depth ++ maybe [] (goExpr depth) mInit
+                      SLetDecl name mInit _
+                        -> record name depth ++ maybe [] (goExpr depth) mInit
+                      SAssignStmt name _ expr _ -> record name depth ++ goExpr depth expr
+                      SExpr expr _ -> goExpr depth expr
+                      SBlock body _ -> goStmts (depth + 1) body
+                      SFunc body _ -> goStmts (depth + 1) body
+                      SFor body _ -> goStmts (depth + 1) body
+                      SDirectiveBlock _ body _ -> goStmts (depth + 1) body
+                      SDirectiveLine _ _ -> []
+                goExpr depth expr
+                  = case expr of
+                      EIdent name _ -> record name depth
+                      ECall name args _
+                        -> record name depth ++ concatMap (goExpr depth) args
+                      EUnary _ inner _ -> goExpr depth inner
+                      EUnknown toks _ -> collectFromTokens depth toks
+                      _ -> []
+                collectFromTokens depth toks
+                  = [(name, depth) |
+                       name <- collectPlainIdentifiers toks ++ collectSelectorBases toks,
+                       Set.member name tracked]
+                ....
+    |
+123 |     goStmts depth = concatMap (goStmt depth)
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Analyzer/CrossAnalysis.hs:123:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        goStmts :: forall {b}. Num b => b -> [Stmt] -> [(String, b)]
+    * In an equation for `collectOccurrences':
+          collectOccurrences tracked (Program stmts)
+            = goStmts 0 stmts
+            where
+                goStmts depth = concatMap (goStmt depth)
+                goStmt depth stmt
+                  = case stmt of
+                      SVarDecl name mInit _
+                        -> record name depth ++ maybe [] (goExpr depth) mInit
+                      SLetDecl name mInit _
+                        -> record name depth ++ maybe [] (goExpr depth) mInit
+                      SAssignStmt name _ expr _ -> record name depth ++ goExpr depth expr
+                      SExpr expr _ -> goExpr depth expr
+                      SBlock body _ -> goStmts (depth + 1) body
+                      SFunc body _ -> goStmts (depth + 1) body
+                      SFor body _ -> goStmts (depth + 1) body
+                      SDirectiveBlock _ body _ -> goStmts (depth + 1) body
+                      SDirectiveLine _ _ -> []
+                goExpr depth expr
+                  = case expr of
+                      EIdent name _ -> record name depth
+                      ECall name args _
+                        -> record name depth ++ concatMap (goExpr depth) args
+                      EUnary _ inner _ -> goExpr depth inner
+                      EUnknown toks _ -> collectFromTokens depth toks
+                      _ -> []
+                collectFromTokens depth toks
+                  = [(name, depth) |
+                       name <- collectPlainIdentifiers toks ++ collectSelectorBases toks,
+                       Set.member name tracked]
+                ....
+    |
+123 |     goStmts depth = concatMap (goStmt depth)
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Analyzer/CrossAnalysis.hs:146:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        goExpr :: forall {t}. t -> Expr -> [(String, t)]
+    * In an equation for `collectOccurrences':
+          collectOccurrences tracked (Program stmts)
+            = goStmts 0 stmts
+            where
+                goStmts depth = concatMap (goStmt depth)
+                goStmt depth stmt
+                  = case stmt of
+                      SVarDecl name mInit _
+                        -> record name depth ++ maybe [] (goExpr depth) mInit
+                      SLetDecl name mInit _
+                        -> record name depth ++ maybe [] (goExpr depth) mInit
+                      SAssignStmt name _ expr _ -> record name depth ++ goExpr depth expr
+                      SExpr expr _ -> goExpr depth expr
+                      SBlock body _ -> goStmts (depth + 1) body
+                      SFunc body _ -> goStmts (depth + 1) body
+                      SFor body _ -> goStmts (depth + 1) body
+                      SDirectiveBlock _ body _ -> goStmts (depth + 1) body
+                      SDirectiveLine _ _ -> []
+                goExpr depth expr
+                  = case expr of
+                      EIdent name _ -> record name depth
+                      ECall name args _
+                        -> record name depth ++ concatMap (goExpr depth) args
+                      EUnary _ inner _ -> goExpr depth inner
+                      EUnknown toks _ -> collectFromTokens depth toks
+                      _ -> []
+                collectFromTokens depth toks
+                  = [(name, depth) |
+                       name <- collectPlainIdentifiers toks ++ collectSelectorBases toks,
+                       Set.member name tracked]
+                ....
+    |
+146 |     goExpr depth expr =
+    |     ^^^^^^^^^^^^^^^^^^^...
+
+src/Analyzer/CrossAnalysis.hs:159:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        collectFromTokens :: forall {b}.
+                             b -> [OwnershipToken] -> [(String, b)]
+    * In an equation for `collectOccurrences':
+          collectOccurrences tracked (Program stmts)
+            = goStmts 0 stmts
+            where
+                goStmts depth = concatMap (goStmt depth)
+                goStmt depth stmt
+                  = case stmt of
+                      SVarDecl name mInit _
+                        -> record name depth ++ maybe [] (goExpr depth) mInit
+                      SLetDecl name mInit _
+                        -> record name depth ++ maybe [] (goExpr depth) mInit
+                      SAssignStmt name _ expr _ -> record name depth ++ goExpr depth expr
+                      SExpr expr _ -> goExpr depth expr
+                      SBlock body _ -> goStmts (depth + 1) body
+                      SFunc body _ -> goStmts (depth + 1) body
+                      SFor body _ -> goStmts (depth + 1) body
+                      SDirectiveBlock _ body _ -> goStmts (depth + 1) body
+                      SDirectiveLine _ _ -> []
+                goExpr depth expr
+                  = case expr of
+                      EIdent name _ -> record name depth
+                      ECall name args _
+                        -> record name depth ++ concatMap (goExpr depth) args
+                      EUnary _ inner _ -> goExpr depth inner
+                      EUnknown toks _ -> collectFromTokens depth toks
+                      _ -> []
+                collectFromTokens depth toks
+                  = [(name, depth) |
+                       name <- collectPlainIdentifiers toks ++ collectSelectorBases toks,
+                       Set.member name tracked]
+                ....
+    |
+159 |     collectFromTokens depth toks =
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Analyzer/CrossAnalysis.hs:165:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        record :: forall {b}. String -> b -> [(String, b)]
+    * In an equation for `collectOccurrences':
+          collectOccurrences tracked (Program stmts)
+            = goStmts 0 stmts
+            where
+                goStmts depth = concatMap (goStmt depth)
+                goStmt depth stmt
+                  = case stmt of
+                      SVarDecl name mInit _
+                        -> record name depth ++ maybe [] (goExpr depth) mInit
+                      SLetDecl name mInit _
+                        -> record name depth ++ maybe [] (goExpr depth) mInit
+                      SAssignStmt name _ expr _ -> record name depth ++ goExpr depth expr
+                      SExpr expr _ -> goExpr depth expr
+                      SBlock body _ -> goStmts (depth + 1) body
+                      SFunc body _ -> goStmts (depth + 1) body
+                      SFor body _ -> goStmts (depth + 1) body
+                      SDirectiveBlock _ body _ -> goStmts (depth + 1) body
+                      SDirectiveLine _ _ -> []
+                goExpr depth expr
+                  = case expr of
+                      EIdent name _ -> record name depth
+                      ECall name args _
+                        -> record name depth ++ concatMap (goExpr depth) args
+                      EUnary _ inner _ -> goExpr depth inner
+                      EUnknown toks _ -> collectFromTokens depth toks
+                      _ -> []
+                collectFromTokens depth toks
+                  = [(name, depth) |
+                       name <- collectPlainIdentifiers toks ++ collectSelectorBases toks,
+                       Set.member name tracked]
+                ....
+    |
+165 |     record name depth
+    |     ^^^^^^^^^^^^^^^^^...
+
+src/Analyzer/CrossAnalysis.hs:191:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        go :: forall {kw}. [String] -> [Token kw Sym] -> [String]
+    * In an equation for `collectSelectorBases':
+          collectSelectorBases
+            = go []
+            where
+                go
+                  acc
+                  (Token (TId ident) _ : Token (TSym SDot) _ : Token (TId _)
+                                                                     _ : rest)
+                  = go (ident : acc) rest
+                go acc (_ : rest) = go acc rest
+                go acc [] = reverse acc
+    |
+191 |     go acc (Token (TId ident) _ : Token (TSym SDot) _ : Token (TId _) _ : rest) =
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Analyzer/CrossAnalysis.hs:199:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        matches :: forall {kw}. Token kw Sym -> Bool
+    * In an equation for `isSymbolToken':
+          isSymbolToken sym
+            = maybe False matches
+            where
+                matches (Token (TSym sym') _) = sym == sym'
+                matches _ = False
+    |
+199 |     matches (Token (TSym sym') _) = sym == sym'
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+[30 of 54] Compiling SourceLocation   ( src/SourceLocation.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SourceLocation.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SourceLocation.dyn_o ) [Compiler.Errors.Core changed]
+[31 of 54] Compiling Compiler.Errors.Compiler ( src/Compiler/Errors/Compiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Compiler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Compiler.dyn_o ) [Compiler.Errors.Core changed]
+[32 of 54] Compiling EnhancedErrorHandler ( src/EnhancedErrorHandler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedErrorHandler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedErrorHandler.dyn_o ) [Compiler.Errors.Compiler changed]
+[33 of 54] Compiling Compiler.Errors  ( src/Compiler/Errors.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors.dyn_o ) [Compiler.Errors.Compiler changed]
+[36 of 54] Compiling Parser           ( src/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Parser.dyn_o ) [Text.Megaparsec.Char.Lexer package changed]
+src/Parser.hs:313:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        foldLast :: forall {t}. t -> [t] -> t
+    * In an equation for `flushCodeBuf':
+          flushCodeBuf linesRev
+            = case reverse linesRev of
+                [] -> Nothing
+                firstLine : restLines
+                  -> let ... in if null content then Nothing else ...
+            where
+                foldLast current [] = current
+                foldLast _ (x : xs) = foldLast x xs
+    |
+313 |     foldLast current [] = current
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Parser.hs:387:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        foldLastLine :: forall {t}. t -> [t] -> t
+    * In an equation for `computeBlockSpan':
+          computeBlockSpan directiveSpan closingSpan blockLines
+            = case blockLines of
+                [] -> SourceSpan (spanEnd directiveSpan) (spanStart closingSpan)
+                (firstLine : restLines)
+                  -> let ...
+                     in
+                       SourceSpan
+                         (spanStart (plSpan firstLine)) (spanEnd (plSpan lastLine))
+            where
+                foldLastLine current [] = current
+                foldLastLine _ (x : xs) = foldLastLine x xs
+    |
+387 |     foldLastLine current [] = current
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+[37 of 54] Compiling Compiler.DependentTypeChecker ( src/Compiler/DependentTypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/DependentTypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/DependentTypeChecker.dyn_o ) [Compiler.Errors changed]
+src/Compiler/DependentTypeChecker.hs:161:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        hasAngleGenerics :: forall {t :: * -> *}.
+                            Foldable t =>
+                            t Char -> Bool
+    * In an equation for `classifySegmentStart':
+          classifySegmentStart line
+            = let trimmed = trimLeading line
+              in
+                if "alias " `isPrefixOf` trimmed then
+                    Just AliasSegment
+                else
+                    if isTypeCandidate trimmed then
+                        Just TypeSegment
+                    else
+                        if isFuncCandidate trimmed then Just FuncSegment else Nothing
+            where
+                isTypeCandidate txt
+                  = "type " `isPrefixOf` txt
+                      && (hasAngleGenerics txt || hasWhereClause txt)
+                isFuncCandidate txt
+                  = "func " `isPrefixOf` txt
+                      && (containsArrow txt || hasWhereClause txt)
+                hasAngleGenerics txt = '<' `elem` txt && '>' `elem` txt
+                hasWhereClause txt = " where " `isInfixOf` txt
+                ....
+    |
+161 |     hasAngleGenerics txt = '<' `elem` txt && '>' `elem` txt
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/DependentTypeChecker.hs:212:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        go :: forall {t}. Num t => t -> Bool -> Bool -> [Char] -> t
+    * In an equation for `braceDelta':
+          braceDelta
+            = go 0 False False
+            where
+                go acc _ _ [] = acc
+                go acc inString escaped (c : cs)
+                  | escaped = go acc inString False cs
+                  | c == '\\' && inString = go acc inString True cs
+                  | c == '"' = go acc (not inString) False cs
+                  | inString = go acc inString False cs
+                  | c == '{' = go (acc + 1) inString False cs
+                  | c == '}' = go (acc - 1) inString False cs
+                  | otherwise = go acc inString False cs
+    |
+212 |     go acc _ _ [] = acc
+    |     ^^^^^^^^^^^^^^^^^^^...
+
+[41 of 54] Compiling Compiler.OwnershipChecker ( src/Compiler/OwnershipChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/OwnershipChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/OwnershipChecker.dyn_o ) [Compiler.Errors changed]
+[42 of 54] Compiling Compiler.IR      ( src/Compiler/IR.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/IR.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/IR.dyn_o ) [Compiler.Errors changed]
+[43 of 54] Compiling Compiler.TypeChecker ( src/Compiler/TypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/TypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/TypeChecker.dyn_o ) [Compiler.Errors changed]
+src/Compiler/TypeChecker.hs:170:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        isErrorInFile :: forall {t :: * -> *}.
+                         Foldable t =>
+                         TypeError -> [Char] -> t String -> Bool
+    * In an equation for `diagnoseTypeErrorsWithPackage':
+          diagnoseTypeErrorsWithPackage mainFile packageFiles
+            = do goModules <- forM packageFiles $ \ (_, typusFile) -> ...
+                 let allDecls = ...
+                     ....
+                 let mainFileErrors = ...
+                     ....
+                 ....
+            where
+                toDiagnostic TypeError {..}
+                  = TypeCheckDiagnostic
+                      {tcdContext = teContext, tcdMessage = teMessage}
+                filterErrorsForFile file errors
+                  = let ...
+                    in
+                      filter
+                        (\ err -> isErrorInFile err fileContent fileFunctions) errors
+                isErrorInFile TypeError {..} fileContent fileFunctions
+                  = case teContext of
+                      Just ctx -> ctx `elem` fileFunctions
+                      Nothing -> teMessage `isInfixOf` fileContent
+                extractFunctionsFromTypus typusFile
+                  = let ... in concatMap extractFunctionFromLine linesList
+                ....
+    |
+170 |     isErrorInFile TypeError{..} fileContent fileFunctions =
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Compiler/TypeChecker.hs:232:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        builtinFunctionEntry :: forall {a}. a -> (a, FunctionSignature)
+    * In an equation for `buildTypeEnv':
+          buildTypeEnv GoModule {..}
+            = let
+                funcEntries = mapMaybe functionEntry gmDecls
+                varEntries = concatMap varEntry gmDecls
+                ....
+              in
+                TypeEnv
+                  {varTypes = Map.fromList varEntries,
+                   functionTypes = Map.fromList allFunctions}
+            where
+                builtinFunctions = ["println", ....]
+                builtinFunctionEntry name = (name, builtinSignature)
+                builtinSignature
+                  = FunctionSignature {fsParams = [...], fsReturns = []}
+                functionEntry (GoFunc decl)
+                  = do info <- parseFunctionInfo decl
+                       ....
+                functionEntry _ = Nothing
+                ....
+    |
+232 |     builtinFunctionEntry name = (name, builtinSignature)
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/TypeChecker.hs:378:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        hasPrefix :: forall {a}. Eq a => [a] -> [a] -> Bool
+    * In an equation for `checkStatement':
+          checkStatement env lines0
+            = let
+                text = unlines lines0
+                isNested = any (hasPrefix "    " . dropWhile isSpace) lines0
+                ....
+              in contextualizedErrors
+            where
+                hasPrefix prefix str = take (length prefix) str == prefix
+                addLocalVars envVar varDecl
+                  = let ...
+                    in
+                      TypeEnv
+                        {varTypes = updatedVarTypes, functionTypes = functionTypes'}
+                extractVariableDeclarationsFromStatement :: String -> [VarDecl]
+                extractVariableDeclarationsFromStatement stmt
+                  = case parseVarDecl stmt of
+                      Just decl -> ...
+                      Nothing -> ...
+                ....
+    |
+378 |     hasPrefix prefix str = take (length prefix) str == prefix
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/TypeChecker.hs:517:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        checkArg :: forall {a}.
+                    (Show a, Num a) =>
+                    (a -> Maybe Type) -> (a, String) -> [TypeError]
+    * In an equation for `checkCall':
+          checkCall TypeEnv {..} context CallExpr {..}
+            = case lookupFunctionSignature callName of
+                Just signature -> let ... in arityErrors ++ typeErrors
+                Nothing
+                  -> case lookupVariable callName of
+                       Just _ -> []
+                       Nothing -> ...
+                  where
+                      hasNestedIfs = ...
+                      getFunctionBody funcName = ...
+            where
+                lookupFunctionSignature name
+                  = Map.lookup name functionTypes
+                      <|> Map.lookup (lastSegment name) functionTypes
+                lookupVariable name
+                  = Map.lookup name varTypes
+                      <|> Map.lookup (lastSegment name) varTypes
+                lastSegment n
+                  = case break (== '.') (reverse n) of
+                      (revSuffix, []) -> reverse revSuffix
+                      (revSuffix, _ : _) -> reverse revSuffix
+                checkArity FunctionSignature {..} = let ... in concat [...]
+                ....
+    |
+517 |     checkArg expected (idx, argText) =
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Compiler/TypeChecker.hs:606:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        stripPrefixWith :: forall {a}.
+                           Eq a =>
+                           [a] -> [a] -> Maybe ([a], [a])
+    * In an equation for `parseFunctionSignature':
+          parseFunctionSignature rawHeader
+            = do let headerWithoutBody = ...
+                 (_, afterFunc) <- stripPrefixWith "func" (trim headerWithoutBody)
+                 let afterTrim = ...
+                 ....
+            where
+                stripPrefixWith prefix s
+                  | prefix `isPrefixOf` s = Just (prefix, drop (length prefix) s)
+                  | otherwise = Nothing
+                guard True = Just ()
+                guard False = Nothing
+    |
+606 |     stripPrefixWith prefix s
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Compiler/TypeChecker.hs:1046:13: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        visited :: forall {a}. Set a
+    * In the expression:
+        let
+          visited = Set.empty
+          recStack = Set.empty
+        in dfsAll graph visited recStack []
+      In an equation for `findCycles':
+          findCycles graph
+            = let
+                visited = Set.empty
+                recStack = Set.empty
+              in dfsAll graph visited recStack []
+      In an equation for `checkCircularDependencies':
+          checkCircularDependencies functionInfos
+            = let
+                callGraph = buildCallGraph functionInfos
+                cycles = findCycles callGraph
+              in map cycleToError cycles
+            where
+                buildCallGraph :: [FunctionInfo] -> Map String [String]
+                buildCallGraph
+                  = Map.fromList
+                      . map
+                          (\ FunctionInfo {..} -> (fiName, extractCalledFunctions fiBody))
+                extractCalledFunctions :: String -> [String]
+                extractCalledFunctions body
+                  = map callName (extractCallExpressions body)
+                ....
+     |
+1046 |         let visited = Set.empty
+     |             ^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/TypeChecker.hs:1047:13: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        recStack :: forall {a}. Set a
+    * In the expression:
+        let
+          visited = Set.empty
+          recStack = Set.empty
+        in dfsAll graph visited recStack []
+      In an equation for `findCycles':
+          findCycles graph
+            = let
+                visited = Set.empty
+                recStack = Set.empty
+              in dfsAll graph visited recStack []
+      In an equation for `checkCircularDependencies':
+          checkCircularDependencies functionInfos
+            = let
+                callGraph = buildCallGraph functionInfos
+                cycles = findCycles callGraph
+              in map cycleToError cycles
+            where
+                buildCallGraph :: [FunctionInfo] -> Map String [String]
+                buildCallGraph
+                  = Map.fromList
+                      . map
+                          (\ FunctionInfo {..} -> (fiName, extractCalledFunctions fiBody))
+                extractCalledFunctions :: String -> [String]
+                extractCalledFunctions body
+                  = map callName (extractCallExpressions body)
+                ....
+     |
+1047 |             recStack = Set.empty
+     |             ^^^^^^^^^^^^^^^^^^^^
+
+[44 of 54] Compiling Compiler         ( src/Compiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler.dyn_o ) [Compiler.DependentTypeChecker changed]
+[45 of 54] Compiling Tooling.Error    ( src/Tooling/Error.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Tooling/Error.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Tooling/Error.dyn_o ) [Compiler changed]
+[46 of 54] Compiling GoToolchain      ( src/GoToolchain.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/GoToolchain.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/GoToolchain.dyn_o ) [System.IO.Temp package changed]
+[47 of 54] Compiling CompilerUtils    ( src/CompilerUtils.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CompilerUtils.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CompilerUtils.dyn_o ) [System.IO.Temp package changed]
+src/CompilerUtils.hs:189:9: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        insertFile :: forall {k} {b} {a}.
+                      Ord k =>
+                      (k, b, a) -> Map.Map k [a] -> Map.Map k [a]
+    * In an equation for `groupFilesByPackage':
+          groupFilesByPackage files
+            = do groups <- forM files $ \ file -> ...
+                 let dirGroups = ...
+                 return $ Map.toList dirGroups
+            where
+                insertFile (dir, _, file) groups
+                  = Map.insertWith (++) dir [file] groups
+                extractPackageName' content
+                  = let ...
+                    in
+                      case packageLines of
+                        (line : _) -> ...
+                        [] -> ...
+                  where
+                      isPackageDeclaration line = ...
+      In an equation for `batchConvert':
+          batchConvert ctx inputDir outputDir
+            = do let Logger {logInfo = logI, logDebug = logD} = ...
+                 isDir <- liftIO $ doesDirectoryExist inputDir
+                 unless isDir $ throwError $ NotADirectory inputDir
+                 ....
+            where
+                groupFilesByPackage ::
+                  [FilePath] -> IOResult [(FilePath, [FilePath])]
+                groupFilesByPackage files
+                  = do groups <- forM files $ ...
+                       ....
+                  where
+                      insertFile (dir, _, file) groups
+                        = Map.insertWith (++) dir ... groups
+                      extractPackageName' content
+                        = ...
+                        where
+                            ...
+    |
+189 |         insertFile (dir, _, file) groups = Map.insertWith (++) dir [file] groups
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[48 of 54] Compiling EmbedAssets      ( src/EmbedAssets.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EmbedAssets.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EmbedAssets.dyn_o ) [System.FilePath.Glob package changed]
+[49 of 54] Compiling Cli.Runner       ( src/Cli/Runner.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/Runner.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/Runner.dyn_o ) [Cli changed]
+[50 of 54] Compiling Analyzer.SymbolTable ( src/Analyzer/SymbolTable.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/SymbolTable.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/SymbolTable.dyn_o ) [Analyzer.Types changed]
+src/Analyzer/SymbolTable.hs:173:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        isGroupClosing :: forall {a}. (a, String) -> Bool
+    * In an equation for `parseGroupedTypeSpecs':
+          parseGroupedTypeSpecs start lines0
+            = let
+                annotated = annotateWithLines start lines0
+                inner = drop 1 (dropWhileEnd isGroupClosing annotated)
+              in reverse (collectSpecs inner Nothing "" 0 [])
+            where
+                isGroupClosing (_, line) = trim (stripLineComment line) == ")"
+                collectSpecs [] currentStart current _ acc
+                  | null (trim current) = acc
+                  | otherwise
+                  = case finalizeSpec currentStart current of
+                      Nothing -> acc
+                      Just spec -> spec : acc
+                collectSpecs ((mLine, raw) : rest) currentStart current depth acc
+                  = let ...
+                    in
+                      if null stripped then
+                          collectSpecs rest currentStart current depth acc
+                      else
+                          ...
+                maybeAddSpec startLine fallback text acc
+                  = case finalizeSpec (startLine <|> fallback) text of
+                      Nothing -> acc
+                      Just spec -> spec : acc
+                finalizeSpec mLine text
+                  = do (name, params) <- parseTypeSpecHeader text
+                       ....
+    |
+173 |     isGroupClosing (_, line) = trim (stripLineComment line) == ")"
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/SymbolTable.hs:413:9: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        update :: forall {a}. Num a => a -> Char -> a
+    * In an equation for `braceDeltaLine':
+          braceDeltaLine
+            = foldl' update 0
+            where
+                update acc '{' = acc + 1
+                update acc '}' = acc - 1
+                update acc _ = acc
+      In an equation for `augmentSymbolTableWithLocals':
+          augmentSymbolTableWithLocals source initialSymbols
+            = snd $ foldl' processLine (0, initialSymbols) (lines source)
+            where
+                processLine (depth, acc) rawLine = let ... in (depthAfter, acc')
+                isVarDeclLine txt = "var " `isPrefixOf` txt
+                addLocalVarSymbols depthBefore line acc
+                  = case GoVar.parseVarSpecRaw line of
+                      Nothing -> acc
+                      Just spec
+                        | not (declaresOwned spec) -> acc
+                        | otherwise
+                        -> foldl'
+                             (insertLocalSymbol depthBefore spec) acc (GoVar.rvsNames spec)
+                insertLocalSymbol depthBefore spec acc name
+                  | Map.member name acc = acc
+                  | otherwise = let ... in Map.insert name info acc
+                ....
+    |
+413 |         update acc '{' = acc + 1
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^...
+
+[51 of 54] Compiling Analyzer.OwnershipBridge ( src/Analyzer/OwnershipBridge.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/OwnershipBridge.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/OwnershipBridge.dyn_o ) [Analyzer.State changed]
+[52 of 54] Compiling Analyzer.DependentTypeBridge ( src/Analyzer/DependentTypeBridge.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/DependentTypeBridge.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/DependentTypeBridge.dyn_o ) [Analyzer.State changed]
+[53 of 54] Compiling AnalyzerIntegration ( src/AnalyzerIntegration.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/AnalyzerIntegration.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/AnalyzerIntegration.dyn_o ) [Analyzer.CrossAnalysis changed]
+[54 of 54] Compiling IntegratedCompiler ( src/IntegratedCompiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/IntegratedCompiler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/IntegratedCompiler.dyn_o ) [Analyzer.State changed]
+src/IntegratedCompiler.hs:189:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        parseHeader :: forall {a} {b}.
+                       (Num a, Num b, Read a, Read b) =>
+                       [Char] -> (a, b)
+    * In an equation for `parserErrorToSyntaxError':
+          parserErrorToSyntaxError msg
+            = let
+                ls = lines msg
+                (lineNum, colNum) = positionFromHeader ls
+                ....
+              in
+                SV.SyntaxError
+                  {SV.errorType = SV.UnexpectedToken, SV.errorMessage = messageText,
+                   SV.lineNumber = lineNum, SV.columnNumber = colNum,
+                   SV.lineContent = lineContent}
+            where
+                positionFromHeader :: [String] -> (Int, Int)
+                positionFromHeader entries
+                  = case entries of
+                      (header : _) -> parseHeader header
+                      _ -> ...
+                parseHeader header
+                  = case splitOnColon header of
+                      (_ : lineStr : colStr : _) -> ...
+                      _ -> ...
+                extractCodeLine line
+                  = case break (== '|') line of
+                      (_, []) -> dropLeadingSpace line
+                      (_, _ : rest) -> dropLeadingSpace rest
+                ....
+    |
+189 |     parseHeader header =
+    |     ^^^^^^^^^^^^^^^^^^^^...
+
+src/IntegratedCompiler.hs:291:5: warning: [GHC-64414] [-Wmissing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        analysisStatus :: forall {a1} {a2}.
+                          (Eq a1, Eq a2, Num a1, Num a2) =>
+                          a1 -> a2 -> String
+    * In an equation for `getDetailedAnalysisSummary':
+          getDetailedAnalysisSummary
+            AnalysisResult {ownershipErrors = ownershipErrs,
+                            dependentTypeErrors = dependentErrs, analysisWarnings = warnings,
+                            analysisInfo = infoMessages, typeEnvironment = typeEnv}
+            = let
+                ownershipErrorCount = length ownershipErrs
+                dependentErrorCount = length dependentErrs
+                ....
+              in unlines ["Analysis Summary", "================", ....]
+            where
+                analysisStatus 0 0 = "All analyses passed"
+                analysisStatus _ 0 = "Ownership analysis reported issues"
+                analysisStatus 0 _ = "Dependent type analysis reported issues"
+                analysisStatus _ _ = "Multiple analyses reported issues"
+    |
+291 |     analysisStatus 0 0 = "All analyses passed"
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/tmp/ghc335054-1.rsp: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wderiving-strategies
+
+Configuring executable 'typus' for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+on the commandline: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wderiving-strategies
+
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Preprocessing executable 'typus' for typus-0.12.0...
+Building executable 'typus' for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/tmp/ghc335277-0.rsp: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wderiving-strategies
+
+[1 of 1] Compiling Main             ( app/Main.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus-tmp/Main.o ) [Cli.Runner changed]
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/tmp/ghc335277-1.rsp: warning: [GHC-93741] [-Wunrecognised-warning-flags]
+    unrecognised warning flag: -Wderiving-strategies
+
+[2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus [Objects changed]

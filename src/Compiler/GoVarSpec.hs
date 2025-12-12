@@ -72,6 +72,7 @@ parseVarSpecRaw rawLine =
                                 , rvsLine = Nothing
                                 }
   where
+    prefixOf :: Eq a => [a] -> [a] -> Bool
     prefixOf pref txt = pref == take (length pref) txt
 
 -- Internal helpers -----------------------------------------------------------------
@@ -83,6 +84,7 @@ parseDeclRawSpecs start True lines0 =
         inner = drop 1 (dropWhileEndBy closingLine annotated)
     in reverse (collect inner Nothing "" 0 [])
   where
+    closingLine :: (a, String) -> Bool
     closingLine (_, line) = trim (stripLineComment line) == ")"
 
     collect [] mStart current _ acc

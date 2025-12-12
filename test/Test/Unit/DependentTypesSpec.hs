@@ -43,7 +43,8 @@ tests =
         errors @?= []
 
     , testCase "reports syntax problems" $ do
-        let invalidSource = "alias Broken"
+        let invalidSource :: String
+            invalidSource = "alias Broken"
         let errors = validateDependentTypeSyntax invalidSource
         assertBool "expected dependent type parser to report errors" (not (null errors))
 

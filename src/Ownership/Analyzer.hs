@@ -406,6 +406,7 @@ scanUnknownAsUse ts =
       debugLog "scanUnknownAsUse: default path (no call)"
       mapM_ useVar (collectPlainIdents ts ++ collectSelectorBases ts)
   where
+    isTypeLike :: Token Keyword sym -> Bool
     isTypeLike (Token (TKw KwType) _)      = True
     isTypeLike (Token (TKw KwStruct) _)    = True
     isTypeLike (Token (TKw KwInterface) _) = True
@@ -440,6 +441,7 @@ collectPlainIdents ts = go Nothing ts
     isDot Nothing  = False
     isLParen (Just t) = isSym SLParen t
     isLParen Nothing  = False
+    isReturn :: Maybe (Token Keyword sym) -> Bool
     isReturn (Just (Token (TKw KwReturn) _)) = True
     isReturn _ = False
 
@@ -450,6 +452,7 @@ collectPlainIdents ts = go Nothing ts
 collectSelectorBases :: [OwnershipToken] -> [Name]
 collectSelectorBases = go []
   where
+    go :: [String] -> [Token kw Sym] -> [String]
     go acc [] = reverse acc
     go acc (Token (TId s) _ : Token (TSym SDot) _ : Token (TId _) _ : rest)
       | isLowerStart s = go (s:acc) rest
@@ -462,6 +465,7 @@ collectSelectorBases = go []
 dropTrailingNoiseTokens :: [OwnershipToken] -> [OwnershipToken]
 dropTrailingNoiseTokens = reverse . dropWhile isNoise . reverse
   where
+    isNoise :: Token kw Sym -> Bool
     isNoise (Token (TComment _ _) _)    = True
     isNoise (Token (TSym SSemicolon) _) = True
     isNoise (Token (TSym SNewline) _)   = True
@@ -470,6 +474,9 @@ dropTrailingNoiseTokens = reverse . dropWhile isNoise . reverse
 splitTopLevelArgsTokens :: [OwnershipToken] -> Maybe ([[OwnershipToken]], [OwnershipToken])
 splitTopLevelArgsTokens ts = go [] [] (0 :: Int) (0 :: Int) ts
   where
+    go :: (Eq t1, Eq t2, Num t1, Num t2) => 
+          [[OwnershipToken]] -> [OwnershipToken] -> t1 -> t2 -> [OwnershipToken] -> 
+          Maybe ([[OwnershipToken]], [OwnershipToken])
     go acc cur paren bracket xs = case xs of
       [] -> Nothing
       (t:rest)
@@ -598,6 +605,7 @@ isLikelyValueVar name =
   || any (`isPrefixOfSafe` name) ["num","count","size","len","idx","flag","val","tmp"]
   || name == "s"
   where
+    isPrefixOfSafe :: Eq a => [a] -> [a] -> Bool
     isPrefixOfSafe pre xs = take (length pre) xs == pre
 
 isValueType :: Name -> Bool
@@ -661,6 +669,7 @@ heuristicOwnershipErrors src =
                         , [MutBorrowWhileBorrowed "data" | mutWhileBorrowed]
                         ]
       -- Special case for assignment after move - check this first
+      assignmentReset :: [a]
       assignmentReset = if "consume(data)" `isInfixOf` txt && "data = \"reloaded\"" `isInfixOf` txt
                         then []  -- No error when data is reassigned after move
                         else []

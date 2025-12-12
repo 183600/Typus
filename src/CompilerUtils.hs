@@ -186,6 +186,7 @@ batchConvert ctx inputDir outputDir = do
         let dirGroups = foldr insertFile Map.empty groups
         return $ Map.toList dirGroups
       where
+        insertFile :: Ord k => (k, b, a) -> Map.Map k [a] -> Map.Map k [a]
         insertFile (dir, _, file) groups = Map.insertWith (++) dir [file] groups
         
         extractPackageName' content = 

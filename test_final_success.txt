@@ -1,0 +1,211 @@
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (configuration changed)
+ - typus-0.12.0 (exe:typus) (configuration changed)
+ - typus-0.12.0 (test:typus-test) (configuration changed)
+Configuring library for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Preprocessing library for typus-0.12.0...
+Building library for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Configuring executable 'typus' for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Preprocessing executable 'typus' for typus-0.12.0...
+Building executable 'typus' for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Configuring test suite 'typus-test' for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Preprocessing test suite 'typus-test' for typus-0.12.0...
+Building test suite 'typus-test' for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+[ 1 of 38] Compiling Test.Dependencies.Arbitrary ( test/Test/Dependencies/Arbitrary.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Dependencies/Arbitrary.o ) [Test.QuickCheck package changed]
+[ 2 of 38] Compiling Test.Golden.CompilerSpec ( test/Test/Golden/CompilerSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Golden/CompilerSpec.o ) [Test.Tasty package changed]
+[ 3 of 38] Compiling Test.Golden.Tests ( test/Test/Golden/Tests.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Golden/Tests.o ) [Test.Tasty package changed]
+[ 4 of 38] Compiling Test.Golden      ( test/Test/Golden.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Golden.o ) [Test.Tasty package changed]
+[ 5 of 38] Compiling Test.Integration.AnalyzerSpec ( test/Test/Integration/AnalyzerSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/AnalyzerSpec.o ) [Test.Tasty package changed]
+[ 6 of 38] Compiling Test.Integration.CLISpec ( test/Test/Integration/CLISpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/CLISpec.o ) [System.IO.Silently package changed]
+[ 7 of 38] Compiling Test.Integration.FullProjectSpec ( test/Test/Integration/FullProjectSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/FullProjectSpec.o ) [Test.Tasty package changed]
+[ 8 of 38] Compiling Test.Integration.IntegratedCompilerSpec ( test/Test/Integration/IntegratedCompilerSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/IntegratedCompilerSpec.o ) [Test.Tasty package changed]
+[ 9 of 38] Compiling Test.Integration.OwnershipSpec ( test/Test/Integration/OwnershipSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/OwnershipSpec.o ) [Test.Tasty package changed]
+[10 of 38] Compiling Test.Integration.PipelineSpec ( test/Test/Integration/PipelineSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/PipelineSpec.o ) [Test.Tasty package changed]
+[11 of 38] Compiling Test.Integration.Tests ( test/Test/Integration/Tests.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/Tests.o ) [Test.Tasty package changed]
+[12 of 38] Compiling Test.Integration ( test/Test/Integration.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration.o ) [Test.Tasty package changed]
+[13 of 38] Compiling Test.Unit.AdvancedParserSpec ( test/Test/Unit/AdvancedParserSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/AdvancedParserSpec.o ) [Test.Tasty package changed]
+[14 of 38] Compiling Test.Unit.CLISpec ( test/Test/Unit/CLISpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CLISpec.o ) [Test.Tasty package changed]
+[15 of 38] Compiling Test.Unit.CommandLineDebugSpec ( test/Test/Unit/CommandLineDebugSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CommandLineDebugSpec.o ) [Test.Tasty package changed]
+[16 of 38] Compiling Test.Unit.CompilerSpec ( test/Test/Unit/CompilerSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CompilerSpec.o ) [Test.Tasty package changed]
+[17 of 38] Compiling Test.Unit.DependentTypesSpec ( test/Test/Unit/DependentTypesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/DependentTypesSpec.o ) [Test.QuickCheck package changed]
+test/Test/Unit/DependentTypesSpec.hs:46:13: error: [GHC-64414] [-Wmissing-local-signatures, Werror=missing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        invalidSource :: forall {a}.
+                         ghc-internal-9.1202.0:GHC.Internal.Data.String.IsString a =>
+                         a
+    * In a stmt of a 'do' block: let invalidSource = "alias Broken"
+      In the second argument of `($)', namely
+        `do let invalidSource = "alias Broken"
+            let errors = validateDependentTypeSyntax invalidSource
+            assertBool
+              "expected dependent type parser to report errors"
+              (not (null errors))'
+      In the expression:
+        testCase "reports syntax problems"
+          $ do let invalidSource = "alias Broken"
+               let errors = validateDependentTypeSyntax invalidSource
+               assertBool
+                 "expected dependent type parser to report errors"
+                 (not (null errors))
+   |
+46 |         let invalidSource = "alias Broken"
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[18 of 38] Compiling Test.Unit.EdgeCaseSpec ( test/Test/Unit/EdgeCaseSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/EdgeCaseSpec.o ) [Test.Tasty package changed]
+[19 of 38] Compiling Test.Unit.EmbedAssetsSpec ( test/Test/Unit/EmbedAssetsSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/EmbedAssetsSpec.o ) [Test.Tasty package changed]
+[20 of 38] Compiling Test.Unit.ErrorHandlingSpec ( test/Test/Unit/ErrorHandlingSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ErrorHandlingSpec.o ) [Test.Tasty package changed]
+[21 of 38] Compiling Test.Unit.GoToolchainSpec ( test/Test/Unit/GoToolchainSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/GoToolchainSpec.o ) [Test.Tasty package changed]
+[22 of 38] Compiling Test.Unit.IntegrationSpec ( test/Test/Unit/IntegrationSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/IntegrationSpec.o ) [Test.Tasty package changed]
+[23 of 38] Compiling Test.Unit.OwnershipBridgeSpec ( test/Test/Unit/OwnershipBridgeSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/OwnershipBridgeSpec.o ) [Test.Tasty package changed]
+[24 of 38] Compiling Test.Unit.OwnershipSpec ( test/Test/Unit/OwnershipSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/OwnershipSpec.o ) [Test.Tasty package changed]
+[25 of 38] Compiling Test.Unit.ParserSpec ( test/Test/Unit/ParserSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ParserSpec.o ) [Test.Tasty package changed]
+[26 of 38] Compiling Test.Unit.PerformanceSpec ( test/Test/Unit/PerformanceSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/PerformanceSpec.o ) [Test.Tasty package changed]
+[27 of 38] Compiling Test.Unit.SourceLocationSpec ( test/Test/Unit/SourceLocationSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/SourceLocationSpec.o ) [Test.Tasty package changed]
+[28 of 38] Compiling Test.Unit.SymbolTableSpec ( test/Test/Unit/SymbolTableSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/SymbolTableSpec.o ) [Test.Tasty package changed]
+[29 of 38] Compiling Test.Unit.SyntaxValidatorSpec ( test/Test/Unit/SyntaxValidatorSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/SyntaxValidatorSpec.o ) [Test.Tasty package changed]
+[30 of 38] Compiling Test.Unit.TypeSystemSpec ( test/Test/Unit/TypeSystemSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeSystemSpec.o ) [Test.QuickCheck package changed]
+test/Test/Unit/TypeSystemSpec.hs:65:13: error: [GHC-64414] [-Wmissing-local-signatures, Werror=missing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        params :: forall {a}.
+                  (Ord a,
+                   ghc-internal-9.1202.0:GHC.Internal.Data.String.IsString a) =>
+                  Set.Set a
+    * In a stmt of a 'do' block:
+        let params = Set.fromList ["T"]
+            typeExpr
+              = RefineT
+                  (GenericT "Vector" [SimpleT "T"]) [SizeGE "values" 2, ....]
+            (tv, constraints)
+              = TS.convertTypeExprAndRefinements params typeExpr
+      In the second argument of `($)', namely
+        `do let params = Set.fromList ...
+                typeExpr = RefineT (GenericT "Vector" ...) ...
+                ....
+            tv @?= TS.TVApp "Vector" [TS.TVVar "T"]
+            constraints
+              @?=
+                [TS.TypeSizeGE (TS.TVVar "values") 2,
+                 TS.Predicate "Ordered" [...]]'
+      In the expression:
+        testCase
+          "convertTypeExprAndRefinements accumulates refinement constraints"
+          $ do let params = Set.fromList ...
+                   typeExpr = RefineT (GenericT "Vector" ...) ...
+                   ....
+               tv @?= TS.TVApp "Vector" [TS.TVVar "T"]
+               constraints
+                 @?=
+                   [TS.TypeSizeGE (TS.TVVar "values") 2, TS.Predicate "Ordered" [...]]
+   |
+65 |         let params = Set.fromList ["T"]
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeSystemSpec.hs:80:13: error: [GHC-64414] [-Wmissing-local-signatures, Werror=missing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        params :: forall {a}.
+                  (Ord a,
+                   ghc-internal-9.1202.0:GHC.Internal.Data.String.IsString a) =>
+                  Set.Set a
+    * In a stmt of a 'do' block:
+        let params = Set.fromList ["Element"]
+            constraint = PredC "EnsureOrder" [GenericT "List" ..., ....]
+      In the second argument of `($)', namely
+        `do let params = Set.fromList ...
+                constraint = PredC "EnsureOrder" ...
+            TS.convertConstraint params constraint
+              @?=
+                TS.Predicate
+                  "EnsureOrder" [TS.TVApp "List" [...], TS.TVCon "Standalone"]'
+      In the expression:
+        testCase
+          "convertConstraint preserves nested generic predicate arguments"
+          $ do let params = Set.fromList ...
+                   constraint = PredC "EnsureOrder" ...
+               TS.convertConstraint params constraint
+                 @?=
+                   TS.Predicate
+                     "EnsureOrder" [TS.TVApp "List" [...], TS.TVCon "Standalone"]
+   |
+80 |         let params = Set.fromList ["Element"]
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeSystemSpec.hs:93:13: error: [GHC-64414] [-Wmissing-local-signatures, Werror=missing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        params :: forall {a}.
+                  (Ord a,
+                   ghc-internal-9.1202.0:GHC.Internal.Data.String.IsString a) =>
+                  Set.Set a
+    * In a stmt of a 'do' block:
+        let params = Set.fromList ["T"]
+            funcType
+              = FuncT
+                  [("input", SimpleT "T")]
+                  (RefineT (SimpleT "Result") [SizeGT "input" 0])
+            (tv, constraints)
+              = TS.convertTypeExprAndRefinements params funcType
+      In the second argument of `($)', namely
+        `do let params = Set.fromList ...
+                funcType = FuncT ... (RefineT (SimpleT "Result") ...)
+                ....
+            tv @?= TS.TVFun [TS.TVVar "T"] (TS.TVCon "Result")
+            constraints @?= [TS.TypeSizeGT (TS.TVVar "input") 0]'
+      In the expression:
+        testCase
+          "convertTypeExprAndRefinements handles refined function returns"
+          $ do let params = Set.fromList ...
+                   funcType = FuncT ... (RefineT (SimpleT "Result") ...)
+                   ....
+               tv @?= TS.TVFun [TS.TVVar "T"] (TS.TVCon "Result")
+               constraints @?= [TS.TypeSizeGT (TS.TVVar "input") 0]
+   |
+93 |         let params = Set.fromList ["T"]
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[31 of 38] Compiling TestSupport.QuickCheck ( test/TestSupport/QuickCheck.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/TestSupport/QuickCheck.o ) [Test.QuickCheck package changed]
+[32 of 38] Compiling Test.Unit.ValueAnalysisSpec ( test/Test/Unit/ValueAnalysisSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ValueAnalysisSpec.o ) [Test.QuickCheck package changed]
+[33 of 38] Compiling Test.Unit.UtilsSpec ( test/Test/Unit/UtilsSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsSpec.o ) [Test.Tasty package changed]
+[35 of 38] Compiling Test.Unit.VerbositySpec ( test/Test/Unit/VerbositySpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/VerbositySpec.o ) [Test.Tasty package changed]
+test/Test/Unit/VerbositySpec.hs:44:5: error: [GHC-64414] [-Wmissing-local-signatures, Werror=missing-local-signatures]
+    * Polymorphic local binding with no type signature:
+        increment :: forall {a}.
+                     Num a =>
+                     ghc-internal-9.1202.0:GHC.Internal.IORef.IORef a -> IO ()
+    * In an equation for `tests':
+          tests
+            = testGroup
+                "Verbosity helpers"
+                [testCase "defaults to quiet when env var is missing"
+                   $ withEnvVar Nothing
+                       $ do verbosity <- getVerbosity
+                            ....,
+                 testCase "parses truthy values case-insensitively"
+                   $ withEnvVar (Just "  YeS  ")
+                       $ do verbosity <- getVerbosity
+                            ....,
+                 testCase "treats other values as quiet"
+                   $ withEnvVar (Just "maybe")
+                       $ do verbosity <- getVerbosity
+                            ....,
+                 ....]
+            where
+                envVar :: String
+                envVar = "TYPUS_TEST_VERBOSE"
+                increment ref = modifyIORef' ref (+ 1)
+                withEnvVar :: Maybe String -> IO a -> IO a
+                ....
+   |
+44 |     increment ref = modifyIORef' ref (+1)
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+

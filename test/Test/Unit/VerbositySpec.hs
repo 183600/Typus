@@ -1,7 +1,7 @@
 module Test.Unit.VerbositySpec (tests) where
 
 import Control.Exception (bracket)
-import Data.IORef (modifyIORef', newIORef, readIORef)
+import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import System.Environment (lookupEnv, setEnv, unsetEnv)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -41,6 +41,7 @@ tests =
     envVar :: String
     envVar = "TYPUS_TEST_VERBOSE"
 
+    increment :: Num a => IORef a -> IO ()
     increment ref = modifyIORef' ref (+1)
 
     withEnvVar :: Maybe String -> IO a -> IO a

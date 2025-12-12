@@ -186,6 +186,7 @@ parserErrorToSyntaxError msg =
             (header:_) -> parseHeader header
             _ -> (0, 0)
 
+    parseHeader :: (Num a, Num b, Read a, Read b) => [Char] -> (a, b)
     parseHeader header =
         case splitOnColon header of
             (_:lineStr:colStr:_) ->
@@ -288,6 +289,7 @@ getDetailedAnalysisSummary AnalysisResult
         , "Status: " ++ analysisStatus ownershipErrorCount dependentErrorCount
         ]
   where
+    analysisStatus :: (Eq a1, Eq a2, Num a1, Num a2) => a1 -> a2 -> String
     analysisStatus 0 0 = "All analyses passed"
     analysisStatus _ 0 = "Ownership analysis reported issues"
     analysisStatus 0 _ = "Dependent type analysis reported issues"
