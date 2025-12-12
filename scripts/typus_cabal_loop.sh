@@ -93,7 +93,7 @@ while true; do
 
     # 新增：在 git add . 之前，先用 iflow 清理根目录多余的 .md/.txt 文件
     echo "🧹 正在清理项目根目录多余的 .md/.txt 文件（如 TEST_ENHANCEMENT_SUMMARY.md、test_wall_production.txt）..."
-    run_with_heartbeat iflow '删除项目根目录多余的.md文件或者.txt文件（像TEST_ENHANCEMENT_SUMMARY.md和test_wall_production.txt这样的）' --yolo || true
+    run_with_heartbeat iflow '删除项目根目录多余的.md文件或者.txt文件（像TEST_ENHANCEMENT_SUMMARY.md和test_wall_production.txt这样的） think:high' --yolo || true
 
     git add .
     if git diff --cached --quiet; then
