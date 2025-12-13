@@ -6,8 +6,8 @@ module Test.Dependencies.Arbitrary () where
 
 import Test.QuickCheck (Arbitrary(..), oneof, elements, listOf1, choose)
 
-import Dependencies.AST
-import Dependencies.TypeSystem
+import Dependencies.AST (AST(..), Statement(..), TypeExpr(..))
+import Dependencies.TypeSystem (TypeVar(..), TypeConstraint(..))
 
 instance Arbitrary TypeVar where
   arbitrary = elements [TVCon "int", TVCon "string", TVCon "bool", TVVar "T"]

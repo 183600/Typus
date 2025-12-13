@@ -1,0 +1,3 @@
+Error: cabal: unrecognized 'build' option `-Wall'
+
+unrecognized 'build' option `-Werror'

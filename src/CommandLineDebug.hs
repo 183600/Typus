@@ -18,7 +18,7 @@ module CommandLineDebug
     ) where
 
 import Control.Monad (when)
-import Data.IORef
+import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -163,7 +163,7 @@ showDebugHelp = do
 -- Set breakpoint at location
 setBreakpoint :: CommandLineDebugConfig -> String -> IO ()
 setBreakpoint config location = do
-    modifyIORef (cldBreakpoints config) (Set.insert location)
+    modifyIORef' (cldBreakpoints config) (Set.insert location)
     putStrLn $ "Breakpoint set at: " ++ location
 
 -- List all breakpoints
@@ -185,7 +185,7 @@ clearBreakpoints config = do
 -- Toggle debug output
 toggleDebugOutput :: CommandLineDebugConfig -> IO ()
 toggleDebugOutput config = do
-    modifyIORef (cldEnabled config) not
+    modifyIORef' (cldEnabled config) not
     enabled <- readIORef (cldEnabled config)
     putStrLn $ "Debug output " ++ (if enabled then "enabled" else "disabled")
 

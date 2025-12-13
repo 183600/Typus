@@ -1,57 +1,1222 @@
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-compilation IS NOT required
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-compilation IS NOT required
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+[1 of 1] Compiling EnhancedDebug    ( src/EnhancedDebug.hs, nothing ) [Source file changed]
+src/EnhancedDebug.hs:31:60: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘modifyIORef'’ from module ‘Data.IORef’ is redundant
+   |
+31 | import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef', modifyIORef)
+   |                                                            ^^^^^^^^^^^^
+
+[1 of 1] Compiling CommandLineDebug ( src/CommandLineDebug.hs, nothing ) [Source file changed]
+src/CommandLineDebug.hs:21:60: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘modifyIORef'’ from module ‘Data.IORef’ is redundant
+   |
+21 | import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef', modifyIORef)
+   |                                                            ^^^^^^^^^^^^
+
+[1 of 1] Compiling Dependencies     ( src/Dependencies.hs, nothing )
 src/Dependencies.hs:71:1: error: [GHC-87110]
-    Could not find module `Dependencies.AST'.
+    Could not find module ‘Dependencies.AST’.
     Use -v to see a list of the files searched for.
    |
 71 | import Dependencies.AST
    | ^^^^^^^^^^^^^^^^^^^^^^^
 
 src/Dependencies.hs:72:1: error: [GHC-87110]
-    Could not find module `Dependencies.Analyzer'.
+    Could not find module ‘Dependencies.Analyzer’.
     Use -v to see a list of the files searched for.
    |
 72 | import Dependencies.Analyzer (analyzeAST, analyzeDependentTypes, validateASTSemantics, validateStatement)
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 src/Dependencies.hs:73:1: error: [GHC-87110]
-    Could not find module `Dependencies.Inference'.
+    Could not find module ‘Dependencies.Inference’.
     Use -v to see a list of the files searched for.
    |
 73 | import Dependencies.Inference
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 src/Dependencies.hs:74:1: error: [GHC-87110]
-    Could not find module `Dependencies.Parser'.
+    Could not find module ‘Dependencies.Parser’.
     Use -v to see a list of the files searched for.
    |
 74 | import Dependencies.Parser (grammarDefinition, parseProgram, runParser)
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 src/Dependencies.hs:75:1: error: [GHC-87110]
-    Could not find module `Dependencies.TypeSystem'.
+    Could not find module ‘Dependencies.TypeSystem’.
     Use -v to see a list of the files searched for.
    |
 75 | import Dependencies.TypeSystem
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-compilation IS NOT required
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+[1 of 1] Compiling GoToolchain      ( src/GoToolchain.hs, nothing )
 src/GoToolchain.hs:25:1: error: [GHC-87110]
-    Could not find module `System.IO.Temp'.
+    Could not find module ‘System.IO.Temp’.
     Use -v to see a list of the files searched for.
    |
 25 | import System.IO.Temp (withSystemTempDirectory, openTempFile)
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 src/GoToolchain.hs:28:1: error: [GHC-87110]
-    Could not find module `Tooling.Error'.
+    Could not find module ‘Tooling.Error’.
     Use -v to see a list of the files searched for.
    |
 28 | import Tooling.Error (ToolingError(..), goCommandFailed)
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling AnalyzerIntegration ( src/AnalyzerIntegration.hs, nothing )
+src/AnalyzerIntegration.hs:25:1: error: [GHC-87110]
+    Could not find module ‘Analyzer.State’.
+    Use -v to see a list of the files searched for.
+   |
+25 | import Analyzer.State
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+src/AnalyzerIntegration.hs:26:1: error: [GHC-87110]
+    Could not find module ‘Analyzer.SymbolTable’.
+    Use -v to see a list of the files searched for.
+   |
+26 | import Analyzer.SymbolTable
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/AnalyzerIntegration.hs:27:1: error: [GHC-87110]
+    Could not find module ‘Analyzer.OwnershipBridge’.
+    Use -v to see a list of the files searched for.
+   |
+27 | import Analyzer.OwnershipBridge
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/AnalyzerIntegration.hs:28:1: error: [GHC-87110]
+    Could not find module ‘Analyzer.DependentTypeBridge’.
+    Use -v to see a list of the files searched for.
+   |
+28 | import Analyzer.DependentTypeBridge
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/AnalyzerIntegration.hs:29:1: error: [GHC-87110]
+    Could not find module ‘Analyzer.CrossAnalysis’.
+    Use -v to see a list of the files searched for.
+   |
+29 | import Analyzer.CrossAnalysis
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/AnalyzerIntegration.hs:30:1: error: [GHC-87110]
+    Could not find module ‘Analyzer.Types’.
+    Use -v to see a list of the files searched for.
+   |
+30 | import Analyzer.Types ( AnalyzerState(..)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/AnalyzerIntegration.hs:39:1: error: [GHC-87110]
+    Could not find module ‘Ownership’.
+    Use -v to see a list of the files searched for.
+   |
+39 | import qualified Ownership as Own
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/AnalyzerIntegration.hs:40:1: error: [GHC-87110]
+    Could not find module ‘Dependencies’.
+    Use -v to see a list of the files searched for.
+   |
+40 | import qualified Dependencies as Dep
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling DependentTypesParser ( src/DependentTypesParser.hs, nothing )
+src/DependentTypesParser.hs:44:1: error: [GHC-87110]
+    Could not find module ‘Text.Megaparsec’.
+    Use -v to see a list of the files searched for.
+   |
+44 | import Text.Megaparsec
+   | ^^^^^^^^^^^^^^^^^^^^^^...
+
+src/DependentTypesParser.hs:52:1: error: [GHC-87110]
+    Could not find module ‘Text.Megaparsec’.
+    Use -v to see a list of the files searched for.
+   |
+52 | import qualified Text.Megaparsec as MP
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/DependentTypesParser.hs:53:1: error: [GHC-61948]
+    Could not find module ‘Text.Megaparsec.Char’.
+    Perhaps you meant Text.Parsec.Char (from parsec-3.1.18.0)
+    Use -v to see a list of the files searched for.
+   |
+53 | import Text.Megaparsec.Char (char, letterChar, space1)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/DependentTypesParser.hs:54:1: error: [GHC-87110]
+    Could not find module ‘Text.Megaparsec.Char.Lexer’.
+    Use -v to see a list of the files searched for.
+   |
+54 | import qualified Text.Megaparsec.Char.Lexer as L
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling ErrorHandler     ( src/ErrorHandler.hs, nothing )
+src/ErrorHandler.hs:5:1: error: [GHC-87110]
+    Could not find module ‘Compiler.Errors.Core’.
+    Use -v to see a list of the files searched for.
+  |
+5 | import Compiler.Errors.Core as Exports
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Compiler.ValueAnalysis ( src/Compiler/ValueAnalysis.hs, nothing )
+src/Compiler/ValueAnalysis.hs:12:1: error: [GHC-87110]
+    Could not find module ‘Compiler.GoAst’.
+    Use -v to see a list of the files searched for.
+   |
+12 | import Compiler.GoAst
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/ValueAnalysis.hs:13:1: error: [GHC-87110]
+    Could not find module ‘Compiler.GoParsing’.
+    Use -v to see a list of the files searched for.
+   |
+13 | import Compiler.GoParsing (nestingDelta, splitTopLevel, stripLineComment)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/ValueAnalysis.hs:14:1: error: [GHC-87110]
+    Could not find module ‘Compiler.GoVarSpec’.
+    Use -v to see a list of the files searched for.
+   |
+14 | import qualified Compiler.GoVarSpec as GoVar
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/ValueAnalysis.hs:21:1: error: [GHC-87110]
+    Could not find module ‘Utils’.
+    Use -v to see a list of the files searched for.
+   |
+21 | import Utils (trim)
+   | ^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Compiler.Errors.Core ( src/Compiler/Errors/Core.hs, nothing )
+src/Compiler/Errors/Core.hs:91:1: error: [GHC-61948]
+    Could not find module ‘Data.Aeson’.
+    Perhaps you meant Data.Version (from base-4.21.0.0)
+    Use -v to see a list of the files searched for.
+   |
+91 | import Data.Aeson (ToJSON, FromJSON)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/Errors/Core.hs:94:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Common.Types’.
+    Use -v to see a list of the files searched for.
+   |
+94 | import qualified Ownership.Common.Types as Own
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/Errors/Core.hs:95:1: error: [GHC-87110]
+    Could not find module ‘Dependencies.TypeSystem’.
+    Use -v to see a list of the files searched for.
+   |
+95 | import qualified Dependencies.TypeSystem as Dep
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Compiler.Errors.Compiler ( src/Compiler/Errors/Compiler.hs, nothing )
+src/Compiler/Errors/Compiler.hs:53:1: error: [GHC-87110]
+    Could not find module ‘Compiler.Errors.Core’.
+    Use -v to see a list of the files searched for.
+   |
+53 | import Compiler.Errors.Core
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/Errors/Compiler.hs:54:1: error: [GHC-87110]
+    Could not find module ‘SourceLocation’.
+    Use -v to see a list of the files searched for.
+   |
+54 | import SourceLocation
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Compiler.GoParsing ( src/Compiler/GoParsing.hs, nothing )
+src/Compiler/GoParsing.hs:13:1: error: [GHC-87110]
+    Could not find module ‘Utils’.
+    Use -v to see a list of the files searched for.
+   |
+13 | import Utils (trim)
+   | ^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Compiler.DependentTypeChecker ( src/Compiler/DependentTypeChecker.hs, nothing )
+src/Compiler/DependentTypeChecker.hs:11:1: error: [GHC-87110]
+    Could not find module ‘Parser’.
+    Use -v to see a list of the files searched for.
+   |
+11 | import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/DependentTypeChecker.hs:12:1: error: [GHC-87110]
+    Could not find module ‘DependentTypesParser’.
+    Use -v to see a list of the files searched for.
+   |
+12 | import DependentTypesParser 
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Compiler/DependentTypeChecker.hs:22:1: error: [GHC-87110]
+    Could not find module ‘Compiler.Errors’.
+    Use -v to see a list of the files searched for.
+   |
+22 | import Compiler.Errors
+   | ^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Compiler/DependentTypeChecker.hs:30:1: error: [GHC-87110]
+    Could not find module ‘SourceLocation’.
+    Use -v to see a list of the files searched for.
+   |
+30 | import SourceLocation
+   | ^^^^^^^^^^^^^^^^^^^^^...
+
+[1 of 1] Compiling Compiler.GoVarSpec ( src/Compiler/GoVarSpec.hs, nothing )
+src/Compiler/GoVarSpec.hs:10:1: error: [GHC-87110]
+    Could not find module ‘Compiler.GoAst’.
+    Use -v to see a list of the files searched for.
+   |
+10 | import Compiler.GoAst (ConstDecl(..), VarDecl(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/GoVarSpec.hs:11:1: error: [GHC-87110]
+    Could not find module ‘Compiler.GoParsing’.
+    Use -v to see a list of the files searched for.
+   |
+11 | import Compiler.GoParsing (consumeNames, findAssignmentIndex, nestingDelta, removeTrailingComma, splitTopLevel, stripLineComment)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/GoVarSpec.hs:13:1: error: [GHC-87110]
+    Could not find module ‘Utils’.
+    Use -v to see a list of the files searched for.
+   |
+13 | import Utils (trim)
+   | ^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Compiler.TypeChecker ( src/Compiler/TypeChecker.hs, nothing )
+src/Compiler/TypeChecker.hs:24:1: error: [GHC-87110]
+    Could not find module ‘Parser’.
+    Use -v to see a list of the files searched for.
+   |
+24 | import Parser (TypusFile(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/TypeChecker.hs:25:1: error: [GHC-87110]
+    Could not find module ‘Compiler.Errors’.
+    Use -v to see a list of the files searched for.
+   |
+25 | import Compiler.Errors (CompilerError)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/TypeChecker.hs:26:1: error: [GHC-87110]
+    Could not find module ‘Compiler.GoAst’.
+    Use -v to see a list of the files searched for.
+   |
+26 | import Compiler.GoAst
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/TypeChecker.hs:27:1: error: [GHC-87110]
+    Could not find module ‘Compiler.GoParsing’.
+    Use -v to see a list of the files searched for.
+   |
+27 | import Compiler.GoParsing (consumeNames, splitTopLevel, stripLineComment)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/TypeChecker.hs:28:1: error: [GHC-87110]
+    Could not find module ‘Compiler.GoVarSpec’.
+    Use -v to see a list of the files searched for.
+   |
+28 | import qualified Compiler.GoVarSpec as GoVar
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/TypeChecker.hs:29:1: error: [GHC-87110]
+    Could not find module ‘Compiler.IR’.
+    Use -v to see a list of the files searched for.
+   |
+29 | import qualified Compiler.IR as IR
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/TypeChecker.hs:40:1: error: [GHC-87110]
+    Could not find module ‘Utils’.
+    Use -v to see a list of the files searched for.
+   |
+40 | import Utils (trim)
+   | ^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Compiler.IR      ( src/Compiler/IR.hs, nothing )
+src/Compiler/IR.hs:18:1: error: [GHC-87110]
+    Could not find module ‘Parser’.
+    Use -v to see a list of the files searched for.
+   |
+18 | import Parser (TypusFile(..), CodeBlock(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/IR.hs:19:1: error: [GHC-87110]
+    Could not find module ‘Compiler.Errors’.
+    Use -v to see a list of the files searched for.
+   |
+19 | import Compiler.Errors
+   | ^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Compiler/IR.hs:27:1: error: [GHC-87110]
+    Could not find module ‘Compiler.GoAst’.
+    Use -v to see a list of the files searched for.
+   |
+27 | import Compiler.GoAst
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/IR.hs:28:1: error: [GHC-87110]
+    Could not find module ‘Compiler.GoLexer’.
+    Use -v to see a list of the files searched for.
+   |
+28 | import Compiler.GoLexer (GoToken(..), GoTokenKind(..), tokenizeGo, isWhitespaceToken, isCommentToken)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/IR.hs:29:1: error: [GHC-87110]
+    Could not find module ‘Compiler.ValueAnalysis’.
+    Use -v to see a list of the files searched for.
+   |
+29 | import Compiler.ValueAnalysis (ValueInfo, analyzeValueSemantics)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/IR.hs:30:1: error: [GHC-87110]
+    Could not find module ‘SourceLocation’.
+    Use -v to see a list of the files searched for.
+   |
+30 | import SourceLocation (locatedValue)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Compiler.Errors  ( src/Compiler/Errors.hs, nothing )
+src/Compiler/Errors.hs:6:1: error: [GHC-87110]
+    Could not find module ‘Compiler.Errors.Core’.
+    Use -v to see a list of the files searched for.
+  |
+6 | import Compiler.Errors.Core
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/Errors.hs:7:1: error: [GHC-87110]
+    Could not find module ‘Compiler.Errors.Compiler’.
+    Use -v to see a list of the files searched for.
+  |
+7 | import Compiler.Errors.Compiler
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Compiler.OwnershipChecker ( src/Compiler/OwnershipChecker.hs, nothing )
+src/Compiler/OwnershipChecker.hs:9:1: error: [GHC-87110]
+    Could not find module ‘Parser’.
+    Use -v to see a list of the files searched for.
+  |
+9 | import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/OwnershipChecker.hs:10:1: error: [GHC-87110]
+    Could not find module ‘Ownership’.
+    Use -v to see a list of the files searched for.
+   |
+10 | import Ownership (analyzeOwnership, OwnershipError(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/OwnershipChecker.hs:11:1: error: [GHC-87110]
+    Could not find module ‘Compiler.ValueAnalysis’.
+    Use -v to see a list of the files searched for.
+   |
+11 | import Compiler.ValueAnalysis (ValueInfo(..), ValueKind(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler/OwnershipChecker.hs:12:1: error: [GHC-87110]
+    Could not find module ‘Compiler.Errors’.
+    Use -v to see a list of the files searched for.
+   |
+12 | import Compiler.Errors
+   | ^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Compiler/OwnershipChecker.hs:20:1: error: [GHC-87110]
+    Could not find module ‘SourceLocation’.
+    Use -v to see a list of the files searched for.
+   |
+20 | import SourceLocation (Located(..), locatedValue)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling EnhancedErrorHandler ( src/EnhancedErrorHandler.hs, nothing )
+src/EnhancedErrorHandler.hs:5:1: error: [GHC-87110]
+    Could not find module ‘Compiler.Errors.Compiler’.
+    Use -v to see a list of the files searched for.
+  |
+5 | import Compiler.Errors.Compiler as Exports
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Cli.Runner       ( src/Cli/Runner.hs, nothing )
+src/Cli/Runner.hs:3:1: error: [GHC-87110]
+    Could not find module ‘Cli’.
+    Use -v to see a list of the files searched for.
+  |
+3 | import Cli (Args(..), parseArgsFromList)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Cli/Runner.hs:4:1: error: [GHC-87110]
+    Could not find module ‘Cli.DebugRunner’.
+    Use -v to see a list of the files searched for.
+  |
+4 | import Cli.DebugRunner (processDebugArgs)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Cli/Runner.hs:5:1: error: [GHC-87110]
+    Could not find module ‘CompilerUtils’.
+    Use -v to see a list of the files searched for.
+  |
+5 | import CompilerUtils (CompilerContext(..), Logger(..), defaultLogger, newCompilerContext)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Cli/Runner.hs:6:1: error: [GHC-87110]
+    Could not find module ‘CompilerUtils’.
+    Use -v to see a list of the files searched for.
+  |
+6 | import qualified CompilerUtils as CU
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Cli/Runner.hs:11:1: error: [GHC-87110]
+    Could not find module ‘EmbedAssets’.
+    Use -v to see a list of the files searched for.
+   |
+11 | import EmbedAssets (copyEmbeddedForBuild, handleMissingEmbeds, mirrorEmbeddedResources)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Cli/Runner.hs:12:1: error: [GHC-61948]
+    Could not find module ‘GoToolchain’.
+    Perhaps you meant GHC.Toolchain (from ghc-toolchain-0.1.0.0)
+    Use -v to see a list of the files searched for.
+   |
+12 | import GoToolchain (IOResult, createTempGoFile, withTemporaryGoProject)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Cli/Runner.hs:16:1: error: [GHC-87110]
+    Could not find module ‘Tooling.Error’.
+    Use -v to see a list of the files searched for.
+   |
+16 | import Tooling.Error (ToolingError(..), renderToolingError)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Cli/Runner.hs:17:1: error: [GHC-87110]
+    Could not find module ‘SyntaxValidator’.
+    Use -v to see a list of the files searched for.
+   |
+17 | import qualified SyntaxValidator as SV
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Cli.DebugRunner  ( src/Cli/DebugRunner.hs, nothing )
+src/Cli/DebugRunner.hs:9:1: error: [GHC-87110]
+    Could not find module ‘CommandLineDebug’.
+    Use -v to see a list of the files searched for.
+  |
+9 | import CommandLineDebug
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Cli/DebugRunner.hs:10:1: error: [GHC-87110]
+    Could not find module ‘EnhancedDebug’.
+    Use -v to see a list of the files searched for.
+   |
+10 | import EnhancedDebug
+   | ^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling SourceLocation   ( src/SourceLocation.hs, nothing )
+src/SourceLocation.hs:56:1: error: [GHC-87110]
+    Could not find module ‘Compiler.Errors.Core’.
+    Use -v to see a list of the files searched for.
+   |
+56 | import Compiler.Errors.Core (ErrorLocation(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Cli              ( src/Cli.hs, nothing )
+src/Cli.hs:5:1: error: [GHC-87110]
+    Could not find module ‘Options.Applicative’.
+    Use -v to see a list of the files searched for.
+  |
+5 | import Options.Applicative
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling EmbedAssets      ( src/EmbedAssets.hs, nothing )
+src/EmbedAssets.hs:9:1: error: [GHC-87110]
+    Could not find module ‘CompilerUtils’.
+    Use -v to see a list of the files searched for.
+  |
+9 | import CompilerUtils (Logger(..))
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/EmbedAssets.hs:15:1: error: [GHC-61948]
+    Could not find module ‘GoToolchain’.
+    Perhaps you meant GHC.Toolchain (from ghc-toolchain-0.1.0.0)
+    Use -v to see a list of the files searched for.
+   |
+15 | import GoToolchain (IOResult)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/EmbedAssets.hs:16:1: error: [GHC-87110]
+    Could not find module ‘Tooling.Error’.
+    Use -v to see a list of the files searched for.
+   |
+16 | import Tooling.Error (MissingEmbedInfo(..), ToolingError(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/EmbedAssets.hs:29:1: error: [GHC-61948]
+    Could not find module ‘System.FilePath.Glob’.
+    Perhaps you meant
+      System.FilePath (from filepath-1.5.4.0)
+      System.FilePath
+      System.FilePath.Posix (from filepath-1.5.4.0)
+    Use -v to see a list of the files searched for.
+   |
+29 | import System.FilePath.Glob (glob)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling IntegratedCompiler ( src/IntegratedCompiler.hs, nothing )
+src/IntegratedCompiler.hs:17:1: error: [GHC-87110]
+    Could not find module ‘Parser’.
+    Use -v to see a list of the files searched for.
+   |
+17 | import qualified Parser as P
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/IntegratedCompiler.hs:18:1: error: [GHC-87110]
+    Could not find module ‘AnalyzerIntegration’.
+    Use -v to see a list of the files searched for.
+   |
+18 | import AnalyzerIntegration
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/IntegratedCompiler.hs:26:1: error: [GHC-87110]
+    Could not find module ‘Compiler’.
+    Use -v to see a list of the files searched for.
+   |
+26 | import Compiler (compile)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/IntegratedCompiler.hs:27:1: error: [GHC-87110]
+    Could not find module ‘Compiler.Errors.Compiler’.
+    Use -v to see a list of the files searched for.
+   |
+27 | import Compiler.Errors.Compiler (CompilerError, formatCompilerErrors)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/IntegratedCompiler.hs:28:1: error: [GHC-87110]
+    Could not find module ‘Compiler.Errors.Core’.
+    Use -v to see a list of the files searched for.
+   |
+28 | import Compiler.Errors.Core (combinedErrorSeverity, filterCombinedErrorsBySeverity)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/IntegratedCompiler.hs:32:1: error: [GHC-87110]
+    Could not find module ‘SyntaxValidator’.
+    Use -v to see a list of the files searched for.
+   |
+32 | import qualified SyntaxValidator as SV
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Ownership        ( src/Ownership.hs, nothing )
+src/Ownership.hs:15:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Analyzer’.
+    Use -v to see a list of the files searched for.
+   |
+15 | import Ownership.Analyzer
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Ownership.hs:21:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Common.Types’.
+    Use -v to see a list of the files searched for.
+   |
+21 | import Ownership.Common.Types
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Ownership.hs:27:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Lexer’.
+    Use -v to see a list of the files searched for.
+   |
+27 | import Ownership.Lexer (lexAll)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Ownership.hs:28:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Parser’.
+    Use -v to see a list of the files searched for.
+   |
+28 | import Ownership.Parser (parseProgram)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Ownership.hs:29:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Reporter’.
+    Use -v to see a list of the files searched for.
+   |
+29 | import Ownership.Reporter (formatOwnershipErrors)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Dependencies.Inference ( src/Dependencies/Inference.hs, nothing )
+src/Dependencies/Inference.hs:42:1: error: [GHC-87110]
+    Could not find module ‘Dependencies.AST’.
+    Use -v to see a list of the files searched for.
+   |
+42 | import Dependencies.AST
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Dependencies/Inference.hs:43:1: error: [GHC-87110]
+    Could not find module ‘Dependencies.TypeSystem’.
+    Use -v to see a list of the files searched for.
+   |
+43 | import Dependencies.TypeSystem
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Dependencies.Parser ( src/Dependencies/Parser.hs, nothing )
+src/Dependencies/Parser.hs:17:1: error: [GHC-87110]
+    Could not find module ‘Text.Megaparsec’.
+    Use -v to see a list of the files searched for.
+   |
+17 | import Text.Megaparsec (Parsec, (<|>), choice, many, eof, try, optional)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Dependencies/Parser.hs:18:1: error: [GHC-87110]
+    Could not find module ‘Text.Megaparsec’.
+    Use -v to see a list of the files searched for.
+   |
+18 | import qualified Text.Megaparsec as MP
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Dependencies/Parser.hs:19:1: error: [GHC-61948]
+    Could not find module ‘Text.Megaparsec.Char’.
+    Perhaps you meant Text.Parsec.Char (from parsec-3.1.18.0)
+    Use -v to see a list of the files searched for.
+   |
+19 | import Text.Megaparsec.Char (alphaNumChar, letterChar, char, string, space1)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Dependencies/Parser.hs:20:1: error: [GHC-87110]
+    Could not find module ‘Text.Megaparsec.Char.Lexer’.
+    Use -v to see a list of the files searched for.
+   |
+20 | import qualified Text.Megaparsec.Char.Lexer as L
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Dependencies/Parser.hs:22:1: error: [GHC-87110]
+    Could not find module ‘Dependencies.AST’.
+    Use -v to see a list of the files searched for.
+   |
+22 | import Dependencies.AST
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Dependencies.TypeSystem ( src/Dependencies/TypeSystem.hs, nothing )
+src/Dependencies/TypeSystem.hs:46:1: error: [GHC-87110]
+    Could not find module ‘Dependencies.AST’.
+    Use -v to see a list of the files searched for.
+   |
+46 | import Dependencies.AST (TypeExpr(..), Constraint(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Dependencies.Analyzer ( src/Dependencies/Analyzer.hs, nothing )
+src/Dependencies/Analyzer.hs:14:1: error: [GHC-87110]
+    Could not find module ‘Dependencies.AST’.
+    Use -v to see a list of the files searched for.
+   |
+14 | import Dependencies.AST
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Dependencies/Analyzer.hs:15:1: error: [GHC-87110]
+    Could not find module ‘Dependencies.Parser’.
+    Use -v to see a list of the files searched for.
+   |
+15 | import Dependencies.Parser (runParser)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Dependencies/Analyzer.hs:16:1: error: [GHC-87110]
+    Could not find module ‘Dependencies.TypeSystem’.
+    Use -v to see a list of the files searched for.
+   |
+16 | import Dependencies.TypeSystem
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Parser           ( src/Parser.hs, nothing )
+src/Parser.hs:20:1: error: [GHC-87110]
+    Could not find module ‘SourceLocation’.
+    Use -v to see a list of the files searched for.
+   |
+20 | import SourceLocation
+   | ^^^^^^^^^^^^^^^^^^^^^...
+
+src/Parser.hs:28:1: error: [GHC-87110]
+    Could not find module ‘Text.Megaparsec’.
+    Use -v to see a list of the files searched for.
+   |
+28 | import qualified Text.Megaparsec as MP
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Parser.hs:29:1: error: [GHC-87110]
+    Could not find module ‘Text.Megaparsec’.
+    Use -v to see a list of the files searched for.
+   |
+29 | import Text.Megaparsec (Parsec, errorBundlePretty)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Parser.hs:30:1: error: [GHC-61948]
+    Could not find module ‘Text.Megaparsec.Char’.
+    Perhaps you meant Text.Parsec.Char (from parsec-3.1.18.0)
+    Use -v to see a list of the files searched for.
+   |
+30 | import qualified Text.Megaparsec.Char as MC
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Parser.hs:31:1: error: [GHC-87110]
+    Could not find module ‘Text.Megaparsec.Char.Lexer’.
+    Use -v to see a list of the files searched for.
+   |
+31 | import qualified Text.Megaparsec.Char.Lexer as L
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Parser.hs:32:1: error: [GHC-87110]
+    Could not find module ‘Utils’.
+    Use -v to see a list of the files searched for.
+   |
+32 | import Utils (trim)
+   | ^^^^^^^^^^^^^^^^^^^
+
+src/Parser.hs:33:1: error: [GHC-87110]
+    Could not find module ‘SyntaxValidator’.
+    Use -v to see a list of the files searched for.
+   |
+33 | import qualified SyntaxValidator
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling CompilerUtils    ( src/CompilerUtils.hs, nothing )
+src/CompilerUtils.hs:8:1: error: [GHC-87110]
+    Could not find module ‘Compiler’.
+    Use -v to see a list of the files searched for.
+  |
+8 | import Compiler (checkDependentTypes, compile, typeCheckFailure, typeDiagnosticToCompilerError, ensureSourceIR, CompilerResult)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/CompilerUtils.hs:9:1: error: [GHC-87110]
+    Could not find module ‘Compiler.TypeChecker’.
+    Use -v to see a list of the files searched for.
+  |
+9 | import qualified Compiler.TypeChecker as TypeChecker (diagnoseTypeErrorsWithPackage)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/CompilerUtils.hs:10:1: error: [GHC-87110]
+    Could not find module ‘Utils’.
+    Use -v to see a list of the files searched for.
+   |
+10 | import qualified Utils as U (trim)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/CompilerUtils.hs:11:1: error: [GHC-87110]
+    Could not find module ‘Compiler.IR’.
+    Use -v to see a list of the files searched for.
+   |
+11 | import qualified Compiler.IR as IR (buildSemanticIRWithPackage, emitGo, sourceTypusFile, semanticValueInfo, goSource)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/CompilerUtils.hs:12:1: error: [GHC-87110]
+    Could not find module ‘Compiler.OwnershipChecker’.
+    Use -v to see a list of the files searched for.
+   |
+12 | import Compiler.OwnershipChecker (checkOwnershipWithValueInfo)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/CompilerUtils.hs:13:1: error: [GHC-87110]
+    Could not find module ‘Parser’.
+    Use -v to see a list of the files searched for.
+   |
+13 | import qualified Parser as P
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/CompilerUtils.hs:20:1: error: [GHC-61948]
+    Could not find module ‘GoToolchain’.
+    Perhaps you meant GHC.Toolchain (from ghc-toolchain-0.1.0.0)
+    Use -v to see a list of the files searched for.
+   |
+20 | import GoToolchain
+   | ^^^^^^^^^^^^^^^^^^...
+
+src/CompilerUtils.hs:28:1: error: [GHC-87110]
+    Could not find module ‘SyntaxValidator’.
+    Use -v to see a list of the files searched for.
+   |
+28 | import qualified SyntaxValidator as SV
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/CompilerUtils.hs:29:1: error: [GHC-87110]
+    Could not find module ‘Tooling.Error’.
+    Use -v to see a list of the files searched for.
+   |
+29 | import Tooling.Error (ToolingError(..), renderToolingError)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/CompilerUtils.hs:44:1: error: [GHC-87110]
+    Could not find module ‘System.IO.Temp’.
+    Use -v to see a list of the files searched for.
+   |
+44 | import System.IO.Temp (withSystemTempDirectory)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Tooling.Error    ( src/Tooling/Error.hs, nothing )
+src/Tooling/Error.hs:8:1: error: [GHC-87110]
+    Could not find module ‘Compiler’.
+    Use -v to see a list of the files searched for.
+  |
+8 | import Compiler (CompilerError, renderCompilationError)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Tooling/Error.hs:10:1: error: [GHC-87110]
+    Could not find module ‘SyntaxValidator’.
+    Use -v to see a list of the files searched for.
+   |
+10 | import qualified SyntaxValidator as SV
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Analyzer.CrossAnalysis ( src/Analyzer/CrossAnalysis.hs, nothing )
+src/Analyzer/CrossAnalysis.hs:5:1: error: [GHC-87110]
+    Could not find module ‘Analyzer.State’.
+    Use -v to see a list of the files searched for.
+  |
+5 | import Analyzer.State
+  | ^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/CrossAnalysis.hs:6:1: error: [GHC-87110]
+    Could not find module ‘Analyzer.Types’.
+    Use -v to see a list of the files searched for.
+  |
+6 | import Analyzer.Types
+  | ^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/CrossAnalysis.hs:7:1: error: [GHC-87110]
+    Could not find module ‘Dependencies’.
+    Use -v to see a list of the files searched for.
+  |
+7 | import qualified Dependencies as Dep
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/CrossAnalysis.hs:8:1: error: [GHC-87110]
+    Could not find module ‘Ownership’.
+    Use -v to see a list of the files searched for.
+  |
+8 | import qualified Ownership as Own
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/CrossAnalysis.hs:17:1: error: [GHC-87110]
+    Could not find module ‘Compiler.GoAst’.
+    Use -v to see a list of the files searched for.
+   |
+17 | import Compiler.GoAst (parseGoModule)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/CrossAnalysis.hs:18:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Common.Lexer’.
+    Use -v to see a list of the files searched for.
+   |
+18 | import Ownership.Common.Lexer (Token(..), TokenKind(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/CrossAnalysis.hs:19:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Lexer’.
+    Use -v to see a list of the files searched for.
+   |
+19 | import Ownership.Lexer (OwnershipToken, Sym(..), lexAll)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/CrossAnalysis.hs:20:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Parser’.
+    Use -v to see a list of the files searched for.
+   |
+20 | import Ownership.Parser (Program(..), Stmt(..), Expr(..), parseProgram)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Analyzer.SymbolTable ( src/Analyzer/SymbolTable.hs, nothing )
+src/Analyzer/SymbolTable.hs:12:1: error: [GHC-87110]
+    Could not find module ‘Analyzer.Types’.
+    Use -v to see a list of the files searched for.
+   |
+12 | import Analyzer.Types
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/SymbolTable.hs:13:1: error: [GHC-87110]
+    Could not find module ‘Dependencies’.
+    Use -v to see a list of the files searched for.
+   |
+13 | import qualified Dependencies as Dep
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/SymbolTable.hs:14:1: error: [GHC-87110]
+    Could not find module ‘Ownership’.
+    Use -v to see a list of the files searched for.
+   |
+14 | import qualified Ownership as Own
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/SymbolTable.hs:15:1: error: [GHC-87110]
+    Could not find module ‘Compiler.GoAst’.
+    Use -v to see a list of the files searched for.
+   |
+15 | import Compiler.GoAst (GoModule(..), GoDecl(..), FuncDecl(..), VarDecl(..), ConstDecl(..), TypeDecl(..), parseGoModule, flattenDeclLines)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/SymbolTable.hs:16:1: error: [GHC-87110]
+    Could not find module ‘Compiler.GoVarSpec’.
+    Use -v to see a list of the files searched for.
+   |
+16 | import qualified Compiler.GoVarSpec as GoVar
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/SymbolTable.hs:17:1: error: [GHC-87110]
+    Could not find module ‘Compiler.GoParsing’.
+    Use -v to see a list of the files searched for.
+   |
+17 | import Compiler.GoParsing (stripLineComment, nestingDelta, splitTopLevel)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Analyzer.DependentTypeBridge ( src/Analyzer/DependentTypeBridge.hs, nothing )
+src/Analyzer/DependentTypeBridge.hs:7:1: error: [GHC-87110]
+    Could not find module ‘Analyzer.State’.
+    Use -v to see a list of the files searched for.
+  |
+7 | import Analyzer.State
+  | ^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/DependentTypeBridge.hs:8:1: error: [GHC-87110]
+    Could not find module ‘Analyzer.SymbolTable’.
+    Use -v to see a list of the files searched for.
+  |
+8 | import Analyzer.SymbolTable (trim)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/DependentTypeBridge.hs:9:1: error: [GHC-87110]
+    Could not find module ‘Analyzer.Types’.
+    Use -v to see a list of the files searched for.
+  |
+9 | import Analyzer.Types
+  | ^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/DependentTypeBridge.hs:10:1: error: [GHC-87110]
+    Could not find module ‘Dependencies’.
+    Use -v to see a list of the files searched for.
+   |
+10 | import qualified Dependencies as Dep
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/DependentTypeBridge.hs:11:1: error: [GHC-87110]
+    Could not find module ‘Parser’.
+    Use -v to see a list of the files searched for.
+   |
+11 | import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..), parseTypus)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/DependentTypeBridge.hs:12:1: error: [GHC-87110]
+    Could not find module ‘SourceLocation’.
+    Use -v to see a list of the files searched for.
+   |
+12 | import SourceLocation (Located, locatedValue)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/DependentTypeBridge.hs:13:1: error: [GHC-87110]
+    Could not find module ‘Compiler.DependentTypeChecker’.
+    Use -v to see a list of the files searched for.
+   |
+13 | import qualified Compiler.DependentTypeChecker as DepChecker
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/DependentTypeBridge.hs:14:1: error: [GHC-87110]
+    Could not find module ‘DependentTypesParser’.
+    Use -v to see a list of the files searched for.
+   |
+14 | import DependentTypesParser
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+[1 of 1] Compiling Analyzer.State   ( src/Analyzer/State.hs, nothing )
+src/Analyzer/State.hs:16:1: error: [GHC-87110]
+    Could not find module ‘Analyzer.Types’.
+    Use -v to see a list of the files searched for.
+   |
+16 | import Analyzer.Types
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/State.hs:17:1: error: [GHC-87110]
+    Could not find module ‘Ownership’.
+    Use -v to see a list of the files searched for.
+   |
+17 | import qualified Ownership as Own
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/State.hs:18:1: error: [GHC-87110]
+    Could not find module ‘Dependencies’.
+    Use -v to see a list of the files searched for.
+   |
+18 | import qualified Dependencies as Dep
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/State.hs:19:1: error: [GHC-87110]
+    Could not find module ‘Compiler.Errors.Core’.
+    Use -v to see a list of the files searched for.
+   |
+19 | import Compiler.Errors.Core (combinedErrorSeverity)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Analyzer.Types   ( src/Analyzer/Types.hs, nothing )
+src/Analyzer/Types.hs:16:1: error: [GHC-87110]
+    Could not find module ‘Ownership’.
+    Use -v to see a list of the files searched for.
+   |
+16 | import qualified Ownership as Own
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/Types.hs:17:1: error: [GHC-87110]
+    Could not find module ‘Dependencies’.
+    Use -v to see a list of the files searched for.
+   |
+17 | import qualified Dependencies as Dep
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/Types.hs:18:1: error: [GHC-87110]
+    Could not find module ‘Compiler.Errors.Core’.
+    Use -v to see a list of the files searched for.
+   |
+18 | import Compiler.Errors.Core (ErrorSeverity(..), CombinedError(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Analyzer.OwnershipBridge ( src/Analyzer/OwnershipBridge.hs, nothing )
+src/Analyzer/OwnershipBridge.hs:6:1: error: [GHC-87110]
+    Could not find module ‘Analyzer.State’.
+    Use -v to see a list of the files searched for.
+  |
+6 | import Analyzer.State
+  | ^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/OwnershipBridge.hs:7:1: error: [GHC-87110]
+    Could not find module ‘Analyzer.SymbolTable’.
+    Use -v to see a list of the files searched for.
+  |
+7 | import Analyzer.SymbolTable (isReservedName, trim)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/OwnershipBridge.hs:8:1: error: [GHC-87110]
+    Could not find module ‘Analyzer.Types’.
+    Use -v to see a list of the files searched for.
+  |
+8 | import Analyzer.Types
+  | ^^^^^^^^^^^^^^^^^^^^^
+
+src/Analyzer/OwnershipBridge.hs:9:1: error: [GHC-87110]
+    Could not find module ‘Ownership’.
+    Use -v to see a list of the files searched for.
+  |
+9 | import qualified Ownership as Own
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling DebugIntegration ( src/DebugIntegration.hs, nothing )
+src/DebugIntegration.hs:26:1: error: [GHC-87110]
+    Could not find module ‘Debug’.
+    Use -v to see a list of the files searched for.
+   |
+26 | import Debug
+   | ^^^^^^^^^^^^
+
+src/DebugIntegration.hs:27:1: error: [GHC-87110]
+    Could not find module ‘CommandLineDebug’.
+    Use -v to see a list of the files searched for.
+   |
+27 | import CommandLineDebug
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Compiler         ( src/Compiler.hs, nothing )
+src/Compiler.hs:30:1: error: [GHC-87110]
+    Could not find module ‘Parser’.
+    Use -v to see a list of the files searched for.
+   |
+30 | import Parser (TypusFile(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler.hs:31:1: error: [GHC-87110]
+    Could not find module ‘Compiler.GoAst’.
+    Use -v to see a list of the files searched for.
+   |
+31 | import Compiler.GoAst (renderGoModule)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler.hs:32:1: error: [GHC-87110]
+    Could not find module ‘Compiler.IR’.
+    Use -v to see a list of the files searched for.
+   |
+32 | import qualified Compiler.IR as IR
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler.hs:33:1: error: [GHC-87110]
+    Could not find module ‘Compiler.DependentTypeChecker’.
+    Use -v to see a list of the files searched for.
+   |
+33 | import Compiler.DependentTypeChecker (checkDependentTypes)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler.hs:34:1: error: [GHC-87110]
+    Could not find module ‘Compiler.OwnershipChecker’.
+    Use -v to see a list of the files searched for.
+   |
+34 | import Compiler.OwnershipChecker (checkOwnership, checkOwnershipWithValueInfo)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Compiler.hs:35:1: error: [GHC-87110]
+    Could not find module ‘Compiler.TypeChecker’.
+    Use -v to see a list of the files searched for.
+   |
+35 | import Compiler.TypeChecker
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/Compiler.hs:46:1: error: [GHC-87110]
+    Could not find module ‘Compiler.Errors’.
+    Use -v to see a list of the files searched for.
+   |
+46 | import Compiler.Errors
+   | ^^^^^^^^^^^^^^^^^^^^^^...
+
+[1 of 1] Compiling Ownership.Lexer  ( src/Ownership/Lexer.hs, nothing )
+src/Ownership/Lexer.hs:11:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Common.Lexer’.
+    Use -v to see a list of the files searched for.
+   |
+11 | import Ownership.Common.Lexer (Token(..), LexerSpec(..), lexWithSpec, Pos(..), TokenKind(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Ownership.Reporter ( src/Ownership/Reporter.hs, nothing )
+src/Ownership/Reporter.hs:7:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Common.Types’.
+    Use -v to see a list of the files searched for.
+  |
+7 | import Ownership.Common.Types (OwnershipError(..))
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Ownership.Parser ( src/Ownership/Parser.hs, nothing )
+src/Ownership/Parser.hs:16:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Common.Lexer’.
+    Use -v to see a list of the files searched for.
+   |
+16 | import Ownership.Common.Lexer (Pos(..), Token(..), TokenKind(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Ownership/Parser.hs:17:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Lexer’.
+    Use -v to see a list of the files searched for.
+   |
+17 | import Ownership.Lexer (Keyword(..), Sym(..), OwnershipToken, lexAll)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1 of 1] Compiling Ownership.Analyzer ( src/Ownership/Analyzer.hs, nothing )
+src/Ownership/Analyzer.hs:14:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Common.Lexer’.
+    Use -v to see a list of the files searched for.
+   |
+14 | import Ownership.Common.Lexer (Token(..), TokenKind(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Ownership/Analyzer.hs:15:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Common.Types’.
+    Use -v to see a list of the files searched for.
+   |
+15 | import Ownership.Common.Types (OwnershipError(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Ownership/Analyzer.hs:16:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Lexer’.
+    Use -v to see a list of the files searched for.
+   |
+16 | import Ownership.Lexer (Keyword(..), Sym(..), OwnershipToken, lexAll)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Ownership/Analyzer.hs:17:1: error: [GHC-87110]
+    Could not find module ‘Ownership.Parser’.
+    Use -v to see a list of the files searched for.
+   |
+17 | import Ownership.Parser
+   | ^^^^^^^^^^^^^^^^^^^^^^^...
 

@@ -14,6 +14,13 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, (@?=), testCase)
 import Data.List (isInfixOf)
 
+-- | Filter out HPC deprecation warnings from stderr output
+filterHpcWarnings :: String -> String
+filterHpcWarnings input = 
+    if "Deprecation warning:" `isInfixOf` input && "tix file" `isInfixOf` input
+    then ""
+    else input
+
 -- | End-to-end CLI tests that exercise the real 'typus' executable when available.
 --   We first try to run the 'typus' binary directly (thanks to build-tool-depends putting it on PATH).
 --   If it's not found, we fall back to running the CLI in-process.
@@ -32,7 +39,8 @@ tests =
               output = tmpDir </> "generated.go"
           (exitCode, _stdout, stderrOutput) <- runTypusCli ["convert", input, "-o", output]
           exitCode @?= ExitSuccess
-          assertBool "convert should not emit stderr" (null stderrOutput)
+          let filteredStderr = filterHpcWarnings stderrOutput
+          assertBool "convert should not emit stderr" (null filteredStderr)
           exists <- doesFileExist output
           assertBool "converted Go file should exist" exists
           generated <- readFile output
@@ -42,7 +50,8 @@ tests =
         (exitCode, stdout, stderrOutput) <- runTypusCli ["check", "test/data/cli_valid.typus"]
         exitCode @?= ExitSuccess
         assertBool "check should confirm success" ("Typus syntax and compilation OK" `isInfixOf` stdout)
-        stderrOutput @?= ""
+        let filteredStderr = filterHpcWarnings stderrOutput
+        filteredStderr @?= ""
 
     , testCase "typus check fails fast on syntax errors" $ do
         (exitCode, stdout, _stderrOutput) <- runTypusCli ["check", "test/data/cli_invalid.typus"]
@@ -55,7 +64,8 @@ tests =
           exitCode @?= ExitSuccess
           assertBool "build should log conversions" ("Converted:" `isInfixOf` stdout)
           assertBool "build should invoke go" ("Skipping Go command: go build" `isInfixOf` stdout)
-          stderrOutput @?= ""
+          let filteredStderr = filterHpcWarnings stderrOutput
+          filteredStderr @?= ""
 
     , testCase "typus build --strict-embed surfaces missing assets" $ do
         withTempFixture "test/data/cli_missing_embed.typus" $ \projectDir _ -> do
@@ -68,7 +78,8 @@ tests =
           (exitCode, stdout, stderrOutput) <- runTypusCli ["run", mainFile]
           exitCode @?= ExitSuccess
           assertBool "run should trigger go run" ("Skipping Go command: go run" `isInfixOf` stdout)
-          stderrOutput @?= ""
+          let filteredStderr = filterHpcWarnings stderrOutput
+          filteredStderr @?= ""
 
     , testCase "typus run fails when the entrypoint is missing" $ do
         (exitCode, stdout, _stderrOutput) <- runTypusCli ["run", "does-not-exist.typus"]

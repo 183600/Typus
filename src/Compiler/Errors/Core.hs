@@ -86,7 +86,7 @@ import qualified Data.Text as T
 import Data.List (intercalate, sortBy)
 import Data.Ord (comparing)
 import Data.Maybe (mapMaybe)
-import Control.Monad.State
+import Control.Monad.State (State, modify)
 import GHC.Generics (Generic)
 import Data.Aeson (ToJSON, FromJSON)
 import Data.Time (UTCTime, getCurrentTime, formatTime, defaultTimeLocale)

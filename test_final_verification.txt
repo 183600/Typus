@@ -4,46 +4,136 @@ In order, the following will be built (use -v for more details):
  - typus-0.12.0 (exe:typus) (configuration changed)
  - typus-0.12.0 (test:typus-test) (configuration changed)
 Configuring library for typus-0.12.0...
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-on the commandline: warning: [GHC-93741] [-Wunrecognised-warning-flags]
-    unrecognised warning flag: -Wderiving-strategies
-
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
 Preprocessing library for typus-0.12.0...
 Building library for typus-0.12.0...
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-/tmp/ghc336571-0.rsp: warning: [GHC-93741] [-Wunrecognised-warning-flags]
-    unrecognised warning flag: -Wderiving-strategies
+[ 2 of 54] Compiling CommandLineDebug ( src/CommandLineDebug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CommandLineDebug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CommandLineDebug.dyn_o ) [Source file changed]
+src/CommandLineDebug.hs:166:5: error: [GHC-88464]
+    Variable not in scope:
+      modifyIORef
+        :: IORef (Set String) -> (Set String -> Set String) -> IO a1
+    Suggested fixes:
+      • Perhaps use ‘modifyIORef'’ (imported from Data.IORef)
+      • Add ‘modifyIORef’ to the import list in the import of
+        ‘Data.IORef’ (at src/CommandLineDebug.hs:21:1-72).
+    |
+166 |     modifyIORef (cldBreakpoints config) (Set.insert location)
+    |     ^^^^^^^^^^^
 
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-/tmp/ghc336571-1.rsp: warning: [GHC-93741] [-Wunrecognised-warning-flags]
-    unrecognised warning flag: -Wderiving-strategies
+src/CommandLineDebug.hs:188:5: error: [GHC-88464]
+    Variable not in scope:
+      modifyIORef :: IORef Bool -> (Bool -> Bool) -> IO a0
+    Suggested fixes:
+      • Perhaps use ‘modifyIORef'’ (imported from Data.IORef)
+      • Add ‘modifyIORef’ to the import list in the import of
+        ‘Data.IORef’ (at src/CommandLineDebug.hs:21:1-72).
+    |
+188 |     modifyIORef (cldEnabled config) not
+    |     ^^^^^^^^^^^
 
-Configuring executable 'typus' for typus-0.12.0...
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-on the commandline: warning: [GHC-93741] [-Wunrecognised-warning-flags]
-    unrecognised warning flag: -Wderiving-strategies
+[15 of 54] Compiling EnhancedDebug    ( src/EnhancedDebug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedDebug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedDebug.dyn_o ) [Source file changed]
+src/EnhancedDebug.hs:129:9: error: [GHC-88464]
+    Variable not in scope:
+      modifyIORef
+        :: IORef (Map LogLevel Int)
+           -> (Map LogLevel a1 -> Map LogLevel a1) -> IO ()
+    Suggested fixes:
+      • Perhaps use ‘modifyIORef'’ (imported from Data.IORef)
+      • Add ‘modifyIORef’ to the import list in the import of
+        ‘Data.IORef’ (at src/EnhancedDebug.hs:31:1-72).
+    |
+129 |         modifyIORef (dlLogCount (edcLogger config)) 
+    |         ^^^^^^^^^^^
 
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-Preprocessing executable 'typus' for typus-0.12.0...
-Building executable 'typus' for typus-0.12.0...
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-/tmp/ghc336664-0.rsp: warning: [GHC-93741] [-Wunrecognised-warning-flags]
-    unrecognised warning flag: -Wderiving-strategies
+src/EnhancedDebug.hs:141:5: error: [GHC-88464]
+    Variable not in scope:
+      modifyIORef
+        :: IORef [LogLevel -> String -> IO ()]
+           -> ([LogLevel -> String -> IO ()] -> [LogLevel -> String -> IO ()])
+           -> IO ()
+    Suggested fixes:
+      • Perhaps use ‘modifyIORef'’ (imported from Data.IORef)
+      • Add ‘modifyIORef’ to the import list in the import of
+        ‘Data.IORef’ (at src/EnhancedDebug.hs:31:1-72).
+    |
+141 |     modifyIORef (dlOutputs (edcLogger config)) (output :)
+    |     ^^^^^^^^^^^
 
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-/tmp/ghc336664-1.rsp: warning: [GHC-93741] [-Wunrecognised-warning-flags]
-    unrecognised warning flag: -Wderiving-strategies
+src/EnhancedDebug.hs:146:5: error: [GHC-88464]
+    Variable not in scope:
+      modifyIORef
+        :: IORef (Set String) -> (Set String -> Set String) -> IO a2
+    Suggested fixes:
+      • Perhaps use ‘modifyIORef'’ (imported from Data.IORef)
+      • Add ‘modifyIORef’ to the import list in the import of
+        ‘Data.IORef’ (at src/EnhancedDebug.hs:31:1-72).
+    |
+146 |     modifyIORef (edcBreakpoints config) (Set.insert location)
+    |     ^^^^^^^^^^^
 
-Configuring test suite 'typus-test' for typus-0.12.0...
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-on the commandline: warning: [GHC-93741] [-Wunrecognised-warning-flags]
-    unrecognised warning flag: -Wderiving-strategies
+src/EnhancedDebug.hs:152:5: error: [GHC-88464]
+    Variable not in scope:
+      modifyIORef
+        :: IORef (Map String (String -> Bool))
+           -> (Map String (String -> Bool) -> Map String (String -> Bool))
+           -> IO a3
+    Suggested fixes:
+      • Perhaps use ‘modifyIORef'’ (imported from Data.IORef)
+      • Add ‘modifyIORef’ to the import list in the import of
+        ‘Data.IORef’ (at src/EnhancedDebug.hs:31:1-72).
+    |
+152 |     modifyIORef (edcConditionalBreakpoints config) (Map.insert location condition)
+    |     ^^^^^^^^^^^
 
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-Preprocessing test suite 'typus-test' for typus-0.12.0...
-Building test suite 'typus-test' for typus-0.12.0...
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-/tmp/ghc336747-0.rsp: error: [GHC-93741] [-Wunrecognised-warning-flags, Werror=unrecognised-warning-flags]
-    unrecognised warning flag: -Wderiving-strategies
+src/EnhancedDebug.hs:159:5: error: [GHC-88464]
+    Variable not in scope:
+      modifyIORef
+        :: IORef (Map String Int)
+           -> (Map String a6 -> Map String a6) -> IO a7
+    Suggested fixes:
+      • Perhaps use ‘modifyIORef'’ (imported from Data.IORef)
+      • Add ‘modifyIORef’ to the import list in the import of
+        ‘Data.IORef’ (at src/EnhancedDebug.hs:31:1-72).
+    |
+159 |     modifyIORef (edcExecutionCounts config) 
+    |     ^^^^^^^^^^^
+
+src/EnhancedDebug.hs:178:9: error: [GHC-88464]
+    Variable not in scope:
+      modifyIORef
+        :: IORef (Map String Int)
+           -> (Map String a4 -> Map String a4) -> IO a5
+    Suggested fixes:
+      • Perhaps use ‘modifyIORef'’ (imported from Data.IORef)
+      • Add ‘modifyIORef’ to the import list in the import of
+        ‘Data.IORef’ (at src/EnhancedDebug.hs:31:1-72).
+    |
+178 |         modifyIORef (edcBreakpointHitCount config) 
+    |         ^^^^^^^^^^^
+
+src/EnhancedDebug.hs:319:5: error: [GHC-88464]
+    Variable not in scope:
+      modifyIORef :: IORef [String] -> ([String] -> [String]) -> IO a8
+    Suggested fixes:
+      • Perhaps use ‘modifyIORef'’ (imported from Data.IORef)
+      • Add ‘modifyIORef’ to the import list in the import of
+        ‘Data.IORef’ (at src/EnhancedDebug.hs:31:1-72).
+    |
+319 |     modifyIORef (edcFunctionStack config) (functionName :)
+    |     ^^^^^^^^^^^
+
+src/EnhancedDebug.hs:342:5: error: [GHC-88464]
+    Variable not in scope:
+      modifyIORef
+        :: IORef (Map String Double)
+           -> (Map String Double -> Map String Double) -> IO a0
+    Suggested fixes:
+      • Perhaps use ‘modifyIORef'’ (imported from Data.IORef)
+      • Add ‘modifyIORef’ to the import list in the import of
+        ‘Data.IORef’ (at src/EnhancedDebug.hs:31:1-72).
+    |
+342 |     modifyIORef (edcTimings config) (Map.insertWith (+) label duration)
+    |     ^^^^^^^^^^^
+
+Error: [Cabal-7125]
+Failed to build typus-0.12.0 (which is required by test:typus-test from typus-0.12.0).
 

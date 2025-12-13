@@ -3,11 +3,9 @@ packages: typus.cabal
 program-options
   ghc-options: -Wall
 
--- 避免locale警告的配置
+-- 设置测试详情显示
 test-show-details: direct
 
--- 设置locale避免警告
--- 使用C locale以避免locale相关的警告
--- 禁用locale警告
+-- 优化链接器选项
 package *
   ghc-options: -optl-Wl,-s

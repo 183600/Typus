@@ -1,0 +1,2 @@
+Compilation successful
+Converted: test.typus -> test.go

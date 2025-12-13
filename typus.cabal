@@ -20,7 +20,7 @@ source-repository head
   location: https://gitee.com/qwe12345678/typus.git
 
 common warnings
-    ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -Wmissing-export-lists -Wmissing-home-modules -Wmonomorphism-restriction -Wmissing-signatures -Wname-shadowing -Worphans -Wpartial-type-signatures -Wtabs -Wtype-defaults -Wunrecognised-pragmas -Wunused-do-bind -Wunused-foralls -Wunused-imports -Wunused-matches -Wunused-top-binds -Wunused-type-patterns -Wwarn=deprecations -Wwarn=unused-imports -Wwarn=unused-matches -Wwarn=unused-local-binds -Wwarn=unused-top-binds -Wwarn=unused-type-patterns
+    ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -Wmissing-export-lists -Wmissing-home-modules -Wmonomorphism-restriction -Wmissing-signatures -Wname-shadowing -Worphans -Wpartial-type-signatures -Wtabs -Wtype-defaults -Wunrecognised-pragmas -Wunused-do-bind -Wunused-foralls -Wunused-imports -Wunused-matches -Wunused-top-binds -Wunused-type-patterns -Wdeprecations
     if flag(werror)
         ghc-options: -Werror
 

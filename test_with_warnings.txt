@@ -1,6 +1,23 @@
 Build profile: -w ghc-9.12.2 -O1
 In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (configuration changed)
+ - typus-0.12.0 (exe:typus) (configuration changed)
  - typus-0.12.0 (test:typus-test) (first run)
+Configuring library for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Preprocessing library for typus-0.12.0...
+Building library for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Configuring executable 'typus' for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Preprocessing executable 'typus' for typus-0.12.0...
+Building executable 'typus' for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+[2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus [Flags changed]
 Configuring test suite 'typus-test' for typus-0.12.0...
 /bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
 /bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
@@ -335,7 +352,7 @@ Typus
       compiles complex types efficiently:                                                   OK
       handles deeply nested structures efficiently:                                         OK
       processes many small functions efficiently:                                           OK (0.08s)
-      memory usage remains reasonable for large files:                                      OK (0.07s)
+      memory usage remains reasonable for large files:                                      OK (0.06s)
       compilation time scales linearly with file size:                                      OK
       error handling doesn't significantly impact performance:                              OK
       parallel processing potential:                                                        OK
@@ -363,7 +380,7 @@ Typus
       handles memory pressure simulation:                                                   OK
   Integration
     Integration
-      compiles sample program and optionally builds with Go:                                OK (0.13s)
+      compiles sample program and optionally builds with Go:                                OK (0.12s)
       ownership analysis flags complex violations:                                          OK
       dependent type directives propagate from fixture:                                     OK
     Integrated Analyzer
@@ -427,7 +444,7 @@ Typus
       statements without package/import infer a runnable main:                              OK
       generic type parameters render Go square bracket notation:                            OK
 
-All 319 tests passed (0.42s)
+All 319 tests passed (0.40s)
 Test suite typus-test: PASS
 Test suite logged to:
 /home/runner/work/Typus/Typus/./dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/test/typus-0.12.0-typus-test.log

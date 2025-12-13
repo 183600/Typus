@@ -1,130 +1,16 @@
-Resolving dependencies...
 Build profile: -w ghc-9.12.2 -O1
 In order, the following will be built (use -v for more details):
- - typus-0.12.0 (lib) (first run)
- - typus-0.12.0 (exe:typus) (first run)
+ - typus-0.12.0 (lib) (configuration changed)
+ - typus-0.12.0 (exe:typus) (configuration changed)
+ - typus-0.12.0 (test:typus-test) (configuration changed)
 Configuring library for typus-0.12.0...
 Preprocessing library for typus-0.12.0...
 Building library for typus-0.12.0...
-[ 1 of 54] Compiling Cli              ( src/Cli.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli.dyn_o )
-[ 2 of 54] Compiling CommandLineDebug ( src/CommandLineDebug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CommandLineDebug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CommandLineDebug.dyn_o )
-[ 3 of 54] Compiling Compiler.Error   ( src/Compiler/Error.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Error.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Error.dyn_o )
-[ 4 of 54] Compiling Compiler.GoAst   ( src/Compiler/GoAst.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoAst.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoAst.dyn_o )
-src/Compiler/GoAst.hs:125:15: error: [GHC-25897]
-    * Couldn't match expected type `a' with actual type `a1'
-      `a1' is a rigid type variable bound by
-        the type signature for:
-          go :: forall a1. [a1] -> [a1] -> ([a1], [a1])
-        at src/Compiler/GoAst.hs:122:9-38
-      `a' is a rigid type variable bound by
-        the type signature for:
-          takeWhileInclusive :: forall a. (a -> Bool) -> [a] -> ([a], [a])
-        at src/Compiler/GoAst.hs:119:5-58
-    * In the first argument of `p', namely `y'
-      In the expression: p y
-      In a stmt of a pattern guard for
-                     an equation for `go':
-        p y
-    * Relevant bindings include
-        ys :: [a1] (bound at src/Compiler/GoAst.hs:124:22)
-        y :: a1 (bound at src/Compiler/GoAst.hs:124:20)
-        xs :: [a1] (bound at src/Compiler/GoAst.hs:124:16)
-        acc :: [a1] (bound at src/Compiler/GoAst.hs:124:12)
-        go :: [a1] -> [a1] -> ([a1], [a1])
-          (bound at src/Compiler/GoAst.hs:123:9)
-        p :: a -> Bool (bound at src/Compiler/GoAst.hs:120:24)
-        (Some bindings suppressed; use -fmax-relevant-binds=N or -fno-max-relevant-binds)
-    |
-125 |           | p y = go (y:acc) ys
-    |               ^
-
-src/Compiler/GoAst.hs:154:29: error: [GHC-25897]
-    * Couldn't match expected type `a' with actual type `a1'
-      `a1' is a rigid type variable bound by
-        the type signature for:
-          step :: forall a1 b1. a1 -> [b1] -> [b1]
-        at src/Compiler/GoAst.hs:153:9-31
-      `a' is a rigid type variable bound by
-        the type signature for:
-          mapMaybe :: forall (t :: * -> *) a b.
-                      Foldable t =>
-                      (a -> Maybe b) -> t a -> [b]
-        at src/Compiler/GoAst.hs:150:5-58
-    * In the first argument of `f', namely `x'
-      In the expression: f x
-      In the expression:
-        case f x of
-          Nothing -> acc
-          Just y -> y : acc
-    * Relevant bindings include
-        x :: a1 (bound at src/Compiler/GoAst.hs:154:14)
-        step :: a1 -> [b1] -> [b1] (bound at src/Compiler/GoAst.hs:154:9)
-        f :: a -> Maybe b (bound at src/Compiler/GoAst.hs:151:14)
-        mapMaybe :: (a -> Maybe b) -> t a -> [b]
-          (bound at src/Compiler/GoAst.hs:151:5)
-    |
-154 |         step x acc = case f x of
-    |                             ^
-
-src/Compiler/GoAst.hs:156:22: error: [GHC-25897]
-    * Couldn't match expected type `b1' with actual type `b'
-      `b1' is a rigid type variable bound by
-        the type signature for:
-          step :: forall a1 b1. a1 -> [b1] -> [b1]
-        at src/Compiler/GoAst.hs:153:9-31
-      `b' is a rigid type variable bound by
-        the type signature for:
-          mapMaybe :: forall (t :: * -> *) a b.
-                      Foldable t =>
-                      (a -> Maybe b) -> t a -> [b]
-        at src/Compiler/GoAst.hs:150:5-58
-    * In the first argument of `(:)', namely `y'
-      In the expression: y : acc
-      In a case alternative: Just y -> y : acc
-    * Relevant bindings include
-        y :: b (bound at src/Compiler/GoAst.hs:156:16)
-        acc :: [b1] (bound at src/Compiler/GoAst.hs:154:16)
-        step :: a1 -> [b1] -> [b1] (bound at src/Compiler/GoAst.hs:154:9)
-        f :: a -> Maybe b (bound at src/Compiler/GoAst.hs:151:14)
-        mapMaybe :: (a -> Maybe b) -> t a -> [b]
-          (bound at src/Compiler/GoAst.hs:151:5)
-    |
-156 |           Just y  -> y : acc
-    |                      ^
-
-[ 5 of 54] Compiling Compiler.GoLexer ( src/Compiler/GoLexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoLexer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoLexer.dyn_o )
-[ 6 of 54] Compiling Debug            ( src/Debug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Debug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Debug.dyn_o )
-[ 7 of 54] Compiling DebugIntegration ( src/DebugIntegration.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DebugIntegration.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DebugIntegration.dyn_o )
-[ 8 of 54] Compiling Dependencies.AST ( src/Dependencies/AST.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/AST.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/AST.dyn_o )
-[ 9 of 54] Compiling Dependencies.Parser ( src/Dependencies/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Parser.dyn_o )
-[10 of 54] Compiling Dependencies.TypeSystem ( src/Dependencies/TypeSystem.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/TypeSystem.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/TypeSystem.dyn_o )
-[11 of 54] Compiling Dependencies.Inference ( src/Dependencies/Inference.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Inference.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Inference.dyn_o )
-[12 of 54] Compiling Dependencies.Analyzer ( src/Dependencies/Analyzer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Analyzer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Analyzer.dyn_o )
-[13 of 54] Compiling Dependencies     ( src/Dependencies.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies.dyn_o )
-[14 of 54] Compiling DependentTypesParser ( src/DependentTypesParser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DependentTypesParser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DependentTypesParser.dyn_o )
-[15 of 54] Compiling EnhancedDebug    ( src/EnhancedDebug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedDebug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedDebug.dyn_o )
-[16 of 54] Compiling Cli.DebugRunner  ( src/Cli/DebugRunner.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/DebugRunner.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/DebugRunner.dyn_o )
-[17 of 54] Compiling Ownership.Common.Lexer ( src/Ownership/Common/Lexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Lexer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Lexer.dyn_o )
-[18 of 54] Compiling Ownership.Common.Types ( src/Ownership/Common/Types.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Types.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Types.dyn_o )
-[19 of 54] Compiling Compiler.Errors.Core ( src/Compiler/Errors/Core.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Core.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Core.dyn_o )
-[20 of 54] Compiling ErrorHandler     ( src/ErrorHandler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/ErrorHandler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/ErrorHandler.dyn_o )
-[21 of 54] Compiling Ownership.Lexer  ( src/Ownership/Lexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Lexer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Lexer.dyn_o )
-[22 of 54] Compiling Ownership.Parser ( src/Ownership/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Parser.dyn_o )
-[23 of 54] Compiling Ownership.Analyzer ( src/Ownership/Analyzer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Analyzer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Analyzer.dyn_o )
-[24 of 54] Compiling Ownership.Reporter ( src/Ownership/Reporter.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Reporter.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Reporter.dyn_o )
-[25 of 54] Compiling Ownership        ( src/Ownership.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership.dyn_o )
-[26 of 54] Compiling Analyzer.Types   ( src/Analyzer/Types.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/Types.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/Types.dyn_o )
-[27 of 54] Compiling Analyzer.State   ( src/Analyzer/State.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/State.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/State.dyn_o )
-[29 of 54] Compiling SimpleSyntaxValidator ( src/SimpleSyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SimpleSyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SimpleSyntaxValidator.dyn_o )
-[30 of 54] Compiling SourceLocation   ( src/SourceLocation.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SourceLocation.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SourceLocation.dyn_o )
-[31 of 54] Compiling Compiler.Errors.Compiler ( src/Compiler/Errors/Compiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Compiler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Compiler.dyn_o )
-[32 of 54] Compiling EnhancedErrorHandler ( src/EnhancedErrorHandler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedErrorHandler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedErrorHandler.dyn_o )
-[33 of 54] Compiling Compiler.Errors  ( src/Compiler/Errors.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors.dyn_o )
-[34 of 54] Compiling SyntaxValidator  ( src/SyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SyntaxValidator.dyn_o )
-[35 of 54] Compiling Utils            ( src/Utils.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Utils.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Utils.dyn_o )
-[36 of 54] Compiling Parser           ( src/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Parser.dyn_o )
-[37 of 54] Compiling Compiler.DependentTypeChecker ( src/Compiler/DependentTypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/DependentTypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/DependentTypeChecker.dyn_o )
-[38 of 54] Compiling Compiler.GoParsing ( src/Compiler/GoParsing.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoParsing.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoParsing.dyn_o )
-Error: [Cabal-7125]
-Failed to build typus-0.12.0 (which is required by exe:typus from typus-0.12.0).
-
+Configuring executable 'typus' for typus-0.12.0...
+Preprocessing executable 'typus' for typus-0.12.0...
+Building executable 'typus' for typus-0.12.0...
+[2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus [Flags changed]
+Configuring test suite 'typus-test' for typus-0.12.0...
+Preprocessing test suite 'typus-test' for typus-0.12.0...
+Building test suite 'typus-test' for typus-0.12.0...
+[39 of 39] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test [Flags changed]

@@ -1051,7 +1051,7 @@ checkCircularDependencies functionInfos =
         let visited :: Set String
             visited = Set.empty
             recStack :: Set String
-            recStack = Set.empty
+            recStack = Set.empty :: Set String
         in dfsAll graph visited recStack []
     
     dfsAll :: Map String [String] -> Set String -> Set String -> [[String]] -> [[String]]

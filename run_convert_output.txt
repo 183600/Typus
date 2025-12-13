@@ -1,0 +1,5 @@
+Missing: (-o|--output OUTPUT)
+
+Usage: typus convert INPUT (-o|--output OUTPUT)
+
+  Convert Typus files to Go

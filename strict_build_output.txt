@@ -1,0 +1,1584 @@
+Resolving dependencies...
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (first run)
+ - typus-0.12.0 (exe:typus) (first run)
+ - typus-0.12.0 (test:typus-test) (first run)
+Configuring library for typus-0.12.0...
+Preprocessing library for typus-0.12.0...
+Building library for typus-0.12.0...
+[ 1 of 54] Compiling Cli              ( src/Cli.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli.dyn_o )
+[ 2 of 54] Compiling CommandLineDebug ( src/CommandLineDebug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CommandLineDebug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CommandLineDebug.dyn_o )
+[ 3 of 54] Compiling Compiler.Error   ( src/Compiler/Error.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Error.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Error.dyn_o )
+src/Compiler/Error.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+
+src/Compiler/Error.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+
+[ 4 of 54] Compiling Compiler.GoAst   ( src/Compiler/GoAst.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoAst.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoAst.dyn_o )
+src/Compiler/GoAst.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘isPrefixOf’
+
+src/Compiler/GoAst.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+
+src/Compiler/GoAst.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+
+[ 5 of 54] Compiling Compiler.GoLexer ( src/Compiler/GoLexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoLexer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoLexer.dyn_o )
+src/Compiler/GoLexer.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.List.elem’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.List.elem’
+
+src/Compiler/GoLexer.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘isPrefixOf’
+
+[ 6 of 54] Compiling Debug            ( src/Debug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Debug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Debug.dyn_o )
+src/Debug.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘formatTime’
+    Probable fix: add INLINABLE pragma on ‘formatTime’
+
+[ 7 of 54] Compiling DebugIntegration ( src/DebugIntegration.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DebugIntegration.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DebugIntegration.dyn_o )
+src/DebugIntegration.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘debugError’
+    Probable fix: add INLINABLE pragma on ‘debugError’
+
+[ 8 of 54] Compiling Dependencies.AST ( src/Dependencies/AST.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/AST.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/AST.dyn_o )
+src/Dependencies/AST.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+
+src/Dependencies/AST.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+
+src/Dependencies/AST.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowTuple2_$cshowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowTuple2_$cshowList’
+
+[ 9 of 54] Compiling Dependencies.Parser ( src/Dependencies/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Parser.dyn_o )
+src/Dependencies/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+      when specialising ‘Data.Set.Internal.$wsplitS’
+      when specialising ‘Data.Set.Internal.splitS’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+      when specialising ‘Data.Set.Internal.$wsplitS’
+      when specialising ‘Data.Set.Internal.splitS’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+      when specialising ‘Data.Set.Internal.insert’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+      when specialising ‘Data.Set.Internal.insert’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+      when specialising ‘Data.Set.Internal.insertR’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+      when specialising ‘Data.Set.Internal.insertR’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem’
+      when specialising ‘Text.Megaparsec.Internal.accHints’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem’
+
+src/Dependencies/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem_$c<’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem_$c<’
+
+src/Dependencies/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorFancy’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorFancy’
+
+src/Dependencies/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadParsecesParsecT1’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadParsecesParsecT1’
+
+src/Dependencies/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘MP.errorBundlePretty’
+    Probable fix: add INLINABLE pragma on ‘MP.errorBundlePretty’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+      when specialising ‘Text.Megaparsec.Char.Lexer.$wdecimal’
+      when specialising ‘L.decimal’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+      when specialising ‘Text.Megaparsec.Char.Lexer.$wdecimal’
+      when specialising ‘L.decimal’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+      when specialising ‘Text.Megaparsec.Char.Lexer.$wdecimal’
+      when specialising ‘L.decimal’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+
+src/Dependencies/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.List.elem’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.List.elem’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem’
+      when specialising ‘Text.Megaparsec.Internal.withHints’
+      when specialising ‘Text.Megaparsec.Internal.pBind’
+      when specialising ‘L.skipBlockComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘optional’
+      when specialising ‘L.skipBlockComment’
+    Probable fix: add INLINABLE pragma on ‘optional’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+      when specialising ‘L.skipBlockComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadParsecT’
+      when specialising ‘L.skipBlockComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadParsecT’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+      when specialising ‘L.skipBlockComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+      when specialising ‘L.skipBlockComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+      when specialising ‘Text.Megaparsec.Char.Lexer.$wskipLineComment’
+      when specialising ‘L.skipLineComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+      when specialising ‘Text.Megaparsec.Char.Lexer.$wskipLineComment’
+      when specialising ‘L.skipLineComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+      when specialising ‘Text.Megaparsec.Char.Lexer.$wskipLineComment’
+      when specialising ‘L.skipLineComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem’
+      when specialising ‘Text.Megaparsec.Internal.pPlus’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem_$cmax’
+      when specialising ‘Text.Megaparsec.Internal.pPlus’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem_$cmax’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorFancy’
+      when specialising ‘Text.Megaparsec.Internal.pPlus’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorFancy’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadParsecT’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadParsecT’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+
+src/Dependencies/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+
+src/Dependencies/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadParsecesParsecT’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadParsecesParsecT’
+
+[10 of 54] Compiling Dependencies.TypeSystem ( src/Dependencies/TypeSystem.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/TypeSystem.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/TypeSystem.dyn_o )
+src/Dependencies/TypeSystem.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fOrdList_$ccompare’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fOrdList_$ccompare’
+
+src/Dependencies/TypeSystem.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.C:Ord’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.C:Ord’
+
+src/Dependencies/TypeSystem.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘lookup’
+    Probable fix: add INLINABLE pragma on ‘lookup’
+
+src/Dependencies/TypeSystem.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+
+src/Dependencies/TypeSystem.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Data.Map.Internal.$fEqMap_$c==’
+    Probable fix: add INLINABLE pragma on ‘Data.Map.Internal.$fEqMap_$c==’
+
+src/Dependencies/TypeSystem.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Data.Map.Internal.$fShowMap_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘Data.Map.Internal.$fShowMap_$cshowsPrec’
+
+[11 of 54] Compiling Dependencies.Inference ( src/Dependencies/Inference.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Inference.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Inference.dyn_o )
+[12 of 54] Compiling Dependencies.Analyzer ( src/Dependencies/Analyzer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Analyzer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Analyzer.dyn_o )
+[13 of 54] Compiling Dependencies     ( src/Dependencies.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies.dyn_o )
+[14 of 54] Compiling DependentTypesParser ( src/DependentTypesParser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DependentTypesParser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DependentTypesParser.dyn_o )
+src/DependentTypesParser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+      when specialising ‘Data.Set.Internal.$wsplitS’
+      when specialising ‘Data.Set.Internal.splitS’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+      when specialising ‘Data.Set.Internal.$wsplitS’
+      when specialising ‘Data.Set.Internal.splitS’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+      when specialising ‘Data.Set.Internal.insert’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+      when specialising ‘Data.Set.Internal.insert’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+      when specialising ‘Data.Set.Internal.insertR’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+      when specialising ‘Data.Set.Internal.insertR’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem’
+      when specialising ‘Text.Megaparsec.Internal.accHints’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem’
+
+src/DependentTypesParser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem_$c<’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem_$c<’
+
+src/DependentTypesParser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorFancy’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorFancy’
+
+src/DependentTypesParser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadParsecesParsecT1’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadParsecesParsecT1’
+
+src/DependentTypesParser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘errorBundlePretty’
+    Probable fix: add INLINABLE pragma on ‘errorBundlePretty’
+
+src/DependentTypesParser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Stream.$fStreamList_$ctakeN_’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Stream.$fStreamList_$ctakeN_’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+      when specialising ‘Text.Megaparsec.Char.Lexer.$wdecimal’
+      when specialising ‘L.decimal’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+      when specialising ‘Text.Megaparsec.Char.Lexer.$wdecimal’
+      when specialising ‘L.decimal’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+      when specialising ‘Text.Megaparsec.Char.Lexer.$wdecimal’
+      when specialising ‘L.decimal’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+
+src/DependentTypesParser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.List.elem’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.List.elem’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Stream.$fStreamList_$ctakeN_’
+      when specialising ‘Text.Megaparsec.Internal.pTokens’
+      when specialising ‘Text.Megaparsec.Char.Lexer.$wskipLineComment’
+      when specialising ‘L.skipLineComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Stream.$fStreamList_$ctakeN_’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem’
+      when specialising ‘Text.Megaparsec.Internal.withHints’
+      when specialising ‘Text.Megaparsec.Internal.$fApplicativeParsecT_$c*>’
+      when specialising ‘Text.Megaparsec.Char.Lexer.$wskipLineComment’
+      when specialising ‘L.skipLineComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+      when specialising ‘Text.Megaparsec.Char.Lexer.$wskipLineComment’
+      when specialising ‘L.skipLineComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+      when specialising ‘Text.Megaparsec.Char.Lexer.$wskipLineComment’
+      when specialising ‘L.skipLineComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+      when specialising ‘Text.Megaparsec.Char.Lexer.$wskipLineComment’
+      when specialising ‘L.skipLineComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘MP.optional’
+      when specialising ‘L.skipBlockComment’
+    Probable fix: add INLINABLE pragma on ‘MP.optional’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+      when specialising ‘L.skipBlockComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadParsecT’
+      when specialising ‘L.skipBlockComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadParsecT’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+      when specialising ‘L.skipBlockComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+      when specialising ‘L.skipBlockComment’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem’
+      when specialising ‘Text.Megaparsec.Internal.pPlus’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem_$cmax’
+      when specialising ‘Text.Megaparsec.Internal.pPlus’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem_$cmax’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorFancy’
+      when specialising ‘Text.Megaparsec.Internal.pPlus’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorFancy’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadParsecT’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadParsecT’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+
+src/DependentTypesParser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+
+src/DependentTypesParser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadParsecesParsecT’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadParsecesParsecT’
+
+src/DependentTypesParser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Data.Map.Internal.$fEqMap_$c==’
+    Probable fix: add INLINABLE pragma on ‘Data.Map.Internal.$fEqMap_$c==’
+
+src/DependentTypesParser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+
+src/DependentTypesParser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Data.Map.Internal.$fShowMap_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘Data.Map.Internal.$fShowMap_$cshowsPrec’
+
+src/DependentTypesParser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowTuple2_$cshowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowTuple2_$cshowList’
+
+[15 of 54] Compiling EnhancedDebug    ( src/EnhancedDebug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedDebug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedDebug.dyn_o )
+src/EnhancedDebug.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Data.Fixed.$fRealFixed’
+    Probable fix: add INLINABLE pragma on ‘Data.Fixed.$fRealFixed’
+
+src/EnhancedDebug.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘realToFrac’
+    Probable fix: add INLINABLE pragma on ‘realToFrac’
+
+src/EnhancedDebug.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Enum.toEnumError’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Enum.toEnumError’
+
+src/EnhancedDebug.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.C:Ord’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.C:Ord’
+
+[16 of 54] Compiling Cli.DebugRunner  ( src/Cli/DebugRunner.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/DebugRunner.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/DebugRunner.dyn_o )
+[17 of 54] Compiling Ownership.Common.Lexer ( src/Ownership/Common/Lexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Lexer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Lexer.dyn_o )
+src/Ownership/Common/Lexer.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘isPrefixOf’
+
+src/Ownership/Common/Lexer.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘lookup’
+    Probable fix: add INLINABLE pragma on ‘lookup’
+
+[18 of 54] Compiling Ownership.Common.Types ( src/Ownership/Common/Types.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Types.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Types.dyn_o )
+[19 of 54] Compiling Compiler.Errors.Core ( src/Compiler/Errors/Core.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Core.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Core.dyn_o )
+src/Compiler/Errors/Core.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘formatTime’
+    Probable fix: add INLINABLE pragma on ‘formatTime’
+
+src/Compiler/Errors/Core.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.C:Ord’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.C:Ord’
+
+src/Compiler/Errors/Core.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+
+src/Compiler/Errors/Core.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+
+src/Compiler/Errors/Core.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowTuple2_$cshowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowTuple2_$cshowList’
+
+src/Compiler/Errors/Core.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘aeson-2.2.3.0-8b2ea0fa7c7255a578f0296560e6e41f5f8c21244cf9a1dce1a318b6e1e3f36a:Data.Aeson.Types.FromJSON.parseAllNullarySum’
+    Probable fix: add INLINABLE pragma on ‘aeson-2.2.3.0-8b2ea0fa7c7255a578f0296560e6e41f5f8c21244cf9a1dce1a318b6e1e3f36a:Data.Aeson.Types.FromJSON.parseAllNullarySum’
+
+src/Compiler/Errors/Core.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Generics.$fConstructorMetaMetaCons’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Generics.$fConstructorMetaMetaCons’
+
+src/Compiler/Errors/Core.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqTuple2’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqTuple2’
+
+src/Compiler/Errors/Core.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘aeson-2.2.3.0-8b2ea0fa7c7255a578f0296560e6e41f5f8c21244cf9a1dce1a318b6e1e3f36a:Data.Aeson.Types.FromJSON.$fFromJSONIntMap_$cparseJSONList1’
+    Probable fix: add INLINABLE pragma on ‘aeson-2.2.3.0-8b2ea0fa7c7255a578f0296560e6e41f5f8c21244cf9a1dce1a318b6e1e3f36a:Data.Aeson.Types.FromJSON.$fFromJSONIntMap_$cparseJSONList1’
+
+src/Compiler/Errors/Core.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘aeson-2.2.3.0-8b2ea0fa7c7255a578f0296560e6e41f5f8c21244cf9a1dce1a318b6e1e3f36a:Data.Aeson.Types.ToJSON.$fToJSONKeyTuple2_$ctoJSONList’
+    Probable fix: add INLINABLE pragma on ‘aeson-2.2.3.0-8b2ea0fa7c7255a578f0296560e6e41f5f8c21244cf9a1dce1a318b6e1e3f36a:Data.Aeson.Types.ToJSON.$fToJSONKeyTuple2_$ctoJSONList’
+
+src/Compiler/Errors/Core.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘aeson-2.2.3.0-8b2ea0fa7c7255a578f0296560e6e41f5f8c21244cf9a1dce1a318b6e1e3f36a:Data.Aeson.Types.FromJSON.$fFromJSONList’
+    Probable fix: add INLINABLE pragma on ‘aeson-2.2.3.0-8b2ea0fa7c7255a578f0296560e6e41f5f8c21244cf9a1dce1a318b6e1e3f36a:Data.Aeson.Types.FromJSON.$fFromJSONList’
+
+[20 of 54] Compiling ErrorHandler     ( src/ErrorHandler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/ErrorHandler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/ErrorHandler.dyn_o )
+[21 of 54] Compiling Ownership.Lexer  ( src/Ownership/Lexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Lexer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Lexer.dyn_o )
+[22 of 54] Compiling Ownership.Parser ( src/Ownership/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Parser.dyn_o )
+src/Ownership/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+
+src/Ownership/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Ownership.Common.Lexer.$fEqToken’
+    Probable fix: add INLINABLE pragma on ‘Ownership.Common.Lexer.$fEqToken’
+
+src/Ownership/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Data.Map.Internal.$fEqMap_$c==’
+    Probable fix: add INLINABLE pragma on ‘Data.Map.Internal.$fEqMap_$c==’
+
+src/Ownership/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+
+src/Ownership/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Data.Map.Internal.$fShowMap_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘Data.Map.Internal.$fShowMap_$cshowsPrec’
+
+src/Ownership/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Ownership.Common.Lexer.$w$cshowsPrec1’
+    Probable fix: add INLINABLE pragma on ‘Ownership.Common.Lexer.$w$cshowsPrec1’
+
+[23 of 54] Compiling Ownership.Analyzer ( src/Ownership/Analyzer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Analyzer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Analyzer.dyn_o )
+src/Ownership/Analyzer.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+src/Ownership/Analyzer.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.List.elem’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.List.elem’
+
+src/Ownership/Analyzer.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Data.Map.Internal.$fShowMap_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘Data.Map.Internal.$fShowMap_$cshowsPrec’
+
+src/Ownership/Analyzer.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowList’
+
+src/Ownership/Analyzer.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+
+[24 of 54] Compiling Ownership.Reporter ( src/Ownership/Reporter.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Reporter.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Reporter.dyn_o )
+[25 of 54] Compiling Ownership        ( src/Ownership.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership.dyn_o )
+[26 of 54] Compiling Analyzer.Types   ( src/Analyzer/Types.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/Types.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/Types.dyn_o )
+src/Analyzer/Types.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+
+src/Analyzer/Types.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Data.Map.Internal.$fEqMap_$c==’
+    Probable fix: add INLINABLE pragma on ‘Data.Map.Internal.$fEqMap_$c==’
+
+src/Analyzer/Types.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowTuple2_$cshowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowTuple2_$cshowList’
+
+src/Analyzer/Types.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Data.Map.Internal.$fShowMap_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘Data.Map.Internal.$fShowMap_$cshowsPrec’
+
+src/Analyzer/Types.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqTuple2’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqTuple2’
+
+src/Analyzer/Types.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+
+[27 of 54] Compiling Analyzer.State   ( src/Analyzer/State.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/State.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/State.dyn_o )
+[28 of 54] Compiling Analyzer.CrossAnalysis ( src/Analyzer/CrossAnalysis.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/CrossAnalysis.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/CrossAnalysis.dyn_o )
+src/Analyzer/CrossAnalysis.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fOrdTuple2’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fOrdTuple2’
+
+src/Analyzer/CrossAnalysis.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fOrdTuple2_$ccompare’
+      when specialising ‘Map.insertWith’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fOrdTuple2_$ccompare’
+
+src/Analyzer/CrossAnalysis.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘isPrefixOf’
+
+[29 of 54] Compiling SimpleSyntaxValidator ( src/SimpleSyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SimpleSyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SimpleSyntaxValidator.dyn_o )
+src/SimpleSyntaxValidator.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘isPrefixOf’
+
+src/SimpleSyntaxValidator.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.List.elem’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.List.elem’
+
+src/SimpleSyntaxValidator.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowTuple3_$cshowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowTuple3_$cshowList’
+
+[30 of 54] Compiling SourceLocation   ( src/SourceLocation.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SourceLocation.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SourceLocation.dyn_o )
+src/SourceLocation.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.C:Ord’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.C:Ord’
+
+[31 of 54] Compiling Compiler.Errors.Compiler ( src/Compiler/Errors/Compiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Compiler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Compiler.dyn_o )
+src/Compiler/Errors/Compiler.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Data.Map.Internal.$fShowMap_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘Data.Map.Internal.$fShowMap_$cshowsPrec’
+
+src/Compiler/Errors/Compiler.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+
+src/Compiler/Errors/Compiler.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.C:Ord’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.C:Ord’
+
+[32 of 54] Compiling EnhancedErrorHandler ( src/EnhancedErrorHandler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedErrorHandler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedErrorHandler.dyn_o )
+[33 of 54] Compiling Compiler.Errors  ( src/Compiler/Errors.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors.dyn_o )
+[34 of 54] Compiling SyntaxValidator  ( src/SyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SyntaxValidator.dyn_o )
+src/SyntaxValidator.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.List.elem’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.List.elem’
+
+src/SyntaxValidator.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘isPrefixOf’
+
+src/SyntaxValidator.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+
+src/SyntaxValidator.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqTuple3’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqTuple3’
+
+src/SyntaxValidator.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Data.Set.Internal.$fEqSet_$c==’
+    Probable fix: add INLINABLE pragma on ‘Data.Set.Internal.$fEqSet_$c==’
+
+src/SyntaxValidator.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowTuple3_$cshowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowTuple3_$cshowList’
+
+src/SyntaxValidator.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+
+src/SyntaxValidator.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Data.Set.Internal.$fShowSet_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘Data.Set.Internal.$fShowSet_$cshowsPrec’
+
+[35 of 54] Compiling Utils            ( src/Utils.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Utils.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Utils.dyn_o )
+[36 of 54] Compiling Parser           ( src/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Parser.dyn_o )
+src/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem’
+
+src/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+      when specialising ‘Data.Set.Internal.$wsplitS’
+      when specialising ‘Data.Set.Internal.splitS’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+
+src/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+      when specialising ‘Data.Set.Internal.$wsplitS’
+      when specialising ‘Data.Set.Internal.splitS’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+
+src/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+      when specialising ‘Data.Set.Internal.insert’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+
+src/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+      when specialising ‘Data.Set.Internal.insert’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+
+src/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+      when specialising ‘Data.Set.Internal.insertR’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem_$ccompare’
+
+src/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+      when specialising ‘Data.Set.Internal.insertR’
+      when specialising ‘Data.Set.Internal.union’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorFancy_$ccompare’
+
+src/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem’
+      when specialising ‘Text.Megaparsec.Internal.accHints’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem’
+
+src/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadParsecesParsecT1’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadParsecesParsecT1’
+
+src/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘isPrefixOf’
+
+src/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘errorBundlePretty’
+    Probable fix: add INLINABLE pragma on ‘errorBundlePretty’
+
+src/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadParsecesParsecT’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadParsecesParsecT’
+
+src/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fApplicativeParsecT’
+
+src/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem’
+      when specialising ‘Text.Megaparsec.Internal.pPlus’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem’
+
+src/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem_$cmax’
+      when specialising ‘Text.Megaparsec.Internal.pPlus’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem_$cmax’
+
+src/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorFancy’
+      when specialising ‘Text.Megaparsec.Internal.pPlus’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorFancy’
+
+src/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadParsecT’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadParsecT’
+
+src/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem’
+      when specialising ‘Text.Megaparsec.Internal.withHints’
+      when specialising ‘Text.Megaparsec.Internal.pBind’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem’
+
+src/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fAlternativeParsecT’
+
+src/Parser.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+      when specialising ‘L.space’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Internal.$fMonadPlusParsecT’
+
+src/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorItem_$c<’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorItem_$c<’
+
+src/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Error.$fOrdErrorFancy’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Error.$fOrdErrorFancy’
+
+src/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Text.Megaparsec.Stream.$fStreamList_$ctakeN_’
+    Probable fix: add INLINABLE pragma on ‘Text.Megaparsec.Stream.$fStreamList_$ctakeN_’
+
+src/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.List.elem’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.List.elem’
+
+src/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+
+src/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘SourceLocation.$fEqLocated’
+    Probable fix: add INLINABLE pragma on ‘SourceLocation.$fEqLocated’
+
+src/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘SourceLocation.$w$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘SourceLocation.$w$cshowsPrec’
+
+src/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+
+src/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘SourceLocation.$fShowLocated’
+    Probable fix: add INLINABLE pragma on ‘SourceLocation.$fShowLocated’
+
+src/Parser.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘SourceLocation.$fEqLocated_$c==’
+    Probable fix: add INLINABLE pragma on ‘SourceLocation.$fEqLocated_$c==’
+
+[37 of 54] Compiling Compiler.DependentTypeChecker ( src/Compiler/DependentTypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/DependentTypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/DependentTypeChecker.dyn_o )
+src/Compiler/DependentTypeChecker.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.List.elem’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.List.elem’
+
+src/Compiler/DependentTypeChecker.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘isPrefixOf’
+
+[38 of 54] Compiling Compiler.GoParsing ( src/Compiler/GoParsing.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoParsing.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoParsing.dyn_o )
+[39 of 54] Compiling Compiler.GoVarSpec ( src/Compiler/GoVarSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoVarSpec.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoVarSpec.dyn_o )
+src/Compiler/GoVarSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+
+[40 of 54] Compiling Compiler.ValueAnalysis ( src/Compiler/ValueAnalysis.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/ValueAnalysis.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/ValueAnalysis.dyn_o )
+src/Compiler/ValueAnalysis.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘isPrefixOf’
+
+src/Compiler/ValueAnalysis.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.List.elem’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.List.elem’
+
+src/Compiler/ValueAnalysis.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘stripPrefix’
+    Probable fix: add INLINABLE pragma on ‘stripPrefix’
+
+[41 of 54] Compiling Compiler.OwnershipChecker ( src/Compiler/OwnershipChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/OwnershipChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/OwnershipChecker.dyn_o )
+src/Compiler/OwnershipChecker.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+src/Compiler/OwnershipChecker.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.List.elem’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.List.elem’
+
+[42 of 54] Compiling Compiler.IR      ( src/Compiler/IR.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/IR.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/IR.dyn_o )
+src/Compiler/IR.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fOrdTuple2_$c>=’
+      when specialising ‘Set.fromList’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fOrdTuple2_$c>=’
+
+src/Compiler/IR.hs: error: [-Wmissed-specialisations, Werror=missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fOrdTuple2_$ccompare’
+      when specialising ‘Set.insert’
+      when specialising ‘Set.fromList’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fOrdTuple2_$ccompare’
+
+src/Compiler/IR.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.List.elem’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.List.elem’
+
+src/Compiler/IR.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqTuple2’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqTuple2’
+
+src/Compiler/IR.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Maybe.$fEqMaybe’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Maybe.$fEqMaybe’
+
+src/Compiler/IR.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘isPrefixOf’
+
+src/Compiler/IR.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fOrdTuple2’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fOrdTuple2’
+
+[43 of 54] Compiling Compiler.TypeChecker ( src/Compiler/TypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/TypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/TypeChecker.dyn_o )
+src/Compiler/TypeChecker.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘isPrefixOf’
+
+src/Compiler/TypeChecker.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.List.elem’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.List.elem’
+
+src/Compiler/TypeChecker.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘stripPrefix’
+    Probable fix: add INLINABLE pragma on ‘stripPrefix’
+
+src/Compiler/TypeChecker.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.C:Ord’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.C:Ord’
+
+src/Compiler/TypeChecker.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+
+src/Compiler/TypeChecker.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Data.Map.Internal.$fShowMap_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘Data.Map.Internal.$fShowMap_$cshowsPrec’
+
+src/Compiler/TypeChecker.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+
+[44 of 54] Compiling Compiler         ( src/Compiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler.dyn_o )
+src/Compiler.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+[45 of 54] Compiling Tooling.Error    ( src/Tooling/Error.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Tooling/Error.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Tooling/Error.dyn_o )
+src/Tooling/Error.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+
+src/Tooling/Error.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowTuple2_$cshowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowTuple2_$cshowList’
+
+src/Tooling/Error.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.C:Ord’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.C:Ord’
+
+[46 of 54] Compiling GoToolchain      ( src/GoToolchain.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/GoToolchain.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/GoToolchain.dyn_o )
+src/GoToolchain.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.IO.throwIO’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.IO.throwIO’
+
+[47 of 54] Compiling CompilerUtils    ( src/CompilerUtils.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CompilerUtils.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CompilerUtils.dyn_o )
+src/CompilerUtils.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘isPrefixOf’
+
+[48 of 54] Compiling EmbedAssets      ( src/EmbedAssets.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EmbedAssets.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EmbedAssets.dyn_o )
+src/EmbedAssets.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.C:Ord’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.C:Ord’
+
+src/EmbedAssets.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘isPrefixOf’
+
+[49 of 54] Compiling Cli.Runner       ( src/Cli/Runner.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/Runner.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/Runner.dyn_o )
+[50 of 54] Compiling Analyzer.SymbolTable ( src/Analyzer/SymbolTable.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/SymbolTable.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/SymbolTable.dyn_o )
+src/Analyzer/SymbolTable.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘isPrefixOf’
+
+[51 of 54] Compiling Analyzer.OwnershipBridge ( src/Analyzer/OwnershipBridge.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/OwnershipBridge.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/OwnershipBridge.dyn_o )
+src/Analyzer/OwnershipBridge.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘stripPrefix’
+    Probable fix: add INLINABLE pragma on ‘stripPrefix’
+
+src/Analyzer/OwnershipBridge.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘isPrefixOf’
+
+src/Analyzer/OwnershipBridge.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.List.elem’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.List.elem’
+
+[52 of 54] Compiling Analyzer.DependentTypeBridge ( src/Analyzer/DependentTypeBridge.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/DependentTypeBridge.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/DependentTypeBridge.dyn_o )
+src/Analyzer/DependentTypeBridge.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.List.elem’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.List.elem’
+
+[53 of 54] Compiling AnalyzerIntegration ( src/AnalyzerIntegration.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/AnalyzerIntegration.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/AnalyzerIntegration.dyn_o )
+src/AnalyzerIntegration.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+
+[54 of 54] Compiling IntegratedCompiler ( src/IntegratedCompiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/IntegratedCompiler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/IntegratedCompiler.dyn_o )
+src/IntegratedCompiler.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList_$c==’
+
+src/IntegratedCompiler.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe_$cshowsPrec’
+
+Configuring executable 'typus' for typus-0.12.0...
+Preprocessing executable 'typus' for typus-0.12.0...
+Building executable 'typus' for typus-0.12.0...
+[1 of 1] Compiling Main             ( app/Main.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus-tmp/Main.o )
+app/Main.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.IO.throwIO’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.IO.throwIO’
+
+[2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus
+Configuring test suite 'typus-test' for typus-0.12.0...
+Preprocessing test suite 'typus-test' for typus-0.12.0...
+Building test suite 'typus-test' for typus-0.12.0...
+[ 1 of 38] Compiling Test.Dependencies.Arbitrary ( test/Test/Dependencies/Arbitrary.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Dependencies/Arbitrary.o )
+[ 2 of 38] Compiling Test.Golden.CompilerSpec ( test/Test/Golden/CompilerSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Golden/CompilerSpec.o )
+[ 3 of 38] Compiling Test.Golden.Tests ( test/Test/Golden/Tests.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Golden/Tests.o )
+[ 4 of 38] Compiling Test.Golden      ( test/Test/Golden.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Golden.o )
+[ 5 of 38] Compiling Test.Integration.AnalyzerSpec ( test/Test/Integration/AnalyzerSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/AnalyzerSpec.o )
+test/Test/Integration/AnalyzerSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Integration/AnalyzerSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Integration/AnalyzerSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+test/Test/Integration/AnalyzerSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList’
+
+test/Test/Integration/AnalyzerSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowList’
+
+[ 6 of 38] Compiling Test.Integration.CLISpec ( test/Test/Integration/CLISpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/CLISpec.o )
+test/Test/Integration/CLISpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Integration/CLISpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+test/Test/Integration/CLISpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+[ 7 of 38] Compiling Test.Integration.FullProjectSpec ( test/Test/Integration/FullProjectSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/FullProjectSpec.o )
+test/Test/Integration/FullProjectSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Integration/FullProjectSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Integration/FullProjectSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+test/Test/Integration/FullProjectSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.List.elem’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.List.elem’
+
+test/Test/Integration/FullProjectSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList’
+
+test/Test/Integration/FullProjectSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqTuple2’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqTuple2’
+
+test/Test/Integration/FullProjectSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowList’
+
+test/Test/Integration/FullProjectSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowTuple2’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowTuple2’
+
+[ 8 of 38] Compiling Test.Integration.IntegratedCompilerSpec ( test/Test/Integration/IntegratedCompilerSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/IntegratedCompilerSpec.o )
+test/Test/Integration/IntegratedCompilerSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Integration/IntegratedCompilerSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Integration/IntegratedCompilerSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowList’
+
+test/Test/Integration/IntegratedCompilerSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList’
+
+test/Test/Integration/IntegratedCompilerSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+test/Test/Integration/IntegratedCompilerSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.Either.$fEqEither’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.Either.$fEqEither’
+
+test/Test/Integration/IntegratedCompilerSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.Either.$fShowEither’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.Either.$fShowEither’
+
+[ 9 of 38] Compiling Test.Integration.OwnershipSpec ( test/Test/Integration/OwnershipSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/OwnershipSpec.o )
+test/Test/Integration/OwnershipSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Integration/OwnershipSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Integration/OwnershipSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList’
+
+test/Test/Integration/OwnershipSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowList’
+
+[10 of 38] Compiling Test.Integration.PipelineSpec ( test/Test/Integration/PipelineSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/PipelineSpec.o )
+test/Test/Integration/PipelineSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe’
+
+test/Test/Integration/PipelineSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Maybe.$fEqMaybe’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Maybe.$fEqMaybe’
+
+test/Test/Integration/PipelineSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Integration/PipelineSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Integration/PipelineSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+[11 of 38] Compiling Test.Integration.Tests ( test/Test/Integration/Tests.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/Tests.o )
+[12 of 38] Compiling Test.Integration ( test/Test/Integration.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration.o )
+[13 of 38] Compiling Test.Unit.AdvancedParserSpec ( test/Test/Unit/AdvancedParserSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/AdvancedParserSpec.o )
+test/Test/Unit/AdvancedParserSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Unit/AdvancedParserSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+test/Test/Unit/AdvancedParserSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+[14 of 38] Compiling Test.Unit.CLISpec ( test/Test/Unit/CLISpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CLISpec.o )
+test/Test/Unit/CLISpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Unit/CLISpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+[15 of 38] Compiling Test.Unit.CommandLineDebugSpec ( test/Test/Unit/CommandLineDebugSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CommandLineDebugSpec.o )
+test/Test/Unit/CommandLineDebugSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Unit/CommandLineDebugSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Unit/CommandLineDebugSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe’
+
+test/Test/Unit/CommandLineDebugSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Maybe.$fEqMaybe’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Maybe.$fEqMaybe’
+
+[16 of 38] Compiling Test.Unit.CompilerSpec ( test/Test/Unit/CompilerSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CompilerSpec.o )
+test/Test/Unit/CompilerSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+test/Test/Unit/CompilerSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+[17 of 38] Compiling Test.Unit.DependentTypesSpec ( test/Test/Unit/DependentTypesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/DependentTypesSpec.o )
+test/Test/Unit/DependentTypesSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Unit/DependentTypesSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Unit/DependentTypesSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowList’
+
+test/Test/Unit/DependentTypesSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList’
+
+test/Test/Unit/DependentTypesSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe’
+
+test/Test/Unit/DependentTypesSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Maybe.$fEqMaybe’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Maybe.$fEqMaybe’
+
+test/Test/Unit/DependentTypesSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqTuple3’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqTuple3’
+
+test/Test/Unit/DependentTypesSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqTuple2’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqTuple2’
+
+test/Test/Unit/DependentTypesSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowTuple3’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowTuple3’
+
+test/Test/Unit/DependentTypesSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowTuple2’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowTuple2’
+
+[18 of 38] Compiling Test.Unit.EdgeCaseSpec ( test/Test/Unit/EdgeCaseSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/EdgeCaseSpec.o )
+test/Test/Unit/EdgeCaseSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Unit/EdgeCaseSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+test/Test/Unit/EdgeCaseSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Unit/EdgeCaseSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList’
+
+test/Test/Unit/EdgeCaseSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowList’
+
+[19 of 38] Compiling Test.Unit.EmbedAssetsSpec ( test/Test/Unit/EmbedAssetsSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/EmbedAssetsSpec.o )
+test/Test/Unit/EmbedAssetsSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Unit/EmbedAssetsSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Unit/EmbedAssetsSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowList’
+
+test/Test/Unit/EmbedAssetsSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList’
+
+test/Test/Unit/EmbedAssetsSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.Either.$fShowEither’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.Either.$fShowEither’
+
+test/Test/Unit/EmbedAssetsSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.Either.$fEqEither’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.Either.$fEqEither’
+
+test/Test/Unit/EmbedAssetsSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+[20 of 38] Compiling Test.Unit.ErrorHandlingSpec ( test/Test/Unit/ErrorHandlingSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ErrorHandlingSpec.o )
+test/Test/Unit/ErrorHandlingSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+test/Test/Unit/ErrorHandlingSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+[21 of 38] Compiling Test.Unit.GoToolchainSpec ( test/Test/Unit/GoToolchainSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/GoToolchainSpec.o )
+test/Test/Unit/GoToolchainSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘isPrefixOf’
+
+test/Test/Unit/GoToolchainSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Unit/GoToolchainSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+[22 of 38] Compiling Test.Unit.IntegrationSpec ( test/Test/Unit/IntegrationSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/IntegrationSpec.o )
+test/Test/Unit/IntegrationSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+test/Test/Unit/IntegrationSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+[23 of 38] Compiling Test.Unit.OwnershipBridgeSpec ( test/Test/Unit/OwnershipBridgeSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/OwnershipBridgeSpec.o )
+test/Test/Unit/OwnershipBridgeSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Unit/OwnershipBridgeSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Unit/OwnershipBridgeSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList’
+
+test/Test/Unit/OwnershipBridgeSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqTuple2’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqTuple2’
+
+test/Test/Unit/OwnershipBridgeSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowList’
+
+test/Test/Unit/OwnershipBridgeSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowTuple2’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowTuple2’
+
+test/Test/Unit/OwnershipBridgeSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Maybe.$fEqMaybe’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Maybe.$fEqMaybe’
+
+test/Test/Unit/OwnershipBridgeSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe’
+
+[24 of 38] Compiling Test.Unit.OwnershipSpec ( test/Test/Unit/OwnershipSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/OwnershipSpec.o )
+test/Test/Unit/OwnershipSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Unit/OwnershipSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Unit/OwnershipSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList’
+
+test/Test/Unit/OwnershipSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowList’
+
+[25 of 38] Compiling Test.Unit.ParserSpec ( test/Test/Unit/ParserSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ParserSpec.o )
+test/Test/Unit/ParserSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Unit/ParserSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+test/Test/Unit/ParserSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Unit/ParserSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowList’
+
+test/Test/Unit/ParserSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList’
+
+test/Test/Unit/ParserSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Maybe.$fEqMaybe’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Maybe.$fEqMaybe’
+
+test/Test/Unit/ParserSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘SourceLocation.$fEqLocated’
+    Probable fix: add INLINABLE pragma on ‘SourceLocation.$fEqLocated’
+
+test/Test/Unit/ParserSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe’
+
+test/Test/Unit/ParserSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘SourceLocation.$fShowLocated’
+    Probable fix: add INLINABLE pragma on ‘SourceLocation.$fShowLocated’
+
+[26 of 38] Compiling Test.Unit.PerformanceSpec ( test/Test/Unit/PerformanceSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/PerformanceSpec.o )
+test/Test/Unit/PerformanceSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+[27 of 38] Compiling Test.Unit.SourceLocationSpec ( test/Test/Unit/SourceLocationSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/SourceLocationSpec.o )
+test/Test/Unit/SourceLocationSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Unit/SourceLocationSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Unit/SourceLocationSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Maybe.$fEqMaybe’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Maybe.$fEqMaybe’
+
+test/Test/Unit/SourceLocationSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe’
+
+[28 of 38] Compiling Test.Unit.SymbolTableSpec ( test/Test/Unit/SymbolTableSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/SymbolTableSpec.o )
+test/Test/Unit/SymbolTableSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Unit/SymbolTableSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Unit/SymbolTableSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+test/Test/Unit/SymbolTableSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Maybe.$fEqMaybe’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Maybe.$fEqMaybe’
+
+test/Test/Unit/SymbolTableSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowMaybe’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowMaybe’
+
+[29 of 38] Compiling Test.Unit.SyntaxValidatorSpec ( test/Test/Unit/SyntaxValidatorSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/SyntaxValidatorSpec.o )
+test/Test/Unit/SyntaxValidatorSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Unit/SyntaxValidatorSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Unit/SyntaxValidatorSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Data.OldList.isPrefixOf’
+
+test/Test/Unit/SyntaxValidatorSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList’
+
+test/Test/Unit/SyntaxValidatorSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowList’
+
+[30 of 38] Compiling Test.Unit.TypeSystemSpec ( test/Test/Unit/TypeSystemSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeSystemSpec.o )
+test/Test/Unit/TypeSystemSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Unit/TypeSystemSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Unit/TypeSystemSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqTuple2’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqTuple2’
+
+test/Test/Unit/TypeSystemSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.List.elem’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.List.elem’
+
+test/Test/Unit/TypeSystemSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowList’
+
+test/Test/Unit/TypeSystemSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList’
+
+[31 of 38] Compiling TestSupport.QuickCheck ( test/TestSupport/QuickCheck.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/TestSupport/QuickCheck.o )
+test/TestSupport/QuickCheck.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+[32 of 38] Compiling Test.Unit.ValueAnalysisSpec ( test/Test/Unit/ValueAnalysisSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ValueAnalysisSpec.o )
+test/Test/Unit/ValueAnalysisSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Unit/ValueAnalysisSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Unit/ValueAnalysisSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘Test.QuickCheck.Property.forAll1’
+    Probable fix: add INLINABLE pragma on ‘Test.QuickCheck.Property.forAll1’
+
+test/Test/Unit/ValueAnalysisSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqList’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqList’
+
+test/Test/Unit/ValueAnalysisSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowList’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowList’
+
+[33 of 38] Compiling Test.Unit.UtilsSpec ( test/Test/Unit/UtilsSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsSpec.o )
+test/Test/Unit/UtilsSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Unit/UtilsSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+test/Test/Unit/UtilsSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-prim:GHC.Classes.$fEqTuple2’
+    Probable fix: add INLINABLE pragma on ‘ghc-prim:GHC.Classes.$fEqTuple2’
+
+test/Test/Unit/UtilsSpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘ghc-internal:GHC.Internal.Show.$fShowTuple2’
+    Probable fix: add INLINABLE pragma on ‘ghc-internal:GHC.Internal.Show.$fShowTuple2’
+
+[34 of 38] Compiling TestSupport.Verbosity ( test/TestSupport/Verbosity.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/TestSupport/Verbosity.o )
+[35 of 38] Compiling Test.Unit.VerbositySpec ( test/Test/Unit/VerbositySpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/VerbositySpec.o )
+test/Test/Unit/VerbositySpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+    Probable fix: add INLINABLE pragma on ‘tasty-hunit-0.10.2-d205e648399a71a80a7ef56d34847fc1c99ac2ac84a496ee5b67a9a509d62819:Test.Tasty.HUnit.Orig.@=?8’
+
+test/Test/Unit/VerbositySpec.hs: error: [-Wall-missed-specialisations, Werror=all-missed-specialisations]
+    Could not specialise imported function ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+    Probable fix: add INLINABLE pragma on ‘tasty-1.5.3-a21b61a65ada7fc2bb39adbec4f6dabcecf68ce5d78593bf31634f9e72849163:Test.Tasty.Core.SingleTest’
+
+[36 of 38] Compiling Test.Unit.Tests  ( test/Test/Unit/Tests.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/Tests.o )
+[37 of 38] Compiling Test.Unit        ( test/Test/Unit.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit.o )
+[38 of 38] Compiling Main             ( test/Main.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Main.o )
+[39 of 39] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test

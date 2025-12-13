@@ -1,0 +1,122 @@
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (file src/Ownership/Analyzer.hs changed)
+ - typus-0.12.0 (exe:typus) (dependency rebuilt)
+Preprocessing library for typus-0.12.0...
+Building library for typus-0.12.0...
+[ 2 of 54] Compiling CommandLineDebug ( src/CommandLineDebug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CommandLineDebug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CommandLineDebug.dyn_o ) [Source file changed]
+src/CommandLineDebug.hs:21:60: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘modifyIORef'’ from module ‘Data.IORef’ is redundant
+   |
+21 | import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef', modifyIORef)
+   |                                                            ^^^^^^^^^^^^
+
+[15 of 54] Compiling EnhancedDebug    ( src/EnhancedDebug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedDebug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedDebug.dyn_o ) [Source file changed]
+src/EnhancedDebug.hs:31:60: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘modifyIORef'’ from module ‘Data.IORef’ is redundant
+   |
+31 | import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef', modifyIORef)
+   |                                                            ^^^^^^^^^^^^
+
+[23 of 54] Compiling Ownership.Analyzer ( src/Ownership/Analyzer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Analyzer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Analyzer.dyn_o ) [Source file changed]
+src/Ownership/Analyzer.hs:9:1: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘gets, runState’
+    from module ‘Control.Monad.State’ is redundant
+  |
+9 | import Control.Monad.State (State, gets, modify, get, put, runState, execState)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Ownership/Analyzer.hs:14:32: warning: [GHC-77037] [-Wmissing-import-lists]
+    The import item ‘Token(..)’ does not have an explicit import list
+   |
+14 | import Ownership.Common.Lexer (Token(..), TokenKind(..))
+   |                                ^^^^^^^^^
+
+src/Ownership/Analyzer.hs:14:43: warning: [GHC-77037] [-Wmissing-import-lists]
+    The import item ‘TokenKind(..)’ does not have an explicit import list
+   |
+14 | import Ownership.Common.Lexer (Token(..), TokenKind(..))
+   |                                           ^^^^^^^^^^^^^
+
+src/Ownership/Analyzer.hs:15:32: warning: [GHC-77037] [-Wmissing-import-lists]
+    The import item ‘OwnershipError(..)’ does not have an explicit import list
+   |
+15 | import Ownership.Common.Types (OwnershipError(..))
+   |                                ^^^^^^^^^^^^^^^^^^
+
+src/Ownership/Analyzer.hs:16:25: warning: [GHC-77037] [-Wmissing-import-lists]
+    The import item ‘Keyword(..)’ does not have an explicit import list
+   |
+16 | import Ownership.Lexer (Keyword(..), Sym(..), OwnershipToken, lexAll)
+   |                         ^^^^^^^^^^^
+
+src/Ownership/Analyzer.hs:16:38: warning: [GHC-77037] [-Wmissing-import-lists]
+    The import item ‘Sym(..)’ does not have an explicit import list
+   |
+16 | import Ownership.Lexer (Keyword(..), Sym(..), OwnershipToken, lexAll)
+   |                                      ^^^^^^^
+
+src/Ownership/Analyzer.hs:18:5: warning: [GHC-77037] [-Wmissing-import-lists]
+    The import item ‘AssignOp(..)’ does not have an explicit import list
+   |
+18 |   ( AssignOp(..)
+   |     ^^^^^^^^^^^^
+
+src/Ownership/Analyzer.hs:19:5: warning: [GHC-77037] [-Wmissing-import-lists]
+    The import item ‘Directive(..)’ does not have an explicit import list
+   |
+19 |   , Directive(..)
+   |     ^^^^^^^^^^^^^
+
+src/Ownership/Analyzer.hs:20:5: warning: [GHC-77037] [-Wmissing-import-lists]
+    The import item ‘Expr(..)’ does not have an explicit import list
+   |
+20 |   , Expr(..)
+   |     ^^^^^^^^
+
+src/Ownership/Analyzer.hs:21:5: warning: [GHC-77037] [-Wmissing-import-lists]
+    The import item ‘Program(..)’ does not have an explicit import list
+   |
+21 |   , Program(..)
+   |     ^^^^^^^^^^^
+
+src/Ownership/Analyzer.hs:22:5: warning: [GHC-77037] [-Wmissing-import-lists]
+    The import item ‘Stmt(..)’ does not have an explicit import list
+   |
+22 |   , Stmt(..)
+   |     ^^^^^^^^
+
+src/Ownership/Analyzer.hs:23:5: warning: [GHC-77037] [-Wmissing-import-lists]
+    The import item ‘UnaryOp(..)’ does not have an explicit import list
+   |
+23 |   , UnaryOp(..)
+   |     ^^^^^^^^^^^
+
+[30 of 54] Compiling SourceLocation   ( src/SourceLocation.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SourceLocation.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SourceLocation.dyn_o ) [Source file changed]
+src/SourceLocation.hs:55:1: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘gets, modify’
+    from module ‘Control.Monad.State’ is redundant
+   |
+55 | import Control.Monad.State (State, gets, modify, get, put, runState, evalState)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/SourceLocation.hs:56:30: warning: [GHC-77037] [-Wmissing-import-lists]
+    The import item ‘ErrorLocation(..)’ does not have an explicit import list
+   |
+56 | import Compiler.Errors.Core (ErrorLocation(..))
+   |                              ^^^^^^^^^^^^^^^^^
+
+[31 of 54] Compiling Compiler.Errors.Compiler ( src/Compiler/Errors/Compiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Compiler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Compiler.dyn_o ) [Source file changed]
+src/Compiler/Errors/Compiler.hs:88:20: error: [GHC-76037]
+    Not in scope: type constructor or class ‘StateT’
+    Suggested fixes:
+      • Perhaps use ‘State’ (imported from Control.Monad.State)
+      • Add ‘StateT’ to the import list in the import of
+        ‘Control.Monad.State’ (at src/Compiler/Errors/Compiler.hs:58:1-68).
+   |
+88 | type CompilerM a = StateT [CompilerError] (Either [CompilerError]) a
+   |                    ^^^^^^
+
+Error: [Cabal-7125]
+Failed to build typus-0.12.0 (which is required by exe:typus from typus-0.12.0).
+

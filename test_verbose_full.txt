@@ -1,0 +1,870 @@
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (configuration changed)
+ - typus-0.12.0 (exe:typus) (configuration changed)
+ - typus-0.12.0 (test:typus-test) (dependency rebuilt)
+Configuring library for typus-0.12.0...
+Glasgow Haskell Compiler, Version 9.12.2, stage 2 booted by GHC version 9.10.1
+*** systool:cc:
+*** C Compiler:
+gcc -x c -c /tmp/179519-0.c -o /tmp/179519-1.o.tmp -fno-PIC -Wimplicit -include /usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/rts-1.0.2/include/ghcversion.h -I/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/ghc-internal-9.1202.0-1465/include -I/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/ghc-bignum-1.3-6db4/include -I/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/rts-1.0.2/include
+Created temporary directory: /tmp/ghc179564_tmp_0
+!!! systool:cc: finished in 0.69 milliseconds, allocated 0.248 megabytes
+*** Deleting temp files:
+Deleting: /tmp/ghc179564_tmp_0/ghc_tmp_1.rsp
+*** Deleting temp dirs:
+Deleting: /tmp/ghc179564_tmp_0
+Preprocessing library for typus-0.12.0...
+Building library for typus-0.12.0...
+Glasgow Haskell Compiler, Version 9.12.2, stage 2 booted by GHC version 9.10.1
+*** initializing unit database:
+package flags [-package-id Glob-0.10.2-83e85e3b30cd702c68c796a2531b7bb80a37b3dc2f4a0eb3565a67af0ab12952{unit Glob-0.10.2-83e85e3b30cd702c68c796a2531b7bb80a37b3dc2f4a0eb3565a67af0ab12952 True ([])},
+               -package-id aeson-2.2.3.0-8b2ea0fa7c7255a578f0296560e6e41f5f8c21244cf9a1dce1a318b6e1e3f36a{unit aeson-2.2.3.0-8b2ea0fa7c7255a578f0296560e6e41f5f8c21244cf9a1dce1a318b6e1e3f36a True ([])},
+               -package-id base-4.21.0.0-ae91{unit base-4.21.0.0-ae91 True ([])},
+               -package-id containers-0.7-5a8f{unit containers-0.7-5a8f True ([])},
+               -package-id directory-1.3.9.0-af18{unit directory-1.3.9.0-af18 True ([])},
+               -package-id filepath-1.5.4.0-e69b{unit filepath-1.5.4.0-e69b True ([])},
+               -package-id megaparsec-9.7.0-f591e19576595244fcd6ec7a129d7346dac732751eca0b66f16a3ce1cfa4d288{unit megaparsec-9.7.0-f591e19576595244fcd6ec7a129d7346dac732751eca0b66f16a3ce1cfa4d288 True ([])},
+               -package-id mtl-2.3.1-fdf9{unit mtl-2.3.1-fdf9 True ([])},
+               -package-id optparse-applicative-0.19.0.0-acebffcb0f036b6f221465e5a2ca32a655adbf0fa90cd9122d6dcc5432eb09e7{unit optparse-applicative-0.19.0.0-acebffcb0f036b6f221465e5a2ca32a655adbf0fa90cd9122d6dcc5432eb09e7 True ([])},
+               -package-id process-1.6.25.0-5f54{unit process-1.6.25.0-5f54 True ([])},
+               -package-id temporary-1.3-667770de9b639724bc5e4dcc3b5bce9b5e4d1ed4bbeb97fffc581b293b50ed83{unit temporary-1.3-667770de9b639724bc5e4dcc3b5bce9b5e4d1ed4bbeb97fffc581b293b50ed83 True ([])},
+               -package-id text-2.1.2-ecdb{unit text-2.1.2-ecdb True ([])},
+               -package-id time-1.14-9bf8{unit time-1.14-9bf8 True ([])}]
+loading package database /usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/package.conf.d
+loading package database /home/runner/.cabal/store/ghc-9.12.2-9b33/package.db
+loading package database /home/runner/work/Typus/Typus/dist-newstyle/packagedb/ghc-9.12.2
+loading package database dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/package.conf.inplace
+wired-in package ghc-prim mapped to ghc-prim-0.13.0-e168
+wired-in package ghc-bignum mapped to ghc-bignum-1.3-6db4
+wired-in package ghc-internal mapped to ghc-internal-9.1202.0-1465
+wired-in package rts mapped to rts-1.0.2
+!!! initializing unit database: finished in 19.05 milliseconds, allocated 5.782 megabytes
+*** Chasing dependencies:
+Chasing modules from: typus-0.12.0-inplace:AnalyzerIntegration,typus-0.12.0-inplace:Analyzer.DependentTypeBridge,typus-0.12.0-inplace:Analyzer.OwnershipBridge,typus-0.12.0-inplace:Analyzer.State,typus-0.12.0-inplace:Analyzer.SymbolTable,typus-0.12.0-inplace:Analyzer.Types,typus-0.12.0-inplace:Cli,typus-0.12.0-inplace:Cli.DebugRunner,typus-0.12.0-inplace:Cli.Runner,typus-0.12.0-inplace:CommandLineDebug,typus-0.12.0-inplace:Compiler,typus-0.12.0-inplace:Compiler.DependentTypeChecker,typus-0.12.0-inplace:Compiler.Errors,typus-0.12.0-inplace:Compiler.Errors.Core,typus-0.12.0-inplace:Compiler.GoAst,typus-0.12.0-inplace:Compiler.IR,typus-0.12.0-inplace:Compiler.TypeChecker,typus-0.12.0-inplace:Compiler.ValueAnalysis,typus-0.12.0-inplace:CompilerUtils,typus-0.12.0-inplace:Debug,typus-0.12.0-inplace:DebugIntegration,typus-0.12.0-inplace:Dependencies,typus-0.12.0-inplace:Dependencies.AST,typus-0.12.0-inplace:Dependencies.Analyzer,typus-0.12.0-inplace:Dependencies.Inference,typus-0.12.0-inplace:Dependencies.Parser,typus-0.12.0-inplace:Dependencies.TypeSystem,typus-0.12.0-inplace:DependentTypesParser,typus-0.12.0-inplace:EmbedAssets,typus-0.12.0-inplace:EnhancedDebug,typus-0.12.0-inplace:GoToolchain,typus-0.12.0-inplace:IntegratedCompiler,typus-0.12.0-inplace:Ownership,typus-0.12.0-inplace:Parser,typus-0.12.0-inplace:SimpleSyntaxValidator,typus-0.12.0-inplace:SourceLocation,typus-0.12.0-inplace:SyntaxValidator,typus-0.12.0-inplace:Tooling.Error,typus-0.12.0-inplace:Utils,typus-0.12.0-inplace:Compiler.Error,typus-0.12.0-inplace:Compiler.GoLexer,typus-0.12.0-inplace:Compiler.GoParsing,typus-0.12.0-inplace:Compiler.GoVarSpec,typus-0.12.0-inplace:Compiler.OwnershipChecker,typus-0.12.0-inplace:Compiler.Errors.Compiler,typus-0.12.0-inplace:Analyzer.CrossAnalysis,typus-0.12.0-inplace:ErrorHandler,typus-0.12.0-inplace:EnhancedErrorHandler,typus-0.12.0-inplace:Ownership.Common.Lexer,typus-0.12.0-inplace:Ownership.Common.Types,typus-0.12.0-inplace:Ownership.Lexer,typus-0.12.0-inplace:Ownership.Parser,typus-0.12.0-inplace:Ownership.Analyzer,typus-0.12.0-inplace:Ownership.Reporter
+!!! Chasing dependencies: finished in 32.68 milliseconds, allocated 57.601 megabytes
+Ready for upsweep
+  [SingleModule(typus-0.12.0-inplace:Cli []),
+   SingleModule(typus-0.12.0-inplace:CommandLineDebug []),
+   SingleModule(typus-0.12.0-inplace:Compiler.Error []),
+   SingleModule(typus-0.12.0-inplace:Compiler.GoAst []),
+   SingleModule(typus-0.12.0-inplace:Compiler.GoLexer []),
+   SingleModule(typus-0.12.0-inplace:Debug []),
+   SingleModule(typus-0.12.0-inplace:DebugIntegration [typus-0.12.0-inplace:CommandLineDebug,
+                                                       typus-0.12.0-inplace:Debug]),
+   SingleModule(typus-0.12.0-inplace:Dependencies.AST []),
+   SingleModule(typus-0.12.0-inplace:Dependencies.Parser [typus-0.12.0-inplace:Dependencies.AST]),
+   SingleModule(typus-0.12.0-inplace:Dependencies.TypeSystem [typus-0.12.0-inplace:Dependencies.AST]),
+   SingleModule(typus-0.12.0-inplace:Dependencies.Inference [typus-0.12.0-inplace:Dependencies.TypeSystem,
+                                                             typus-0.12.0-inplace:Dependencies.AST]),
+   SingleModule(typus-0.12.0-inplace:Dependencies.Analyzer [typus-0.12.0-inplace:Dependencies.TypeSystem,
+                                                            typus-0.12.0-inplace:Dependencies.Parser,
+                                                            typus-0.12.0-inplace:Dependencies.AST]),
+   SingleModule(typus-0.12.0-inplace:Dependencies [typus-0.12.0-inplace:Dependencies.TypeSystem,
+                                                   typus-0.12.0-inplace:Dependencies.Parser,
+                                                   typus-0.12.0-inplace:Dependencies.Inference,
+                                                   typus-0.12.0-inplace:Dependencies.Analyzer,
+                                                   typus-0.12.0-inplace:Dependencies.AST]),
+   SingleModule(typus-0.12.0-inplace:DependentTypesParser []),
+   SingleModule(typus-0.12.0-inplace:EnhancedDebug []),
+   SingleModule(typus-0.12.0-inplace:Cli.DebugRunner [typus-0.12.0-inplace:EnhancedDebug,
+                                                      typus-0.12.0-inplace:CommandLineDebug]),
+   SingleModule(typus-0.12.0-inplace:Ownership.Common.Lexer []),
+   SingleModule(typus-0.12.0-inplace:Ownership.Common.Types []),
+   SingleModule(typus-0.12.0-inplace:Compiler.Errors.Core [typus-0.12.0-inplace:Dependencies.TypeSystem,
+                                                           typus-0.12.0-inplace:Ownership.Common.Types]),
+   SingleModule(typus-0.12.0-inplace:ErrorHandler [typus-0.12.0-inplace:Compiler.Errors.Core]),
+   SingleModule(typus-0.12.0-inplace:Ownership.Lexer [typus-0.12.0-inplace:Ownership.Common.Lexer]),
+   SingleModule(typus-0.12.0-inplace:Ownership.Parser [typus-0.12.0-inplace:Ownership.Lexer,
+                                                       typus-0.12.0-inplace:Ownership.Common.Lexer]),
+   SingleModule(typus-0.12.0-inplace:Ownership.Analyzer [typus-0.12.0-inplace:Ownership.Parser,
+                                                         typus-0.12.0-inplace:Ownership.Lexer,
+                                                         typus-0.12.0-inplace:Ownership.Common.Types,
+                                                         typus-0.12.0-inplace:Ownership.Common.Lexer]),
+   SingleModule(typus-0.12.0-inplace:Ownership.Reporter [typus-0.12.0-inplace:Ownership.Common.Types]),
+   SingleModule(typus-0.12.0-inplace:Ownership [typus-0.12.0-inplace:Ownership.Reporter,
+                                                typus-0.12.0-inplace:Ownership.Parser,
+                                                typus-0.12.0-inplace:Ownership.Lexer,
+                                                typus-0.12.0-inplace:Ownership.Common.Types,
+                                                typus-0.12.0-inplace:Ownership.Analyzer]),
+   SingleModule(typus-0.12.0-inplace:Analyzer.Types [typus-0.12.0-inplace:Compiler.Errors.Core,
+                                                     typus-0.12.0-inplace:Dependencies,
+                                                     typus-0.12.0-inplace:Ownership]),
+   SingleModule(typus-0.12.0-inplace:Analyzer.State [typus-0.12.0-inplace:Compiler.Errors.Core,
+                                                     typus-0.12.0-inplace:Dependencies,
+                                                     typus-0.12.0-inplace:Ownership,
+                                                     typus-0.12.0-inplace:Analyzer.Types]),
+   SingleModule(typus-0.12.0-inplace:Analyzer.CrossAnalysis [typus-0.12.0-inplace:Ownership.Parser,
+                                                             typus-0.12.0-inplace:Ownership.Lexer,
+                                                             typus-0.12.0-inplace:Ownership.Common.Lexer,
+                                                             typus-0.12.0-inplace:Compiler.GoAst,
+                                                             typus-0.12.0-inplace:Ownership,
+                                                             typus-0.12.0-inplace:Dependencies,
+                                                             typus-0.12.0-inplace:Analyzer.Types,
+                                                             typus-0.12.0-inplace:Analyzer.State]),
+   SingleModule(typus-0.12.0-inplace:SimpleSyntaxValidator []),
+   SingleModule(typus-0.12.0-inplace:SourceLocation [typus-0.12.0-inplace:Compiler.Errors.Core]),
+   SingleModule(typus-0.12.0-inplace:Compiler.Errors.Compiler [typus-0.12.0-inplace:SourceLocation,
+                                                               typus-0.12.0-inplace:Compiler.Errors.Core]),
+   SingleModule(typus-0.12.0-inplace:EnhancedErrorHandler [typus-0.12.0-inplace:Compiler.Errors.Compiler]),
+   SingleModule(typus-0.12.0-inplace:Compiler.Errors [typus-0.12.0-inplace:Compiler.Errors.Compiler,
+                                                      typus-0.12.0-inplace:Compiler.Errors.Core]),
+   SingleModule(typus-0.12.0-inplace:SyntaxValidator []),
+   SingleModule(typus-0.12.0-inplace:Utils []),
+   SingleModule(typus-0.12.0-inplace:Parser [typus-0.12.0-inplace:SyntaxValidator,
+                                             typus-0.12.0-inplace:Utils,
+                                             typus-0.12.0-inplace:SourceLocation]),
+   SingleModule(typus-0.12.0-inplace:Compiler.DependentTypeChecker [typus-0.12.0-inplace:SourceLocation,
+                                                                    typus-0.12.0-inplace:Compiler.Errors,
+                                                                    typus-0.12.0-inplace:DependentTypesParser,
+                                                                    typus-0.12.0-inplace:Parser]),
+   SingleModule(typus-0.12.0-inplace:Compiler.GoParsing [typus-0.12.0-inplace:Utils]),
+   SingleModule(typus-0.12.0-inplace:Compiler.GoVarSpec [typus-0.12.0-inplace:Utils,
+                                                         typus-0.12.0-inplace:Compiler.GoParsing,
+                                                         typus-0.12.0-inplace:Compiler.GoAst]),
+   SingleModule(typus-0.12.0-inplace:Compiler.ValueAnalysis [typus-0.12.0-inplace:Utils,
+                                                             typus-0.12.0-inplace:Compiler.GoVarSpec,
+                                                             typus-0.12.0-inplace:Compiler.GoParsing,
+                                                             typus-0.12.0-inplace:Compiler.GoAst]),
+   SingleModule(typus-0.12.0-inplace:Compiler.OwnershipChecker [typus-0.12.0-inplace:SourceLocation,
+                                                                typus-0.12.0-inplace:Compiler.Errors,
+                                                                typus-0.12.0-inplace:Compiler.ValueAnalysis,
+                                                                typus-0.12.0-inplace:Ownership,
+                                                                typus-0.12.0-inplace:Parser]),
+   SingleModule(typus-0.12.0-inplace:Compiler.IR [typus-0.12.0-inplace:SourceLocation,
+                                                  typus-0.12.0-inplace:Compiler.ValueAnalysis,
+                                                  typus-0.12.0-inplace:Compiler.GoLexer,
+                                                  typus-0.12.0-inplace:Compiler.GoAst,
+                                                  typus-0.12.0-inplace:Compiler.Errors,
+                                                  typus-0.12.0-inplace:Parser]),
+   SingleModule(typus-0.12.0-inplace:Compiler.TypeChecker [typus-0.12.0-inplace:Utils,
+                                                           typus-0.12.0-inplace:Compiler.IR,
+                                                           typus-0.12.0-inplace:Compiler.GoVarSpec,
+                                                           typus-0.12.0-inplace:Compiler.GoParsing,
+                                                           typus-0.12.0-inplace:Compiler.GoAst,
+                                                           typus-0.12.0-inplace:Compiler.Errors,
+                                                           typus-0.12.0-inplace:Parser]),
+   SingleModule(typus-0.12.0-inplace:Compiler [typus-0.12.0-inplace:Compiler.Errors,
+                                               typus-0.12.0-inplace:Compiler.TypeChecker,
+                                               typus-0.12.0-inplace:Compiler.OwnershipChecker,
+                                               typus-0.12.0-inplace:Compiler.DependentTypeChecker,
+                                               typus-0.12.0-inplace:Compiler.IR,
+                                               typus-0.12.0-inplace:Compiler.GoAst,
+                                               typus-0.12.0-inplace:Parser]),
+   SingleModule(typus-0.12.0-inplace:Tooling.Error [typus-0.12.0-inplace:SyntaxValidator,
+                                                    typus-0.12.0-inplace:Compiler]),
+   SingleModule(typus-0.12.0-inplace:GoToolchain [typus-0.12.0-inplace:Tooling.Error]),
+   SingleModule(typus-0.12.0-inplace:CompilerUtils [typus-0.12.0-inplace:Tooling.Error,
+                                                    typus-0.12.0-inplace:SyntaxValidator,
+                                                    typus-0.12.0-inplace:GoToolchain,
+                                                    typus-0.12.0-inplace:Parser,
+                                                    typus-0.12.0-inplace:Compiler.OwnershipChecker,
+                                                    typus-0.12.0-inplace:Compiler.IR,
+                                                    typus-0.12.0-inplace:Utils,
+                                                    typus-0.12.0-inplace:Compiler.TypeChecker,
+                                                    typus-0.12.0-inplace:Compiler]),
+   SingleModule(typus-0.12.0-inplace:EmbedAssets [typus-0.12.0-inplace:Tooling.Error,
+                                                  typus-0.12.0-inplace:GoToolchain,
+                                                  typus-0.12.0-inplace:CompilerUtils]),
+   SingleModule(typus-0.12.0-inplace:Cli.Runner [typus-0.12.0-inplace:SyntaxValidator,
+                                                 typus-0.12.0-inplace:Tooling.Error,
+                                                 typus-0.12.0-inplace:GoToolchain,
+                                                 typus-0.12.0-inplace:EmbedAssets,
+                                                 typus-0.12.0-inplace:CompilerUtils,
+                                                 typus-0.12.0-inplace:CompilerUtils,
+                                                 typus-0.12.0-inplace:Cli.DebugRunner,
+                                                 typus-0.12.0-inplace:Cli]),
+   SingleModule(typus-0.12.0-inplace:Analyzer.SymbolTable [typus-0.12.0-inplace:Compiler.GoParsing,
+                                                           typus-0.12.0-inplace:Compiler.GoVarSpec,
+                                                           typus-0.12.0-inplace:Compiler.GoAst,
+                                                           typus-0.12.0-inplace:Ownership,
+                                                           typus-0.12.0-inplace:Dependencies,
+                                                           typus-0.12.0-inplace:Analyzer.Types]),
+   SingleModule(typus-0.12.0-inplace:Analyzer.OwnershipBridge [typus-0.12.0-inplace:Ownership,
+                                                               typus-0.12.0-inplace:Analyzer.Types,
+                                                               typus-0.12.0-inplace:Analyzer.SymbolTable,
+                                                               typus-0.12.0-inplace:Analyzer.State]),
+   SingleModule(typus-0.12.0-inplace:Analyzer.DependentTypeBridge [typus-0.12.0-inplace:DependentTypesParser,
+                                                                   typus-0.12.0-inplace:Compiler.DependentTypeChecker,
+                                                                   typus-0.12.0-inplace:SourceLocation,
+                                                                   typus-0.12.0-inplace:Parser,
+                                                                   typus-0.12.0-inplace:Dependencies,
+                                                                   typus-0.12.0-inplace:Analyzer.Types,
+                                                                   typus-0.12.0-inplace:Analyzer.SymbolTable,
+                                                                   typus-0.12.0-inplace:Analyzer.State]),
+   SingleModule(typus-0.12.0-inplace:AnalyzerIntegration [typus-0.12.0-inplace:Dependencies,
+                                                          typus-0.12.0-inplace:Ownership,
+                                                          typus-0.12.0-inplace:Analyzer.Types,
+                                                          typus-0.12.0-inplace:Analyzer.CrossAnalysis,
+                                                          typus-0.12.0-inplace:Analyzer.DependentTypeBridge,
+                                                          typus-0.12.0-inplace:Analyzer.OwnershipBridge,
+                                                          typus-0.12.0-inplace:Analyzer.SymbolTable,
+                                                          typus-0.12.0-inplace:Analyzer.State]),
+   SingleModule(typus-0.12.0-inplace:IntegratedCompiler [typus-0.12.0-inplace:SyntaxValidator,
+                                                         typus-0.12.0-inplace:Compiler.Errors.Core,
+                                                         typus-0.12.0-inplace:Compiler.Errors.Compiler,
+                                                         typus-0.12.0-inplace:Compiler,
+                                                         typus-0.12.0-inplace:AnalyzerIntegration,
+                                                         typus-0.12.0-inplace:Parser])]
+compile: input file src/Cli.hs
+*** Checking old interface for Cli (use -ddump-hi-diffs for more details):
+[ 1 of 54] Skipping Cli              ( src/Cli.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli.dyn_o )
+compile: input file src/CommandLineDebug.hs
+*** Checking old interface for CommandLineDebug (use -ddump-hi-diffs for more details):
+[ 2 of 54] Skipping CommandLineDebug ( src/CommandLineDebug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CommandLineDebug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CommandLineDebug.dyn_o )
+compile: input file src/Compiler/Error.hs
+*** Checking old interface for Compiler.Error (use -ddump-hi-diffs for more details):
+[ 3 of 54] Skipping Compiler.Error   ( src/Compiler/Error.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Error.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Error.dyn_o )
+compile: input file src/Compiler/GoAst.hs
+*** Checking old interface for Compiler.GoAst (use -ddump-hi-diffs for more details):
+[ 4 of 54] Skipping Compiler.GoAst   ( src/Compiler/GoAst.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoAst.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoAst.dyn_o )
+compile: input file src/Compiler/GoLexer.hs
+*** Checking old interface for Compiler.GoLexer (use -ddump-hi-diffs for more details):
+[ 5 of 54] Skipping Compiler.GoLexer ( src/Compiler/GoLexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoLexer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoLexer.dyn_o )
+compile: input file src/Debug.hs
+*** Checking old interface for Debug (use -ddump-hi-diffs for more details):
+[ 6 of 54] Skipping Debug            ( src/Debug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Debug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Debug.dyn_o )
+compile: input file src/DebugIntegration.hs
+*** Checking old interface for DebugIntegration (use -ddump-hi-diffs for more details):
+[ 7 of 54] Skipping DebugIntegration ( src/DebugIntegration.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DebugIntegration.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DebugIntegration.dyn_o )
+compile: input file src/Dependencies/AST.hs
+*** Checking old interface for Dependencies.AST (use -ddump-hi-diffs for more details):
+[ 8 of 54] Skipping Dependencies.AST ( src/Dependencies/AST.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/AST.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/AST.dyn_o )
+compile: input file src/Dependencies/Parser.hs
+*** Checking old interface for Dependencies.Parser (use -ddump-hi-diffs for more details):
+[ 9 of 54] Skipping Dependencies.Parser ( src/Dependencies/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Parser.dyn_o )
+compile: input file src/Dependencies/TypeSystem.hs
+*** Checking old interface for Dependencies.TypeSystem (use -ddump-hi-diffs for more details):
+[10 of 54] Skipping Dependencies.TypeSystem ( src/Dependencies/TypeSystem.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/TypeSystem.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/TypeSystem.dyn_o )
+compile: input file src/Dependencies/Inference.hs
+*** Checking old interface for Dependencies.Inference (use -ddump-hi-diffs for more details):
+[11 of 54] Skipping Dependencies.Inference ( src/Dependencies/Inference.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Inference.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Inference.dyn_o )
+compile: input file src/Dependencies/Analyzer.hs
+*** Checking old interface for Dependencies.Analyzer (use -ddump-hi-diffs for more details):
+[12 of 54] Skipping Dependencies.Analyzer ( src/Dependencies/Analyzer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Analyzer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Analyzer.dyn_o )
+compile: input file src/Dependencies.hs
+*** Checking old interface for Dependencies (use -ddump-hi-diffs for more details):
+[13 of 54] Skipping Dependencies     ( src/Dependencies.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies.dyn_o )
+compile: input file src/DependentTypesParser.hs
+*** Checking old interface for DependentTypesParser (use -ddump-hi-diffs for more details):
+[14 of 54] Skipping DependentTypesParser ( src/DependentTypesParser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DependentTypesParser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DependentTypesParser.dyn_o )
+compile: input file src/EnhancedDebug.hs
+*** Checking old interface for EnhancedDebug (use -ddump-hi-diffs for more details):
+[15 of 54] Skipping EnhancedDebug    ( src/EnhancedDebug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedDebug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedDebug.dyn_o )
+compile: input file src/Cli/DebugRunner.hs
+*** Checking old interface for Cli.DebugRunner (use -ddump-hi-diffs for more details):
+[16 of 54] Skipping Cli.DebugRunner  ( src/Cli/DebugRunner.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/DebugRunner.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/DebugRunner.dyn_o )
+compile: input file src/Ownership/Common/Lexer.hs
+*** Checking old interface for Ownership.Common.Lexer (use -ddump-hi-diffs for more details):
+[17 of 54] Skipping Ownership.Common.Lexer ( src/Ownership/Common/Lexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Lexer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Lexer.dyn_o )
+compile: input file src/Ownership/Common/Types.hs
+*** Checking old interface for Ownership.Common.Types (use -ddump-hi-diffs for more details):
+[18 of 54] Skipping Ownership.Common.Types ( src/Ownership/Common/Types.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Types.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Types.dyn_o )
+compile: input file src/Compiler/Errors/Core.hs
+*** Checking old interface for Compiler.Errors.Core (use -ddump-hi-diffs for more details):
+[19 of 54] Skipping Compiler.Errors.Core ( src/Compiler/Errors/Core.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Core.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Core.dyn_o )
+compile: input file src/ErrorHandler.hs
+*** Checking old interface for ErrorHandler (use -ddump-hi-diffs for more details):
+[20 of 54] Skipping ErrorHandler     ( src/ErrorHandler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/ErrorHandler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/ErrorHandler.dyn_o )
+compile: input file src/Ownership/Lexer.hs
+*** Checking old interface for Ownership.Lexer (use -ddump-hi-diffs for more details):
+[21 of 54] Skipping Ownership.Lexer  ( src/Ownership/Lexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Lexer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Lexer.dyn_o )
+compile: input file src/Ownership/Parser.hs
+*** Checking old interface for Ownership.Parser (use -ddump-hi-diffs for more details):
+[22 of 54] Skipping Ownership.Parser ( src/Ownership/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Parser.dyn_o )
+compile: input file src/Ownership/Analyzer.hs
+*** Checking old interface for Ownership.Analyzer (use -ddump-hi-diffs for more details):
+[23 of 54] Skipping Ownership.Analyzer ( src/Ownership/Analyzer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Analyzer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Analyzer.dyn_o )
+compile: input file src/Ownership/Reporter.hs
+*** Checking old interface for Ownership.Reporter (use -ddump-hi-diffs for more details):
+[24 of 54] Skipping Ownership.Reporter ( src/Ownership/Reporter.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Reporter.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Reporter.dyn_o )
+compile: input file src/Ownership.hs
+*** Checking old interface for Ownership (use -ddump-hi-diffs for more details):
+[25 of 54] Skipping Ownership        ( src/Ownership.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership.dyn_o )
+compile: input file src/Analyzer/Types.hs
+*** Checking old interface for Analyzer.Types (use -ddump-hi-diffs for more details):
+[26 of 54] Skipping Analyzer.Types   ( src/Analyzer/Types.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/Types.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/Types.dyn_o )
+compile: input file src/Analyzer/State.hs
+*** Checking old interface for Analyzer.State (use -ddump-hi-diffs for more details):
+[27 of 54] Skipping Analyzer.State   ( src/Analyzer/State.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/State.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/State.dyn_o )
+compile: input file src/Analyzer/CrossAnalysis.hs
+*** Checking old interface for Analyzer.CrossAnalysis (use -ddump-hi-diffs for more details):
+[28 of 54] Skipping Analyzer.CrossAnalysis ( src/Analyzer/CrossAnalysis.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/CrossAnalysis.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/CrossAnalysis.dyn_o )
+compile: input file src/SimpleSyntaxValidator.hs
+*** Checking old interface for SimpleSyntaxValidator (use -ddump-hi-diffs for more details):
+[29 of 54] Skipping SimpleSyntaxValidator ( src/SimpleSyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SimpleSyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SimpleSyntaxValidator.dyn_o )
+compile: input file src/SourceLocation.hs
+*** Checking old interface for SourceLocation (use -ddump-hi-diffs for more details):
+[30 of 54] Skipping SourceLocation   ( src/SourceLocation.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SourceLocation.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SourceLocation.dyn_o )
+compile: input file src/Compiler/Errors/Compiler.hs
+*** Checking old interface for Compiler.Errors.Compiler (use -ddump-hi-diffs for more details):
+[31 of 54] Skipping Compiler.Errors.Compiler ( src/Compiler/Errors/Compiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Compiler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Compiler.dyn_o )
+compile: input file src/EnhancedErrorHandler.hs
+*** Checking old interface for EnhancedErrorHandler (use -ddump-hi-diffs for more details):
+[32 of 54] Skipping EnhancedErrorHandler ( src/EnhancedErrorHandler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedErrorHandler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedErrorHandler.dyn_o )
+compile: input file src/Compiler/Errors.hs
+*** Checking old interface for Compiler.Errors (use -ddump-hi-diffs for more details):
+[33 of 54] Skipping Compiler.Errors  ( src/Compiler/Errors.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors.dyn_o )
+compile: input file src/SyntaxValidator.hs
+*** Checking old interface for SyntaxValidator (use -ddump-hi-diffs for more details):
+[34 of 54] Skipping SyntaxValidator  ( src/SyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SyntaxValidator.dyn_o )
+compile: input file src/Utils.hs
+*** Checking old interface for Utils (use -ddump-hi-diffs for more details):
+[35 of 54] Skipping Utils            ( src/Utils.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Utils.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Utils.dyn_o )
+compile: input file src/Parser.hs
+*** Checking old interface for Parser (use -ddump-hi-diffs for more details):
+[36 of 54] Skipping Parser           ( src/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Parser.dyn_o )
+compile: input file src/Compiler/DependentTypeChecker.hs
+*** Checking old interface for Compiler.DependentTypeChecker (use -ddump-hi-diffs for more details):
+[37 of 54] Skipping Compiler.DependentTypeChecker ( src/Compiler/DependentTypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/DependentTypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/DependentTypeChecker.dyn_o )
+compile: input file src/Compiler/GoParsing.hs
+*** Checking old interface for Compiler.GoParsing (use -ddump-hi-diffs for more details):
+[38 of 54] Skipping Compiler.GoParsing ( src/Compiler/GoParsing.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoParsing.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoParsing.dyn_o )
+compile: input file src/Compiler/GoVarSpec.hs
+*** Checking old interface for Compiler.GoVarSpec (use -ddump-hi-diffs for more details):
+[39 of 54] Skipping Compiler.GoVarSpec ( src/Compiler/GoVarSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoVarSpec.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoVarSpec.dyn_o )
+compile: input file src/Compiler/ValueAnalysis.hs
+*** Checking old interface for Compiler.ValueAnalysis (use -ddump-hi-diffs for more details):
+[40 of 54] Skipping Compiler.ValueAnalysis ( src/Compiler/ValueAnalysis.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/ValueAnalysis.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/ValueAnalysis.dyn_o )
+compile: input file src/Compiler/OwnershipChecker.hs
+*** Checking old interface for Compiler.OwnershipChecker (use -ddump-hi-diffs for more details):
+[41 of 54] Skipping Compiler.OwnershipChecker ( src/Compiler/OwnershipChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/OwnershipChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/OwnershipChecker.dyn_o )
+compile: input file src/Compiler/IR.hs
+*** Checking old interface for Compiler.IR (use -ddump-hi-diffs for more details):
+[42 of 54] Skipping Compiler.IR      ( src/Compiler/IR.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/IR.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/IR.dyn_o )
+compile: input file src/Compiler/TypeChecker.hs
+*** Checking old interface for Compiler.TypeChecker (use -ddump-hi-diffs for more details):
+[43 of 54] Skipping Compiler.TypeChecker ( src/Compiler/TypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/TypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/TypeChecker.dyn_o )
+compile: input file src/Compiler.hs
+*** Checking old interface for Compiler (use -ddump-hi-diffs for more details):
+[44 of 54] Skipping Compiler         ( src/Compiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler.dyn_o )
+compile: input file src/Tooling/Error.hs
+*** Checking old interface for Tooling.Error (use -ddump-hi-diffs for more details):
+[45 of 54] Skipping Tooling.Error    ( src/Tooling/Error.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Tooling/Error.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Tooling/Error.dyn_o )
+compile: input file src/GoToolchain.hs
+*** Checking old interface for GoToolchain (use -ddump-hi-diffs for more details):
+[46 of 54] Skipping GoToolchain      ( src/GoToolchain.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/GoToolchain.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/GoToolchain.dyn_o )
+compile: input file src/CompilerUtils.hs
+*** Checking old interface for CompilerUtils (use -ddump-hi-diffs for more details):
+[47 of 54] Skipping CompilerUtils    ( src/CompilerUtils.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CompilerUtils.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CompilerUtils.dyn_o )
+compile: input file src/EmbedAssets.hs
+*** Checking old interface for EmbedAssets (use -ddump-hi-diffs for more details):
+[48 of 54] Skipping EmbedAssets      ( src/EmbedAssets.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EmbedAssets.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EmbedAssets.dyn_o )
+compile: input file src/Cli/Runner.hs
+*** Checking old interface for Cli.Runner (use -ddump-hi-diffs for more details):
+[49 of 54] Skipping Cli.Runner       ( src/Cli/Runner.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/Runner.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/Runner.dyn_o )
+compile: input file src/Analyzer/SymbolTable.hs
+*** Checking old interface for Analyzer.SymbolTable (use -ddump-hi-diffs for more details):
+[50 of 54] Skipping Analyzer.SymbolTable ( src/Analyzer/SymbolTable.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/SymbolTable.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/SymbolTable.dyn_o )
+compile: input file src/Analyzer/OwnershipBridge.hs
+*** Checking old interface for Analyzer.OwnershipBridge (use -ddump-hi-diffs for more details):
+[51 of 54] Skipping Analyzer.OwnershipBridge ( src/Analyzer/OwnershipBridge.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/OwnershipBridge.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/OwnershipBridge.dyn_o )
+compile: input file src/Analyzer/DependentTypeBridge.hs
+*** Checking old interface for Analyzer.DependentTypeBridge (use -ddump-hi-diffs for more details):
+[52 of 54] Skipping Analyzer.DependentTypeBridge ( src/Analyzer/DependentTypeBridge.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/DependentTypeBridge.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/DependentTypeBridge.dyn_o )
+compile: input file src/AnalyzerIntegration.hs
+*** Checking old interface for AnalyzerIntegration (use -ddump-hi-diffs for more details):
+[53 of 54] Skipping AnalyzerIntegration ( src/AnalyzerIntegration.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/AnalyzerIntegration.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/AnalyzerIntegration.dyn_o )
+compile: input file src/IntegratedCompiler.hs
+*** Checking old interface for IntegratedCompiler (use -ddump-hi-diffs for more details):
+[54 of 54] Skipping IntegratedCompiler ( src/IntegratedCompiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/IntegratedCompiler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/IntegratedCompiler.dyn_o )
+Upsweep completely successful.
+Glasgow Haskell Compiler, Version 9.12.2, stage 2 booted by GHC version 9.10.1
+*** systool:linker:
+*** Linker:
+gcc -Wl,--no-as-needed -lm -o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/libHStypus-0.12.0-inplace-ghc9.12.2.so -shared -Wl,-Bsymbolic -Wl,-h,libHStypus-0.12.0-inplace-ghc9.12.2.so dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/AnalyzerIntegration.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/DependentTypeBridge.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/OwnershipBridge.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/State.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/SymbolTable.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/Types.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/DebugRunner.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Cli/Runner.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CommandLineDebug.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/DependentTypeChecker.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Core.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoAst.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/IR.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/TypeChecker.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/ValueAnalysis.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/CompilerUtils.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Debug.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DebugIntegration.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/AST.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Analyzer.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Inference.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Parser.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/TypeSystem.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DependentTypesParser.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EmbedAssets.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedDebug.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/GoToolchain.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/IntegratedCompiler.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Parser.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SimpleSyntaxValidator.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SourceLocation.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/SyntaxValidator.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Tooling/Error.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Utils.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Error.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoLexer.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoParsing.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoVarSpec.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/OwnershipChecker.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Compiler.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Analyzer/CrossAnalysis.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/ErrorHandler.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/EnhancedErrorHandler.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Lexer.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Common/Types.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Lexer.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Parser.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Analyzer.dyn_o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Ownership/Reporter.dyn_o -L/home/runner/.cabal/store/ghc-9.12.2-9b33/optparse-applicative-0.19.0.0-acebffcb0f036b6f221465e5a2ca32a655adbf0fa90cd9122d6dcc5432eb09e7/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/prettyprinter-ansi-terminal-1.1.3-f3c9da6fa1abaf4fd9896b1dd66111941bb9a7e303925a066421a79d3f53e610/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/ansi-terminal-1.1.4-c86db0af6545e24f6a44fe40256b7e1e500f116502edaaf0a0b66a52a43314ae/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/ansi-terminal-types-1.1.3-6b1bd4c7906dc8881be25784fe6e0029e8cd9ee8f49f0906a1f722dd853ec37b/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/colour-2.3.6-327276b74192ee5570f3b5b7f2d191c5ac3be2a226024dc3528ea5f18c55bc1c/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/prettyprinter-1.7.1-2260476b78605fcee64072958030196bfdc5e8bc7e444dd8f756c140190f6555/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/megaparsec-9.7.0-f591e19576595244fcd6ec7a129d7346dac732751eca0b66f16a3ce1cfa4d288/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/parser-combinators-1.3.0-89002c1ebf15af3320e6ec429df1935bc732dfed54a2cb823c5ba49c422fd585/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/case-insensitive-1.2.1.0-e91973c0f2ef984e0f55740e320cbffd028c5a4d78ee1c4c21f97b3366fe5aa7/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/aeson-2.2.3.0-8b2ea0fa7c7255a578f0296560e6e41f5f8c21244cf9a1dce1a318b6e1e3f36a/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/witherable-0.5-598eaddef9d017cce139194dd732bafe99d36d508c5a7d45d469fe916fa17a49/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/uuid-types-1.0.6-8a7ec495a362efed2d3a21ccf84570d928fa54791e164ab7bac9c9cb254d700b/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/text-short-0.1.6-4da7d40262a6ebefc8b9b05a8c218df4455b6057178a386d835165f6cf02a493/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/text-iso8601-0.1.1-32101603b551113963a4a2cf00575947dd280192dcc745fbe9dc7432e29429e4/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/time-compat-1.9.8-901628144030007021cebd8e851c406c8d2247b92db9d6590e2afee9e915ea6a/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/strict-0.5.1-8f1aead51bde462d7cd49368dd67de1e7a64c6b167c9f3d24afcb5daabe8fa57/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/semialign-1.3.1-0357efbb980ffb44405e493de0ed08d88d0318b23400a16a9633ba78dedfa313/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/these-1.2.1-bce865663bfd603bb27c7971481a60f838c8d54dbc360e9353c99dfcb8df3ba6/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/semigroupoids-6.0.1-4c3f6500750be3e2239d4bfc7d7fc7f34bc8596697e4f11b08b48281861fcca0/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/contravariant-1.5.5-0776e3c12703bdc60620cb2c090412271322aa43e20ae015864d4709828ae22f/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/StateVar-1.2.2-e151e4d63de039da1ca0e9f068bf0c53422aed478d93943de98ee83cd73c8eab/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/bifunctors-5.6.2-193d77ffe9094e1bbb54a3a0323782eaa0596316dd8a91160a810daa7d6ce9b4/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/th-abstraction-0.7.1.0-804edd9edaea45793e6da20dd0a6b26f7ec61d0c01442813a4d1a55680b5fe4b/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/comonad-5.0.9-cf812545eac05892163cb4acfa6ca37fa74a4eb4ad972a9ae0bb6335b9136e8a/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/distributive-0.6.2.1-dd8934136b00420120945edcd876a085f052d588c933c6640e8d98bcaa2a497c/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/assoc-1.1.1-3c597e58436a6d836ad06fb2c2adb62ebf1f61edc5d256e3ffda7872a2aae5cc/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/base-orphans-0.9.3-8283cfd1d831b7ffc853fb5c98cbd48de0bd8c8dec6dfbcfb81a179073f3d8a4/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/indexed-traversable-instances-0.1.2-5545641cb4bf05f5161128a2d138f157d61496e6868a21a750a321a97ca43f0e/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/vector-0.13.2.0-1043042a663401563f05928920d3bb0dbeafa8d050bbae932b7472bb25d006da/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/vector-stream-0.1.0.1-9fbb5363b58be57e2b148bc6ec833fb52699c7b5dcdcd8b91d509d30360a32f0/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/unordered-containers-0.2.20.1-56ed261fbd9a707fce980b7c91792eb66f0ffec3645ef68b52b838cb7f732f87/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/tagged-0.8.10-01c75aecf1f4c3832d403761dfd36e4e9279597cb29ce05b00a0a9341a05f87a/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/scientific-0.3.8.0-d731882e34bf2718569fc19b417dd2f957b594fc0d9efb6dbbd1c1b52f7dcfa8/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/network-uri-2.6.4.2-57d99f1aff0ce03d9b73addf440124cb510ad1dca4cf564e78ed17249544d090/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/th-compat-0.1.6-c7b0709d68924766961e8f44e7ec4b483712673bb93682d88c3b214f21bd4246/lib -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828 -L/home/runner/.cabal/store/ghc-9.12.2-9b33/integer-logarithms-1.0.4-c130a0606d11a6ae49a81bfc2e529b2a2b9e7c67153614764ebb0399f70118fb/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/integer-conversion-0.1.1-f0e3b47bd33ac3cd6a69a88fcb9bb25337b1ef6b0686fe5db3e09c57aa3b0399/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/primitive-0.9.1.0-6d8a188ccb33b23429ef04d5b4dbc73ab6de9fa803c551e6c0707bfdfeaa96cf/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/indexed-traversable-0.1.4-8e32ff916a462b68acb2f10ab1a51c7458915121d852fc20fbffacf1663a7324/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/generically-0.1.1-9b49ca99f4ca8a4379d6480d509b542da34897f5b34eb49b9356d914619044a7/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/data-fix-0.3.4-7da78bef58b7789d04316812d5f0a4309335028e14414d05e24b28dfd361ce93/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/hashable-1.5.0.0-f2f5f3f43b8d7349ebd7b6fc02b5f9a62ebec88597080f59c9c34e6424196e15/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/character-ps-0.1-bc3332bfd564ae27ace5991a9c53b024991c14f538d395b933f0cb9a74834e92/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/QuickCheck-2.16.0.0-6f220063baf475378168c7f0f82ebce1e3871ee6ee58a2b91e412aab7db04bc8/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/OneTuple-0.4.2-5a34462c4032f7c72a6567f8448511744f023d28df80466d015e646cb6e21250/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/Glob-0.10.2-83e85e3b30cd702c68c796a2531b7bb80a37b3dc2f4a0eb3565a67af0ab12952/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/transformers-compat-0.7.2-38dd8fc766f75e24868579b46dfa88ec32c046b70a2893706094f2bfc091cb42/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/dlist-1.0-be61acc4c604c5bf71c50dca63a0d0101e79b9682d6252c4479903f53519a349/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/temporary-1.3-667770de9b639724bc5e4dcc3b5bce9b5e4d1ed4bbeb97fffc581b293b50ed83/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/random-1.3.1-be8540078fd628758d1e9391befd83e71a1e817d66fc94663d03816980edf44a/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/splitmix-0.1.3.1-335ba5f34505daedceec42cccfd6f0af242ae5e2270da05c40cab063a657df7d/lib -lHSoptparse-applicative-0.19.0.0-acebffcb0f036b6f221465e5a2ca32a655adbf0fa90cd9122d6dcc5432eb09e7-ghc9.12.2 -lHSprettyprinter-ansi-terminal-1.1.3-f3c9da6fa1abaf4fd9896b1dd66111941bb9a7e303925a066421a79d3f53e610-ghc9.12.2 -lHSansi-terminal-1.1.4-c86db0af6545e24f6a44fe40256b7e1e500f116502edaaf0a0b66a52a43314ae-ghc9.12.2 -lHSansi-terminal-types-1.1.3-6b1bd4c7906dc8881be25784fe6e0029e8cd9ee8f49f0906a1f722dd853ec37b-ghc9.12.2 -lHScolour-2.3.6-327276b74192ee5570f3b5b7f2d191c5ac3be2a226024dc3528ea5f18c55bc1c-ghc9.12.2 -lHSprettyprinter-1.7.1-2260476b78605fcee64072958030196bfdc5e8bc7e444dd8f756c140190f6555-ghc9.12.2 -lHSmegaparsec-9.7.0-f591e19576595244fcd6ec7a129d7346dac732751eca0b66f16a3ce1cfa4d288-ghc9.12.2 -lHSparser-combinators-1.3.0-89002c1ebf15af3320e6ec429df1935bc732dfed54a2cb823c5ba49c422fd585-ghc9.12.2 -lHScase-insensitive-1.2.1.0-e91973c0f2ef984e0f55740e320cbffd028c5a4d78ee1c4c21f97b3366fe5aa7-ghc9.12.2 -lHSaeson-2.2.3.0-8b2ea0fa7c7255a578f0296560e6e41f5f8c21244cf9a1dce1a318b6e1e3f36a-ghc9.12.2 -lHSwitherable-0.5-598eaddef9d017cce139194dd732bafe99d36d508c5a7d45d469fe916fa17a49-ghc9.12.2 -lHSuuid-types-1.0.6-8a7ec495a362efed2d3a21ccf84570d928fa54791e164ab7bac9c9cb254d700b-ghc9.12.2 -lHStext-short-0.1.6-4da7d40262a6ebefc8b9b05a8c218df4455b6057178a386d835165f6cf02a493-ghc9.12.2 -lHStext-iso8601-0.1.1-32101603b551113963a4a2cf00575947dd280192dcc745fbe9dc7432e29429e4-ghc9.12.2 -lHStime-compat-1.9.8-901628144030007021cebd8e851c406c8d2247b92db9d6590e2afee9e915ea6a-ghc9.12.2 -lHSstrict-0.5.1-8f1aead51bde462d7cd49368dd67de1e7a64c6b167c9f3d24afcb5daabe8fa57-ghc9.12.2 -lHSsemialign-1.3.1-0357efbb980ffb44405e493de0ed08d88d0318b23400a16a9633ba78dedfa313-ghc9.12.2 -lHSthese-1.2.1-bce865663bfd603bb27c7971481a60f838c8d54dbc360e9353c99dfcb8df3ba6-ghc9.12.2 -lHSsemigroupoids-6.0.1-4c3f6500750be3e2239d4bfc7d7fc7f34bc8596697e4f11b08b48281861fcca0-ghc9.12.2 -lHScontravariant-1.5.5-0776e3c12703bdc60620cb2c090412271322aa43e20ae015864d4709828ae22f-ghc9.12.2 -lHSStateVar-1.2.2-e151e4d63de039da1ca0e9f068bf0c53422aed478d93943de98ee83cd73c8eab-ghc9.12.2 -lHSbifunctors-5.6.2-193d77ffe9094e1bbb54a3a0323782eaa0596316dd8a91160a810daa7d6ce9b4-ghc9.12.2 -lHSth-abstraction-0.7.1.0-804edd9edaea45793e6da20dd0a6b26f7ec61d0c01442813a4d1a55680b5fe4b-ghc9.12.2 -lHScomonad-5.0.9-cf812545eac05892163cb4acfa6ca37fa74a4eb4ad972a9ae0bb6335b9136e8a-ghc9.12.2 -lHSdistributive-0.6.2.1-dd8934136b00420120945edcd876a085f052d588c933c6640e8d98bcaa2a497c-ghc9.12.2 -lHSassoc-1.1.1-3c597e58436a6d836ad06fb2c2adb62ebf1f61edc5d256e3ffda7872a2aae5cc-ghc9.12.2 -lHSbase-orphans-0.9.3-8283cfd1d831b7ffc853fb5c98cbd48de0bd8c8dec6dfbcfb81a179073f3d8a4-ghc9.12.2 -lHSindexed-traversable-instances-0.1.2-5545641cb4bf05f5161128a2d138f157d61496e6868a21a750a321a97ca43f0e-ghc9.12.2 -lHSvector-0.13.2.0-1043042a663401563f05928920d3bb0dbeafa8d050bbae932b7472bb25d006da-ghc9.12.2 -lHSvector-stream-0.1.0.1-9fbb5363b58be57e2b148bc6ec833fb52699c7b5dcdcd8b91d509d30360a32f0-ghc9.12.2 -lHSunordered-containers-0.2.20.1-56ed261fbd9a707fce980b7c91792eb66f0ffec3645ef68b52b838cb7f732f87-ghc9.12.2 -lHStagged-0.8.10-01c75aecf1f4c3832d403761dfd36e4e9279597cb29ce05b00a0a9341a05f87a-ghc9.12.2 -lHSscientific-0.3.8.0-d731882e34bf2718569fc19b417dd2f957b594fc0d9efb6dbbd1c1b52f7dcfa8-ghc9.12.2 -lHSnetwork-uri-2.6.4.2-57d99f1aff0ce03d9b73addf440124cb510ad1dca4cf564e78ed17249544d090-ghc9.12.2 -lHSth-compat-0.1.6-c7b0709d68924766961e8f44e7ec4b483712673bb93682d88c3b214f21bd4246-ghc9.12.2 -lHSparsec-3.1.18.0-a894-ghc9.12.2 -lHSinteger-logarithms-1.0.4-c130a0606d11a6ae49a81bfc2e529b2a2b9e7c67153614764ebb0399f70118fb-ghc9.12.2 -lHSinteger-conversion-0.1.1-f0e3b47bd33ac3cd6a69a88fcb9bb25337b1ef6b0686fe5db3e09c57aa3b0399-ghc9.12.2 -lHSprimitive-0.9.1.0-6d8a188ccb33b23429ef04d5b4dbc73ab6de9fa803c551e6c0707bfdfeaa96cf-ghc9.12.2 -lHSindexed-traversable-0.1.4-8e32ff916a462b68acb2f10ab1a51c7458915121d852fc20fbffacf1663a7324-ghc9.12.2 -lHSgenerically-0.1.1-9b49ca99f4ca8a4379d6480d509b542da34897f5b34eb49b9356d914619044a7-ghc9.12.2 -lHSdata-fix-0.3.4-7da78bef58b7789d04316812d5f0a4309335028e14414d05e24b28dfd361ce93-ghc9.12.2 -lHShashable-1.5.0.0-f2f5f3f43b8d7349ebd7b6fc02b5f9a62ebec88597080f59c9c34e6424196e15-ghc9.12.2 -lHScharacter-ps-0.1-bc3332bfd564ae27ace5991a9c53b024991c14f538d395b933f0cb9a74834e92-ghc9.12.2 -lHSQuickCheck-2.16.0.0-6f220063baf475378168c7f0f82ebce1e3871ee6ee58a2b91e412aab7db04bc8-ghc9.12.2 -lHSOneTuple-0.4.2-5a34462c4032f7c72a6567f8448511744f023d28df80466d015e646cb6e21250-ghc9.12.2 -lHSGlob-0.10.2-83e85e3b30cd702c68c796a2531b7bb80a37b3dc2f4a0eb3565a67af0ab12952-ghc9.12.2 -lHStransformers-compat-0.7.2-38dd8fc766f75e24868579b46dfa88ec32c046b70a2893706094f2bfc091cb42-ghc9.12.2 -lHSdlist-1.0-be61acc4c604c5bf71c50dca63a0d0101e79b9682d6252c4479903f53519a349-ghc9.12.2 -lHStemporary-1.3-667770de9b639724bc5e4dcc3b5bce9b5e4d1ed4bbeb97fffc581b293b50ed83-ghc9.12.2 -lHSrandom-1.3.1-be8540078fd628758d1e9391befd83e71a1e817d66fc94663d03816980edf44a-ghc9.12.2 -lHSsplitmix-0.1.3.1-335ba5f34505daedceec42cccfd6f0af242ae5e2270da05c40cab063a657df7d-ghc9.12.2 -lHSprocess-1.6.25.0-5f54-ghc9.12.2 -lHSdirectory-1.3.9.0-af18-ghc9.12.2 -lHSfile-io-0.1.5-178f-ghc9.12.2 -lHSunix-2.8.6.0-c07b-ghc9.12.2 -lHStime-1.14-9bf8-ghc9.12.2 -lHSfilepath-1.5.4.0-e69b-ghc9.12.2 -lHSos-string-2.0.7-e43c-ghc9.12.2 -lHSexceptions-0.10.9-4d2e-ghc9.12.2 -lHSstm-2.5.3.1-d35b-ghc9.12.2 -lHSmtl-2.3.1-fdf9-ghc9.12.2 -lHStransformers-0.6.1.2-38b1-ghc9.12.2 -lHStext-2.1.2-ecdb-ghc9.12.2 -lHSbinary-0.8.9.3-25e5-ghc9.12.2 -lHScontainers-0.7-5a8f-ghc9.12.2 -lHSbytestring-0.12.2.0-7dd0-ghc9.12.2 -lHStemplate-haskell-2.23.0.0-c7f4-ghc9.12.2 -lHSghc-boot-th-9.12.2-e976-ghc9.12.2 -lHSpretty-1.1.3.6-fe44-ghc9.12.2 -lHSdeepseq-1.5.1.0-6837-ghc9.12.2 -lHSarray-0.5.8.0-9044-ghc9.12.2 -lHSbase-4.21.0.0-ae91-ghc9.12.2 -lHSghc-internal-9.1202.0-1465-ghc9.12.2 -lHSghc-bignum-1.3-6db4-ghc9.12.2 -lHSghc-prim-0.13.0-e168-ghc9.12.2 -lgmp -lc -lm -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/Glob-0.10.2-83e85e3b30cd702c68c796a2531b7bb80a37b3dc2f4a0eb3565a67af0ab12952/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/OneTuple-0.4.2-5a34462c4032f7c72a6567f8448511744f023d28df80466d015e646cb6e21250/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/QuickCheck-2.16.0.0-6f220063baf475378168c7f0f82ebce1e3871ee6ee58a2b91e412aab7db04bc8/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/StateVar-1.2.2-e151e4d63de039da1ca0e9f068bf0c53422aed478d93943de98ee83cd73c8eab/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/aeson-2.2.3.0-8b2ea0fa7c7255a578f0296560e6e41f5f8c21244cf9a1dce1a318b6e1e3f36a/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/ansi-terminal-1.1.4-c86db0af6545e24f6a44fe40256b7e1e500f116502edaaf0a0b66a52a43314ae/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/ansi-terminal-types-1.1.3-6b1bd4c7906dc8881be25784fe6e0029e8cd9ee8f49f0906a1f722dd853ec37b/lib -Wl,-rpath,/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/x86_64-linux-ghc-9.12.2-a828 -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/assoc-1.1.1-3c597e58436a6d836ad06fb2c2adb62ebf1f61edc5d256e3ffda7872a2aae5cc/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/base-orphans-0.9.3-8283cfd1d831b7ffc853fb5c98cbd48de0bd8c8dec6dfbcfb81a179073f3d8a4/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/bifunctors-5.6.2-193d77ffe9094e1bbb54a3a0323782eaa0596316dd8a91160a810daa7d6ce9b4/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/case-insensitive-1.2.1.0-e91973c0f2ef984e0f55740e320cbffd028c5a4d78ee1c4c21f97b3366fe5aa7/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/character-ps-0.1-bc3332bfd564ae27ace5991a9c53b024991c14f538d395b933f0cb9a74834e92/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/colour-2.3.6-327276b74192ee5570f3b5b7f2d191c5ac3be2a226024dc3528ea5f18c55bc1c/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/comonad-5.0.9-cf812545eac05892163cb4acfa6ca37fa74a4eb4ad972a9ae0bb6335b9136e8a/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/contravariant-1.5.5-0776e3c12703bdc60620cb2c090412271322aa43e20ae015864d4709828ae22f/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/data-fix-0.3.4-7da78bef58b7789d04316812d5f0a4309335028e14414d05e24b28dfd361ce93/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/distributive-0.6.2.1-dd8934136b00420120945edcd876a085f052d588c933c6640e8d98bcaa2a497c/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/dlist-1.0-be61acc4c604c5bf71c50dca63a0d0101e79b9682d6252c4479903f53519a349/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/generically-0.1.1-9b49ca99f4ca8a4379d6480d509b542da34897f5b34eb49b9356d914619044a7/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/hashable-1.5.0.0-f2f5f3f43b8d7349ebd7b6fc02b5f9a62ebec88597080f59c9c34e6424196e15/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/indexed-traversable-0.1.4-8e32ff916a462b68acb2f10ab1a51c7458915121d852fc20fbffacf1663a7324/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/indexed-traversable-instances-0.1.2-5545641cb4bf05f5161128a2d138f157d61496e6868a21a750a321a97ca43f0e/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/integer-conversion-0.1.1-f0e3b47bd33ac3cd6a69a88fcb9bb25337b1ef6b0686fe5db3e09c57aa3b0399/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/integer-logarithms-1.0.4-c130a0606d11a6ae49a81bfc2e529b2a2b9e7c67153614764ebb0399f70118fb/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/megaparsec-9.7.0-f591e19576595244fcd6ec7a129d7346dac732751eca0b66f16a3ce1cfa4d288/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/network-uri-2.6.4.2-57d99f1aff0ce03d9b73addf440124cb510ad1dca4cf564e78ed17249544d090/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/optparse-applicative-0.19.0.0-acebffcb0f036b6f221465e5a2ca32a655adbf0fa90cd9122d6dcc5432eb09e7/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/parser-combinators-1.3.0-89002c1ebf15af3320e6ec429df1935bc732dfed54a2cb823c5ba49c422fd585/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/prettyprinter-1.7.1-2260476b78605fcee64072958030196bfdc5e8bc7e444dd8f756c140190f6555/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/prettyprinter-ansi-terminal-1.1.3-f3c9da6fa1abaf4fd9896b1dd66111941bb9a7e303925a066421a79d3f53e610/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/primitive-0.9.1.0-6d8a188ccb33b23429ef04d5b4dbc73ab6de9fa803c551e6c0707bfdfeaa96cf/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/random-1.3.1-be8540078fd628758d1e9391befd83e71a1e817d66fc94663d03816980edf44a/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/scientific-0.3.8.0-d731882e34bf2718569fc19b417dd2f957b594fc0d9efb6dbbd1c1b52f7dcfa8/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/semialign-1.3.1-0357efbb980ffb44405e493de0ed08d88d0318b23400a16a9633ba78dedfa313/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/semigroupoids-6.0.1-4c3f6500750be3e2239d4bfc7d7fc7f34bc8596697e4f11b08b48281861fcca0/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/splitmix-0.1.3.1-335ba5f34505daedceec42cccfd6f0af242ae5e2270da05c40cab063a657df7d/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/strict-0.5.1-8f1aead51bde462d7cd49368dd67de1e7a64c6b167c9f3d24afcb5daabe8fa57/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/tagged-0.8.10-01c75aecf1f4c3832d403761dfd36e4e9279597cb29ce05b00a0a9341a05f87a/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/temporary-1.3-667770de9b639724bc5e4dcc3b5bce9b5e4d1ed4bbeb97fffc581b293b50ed83/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/text-iso8601-0.1.1-32101603b551113963a4a2cf00575947dd280192dcc745fbe9dc7432e29429e4/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/text-short-0.1.6-4da7d40262a6ebefc8b9b05a8c218df4455b6057178a386d835165f6cf02a493/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/th-abstraction-0.7.1.0-804edd9edaea45793e6da20dd0a6b26f7ec61d0c01442813a4d1a55680b5fe4b/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/th-compat-0.1.6-c7b0709d68924766961e8f44e7ec4b483712673bb93682d88c3b214f21bd4246/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/these-1.2.1-bce865663bfd603bb27c7971481a60f838c8d54dbc360e9353c99dfcb8df3ba6/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/time-compat-1.9.8-901628144030007021cebd8e851c406c8d2247b92db9d6590e2afee9e915ea6a/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/transformers-compat-0.7.2-38dd8fc766f75e24868579b46dfa88ec32c046b70a2893706094f2bfc091cb42/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/unordered-containers-0.2.20.1-56ed261fbd9a707fce980b7c91792eb66f0ffec3645ef68b52b838cb7f732f87/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/uuid-types-1.0.6-8a7ec495a362efed2d3a21ccf84570d928fa54791e164ab7bac9c9cb254d700b/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/vector-0.13.2.0-1043042a663401563f05928920d3bb0dbeafa8d050bbae932b7472bb25d006da/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/vector-stream-0.1.0.1-9fbb5363b58be57e2b148bc6ec833fb52699c7b5dcdcd8b91d509d30360a32f0/lib -Wl,-rpath,/home/runner/.cabal/store/ghc-9.12.2-9b33/witherable-0.5-598eaddef9d017cce139194dd732bafe99d36d508c5a7d45d469fe916fa17a49/lib -Wl,-s -Wl,-s
+Created temporary directory: /tmp/ghc179596_tmp_0
+!!! systool:linker: finished in 20.29 milliseconds, allocated 5.897 megabytes
+*** Deleting temp files:
+Deleting: /tmp/ghc179596_tmp_0/ghc_tmp_1.rsp
+*** Deleting temp dirs:
+Deleting: /tmp/ghc179596_tmp_0
+Configuring executable 'typus' for typus-0.12.0...
+Glasgow Haskell Compiler, Version 9.12.2, stage 2 booted by GHC version 9.10.1
+*** systool:cc:
+*** C Compiler:
+gcc -x c -c /tmp/179612-0.c -o /tmp/179612-1.o.tmp -fno-PIC -Wimplicit -include /usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/rts-1.0.2/include/ghcversion.h -I/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/ghc-internal-9.1202.0-1465/include -I/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/ghc-bignum-1.3-6db4/include -I/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/rts-1.0.2/include
+Created temporary directory: /tmp/ghc179657_tmp_0
+!!! systool:cc: finished in 0.76 milliseconds, allocated 0.248 megabytes
+*** Deleting temp files:
+Deleting: /tmp/ghc179657_tmp_0/ghc_tmp_1.rsp
+*** Deleting temp dirs:
+Deleting: /tmp/ghc179657_tmp_0
+Preprocessing executable 'typus' for typus-0.12.0...
+Building executable 'typus' for typus-0.12.0...
+Glasgow Haskell Compiler, Version 9.12.2, stage 2 booted by GHC version 9.10.1
+*** initializing unit database:
+package flags [-package-id Glob-0.10.2-83e85e3b30cd702c68c796a2531b7bb80a37b3dc2f4a0eb3565a67af0ab12952{unit Glob-0.10.2-83e85e3b30cd702c68c796a2531b7bb80a37b3dc2f4a0eb3565a67af0ab12952 True ([])},
+               -package-id base-4.21.0.0-ae91{unit base-4.21.0.0-ae91 True ([])},
+               -package-id containers-0.7-5a8f{unit containers-0.7-5a8f True ([])},
+               -package-id directory-1.3.9.0-af18{unit directory-1.3.9.0-af18 True ([])},
+               -package-id filepath-1.5.4.0-e69b{unit filepath-1.5.4.0-e69b True ([])},
+               -package-id mtl-2.3.1-fdf9{unit mtl-2.3.1-fdf9 True ([])},
+               -package-id process-1.6.25.0-5f54{unit process-1.6.25.0-5f54 True ([])},
+               -package-id temporary-1.3-667770de9b639724bc5e4dcc3b5bce9b5e4d1ed4bbeb97fffc581b293b50ed83{unit temporary-1.3-667770de9b639724bc5e4dcc3b5bce9b5e4d1ed4bbeb97fffc581b293b50ed83 True ([])},
+               -package-id typus-0.12.0-inplace{unit typus-0.12.0-inplace True ([])}]
+loading package database /usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/package.conf.d
+loading package database /home/runner/.cabal/store/ghc-9.12.2-9b33/package.db
+loading package database /home/runner/work/Typus/Typus/dist-newstyle/packagedb/ghc-9.12.2
+loading package database dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/package.conf.inplace
+wired-in package ghc-prim mapped to ghc-prim-0.13.0-e168
+wired-in package ghc-bignum mapped to ghc-bignum-1.3-6db4
+wired-in package ghc-internal mapped to ghc-internal-9.1202.0-1465
+wired-in package rts mapped to rts-1.0.2
+!!! initializing unit database: finished in 20.52 milliseconds, allocated 5.717 megabytes
+*** Chasing dependencies:
+Chasing modules from: typus-0.12.0-inplace-typus:app/Main.hs
+!!! Chasing dependencies: finished in 1.44 milliseconds, allocated 2.046 megabytes
+Ready for upsweep
+  [SingleModule(typus-0.12.0-inplace-typus:Main [])]
+compile: input file app/Main.hs
+*** Checking old interface for Main (use -ddump-hi-diffs for more details):
+[1 of 1] Skipping Main             ( app/Main.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus-tmp/Main.o )
+Upsweep completely successful.
+Glasgow Haskell Compiler, Version 9.12.2, stage 2 booted by GHC version 9.10.1
+*** initializing unit database:
+package flags [-package-id Glob-0.10.2-83e85e3b30cd702c68c796a2531b7bb80a37b3dc2f4a0eb3565a67af0ab12952{unit Glob-0.10.2-83e85e3b30cd702c68c796a2531b7bb80a37b3dc2f4a0eb3565a67af0ab12952 True ([])},
+               -package-id base-4.21.0.0-ae91{unit base-4.21.0.0-ae91 True ([])},
+               -package-id containers-0.7-5a8f{unit containers-0.7-5a8f True ([])},
+               -package-id directory-1.3.9.0-af18{unit directory-1.3.9.0-af18 True ([])},
+               -package-id filepath-1.5.4.0-e69b{unit filepath-1.5.4.0-e69b True ([])},
+               -package-id mtl-2.3.1-fdf9{unit mtl-2.3.1-fdf9 True ([])},
+               -package-id process-1.6.25.0-5f54{unit process-1.6.25.0-5f54 True ([])},
+               -package-id temporary-1.3-667770de9b639724bc5e4dcc3b5bce9b5e4d1ed4bbeb97fffc581b293b50ed83{unit temporary-1.3-667770de9b639724bc5e4dcc3b5bce9b5e4d1ed4bbeb97fffc581b293b50ed83 True ([])},
+               -package-id typus-0.12.0-inplace{unit typus-0.12.0-inplace True ([])}]
+loading package database /usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/package.conf.d
+loading package database /home/runner/.cabal/store/ghc-9.12.2-9b33/package.db
+loading package database /home/runner/work/Typus/Typus/dist-newstyle/packagedb/ghc-9.12.2
+loading package database dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/package.conf.inplace
+wired-in package ghc-prim mapped to ghc-prim-0.13.0-e168
+wired-in package ghc-bignum mapped to ghc-bignum-1.3-6db4
+wired-in package ghc-internal mapped to ghc-internal-9.1202.0-1465
+wired-in package rts mapped to rts-1.0.2
+!!! initializing unit database: finished in 20.62 milliseconds, allocated 5.717 megabytes
+*** Chasing dependencies:
+Chasing modules from: typus-0.12.0-inplace-typus:app/Main.hs
+!!! Chasing dependencies: finished in 1.42 milliseconds, allocated 2.047 megabytes
+Ready for upsweep
+  [SingleModule(typus-0.12.0-inplace-typus:Main []),
+   SingleModule(LN: [typus-0.12.0-inplace-typus:Main])]
+compile: input file app/Main.hs
+*** Checking old interface for Main (use -ddump-hi-diffs for more details):
+[1 of 2] Skipping Main             ( app/Main.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus-tmp/Main.o )
+link: hmi ...
+Main
+link: linkables are ...
+Linkable (2025-12-13 07:11:09.060229323 UTC) Main
+   [DotO dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus-tmp/Main.o]
+link: pkg deps are ...
+base-4.21.0.0-ae91
+typus-0.12.0-inplace
+Link info: (UnitLinkOpts {hsLibs = ["-lHStypus-0.12.0-inplace","-lHSoptparse-applicative-0.19.0.0-acebffcb0f036b6f221465e5a2ca32a655adbf0fa90cd9122d6dcc5432eb09e7","-lHSprettyprinter-ansi-terminal-1.1.3-f3c9da6fa1abaf4fd9896b1dd66111941bb9a7e303925a066421a79d3f53e610","-lHSansi-terminal-1.1.4-c86db0af6545e24f6a44fe40256b7e1e500f116502edaaf0a0b66a52a43314ae","-lHSansi-terminal-types-1.1.3-6b1bd4c7906dc8881be25784fe6e0029e8cd9ee8f49f0906a1f722dd853ec37b","-lHScolour-2.3.6-327276b74192ee5570f3b5b7f2d191c5ac3be2a226024dc3528ea5f18c55bc1c","-lHSprettyprinter-1.7.1-2260476b78605fcee64072958030196bfdc5e8bc7e444dd8f756c140190f6555","-lHSmegaparsec-9.7.0-f591e19576595244fcd6ec7a129d7346dac732751eca0b66f16a3ce1cfa4d288","-lHSparser-combinators-1.3.0-89002c1ebf15af3320e6ec429df1935bc732dfed54a2cb823c5ba49c422fd585","-lHScase-insensitive-1.2.1.0-e91973c0f2ef984e0f55740e320cbffd028c5a4d78ee1c4c21f97b3366fe5aa7","-lHSaeson-2.2.3.0-8b2ea0fa7c7255a578f0296560e6e41f5f8c21244cf9a1dce1a318b6e1e3f36a","-lHSwitherable-0.5-598eaddef9d017cce139194dd732bafe99d36d508c5a7d45d469fe916fa17a49","-lHSuuid-types-1.0.6-8a7ec495a362efed2d3a21ccf84570d928fa54791e164ab7bac9c9cb254d700b","-lHStext-short-0.1.6-4da7d40262a6ebefc8b9b05a8c218df4455b6057178a386d835165f6cf02a493","-lHStext-iso8601-0.1.1-32101603b551113963a4a2cf00575947dd280192dcc745fbe9dc7432e29429e4","-lHStime-compat-1.9.8-901628144030007021cebd8e851c406c8d2247b92db9d6590e2afee9e915ea6a","-lHSstrict-0.5.1-8f1aead51bde462d7cd49368dd67de1e7a64c6b167c9f3d24afcb5daabe8fa57","-lHSsemialign-1.3.1-0357efbb980ffb44405e493de0ed08d88d0318b23400a16a9633ba78dedfa313","-lHSthese-1.2.1-bce865663bfd603bb27c7971481a60f838c8d54dbc360e9353c99dfcb8df3ba6","-lHSsemigroupoids-6.0.1-4c3f6500750be3e2239d4bfc7d7fc7f34bc8596697e4f11b08b48281861fcca0","-lHScontravariant-1.5.5-0776e3c12703bdc60620cb2c090412271322aa43e20ae015864d4709828ae22f","-lHSStateVar-1.2.2-e151e4d63de039da1ca0e9f068bf0c53422aed478d93943de98ee83cd73c8eab","-lHSbifunctors-5.6.2-193d77ffe9094e1bbb54a3a0323782eaa0596316dd8a91160a810daa7d6ce9b4","-lHSth-abstraction-0.7.1.0-804edd9edaea45793e6da20dd0a6b26f7ec61d0c01442813a4d1a55680b5fe4b","-lHScomonad-5.0.9-cf812545eac05892163cb4acfa6ca37fa74a4eb4ad972a9ae0bb6335b9136e8a","-lHSdistributive-0.6.2.1-dd8934136b00420120945edcd876a085f052d588c933c6640e8d98bcaa2a497c","-lHSassoc-1.1.1-3c597e58436a6d836ad06fb2c2adb62ebf1f61edc5d256e3ffda7872a2aae5cc","-lHSbase-orphans-0.9.3-8283cfd1d831b7ffc853fb5c98cbd48de0bd8c8dec6dfbcfb81a179073f3d8a4","-lHSindexed-traversable-instances-0.1.2-5545641cb4bf05f5161128a2d138f157d61496e6868a21a750a321a97ca43f0e","-lHSvector-0.13.2.0-1043042a663401563f05928920d3bb0dbeafa8d050bbae932b7472bb25d006da","-lHSvector-stream-0.1.0.1-9fbb5363b58be57e2b148bc6ec833fb52699c7b5dcdcd8b91d509d30360a32f0","-lHSunordered-containers-0.2.20.1-56ed261fbd9a707fce980b7c91792eb66f0ffec3645ef68b52b838cb7f732f87","-lHStagged-0.8.10-01c75aecf1f4c3832d403761dfd36e4e9279597cb29ce05b00a0a9341a05f87a","-lHSscientific-0.3.8.0-d731882e34bf2718569fc19b417dd2f957b594fc0d9efb6dbbd1c1b52f7dcfa8","-lHSnetwork-uri-2.6.4.2-57d99f1aff0ce03d9b73addf440124cb510ad1dca4cf564e78ed17249544d090","-lHSth-compat-0.1.6-c7b0709d68924766961e8f44e7ec4b483712673bb93682d88c3b214f21bd4246","-lHSparsec-3.1.18.0-a894","-lHSinteger-logarithms-1.0.4-c130a0606d11a6ae49a81bfc2e529b2a2b9e7c67153614764ebb0399f70118fb","-lHSinteger-conversion-0.1.1-f0e3b47bd33ac3cd6a69a88fcb9bb25337b1ef6b0686fe5db3e09c57aa3b0399","-lHSprimitive-0.9.1.0-6d8a188ccb33b23429ef04d5b4dbc73ab6de9fa803c551e6c0707bfdfeaa96cf","-lHSindexed-traversable-0.1.4-8e32ff916a462b68acb2f10ab1a51c7458915121d852fc20fbffacf1663a7324","-lHSgenerically-0.1.1-9b49ca99f4ca8a4379d6480d509b542da34897f5b34eb49b9356d914619044a7","-lHSdata-fix-0.3.4-7da78bef58b7789d04316812d5f0a4309335028e14414d05e24b28dfd361ce93","-lHShashable-1.5.0.0-f2f5f3f43b8d7349ebd7b6fc02b5f9a62ebec88597080f59c9c34e6424196e15","-lHStext-2.1.2-ecdb","-lHSbinary-0.8.9.3-25e5","-lHScharacter-ps-0.1-bc3332bfd564ae27ace5991a9c53b024991c14f538d395b933f0cb9a74834e92","-lHSQuickCheck-2.16.0.0-6f220063baf475378168c7f0f82ebce1e3871ee6ee58a2b91e412aab7db04bc8","-lHSOneTuple-0.4.2-5a34462c4032f7c72a6567f8448511744f023d28df80466d015e646cb6e21250","-lHSGlob-0.10.2-83e85e3b30cd702c68c796a2531b7bb80a37b3dc2f4a0eb3565a67af0ab12952","-lHStransformers-compat-0.7.2-38dd8fc766f75e24868579b46dfa88ec32c046b70a2893706094f2bfc091cb42","-lHSdlist-1.0-be61acc4c604c5bf71c50dca63a0d0101e79b9682d6252c4479903f53519a349","-lHStemporary-1.3-667770de9b639724bc5e4dcc3b5bce9b5e4d1ed4bbeb97fffc581b293b50ed83","-lHSrandom-1.3.1-be8540078fd628758d1e9391befd83e71a1e817d66fc94663d03816980edf44a","-lHSsplitmix-0.1.3.1-335ba5f34505daedceec42cccfd6f0af242ae5e2270da05c40cab063a657df7d","-lHScontainers-0.7-5a8f","-lHSprocess-1.6.25.0-5f54","-lHSdirectory-1.3.9.0-af18","-lHSfile-io-0.1.5-178f","-lHSunix-2.8.6.0-c07b","-lHStime-1.14-9bf8","-lHSfilepath-1.5.4.0-e69b","-lHSos-string-2.0.7-e43c","-lHSexceptions-0.10.9-4d2e","-lHSstm-2.5.3.1-d35b","-lHSarray-0.5.8.0-9044","-lHSmtl-2.3.1-fdf9","-lHStransformers-0.6.1.2-38b1","-lHSbytestring-0.12.2.0-7dd0","-lHStemplate-haskell-2.23.0.0-c7f4","-lHSghc-boot-th-9.12.2-e976","-lHSpretty-1.1.3.6-fe44","-lHSdeepseq-1.5.1.0-6837","-lHSbase-4.21.0.0-ae91","-lHSghc-internal-9.1202.0-1465","-lHSghc-bignum-1.3-6db4","-lHSghc-prim-0.13.0-e168","-lHSrts-1.0.2_thr","-lCffi"], extraLibs = ["-lgmp","-lc","-lm","-lc","-lm","-lrt","-ldl"], otherFlags = ["-Wl,-u,ghczminternal_GHCziInternalziTopHandler_runIO_closure","-Wl,-u,ghczminternal_GHCziInternalziTopHandler_runNonIO_closure","-Wl,-u,ghczmprim_GHCziTuple_Z0T_closure","-Wl,-u,ghczmprim_GHCziTypes_True_closure","-Wl,-u,ghczmprim_GHCziTypes_False_closure","-Wl,-u,ghczminternal_GHCziInternalziPack_unpackCString_closure","-Wl,-u,ghczminternal_GHCziInternalziWeakziFinalizze_runFinalizzerBatch_closure","-Wl,-u,ghczminternal_GHCziInternalziIOziException_stackOverflow_closure","-Wl,-u,ghczminternal_GHCziInternalziIOziException_heapOverflow_closure","-Wl,-u,ghczminternal_GHCziInternalziIOziException_allocationLimitExceeded_closure","-Wl,-u,ghczminternal_GHCziInternalziIOziException_blockedIndefinitelyOnMVar_closure","-Wl,-u,ghczminternal_GHCziInternalziIOziException_blockedIndefinitelyOnSTM_closure","-Wl,-u,ghczminternal_GHCziInternalziIOziException_cannotCompactFunction_closure","-Wl,-u,ghczminternal_GHCziInternalziIOziException_cannotCompactPinned_closure","-Wl,-u,ghczminternal_GHCziInternalziIOziException_cannotCompactMutable_closure","-Wl,-u,ghczminternal_GHCziInternalziIOPort_doubleReadException_closure","-Wl,-u,ghczminternal_GHCziInternalziControlziExceptionziBase_nonTermination_closure","-Wl,-u,ghczminternal_GHCziInternalziControlziExceptionziBase_nestedAtomically_closure","-Wl,-u,ghczminternal_GHCziInternalziEventziThread_blockedOnBadFD_closure","-Wl,-u,ghczminternal_GHCziInternalziConcziSync_runSparks_closure","-Wl,-u,ghczminternal_GHCziInternalziConcziIO_ensureIOManagerIsRunning_closure","-Wl,-u,ghczminternal_GHCziInternalziConcziIO_interruptIOManager_closure","-Wl,-u,ghczminternal_GHCziInternalziConcziIO_ioManagerCapabilitiesChanged_closure","-Wl,-u,ghczminternal_GHCziInternalziConcziSignal_runHandlersPtr_closure","-Wl,-u,ghczminternal_GHCziInternalziTopHandler_flushStdHandles_closure","-Wl,-u,ghczminternal_GHCziInternalziTopHandler_runMainIO_closure","-Wl,-u,ghczmprim_GHCziTypes_Czh_con_info","-Wl,-u,ghczmprim_GHCziTypes_Izh_con_info","-Wl,-u,ghczmprim_GHCziTypes_Fzh_con_info","-Wl,-u,ghczmprim_GHCziTypes_Dzh_con_info","-Wl,-u,ghczmprim_GHCziTypes_Wzh_con_info","-Wl,-u,ghczminternal_GHCziInternalziPtr_Ptr_con_info","-Wl,-u,ghczminternal_GHCziInternalziPtr_FunPtr_con_info","-Wl,-u,ghczminternal_GHCziInternalziInt_I8zh_con_info","-Wl,-u,ghczminternal_GHCziInternalziInt_I16zh_con_info","-Wl,-u,ghczminternal_GHCziInternalziInt_I32zh_con_info","-Wl,-u,ghczminternal_GHCziInternalziInt_I64zh_con_info","-Wl,-u,ghczminternal_GHCziInternalziWord_W8zh_con_info","-Wl,-u,ghczminternal_GHCziInternalziWord_W16zh_con_info","-Wl,-u,ghczminternal_GHCziInternalziWord_W32zh_con_info","-Wl,-u,ghczminternal_GHCziInternalziWord_W64zh_con_info","-Wl,-u,ghczminternal_GHCziInternalziStable_StablePtr_con_info","-Wl,-u,hs_atomic_add8","-Wl,-u,hs_atomic_add16","-Wl,-u,hs_atomic_add32","-Wl,-u,hs_atomic_add64","-Wl,-u,hs_atomic_sub8","-Wl,-u,hs_atomic_sub16","-Wl,-u,hs_atomic_sub32","-Wl,-u,hs_atomic_sub64","-Wl,-u,hs_atomic_and8","-Wl,-u,hs_atomic_and16","-Wl,-u,hs_atomic_and32","-Wl,-u,hs_atomic_and64","-Wl,-u,hs_atomic_nand8","-Wl,-u,hs_atomic_nand16","-Wl,-u,hs_atomic_nand32","-Wl,-u,hs_atomic_nand64","-Wl,-u,hs_atomic_or8","-Wl,-u,hs_atomic_or16","-Wl,-u,hs_atomic_or32","-Wl,-u,hs_atomic_or64","-Wl,-u,hs_atomic_xor8","-Wl,-u,hs_atomic_xor16","-Wl,-u,hs_atomic_xor32","-Wl,-u,hs_atomic_xor64","-Wl,-u,hs_cmpxchg8","-Wl,-u,hs_cmpxchg16","-Wl,-u,hs_cmpxchg32","-Wl,-u,hs_cmpxchg64","-Wl,-u,hs_xchg8","-Wl,-u,hs_xchg16","-Wl,-u,hs_xchg32","-Wl,-u,hs_xchg64","-Wl,-u,hs_atomicread8","-Wl,-u,hs_atomicread16","-Wl,-u,hs_atomicread32","-Wl,-u,hs_atomicread64","-Wl,-u,hs_atomicwrite8","-Wl,-u,hs_atomicwrite16","-Wl,-u,hs_atomicwrite32","-Wl,-u,hs_atomicwrite64","-Wl,-u,ghczminternal_GHCziInternalziStackziCloneStack_StackSnapshot_closure"]},[],Just "-N",RtsOptsAll,False,[],["-Wl,-s","-Wl,-s"])
+Exe link info: Not found
+[2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus [Flags changed]
+Created temporary directory: /tmp/ghc179689_tmp_1_0
+*** systool:cc:
+*** C Compiler:
+gcc -c /tmp/ghc179689_tmp_1_0/ghc_tmp_1_1.c -o /tmp/ghc179689_tmp_1_0/ghc_tmp_1_2.o -fno-PIC -I/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/rts-1.0.2/include
+!!! systool:cc: finished in 0.59 milliseconds, allocated 0.156 megabytes
+*** systool:cc:
+*** C Compiler:
+gcc -c /tmp/ghc179689_tmp_1_0/ghc_tmp_1_4.s -o /tmp/ghc179689_tmp_1_0/ghc_tmp_1_5.o
+!!! systool:cc: finished in 0.46 milliseconds, allocated 0.126 megabytes
+*** systool:linker:
+*** Linker:
+gcc -Wl,--no-as-needed -o dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus -lm -no-pie -Wl,--gc-sections dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus-tmp/Main.o -L/home/runner/work/Typus/Typus/dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build -L/home/runner/.cabal/store/ghc-9.12.2-9b33/optparse-applicative-0.19.0.0-acebffcb0f036b6f221465e5a2ca32a655adbf0fa90cd9122d6dcc5432eb09e7/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/prettyprinter-ansi-terminal-1.1.3-f3c9da6fa1abaf4fd9896b1dd66111941bb9a7e303925a066421a79d3f53e610/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/ansi-terminal-1.1.4-c86db0af6545e24f6a44fe40256b7e1e500f116502edaaf0a0b66a52a43314ae/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/ansi-terminal-types-1.1.3-6b1bd4c7906dc8881be25784fe6e0029e8cd9ee8f49f0906a1f722dd853ec37b/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/colour-2.3.6-327276b74192ee5570f3b5b7f2d191c5ac3be2a226024dc3528ea5f18c55bc1c/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/prettyprinter-1.7.1-2260476b78605fcee64072958030196bfdc5e8bc7e444dd8f756c140190f6555/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/megaparsec-9.7.0-f591e19576595244fcd6ec7a129d7346dac732751eca0b66f16a3ce1cfa4d288/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/parser-combinators-1.3.0-89002c1ebf15af3320e6ec429df1935bc732dfed54a2cb823c5ba49c422fd585/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/case-insensitive-1.2.1.0-e91973c0f2ef984e0f55740e320cbffd028c5a4d78ee1c4c21f97b3366fe5aa7/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/aeson-2.2.3.0-8b2ea0fa7c7255a578f0296560e6e41f5f8c21244cf9a1dce1a318b6e1e3f36a/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/witherable-0.5-598eaddef9d017cce139194dd732bafe99d36d508c5a7d45d469fe916fa17a49/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/uuid-types-1.0.6-8a7ec495a362efed2d3a21ccf84570d928fa54791e164ab7bac9c9cb254d700b/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/text-short-0.1.6-4da7d40262a6ebefc8b9b05a8c218df4455b6057178a386d835165f6cf02a493/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/text-iso8601-0.1.1-32101603b551113963a4a2cf00575947dd280192dcc745fbe9dc7432e29429e4/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/time-compat-1.9.8-901628144030007021cebd8e851c406c8d2247b92db9d6590e2afee9e915ea6a/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/strict-0.5.1-8f1aead51bde462d7cd49368dd67de1e7a64c6b167c9f3d24afcb5daabe8fa57/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/semialign-1.3.1-0357efbb980ffb44405e493de0ed08d88d0318b23400a16a9633ba78dedfa313/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/these-1.2.1-bce865663bfd603bb27c7971481a60f838c8d54dbc360e9353c99dfcb8df3ba6/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/semigroupoids-6.0.1-4c3f6500750be3e2239d4bfc7d7fc7f34bc8596697e4f11b08b48281861fcca0/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/contravariant-1.5.5-0776e3c12703bdc60620cb2c090412271322aa43e20ae015864d4709828ae22f/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/StateVar-1.2.2-e151e4d63de039da1ca0e9f068bf0c53422aed478d93943de98ee83cd73c8eab/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/bifunctors-5.6.2-193d77ffe9094e1bbb54a3a0323782eaa0596316dd8a91160a810daa7d6ce9b4/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/th-abstraction-0.7.1.0-804edd9edaea45793e6da20dd0a6b26f7ec61d0c01442813a4d1a55680b5fe4b/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/comonad-5.0.9-cf812545eac05892163cb4acfa6ca37fa74a4eb4ad972a9ae0bb6335b9136e8a/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/distributive-0.6.2.1-dd8934136b00420120945edcd876a085f052d588c933c6640e8d98bcaa2a497c/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/assoc-1.1.1-3c597e58436a6d836ad06fb2c2adb62ebf1f61edc5d256e3ffda7872a2aae5cc/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/base-orphans-0.9.3-8283cfd1d831b7ffc853fb5c98cbd48de0bd8c8dec6dfbcfb81a179073f3d8a4/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/indexed-traversable-instances-0.1.2-5545641cb4bf05f5161128a2d138f157d61496e6868a21a750a321a97ca43f0e/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/vector-0.13.2.0-1043042a663401563f05928920d3bb0dbeafa8d050bbae932b7472bb25d006da/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/vector-stream-0.1.0.1-9fbb5363b58be57e2b148bc6ec833fb52699c7b5dcdcd8b91d509d30360a32f0/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/unordered-containers-0.2.20.1-56ed261fbd9a707fce980b7c91792eb66f0ffec3645ef68b52b838cb7f732f87/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/tagged-0.8.10-01c75aecf1f4c3832d403761dfd36e4e9279597cb29ce05b00a0a9341a05f87a/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/scientific-0.3.8.0-d731882e34bf2718569fc19b417dd2f957b594fc0d9efb6dbbd1c1b52f7dcfa8/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/network-uri-2.6.4.2-57d99f1aff0ce03d9b73addf440124cb510ad1dca4cf564e78ed17249544d090/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/th-compat-0.1.6-c7b0709d68924766961e8f44e7ec4b483712673bb93682d88c3b214f21bd4246/lib -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/parsec-3.1.18.0-a894 -L/home/runner/.cabal/store/ghc-9.12.2-9b33/integer-logarithms-1.0.4-c130a0606d11a6ae49a81bfc2e529b2a2b9e7c67153614764ebb0399f70118fb/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/integer-conversion-0.1.1-f0e3b47bd33ac3cd6a69a88fcb9bb25337b1ef6b0686fe5db3e09c57aa3b0399/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/primitive-0.9.1.0-6d8a188ccb33b23429ef04d5b4dbc73ab6de9fa803c551e6c0707bfdfeaa96cf/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/indexed-traversable-0.1.4-8e32ff916a462b68acb2f10ab1a51c7458915121d852fc20fbffacf1663a7324/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/generically-0.1.1-9b49ca99f4ca8a4379d6480d509b542da34897f5b34eb49b9356d914619044a7/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/data-fix-0.3.4-7da78bef58b7789d04316812d5f0a4309335028e14414d05e24b28dfd361ce93/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/hashable-1.5.0.0-f2f5f3f43b8d7349ebd7b6fc02b5f9a62ebec88597080f59c9c34e6424196e15/lib -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/text-2.1.2-ecdb -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/binary-0.8.9.3-25e5 -L/home/runner/.cabal/store/ghc-9.12.2-9b33/character-ps-0.1-bc3332bfd564ae27ace5991a9c53b024991c14f538d395b933f0cb9a74834e92/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/QuickCheck-2.16.0.0-6f220063baf475378168c7f0f82ebce1e3871ee6ee58a2b91e412aab7db04bc8/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/OneTuple-0.4.2-5a34462c4032f7c72a6567f8448511744f023d28df80466d015e646cb6e21250/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/Glob-0.10.2-83e85e3b30cd702c68c796a2531b7bb80a37b3dc2f4a0eb3565a67af0ab12952/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/transformers-compat-0.7.2-38dd8fc766f75e24868579b46dfa88ec32c046b70a2893706094f2bfc091cb42/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/dlist-1.0-be61acc4c604c5bf71c50dca63a0d0101e79b9682d6252c4479903f53519a349/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/temporary-1.3-667770de9b639724bc5e4dcc3b5bce9b5e4d1ed4bbeb97fffc581b293b50ed83/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/random-1.3.1-be8540078fd628758d1e9391befd83e71a1e817d66fc94663d03816980edf44a/lib -L/home/runner/.cabal/store/ghc-9.12.2-9b33/splitmix-0.1.3.1-335ba5f34505daedceec42cccfd6f0af242ae5e2270da05c40cab063a657df7d/lib -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/containers-0.7-5a8f -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/process-1.6.25.0-5f54 -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/directory-1.3.9.0-af18 -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/file-io-0.1.5-178f -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/unix-2.8.6.0-c07b -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/time-1.14-9bf8 -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/filepath-1.5.4.0-e69b -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/os-string-2.0.7-e43c -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/exceptions-0.10.9-4d2e -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/stm-2.5.3.1-d35b -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/array-0.5.8.0-9044 -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/mtl-2.3.1-fdf9 -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/transformers-0.6.1.2-38b1 -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/bytestring-0.12.2.0-7dd0 -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/template-haskell-2.23.0.0-c7f4 -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/ghc-boot-th-9.12.2-e976 -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/pretty-1.1.3.6-fe44 -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/deepseq-1.5.1.0-6837 -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/base-4.21.0.0-ae91 -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/ghc-internal-9.1202.0-1465 -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/ghc-bignum-1.3-6db4 -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/ghc-prim-0.13.0-e168 -L/usr/local/.ghcup/ghc/9.12.2/lib/ghc-9.12.2/lib/../lib/x86_64-linux-ghc-9.12.2-a828/rts-1.0.2 /tmp/ghc179689_tmp_1_0/ghc_tmp_1_2.o /tmp/ghc179689_tmp_1_0/ghc_tmp_1_5.o -Wl,-u,ghczminternal_GHCziInternalziTopHandler_runIO_closure -Wl,-u,ghczminternal_GHCziInternalziTopHandler_runNonIO_closure -Wl,-u,ghczmprim_GHCziTuple_Z0T_closure -Wl,-u,ghczmprim_GHCziTypes_True_closure -Wl,-u,ghczmprim_GHCziTypes_False_closure -Wl,-u,ghczminternal_GHCziInternalziPack_unpackCString_closure -Wl,-u,ghczminternal_GHCziInternalziWeakziFinalizze_runFinalizzerBatch_closure -Wl,-u,ghczminternal_GHCziInternalziIOziException_stackOverflow_closure -Wl,-u,ghczminternal_GHCziInternalziIOziException_heapOverflow_closure -Wl,-u,ghczminternal_GHCziInternalziIOziException_allocationLimitExceeded_closure -Wl,-u,ghczminternal_GHCziInternalziIOziException_blockedIndefinitelyOnMVar_closure -Wl,-u,ghczminternal_GHCziInternalziIOziException_blockedIndefinitelyOnSTM_closure -Wl,-u,ghczminternal_GHCziInternalziIOziException_cannotCompactFunction_closure -Wl,-u,ghczminternal_GHCziInternalziIOziException_cannotCompactPinned_closure -Wl,-u,ghczminternal_GHCziInternalziIOziException_cannotCompactMutable_closure -Wl,-u,ghczminternal_GHCziInternalziIOPort_doubleReadException_closure -Wl,-u,ghczminternal_GHCziInternalziControlziExceptionziBase_nonTermination_closure -Wl,-u,ghczminternal_GHCziInternalziControlziExceptionziBase_nestedAtomically_closure -Wl,-u,ghczminternal_GHCziInternalziEventziThread_blockedOnBadFD_closure -Wl,-u,ghczminternal_GHCziInternalziConcziSync_runSparks_closure -Wl,-u,ghczminternal_GHCziInternalziConcziIO_ensureIOManagerIsRunning_closure -Wl,-u,ghczminternal_GHCziInternalziConcziIO_interruptIOManager_closure -Wl,-u,ghczminternal_GHCziInternalziConcziIO_ioManagerCapabilitiesChanged_closure -Wl,-u,ghczminternal_GHCziInternalziConcziSignal_runHandlersPtr_closure -Wl,-u,ghczminternal_GHCziInternalziTopHandler_flushStdHandles_closure -Wl,-u,ghczminternal_GHCziInternalziTopHandler_runMainIO_closure -Wl,-u,ghczmprim_GHCziTypes_Czh_con_info -Wl,-u,ghczmprim_GHCziTypes_Izh_con_info -Wl,-u,ghczmprim_GHCziTypes_Fzh_con_info -Wl,-u,ghczmprim_GHCziTypes_Dzh_con_info -Wl,-u,ghczmprim_GHCziTypes_Wzh_con_info -Wl,-u,ghczminternal_GHCziInternalziPtr_Ptr_con_info -Wl,-u,ghczminternal_GHCziInternalziPtr_FunPtr_con_info -Wl,-u,ghczminternal_GHCziInternalziInt_I8zh_con_info -Wl,-u,ghczminternal_GHCziInternalziInt_I16zh_con_info -Wl,-u,ghczminternal_GHCziInternalziInt_I32zh_con_info -Wl,-u,ghczminternal_GHCziInternalziInt_I64zh_con_info -Wl,-u,ghczminternal_GHCziInternalziWord_W8zh_con_info -Wl,-u,ghczminternal_GHCziInternalziWord_W16zh_con_info -Wl,-u,ghczminternal_GHCziInternalziWord_W32zh_con_info -Wl,-u,ghczminternal_GHCziInternalziWord_W64zh_con_info -Wl,-u,ghczminternal_GHCziInternalziStable_StablePtr_con_info -Wl,-u,hs_atomic_add8 -Wl,-u,hs_atomic_add16 -Wl,-u,hs_atomic_add32 -Wl,-u,hs_atomic_add64 -Wl,-u,hs_atomic_sub8 -Wl,-u,hs_atomic_sub16 -Wl,-u,hs_atomic_sub32 -Wl,-u,hs_atomic_sub64 -Wl,-u,hs_atomic_and8 -Wl,-u,hs_atomic_and16 -Wl,-u,hs_atomic_and32 -Wl,-u,hs_atomic_and64 -Wl,-u,hs_atomic_nand8 -Wl,-u,hs_atomic_nand16 -Wl,-u,hs_atomic_nand32 -Wl,-u,hs_atomic_nand64 -Wl,-u,hs_atomic_or8 -Wl,-u,hs_atomic_or16 -Wl,-u,hs_atomic_or32 -Wl,-u,hs_atomic_or64 -Wl,-u,hs_atomic_xor8 -Wl,-u,hs_atomic_xor16 -Wl,-u,hs_atomic_xor32 -Wl,-u,hs_atomic_xor64 -Wl,-u,hs_cmpxchg8 -Wl,-u,hs_cmpxchg16 -Wl,-u,hs_cmpxchg32 -Wl,-u,hs_cmpxchg64 -Wl,-u,hs_xchg8 -Wl,-u,hs_xchg16 -Wl,-u,hs_xchg32 -Wl,-u,hs_xchg64 -Wl,-u,hs_atomicread8 -Wl,-u,hs_atomicread16 -Wl,-u,hs_atomicread32 -Wl,-u,hs_atomicread64 -Wl,-u,hs_atomicwrite8 -Wl,-u,hs_atomicwrite16 -Wl,-u,hs_atomicwrite32 -Wl,-u,hs_atomicwrite64 -Wl,-u,ghczminternal_GHCziInternalziStackziCloneStack_StackSnapshot_closure -lHStypus-0.12.0-inplace -lHSoptparse-applicative-0.19.0.0-acebffcb0f036b6f221465e5a2ca32a655adbf0fa90cd9122d6dcc5432eb09e7 -lHSprettyprinter-ansi-terminal-1.1.3-f3c9da6fa1abaf4fd9896b1dd66111941bb9a7e303925a066421a79d3f53e610 -lHSansi-terminal-1.1.4-c86db0af6545e24f6a44fe40256b7e1e500f116502edaaf0a0b66a52a43314ae -lHSansi-terminal-types-1.1.3-6b1bd4c7906dc8881be25784fe6e0029e8cd9ee8f49f0906a1f722dd853ec37b -lHScolour-2.3.6-327276b74192ee5570f3b5b7f2d191c5ac3be2a226024dc3528ea5f18c55bc1c -lHSprettyprinter-1.7.1-2260476b78605fcee64072958030196bfdc5e8bc7e444dd8f756c140190f6555 -lHSmegaparsec-9.7.0-f591e19576595244fcd6ec7a129d7346dac732751eca0b66f16a3ce1cfa4d288 -lHSparser-combinators-1.3.0-89002c1ebf15af3320e6ec429df1935bc732dfed54a2cb823c5ba49c422fd585 -lHScase-insensitive-1.2.1.0-e91973c0f2ef984e0f55740e320cbffd028c5a4d78ee1c4c21f97b3366fe5aa7 -lHSaeson-2.2.3.0-8b2ea0fa7c7255a578f0296560e6e41f5f8c21244cf9a1dce1a318b6e1e3f36a -lHSwitherable-0.5-598eaddef9d017cce139194dd732bafe99d36d508c5a7d45d469fe916fa17a49 -lHSuuid-types-1.0.6-8a7ec495a362efed2d3a21ccf84570d928fa54791e164ab7bac9c9cb254d700b -lHStext-short-0.1.6-4da7d40262a6ebefc8b9b05a8c218df4455b6057178a386d835165f6cf02a493 -lHStext-iso8601-0.1.1-32101603b551113963a4a2cf00575947dd280192dcc745fbe9dc7432e29429e4 -lHStime-compat-1.9.8-901628144030007021cebd8e851c406c8d2247b92db9d6590e2afee9e915ea6a -lHSstrict-0.5.1-8f1aead51bde462d7cd49368dd67de1e7a64c6b167c9f3d24afcb5daabe8fa57 -lHSsemialign-1.3.1-0357efbb980ffb44405e493de0ed08d88d0318b23400a16a9633ba78dedfa313 -lHSthese-1.2.1-bce865663bfd603bb27c7971481a60f838c8d54dbc360e9353c99dfcb8df3ba6 -lHSsemigroupoids-6.0.1-4c3f6500750be3e2239d4bfc7d7fc7f34bc8596697e4f11b08b48281861fcca0 -lHScontravariant-1.5.5-0776e3c12703bdc60620cb2c090412271322aa43e20ae015864d4709828ae22f -lHSStateVar-1.2.2-e151e4d63de039da1ca0e9f068bf0c53422aed478d93943de98ee83cd73c8eab -lHSbifunctors-5.6.2-193d77ffe9094e1bbb54a3a0323782eaa0596316dd8a91160a810daa7d6ce9b4 -lHSth-abstraction-0.7.1.0-804edd9edaea45793e6da20dd0a6b26f7ec61d0c01442813a4d1a55680b5fe4b -lHScomonad-5.0.9-cf812545eac05892163cb4acfa6ca37fa74a4eb4ad972a9ae0bb6335b9136e8a -lHSdistributive-0.6.2.1-dd8934136b00420120945edcd876a085f052d588c933c6640e8d98bcaa2a497c -lHSassoc-1.1.1-3c597e58436a6d836ad06fb2c2adb62ebf1f61edc5d256e3ffda7872a2aae5cc -lHSbase-orphans-0.9.3-8283cfd1d831b7ffc853fb5c98cbd48de0bd8c8dec6dfbcfb81a179073f3d8a4 -lHSindexed-traversable-instances-0.1.2-5545641cb4bf05f5161128a2d138f157d61496e6868a21a750a321a97ca43f0e -lHSvector-0.13.2.0-1043042a663401563f05928920d3bb0dbeafa8d050bbae932b7472bb25d006da -lHSvector-stream-0.1.0.1-9fbb5363b58be57e2b148bc6ec833fb52699c7b5dcdcd8b91d509d30360a32f0 -lHSunordered-containers-0.2.20.1-56ed261fbd9a707fce980b7c91792eb66f0ffec3645ef68b52b838cb7f732f87 -lHStagged-0.8.10-01c75aecf1f4c3832d403761dfd36e4e9279597cb29ce05b00a0a9341a05f87a -lHSscientific-0.3.8.0-d731882e34bf2718569fc19b417dd2f957b594fc0d9efb6dbbd1c1b52f7dcfa8 -lHSnetwork-uri-2.6.4.2-57d99f1aff0ce03d9b73addf440124cb510ad1dca4cf564e78ed17249544d090 -lHSth-compat-0.1.6-c7b0709d68924766961e8f44e7ec4b483712673bb93682d88c3b214f21bd4246 -lHSparsec-3.1.18.0-a894 -lHSinteger-logarithms-1.0.4-c130a0606d11a6ae49a81bfc2e529b2a2b9e7c67153614764ebb0399f70118fb -lHSinteger-conversion-0.1.1-f0e3b47bd33ac3cd6a69a88fcb9bb25337b1ef6b0686fe5db3e09c57aa3b0399 -lHSprimitive-0.9.1.0-6d8a188ccb33b23429ef04d5b4dbc73ab6de9fa803c551e6c0707bfdfeaa96cf -lHSindexed-traversable-0.1.4-8e32ff916a462b68acb2f10ab1a51c7458915121d852fc20fbffacf1663a7324 -lHSgenerically-0.1.1-9b49ca99f4ca8a4379d6480d509b542da34897f5b34eb49b9356d914619044a7 -lHSdata-fix-0.3.4-7da78bef58b7789d04316812d5f0a4309335028e14414d05e24b28dfd361ce93 -lHShashable-1.5.0.0-f2f5f3f43b8d7349ebd7b6fc02b5f9a62ebec88597080f59c9c34e6424196e15 -lHStext-2.1.2-ecdb -lHSbinary-0.8.9.3-25e5 -lHScharacter-ps-0.1-bc3332bfd564ae27ace5991a9c53b024991c14f538d395b933f0cb9a74834e92 -lHSQuickCheck-2.16.0.0-6f220063baf475378168c7f0f82ebce1e3871ee6ee58a2b91e412aab7db04bc8 -lHSOneTuple-0.4.2-5a34462c4032f7c72a6567f8448511744f023d28df80466d015e646cb6e21250 -lHSGlob-0.10.2-83e85e3b30cd702c68c796a2531b7bb80a37b3dc2f4a0eb3565a67af0ab12952 -lHStransformers-compat-0.7.2-38dd8fc766f75e24868579b46dfa88ec32c046b70a2893706094f2bfc091cb42 -lHSdlist-1.0-be61acc4c604c5bf71c50dca63a0d0101e79b9682d6252c4479903f53519a349 -lHStemporary-1.3-667770de9b639724bc5e4dcc3b5bce9b5e4d1ed4bbeb97fffc581b293b50ed83 -lHSrandom-1.3.1-be8540078fd628758d1e9391befd83e71a1e817d66fc94663d03816980edf44a -lHSsplitmix-0.1.3.1-335ba5f34505daedceec42cccfd6f0af242ae5e2270da05c40cab063a657df7d -lHScontainers-0.7-5a8f -lHSprocess-1.6.25.0-5f54 -lHSdirectory-1.3.9.0-af18 -lHSfile-io-0.1.5-178f -lHSunix-2.8.6.0-c07b -lHStime-1.14-9bf8 -lHSfilepath-1.5.4.0-e69b -lHSos-string-2.0.7-e43c -lHSexceptions-0.10.9-4d2e -lHSstm-2.5.3.1-d35b -lHSarray-0.5.8.0-9044 -lHSmtl-2.3.1-fdf9 -lHStransformers-0.6.1.2-38b1 -lHSbytestring-0.12.2.0-7dd0 -lHStemplate-haskell-2.23.0.0-c7f4 -lHSghc-boot-th-9.12.2-e976 -lHSpretty-1.1.3.6-fe44 -lHSdeepseq-1.5.1.0-6837 -lHSbase-4.21.0.0-ae91 -lHSghc-internal-9.1202.0-1465 -lHSghc-bignum-1.3-6db4 -lHSghc-prim-0.13.0-e168 -lHSrts-1.0.2_thr -lCffi -lgmp -lc -lm -lc -lm -lrt -ldl -Wl,-s -Wl,-s
+!!! systool:linker: finished in 4.97 milliseconds, allocated 5.021 megabytes
+link: done
+Upsweep completely successful.
+*** Deleting temp files:
+Deleting: /tmp/ghc179689_tmp_1_0/ghc_tmp_1_1.c /tmp/ghc179689_tmp_1_0/ghc_tmp_1_3.rsp /tmp/ghc179689_tmp_1_0/ghc_tmp_1_4.s /tmp/ghc179689_tmp_1_0/ghc_tmp_1_6.rsp /tmp/ghc179689_tmp_1_0/ghc_tmp_1_7.rsp /tmp/ghc179689_tmp_1_0/ghc_tmp_1_2.o /tmp/ghc179689_tmp_1_0/ghc_tmp_1_5.o
+*** Deleting temp dirs:
+Deleting: /tmp/ghc179689_tmp_1_0
+Preprocessing test suite 'typus-test' for typus-0.12.0...
+Building test suite 'typus-test' for typus-0.12.0...
+[39 of 39] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test [Flags changed]
+Running 1 test suites...
+Test suite typus-test: RUNNING...
+Typus
+  Unit
+    Parser
+      parses file-level directives:                                                         OK
+      treats file-level constraints directive as dependent type alias:                      OK
+      captures block directives with associated code:                                       OK
+      parses README-style block directives without inline closing brace:                    OK
+      ignores trailing whitespace-only files:                                               OK
+      collects build tags before the first code block:                                      OK
+      rejects unknown file directives:                                                      OK
+      requires directive blocks to close:                                                   OK
+      parses complex function signatures:                                                   OK
+      handles interface definitions:                                                        OK
+      parses struct definitions with multiple fields:                                       OK
+      handles method definitions:                                                           OK
+      parses channel operations:                                                            OK
+      handles go statements and goroutines:                                                 OK
+      parses defer statements:                                                              OK
+      handles complex literals:                                                             OK
+      parses generic types and functions:                                                   OK
+      handles embedded structs:                                                             OK
+      parses import statements:                                                             OK
+      handles multiple package declarations:                                                OK
+      parses constants and variables:                                                       OK
+    Ownership analysis
+      does not report errors for simple value usage:                                        OK
+      detects use-after-move patterns:                                                      OK
+      detects borrow while mutable borrow is active:                                        OK
+      detects mutable borrow while immutable borrows exist:                                 OK
+      detects borrow after a move operation:                                                OK
+      detects use of value while it has a mutable borrow:                                   OK
+      detects multiple mutable borrows:                                                     OK
+      detects double move attempts:                                                         OK
+      reports out-of-scope variable usage:                                                  OK
+      allows reborrowing after scoped mutable borrow ends:                                  OK
+      fmt.Println is treated as pure usage:                                                 OK
+      mutex locking and unlocking are treated as safe usages:                               OK
+      respects ownership off directive:                                                     OK
+      line directive toggles ownership tracking back on:                                    OK
+      releases immutable borrows when leaving nested scope:                                 OK
+      mutable borrow scope ending allows subsequent immutable borrow:                       OK
+      block directive limits ownership disabling to its block:                              OK
+      nested block directives re-enable ownership tracking:                                 OK
+      for loop introduces synthetic iteration bindings:                                     OK
+      assignment after move resets ownership flags:                                         OK
+      len built-in counts as pure usage:                                                    OK
+      temporary mutable borrows used as arguments are released:                             OK
+    OwnershipBridge
+      filtered ownership errors do not mutate the symbol table:                             OK
+      processOwnershipErrors only reports names tracked in the symbol table:                OK
+      processOwnershipErrors synthesizes use-after-move patterns when missing:              OK
+    Dependent types parser
+      parses type and function declarations:                                                OK
+      reports syntax problems:                                                              OK
+      runDependentTypesParser recovers from invalid declarations:                           OK
+      extracts constraints from multiline type declarations:                                OK
+      collects parameter and declaration constraints:                                       OK
+      supports type class constraints in type definitions:                                  OK
+      extractTypeDefinitions handles parameter types referencing other parameters:          OK
+      translates nonempty shorthand constraint to TypeSizeGT:                               OK
+      extracts numeric equality constraints as concrete values:                             OK
+      ignores aliases and dependent functions when extracting types:                        OK
+      analyzeAST accepts well-formed declarations:                                          OK
+      analyzeAST reports missing type references:                                           OK
+      validateStatement registers dependent type definitions:                               OK
+      validateStatement reports missing alias targets:                                      OK
+      solveConstraints succeeds with satisfiable constraints:                               OK
+      solveConstraints reports invalid range constraints:                                   OK
+      extractTypeDefinitions preserves equality between parameters:                         OK
+      extractTypeDefinitions treats uppercase constants as concrete types:                  OK
+      extractTypeDefinitions converts custom constraints to predicates:                     OK
+      parseDependentType parses dependent functions with constraints:                       OK
+      parseTypeDeclaration captures inline parameter constraints:                           OK
+      validateDependentTypeSyntax reports duplicate type definitions:                       OK
+      parseDependentType parses alias definitions with constraints:                         OK
+      parseDependentType handles nested function bodies:                                    OK
+      extractTypeDefinitions categorizes predicate arguments precisely:                     OK
+      extractTypeDefinitions records bounded ranges:                                        OK
+      extractTypeDefinitions handles type class constraints with generics:                  OK
+      extractTypeDefinitions treats lowercase equality targets as symbolic variables:       OK
+      analyzeAST accepts generated safe programs:                                           OK
+        +++ OK, passed 100 tests.
+    Type system
+      prelude exposes primitive definitions:                                                OK
+      checkType accepts known types:                                                        OK
+      checkType reports unknown types:                                                      OK
+      checkTypeInstantiation validates type arity:                                          OK
+      checkTypeInstantiation accepts valid instantiation:                                   OK
+      solveConstraints flags conflicting equalities:                                        OK
+      unify produces substitutions:                                                         OK
+      unify enforces occurs check:                                                          OK
+      convertTypeExprAndRefinements accumulates refinement constraints:                     OK
+      convertConstraint preserves nested generic predicate arguments:                       OK
+      convertTypeExprAndRefinements handles refined function returns:                       OK
+      solveConstraints accepts reflexive equalities:                                        OK
+        +++ OK, passed 100 tests.
+      solveConstraints clears pending constraints:                                          OK
+        +++ OK, passed 100 tests.
+    SymbolTable
+      collectSymbolsAndTypes extracts top-level declarations:                               OK
+      augmentSymbolTableWithLocals adds owned locals:                                       OK
+      collectSymbolsAndTypes surfaces parse errors:                                         OK
+    SourceLocation
+      Position arithmetic
+        posAfter newline increments the line and resets the column:                         OK
+        posAfter tab jumps to the next tab stop:                                            OK
+        advancePosByText keeps track of multiline progress:                                 OK
+        advancePosByLine bumps the line number and resets the column:                       OK
+      Span utilities
+        spanFrom is equivalent to emptySpan:                                                OK
+        spanTo produces a zero-length span ending at the position:                          OK
+        spanBetween preserves the provided bounds:                                          OK
+        mergeSpans chooses the earliest start and latest end:                               OK
+        isValidSpan rejects spans whose start follows their end:                            OK
+      Located helpers
+        locatedAt anchors the value at an empty span:                                       OK
+        mapLocated transforms the payload while preserving the span:                        OK
+      Location tracking state
+        markSpanStart/markSpanEnd capture the advanced range:                               OK
+      Error conversions
+        toErrorLocation keeps only the point information:                                   OK
+        toErrorLocationWithSpan preserves both ends of the span:                            OK
+    SyntaxValidator
+      returns no errors for an empty file:                                                  OK
+      detects missing package declarations in Go files:                                     OK
+      reports unclosed braces with the original opening location:                           OK
+      flags malformed Typus directives:                                                     OK
+      detects duplicate variable declarations in the same scope:                            OK
+      requires braces after control-flow keywords:                                          OK
+      validateFile delegates to validateSyntax:                                             OK
+      ignores import formatting errors that are filtered as false positives:                OK
+      successfully validates a minimal, well-formed Go file:                                OK
+      formatSyntaxError includes the location prefix and context line:                      OK
+    Compiler
+      generates Go code for valid Typus input:                                              OK
+      fails when dependent type blocks contain errors:                                      OK
+      file-level dependent type directives are enforced without blocks:                     OK
+      reports detailed diagnostics when type checking fails:                                OK
+      rejects malformed syntax with unbalanced braces:                                      OK
+      compiles complex expressions:                                                         OK
+      handles struct compilation:                                                           OK
+      compiles interface definitions:                                                       OK
+      handles method compilation:                                                           OK
+      compiles generic types:                                                               OK
+      handles channel compilation:                                                          OK
+      compiles goroutines:                                                                  OK
+      handles defer statements:                                                             OK
+      compiles complex literals:                                                            OK
+      handles import statements:                                                            OK
+      compiles constants and variables:                                                     OK
+      handles error types:                                                                  OK
+      compiles ownership-enabled code:                                                      OK
+      compiles dependent types code:                                                        OK
+      handles mixed ownership and dependent types:                                          OK
+      reports multiple compilation errors:                                                  OK
+      handles undefined variables:                                                          OK
+      detects circular dependencies:                                                        OK
+    ValueAnalysis
+      handles comments, strings, and multi-line references:                                 OK
+      classifies short declarations inside guards:                                          OK
+      handles composite literals and builder patterns:                                      OK
+      Property-based guarantees
+        ampersand-prefixed expressions are references:                                      OK
+          +++ OK, passed 100 tests.
+        whitespace does not affect builtin value types:                                     OK
+          +++ OK, passed 100 tests.
+        pointer-prefixed types are not treated as values:                                   OK
+          +++ OK, passed 100 tests.
+    Error handling
+      handles parse errors gracefully:                                                      OK
+      reports compilation errors with source locations:                                     OK
+      aggregates multiple errors in single compilation:                                     OK
+      provides helpful error messages for undefined variables:                              OK
+      handles circular dependency detection:                                                OK
+      reports type mismatch errors with expected and actual types:                          OK
+      provides context for errors in nested blocks:                                         OK
+      handles errors in dependent type constraints:                                         OK
+      reports ownership violations with clear explanations:                                 OK
+      provides error recovery suggestions:                                                  OK
+      handles malformed directive errors:                                                   OK
+      reports syntax errors with position information:                                      OK
+    Embedded assets
+      handleMissingEmbeds warns but succeeds in non-strict mode:                            OK
+      handleMissingEmbeds fails fast when strict mode is enabled:                           OK
+      mirrorEmbeddedResources copies referenced files:                                      OK
+      mirrorEmbeddedResources handles indented go:embed directives:                         OK
+      mirrorEmbeddedResources reports missing patterns:                                     OK
+      copyEmbeddedForBuild mirrors directories for go:embed patterns:                       OK
+    GoToolchain
+      isEnvVarEnabled recognises truthy values:                                             OK
+      shouldSkipGoToolchain mirrors environment state:                                      OK
+      writeGoModule creates a go.mod file with canned contents:                             OK
+      createTempGoFile derives the prefix from the source file:                             OK
+      withTemporaryGoProject writes go.mod and reuses the provided prefix:                  OK
+      runGoCommand logs when Go is skipped:                                                 OK
+    CommandLineDebug
+      does not trigger breakpoint when condition is False:                                  OK
+      disable command keeps debugging disabled when already disabled:                       OK
+    CLI argument parsing
+      parses convert command:                                                               OK
+      parses check command:                                                                 OK
+      parses --version option:                                                              OK
+      parses build strict embed flag:                                                       OK
+      parses build strict embed flag after positional argument:                             OK
+      allows passing --strict-embed through to Go arguments:                                OK
+      parses build forwarding go arguments:                                                 OK
+      parses run defaults to non-strict:                                                    OK
+      parses run with strict embed flag:                                                    OK
+      parses run strict embed flag after file argument:                                     OK
+      parses run command with additional arguments:                                         OK
+    Verbosity helpers
+      defaults to quiet when env var is missing:                                            OK
+      parses truthy values case-insensitively:                                              OK
+      treats other values as quiet:                                                         OK
+      whenVerbose executes action only when verbose:                                        OK
+    Utils helpers
+      Whitespace and splitting
+        trim removes leading and trailing whitespace:                                       OK
+        splitBy preserves empty segments:                                                   OK
+        splitBy on empty input returns a singleton empty chunk:                             OK
+        splitByCollapsed removes empty segments:                                            OK
+        splitByCollapsed returns [] when the string only has delimiters:                    OK
+        splitByComma delegates to splitBy:                                                  OK
+        splitByCommaCollapsed yields [] on empty input:                                     OK
+        splitByCommaCollapsed collapses trailing delimiter chains:                          OK
+      Comment stripping
+        removeLineComments respects string and char literals:                               OK
+        removeLineComments keeps escaped quotes inside strings:                             OK
+        removeLineComments maintains blank lines when an entire line is a comment:          OK
+        removeComments removes multiline block comments and retains line information:       OK
+        removeComments removes sequential inline block comments:                            OK
+        removeComments ignores comment markers that appear inside strings or char literals: OK
+        removeComments preserves file-leading block comments:                               OK
+        removeComments tolerates unterminated block comments by dropping the remainder:     OK
+      Indentation helpers
+        normalizeIndentation removes the common leading indentation but keeps structure:    OK
+        normalizeIndentation keeps leading blank lines intact:                              OK
+        normalizeIndentation leaves purely whitespace input untouched:                      OK
+        forceSingleTabIndentation enforces a single leading tab on non-empty lines:         OK
+        forceSingleTabIndentation collapses whitespace-only lines:                          OK
+        fixIndentation is an alias for normalizeIndentation:                                OK
+      Search helpers
+        breakOn returns prefix and suffix when the pattern exists:                          OK
+        breakOn falls back to the original string when the pattern is missing:              OK
+        breakOn with an empty pattern returns the whole string as the suffix:               OK
+        breakOn returns empty suffix when the pattern matches the entire string:            OK
+      Property-based regression
+        trim is idempotent:                                                                 OK
+          +++ OK, passed 100 tests.
+        splitByCollapsed never yields empty chunks:                                         OK
+          +++ OK, passed 100 tests.
+    Advanced Parser
+      parses complex nested directives:                                                     OK
+      handles malformed directive syntax gracefully:                                        OK
+      parses complex type definitions:                                                      OK
+      handles multiple build tags:                                                          OK
+      parses deeply nested code blocks:                                                     OK
+      handles unicode and special characters:                                               OK
+      parses complex function signatures:                                                   OK
+      handles interface definitions:                                                        OK
+      parses channel operations:                                                            OK
+      handles go statements and goroutines:                                                 OK
+      parses defer statements:                                                              OK
+      handles complex literals:                                                             OK
+      parses method definitions:                                                            OK
+      handles error types and error handling:                                               OK
+      parses generic types and functions:                                                   OK
+      handles embedded structs:                                                             OK
+    Integration tests
+      compiles and runs simple program:                                                     OK
+      compiles program with multiple functions:                                             OK
+      handles complex type definitions:                                                     OK
+      processes ownership and dependent types together:                                     OK
+      handles block-level directives:                                                       OK
+      integrates error handling across phases:                                              OK
+      handles Go toolchain integration:                                                     OK
+      processes complex expressions:                                                        OK
+      handles multiple source files:                                                        OK
+      maintains type safety across compilation phases:                                      OK
+      handles edge cases in parsing and compilation:                                        OK
+      preserves comments and formatting:                                                    OK
+    Performance tests
+      parses large files efficiently:                                                       OK
+      compiles complex types efficiently:                                                   OK
+      handles deeply nested structures efficiently:                                         OK
+      processes many small functions efficiently:                                           OK (0.08s)
+      memory usage remains reasonable for large files:                                      OK (0.07s)
+      compilation time scales linearly with file size:                                      OK
+      error handling doesn't significantly impact performance:                              OK
+      parallel processing potential:                                                        OK
+      cache effectiveness:                                                                  OK
+    Edge case tests
+      handles empty input:                                                                  OK
+      handles whitespace-only input:                                                        OK
+      handles comments-only input:                                                          OK
+      handles extremely long lines:                                                         OK
+      handles deeply nested parentheses:                                                    OK
+      handles unusual unicode characters:                                                   OK
+      handles escape sequences:                                                             OK
+      handles numeric edge cases:                                                           OK
+      handles conflicting directives:                                                       OK
+      handles malformed block directives:                                                   OK
+      handles recursive type definitions:                                                   OK
+      handles circular imports simulation:                                                  OK
+      handles extremely long identifiers:                                                   OK
+      handles zero-width and invisible characters:                                          OK
+      handles mixed line endings:                                                           OK
+      handles BOM (Byte Order Mark):                                                        OK
+      handles invalid UTF-8 sequences:                                                      OK
+      handles extreme indentation:                                                          OK
+      handles concurrent access patterns:                                                   OK
+      handles memory pressure simulation:                                                   OK
+  Integration
+    Integration
+      compiles sample program and optionally builds with Go:                                OK (0.13s)
+      ownership analysis flags complex violations:                                          OK
+      dependent type directives propagate from fixture:                                     OK
+    Integrated Analyzer
+      Cross-Analysis
+        file-level dependent type directives trigger analysis without blocks:               OK
+        ownership transfer in dependent-type context:                                       OK
+        use-after-move with type constraints:                                               OK
+        cross-analysis errors are returned to callers:                                      OK
+        integrated compiler blocks on cross-analysis errors:                                OK
+        borrow with type refinement:                                                        OK
+        mutable borrow with constraints:                                                    OK
+      Error Handling
+        fails fast when Go AST parsing fails:                                               OK
+      Error Prioritization
+        ownership error takes precedence over type error:                                   OK
+        multiple analyzer warnings combined:                                                OK
+        warnings retain severity in combined errors:                                        OK
+        compiler config filters out warning-only diagnostics:                               OK
+      Analysis Context Metadata
+        records provided source path in analysis context:                                   OK
+        uses custom label when no path is provided:                                         OK
+      Full Pipeline Integration
+        complete project with mixed directives:                                             OK
+        selective feature enabling:                                                         OK
+        complex nested ownership transfer:                                                  OK
+        dependent types with ownership constraints:                                         OK
+      Symbolic State Management
+        symbol table consistency across phases:                                             OK
+        type environment preservation:                                                      OK
+    Ownership integration
+      reports double move across chained bindings:                                          OK
+      borrow after move via call surfaces borrow-while-moved:                               OK
+      usage after scope exit is flagged as out-of-scope:                                    OK
+      type declarations do not mask ownership violations:                                   OK
+      shared borrows across helpers block later mutable borrows:                            OK
+    Integrated Compiler
+      surfaces multi-analyzer failures and propagates diagnostics:                          OK
+      filters warning-only diagnostics based on errorReportingLevel:                        OK
+      batchCheck honors TYPUS_SKIP_GO_BUILD
+        invokes Go toolchain when skip flag is absent:                                      OK
+        skips Go toolchain when skip flag is enabled:                                       OK
+    Full project workflow
+      batchConvert mirrors the project structure:                                           OK
+      batchCheck triggers Go validation:                                                    OK
+      batchCheck honours the skip flag:                                                     OK
+      convertFile passes Go sources through unchanged:                                      OK
+      batchCheck surfaces syntax validation errors:                                         OK
+      batchCheck surfaces go build failures:                                                OK
+    CLI smoke tests
+      typus --version prints the version banner:                                            OK
+      typus convert emits Go output:                                                        OK
+      typus check reports success for well-formed modules:                                  OK
+      typus check fails fast on syntax errors:                                              OK
+      typus build converts directories and invokes go:                                      OK
+      typus build --strict-embed surfaces missing assets:                                   OK
+      typus run shells out to go run via the stub:                                          OK
+      typus run fails when the entrypoint is missing:                                       OK
+  Golden
+    Golden
+      simple program renders canonical Go:                                                  OK
+      statements without package/import infer a runnable main:                              OK
+      generic type parameters render Go square bracket notation:                            OK
+
+All 319 tests passed (0.43s)
+Test suite typus-test: PASS
+Test suite logged to:
+/home/runner/work/Typus/Typus/./dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/test/typus-0.12.0-typus-test.log
+1 of 1 test suites (1 of 1 test cases) passed.

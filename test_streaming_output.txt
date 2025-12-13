@@ -1,123 +1,20 @@
-typus-0.12.0: unregistering (dependencies changed)
-typus> configure (lib + exe + test)
-Configuring typus-0.12.0...
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-typus> build (lib + exe + test) with ghc-9.10.2
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (configuration changed)
+ - typus-0.12.0 (exe:typus) (configuration changed)
+ - typus-0.12.0 (test:typus-test) (dependency rebuilt)
+Configuring library for typus-0.12.0...
 Preprocessing library for typus-0.12.0...
 Building library for typus-0.12.0...
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-[ 1 of 54] Compiling Cli
-[ 2 of 54] Compiling CommandLineDebug
-[ 3 of 54] Compiling Compiler.Error
-[ 4 of 54] Compiling Compiler.GoAst
-[ 5 of 54] Compiling Compiler.GoLexer
-[ 6 of 54] Compiling Debug
-[ 7 of 54] Compiling DebugIntegration
-[ 8 of 54] Compiling Dependencies.AST
-[ 9 of 54] Compiling Dependencies.Parser
-[10 of 54] Compiling Dependencies.TypeSystem
-[11 of 54] Compiling Dependencies.Inference
-[12 of 54] Compiling Dependencies.Analyzer
-[13 of 54] Compiling Dependencies
-[14 of 54] Compiling DependentTypesParser
-[15 of 54] Compiling EnhancedDebug
-[16 of 54] Compiling Cli.DebugRunner
-[17 of 54] Compiling Ownership.Common.Lexer
-[18 of 54] Compiling Ownership.Common.Types
-[19 of 54] Compiling Compiler.Errors.Core
-[20 of 54] Compiling ErrorHandler
-[21 of 54] Compiling Ownership.Lexer
-[22 of 54] Compiling Ownership.Parser
-[23 of 54] Compiling Ownership.Analyzer
-[24 of 54] Compiling Ownership.Reporter
-[25 of 54] Compiling Ownership
-[26 of 54] Compiling Analyzer.Types
-[27 of 54] Compiling Analyzer.State
-[28 of 54] Compiling Analyzer.CrossAnalysis
-[29 of 54] Compiling SimpleSyntaxValidator
-[30 of 54] Compiling SourceLocation
-[31 of 54] Compiling Compiler.Errors.Compiler
-[32 of 54] Compiling EnhancedErrorHandler
-[33 of 54] Compiling Compiler.Errors
-[34 of 54] Compiling SyntaxValidator
-[35 of 54] Compiling Utils
-[36 of 54] Compiling Parser
-[37 of 54] Compiling Compiler.DependentTypeChecker
-[38 of 54] Compiling Compiler.GoParsing
-[39 of 54] Compiling Compiler.GoVarSpec
-[40 of 54] Compiling Compiler.ValueAnalysis
-[41 of 54] Compiling Compiler.OwnershipChecker
-[42 of 54] Compiling Compiler.IR
-[43 of 54] Compiling Compiler.TypeChecker
-[44 of 54] Compiling Compiler
-[45 of 54] Compiling Tooling.Error
-[46 of 54] Compiling GoToolchain
-[47 of 54] Compiling CompilerUtils
-[48 of 54] Compiling EmbedAssets
-[49 of 54] Compiling Cli.Runner
-[50 of 54] Compiling Analyzer.SymbolTable
-[51 of 54] Compiling Analyzer.OwnershipBridge
-[52 of 54] Compiling Analyzer.DependentTypeBridge
-[53 of 54] Compiling AnalyzerIntegration
-[54 of 54] Compiling IntegratedCompiler
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Configuring executable 'typus' for typus-0.12.0...
 Preprocessing executable 'typus' for typus-0.12.0...
 Building executable 'typus' for typus-0.12.0...
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-[1 of 1] Compiling Main
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-[2 of 2] Linking .stack-work/dist/x86_64-linux-tinfo6/ghc-9.10.2/build/typus/typus [Objects changed]
+[2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus [Flags changed]
 Preprocessing test suite 'typus-test' for typus-0.12.0...
 Building test suite 'typus-test' for typus-0.12.0...
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-[ 1 of 38] Compiling Test.Dependencies.Arbitrary
-[ 2 of 38] Compiling Test.Golden.CompilerSpec
-[ 3 of 38] Compiling Test.Golden.Tests
-[ 4 of 38] Compiling Test.Golden
-[ 5 of 38] Compiling Test.Integration.AnalyzerSpec
-[ 6 of 38] Compiling Test.Integration.CLISpec
-[ 7 of 38] Compiling Test.Integration.FullProjectSpec
-[ 8 of 38] Compiling Test.Integration.IntegratedCompilerSpec
-[ 9 of 38] Compiling Test.Integration.OwnershipSpec
-[10 of 38] Compiling Test.Integration.PipelineSpec
-[11 of 38] Compiling Test.Integration.Tests
-[12 of 38] Compiling Test.Integration
-[13 of 38] Compiling Test.Unit.AdvancedParserSpec
-[14 of 38] Compiling Test.Unit.CLISpec
-[15 of 38] Compiling Test.Unit.CommandLineDebugSpec
-[16 of 38] Compiling Test.Unit.CompilerSpec
-[17 of 38] Compiling Test.Unit.DependentTypesSpec
-[18 of 38] Compiling Test.Unit.EdgeCaseSpec
-[19 of 38] Compiling Test.Unit.EmbedAssetsSpec
-[20 of 38] Compiling Test.Unit.ErrorHandlingSpec
-[21 of 38] Compiling Test.Unit.GoToolchainSpec
-[22 of 38] Compiling Test.Unit.IntegrationSpec
-[23 of 38] Compiling Test.Unit.OwnershipBridgeSpec
-[24 of 38] Compiling Test.Unit.OwnershipSpec
-[25 of 38] Compiling Test.Unit.ParserSpec
-[26 of 38] Compiling Test.Unit.PerformanceSpec
-[27 of 38] Compiling Test.Unit.SourceLocationSpec
-[28 of 38] Compiling Test.Unit.SymbolTableSpec
-[29 of 38] Compiling Test.Unit.SyntaxValidatorSpec
-[30 of 38] Compiling Test.Unit.TypeSystemSpec
-[31 of 38] Compiling TestSupport.QuickCheck
-[32 of 38] Compiling Test.Unit.ValueAnalysisSpec
-[33 of 38] Compiling Test.Unit.UtilsSpec
-[34 of 38] Compiling TestSupport.Verbosity
-[35 of 38] Compiling Test.Unit.VerbositySpec
-[36 of 38] Compiling Test.Unit.Tests
-[37 of 38] Compiling Test.Unit
-[38 of 38] Compiling Main
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-[39 of 39] Linking .stack-work/dist/x86_64-linux-tinfo6/ghc-9.10.2/build/typus-test/typus-test [Objects changed]
-typus> copy/register
-Installing library in /home/runner/work/Typus/Typus/.stack-work/install/x86_64-linux-tinfo6/706206f1ec680b02813aecafd22035455428193a1f01a72081ea01c811daefd5/9.10.2/lib/x86_64-linux-ghc-9.10.2-2f07/typus-0.12.0-3YBIy1RLH7aKJjVTXG4rUy
-Installing executable typus in /home/runner/work/Typus/Typus/.stack-work/install/x86_64-linux-tinfo6/706206f1ec680b02813aecafd22035455428193a1f01a72081ea01c811daefd5/9.10.2/bin
-Registering library for typus-0.12.0...
-typus> test (suite: typus-test)
-
+[39 of 39] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test [Flags changed]
+Running 1 test suites...
+Test suite typus-test: RUNNING...
 Typus
   Unit
     Parser
@@ -281,11 +178,11 @@ Typus
       handles composite literals and builder patterns:                                      OK
       Property-based guarantees
         ampersand-prefixed expressions are references:                                      OK
-          +++ OK, passed 25 tests.
+          +++ OK, passed 100 tests.
         whitespace does not affect builtin value types:                                     OK
-          +++ OK, passed 25 tests.
+          +++ OK, passed 100 tests.
         pointer-prefixed types are not treated as values:                                   OK
-          +++ OK, passed 25 tests.
+          +++ OK, passed 100 tests.
     Error handling
       handles parse errors gracefully:                                                      OK
       reports compilation errors with source locations:                                     OK
@@ -366,9 +263,9 @@ Typus
         breakOn returns empty suffix when the pattern matches the entire string:            OK
       Property-based regression
         trim is idempotent:                                                                 OK
-          +++ OK, passed 25 tests.
+          +++ OK, passed 100 tests.
         splitByCollapsed never yields empty chunks:                                         OK
-          +++ OK, passed 25 tests.
+          +++ OK, passed 100 tests.
     Advanced Parser
       parses complex nested directives:                                                     OK
       handles malformed directive syntax gracefully:                                        OK
@@ -430,10 +327,74 @@ Typus
       handles extreme indentation:                                                          OK
       handles concurrent access patterns:                                                   OK
       handles memory pressure simulation:                                                   OK
+  Integration
+    Integration
+      compiles sample program and optionally builds with Go:                                OK (0.12s)
+      ownership analysis flags complex violations:                                          OK
+      dependent type directives propagate from fixture:                                     OK
+    Integrated Analyzer
+      Cross-Analysis
+        file-level dependent type directives trigger analysis without blocks:               OK
+        ownership transfer in dependent-type context:                                       OK
+        use-after-move with type constraints:                                               OK
+        cross-analysis errors are returned to callers:                                      OK
+        integrated compiler blocks on cross-analysis errors:                                OK
+        borrow with type refinement:                                                        OK
+        mutable borrow with constraints:                                                    OK
+      Error Handling
+        fails fast when Go AST parsing fails:                                               OK
+      Error Prioritization
+        ownership error takes precedence over type error:                                   OK
+        multiple analyzer warnings combined:                                                OK
+        warnings retain severity in combined errors:                                        OK
+        compiler config filters out warning-only diagnostics:                               OK
+      Analysis Context Metadata
+        records provided source path in analysis context:                                   OK
+        uses custom label when no path is provided:                                         OK
+      Full Pipeline Integration
+        complete project with mixed directives:                                             OK
+        selective feature enabling:                                                         OK
+        complex nested ownership transfer:                                                  OK
+        dependent types with ownership constraints:                                         OK
+      Symbolic State Management
+        symbol table consistency across phases:                                             OK
+        type environment preservation:                                                      OK
+    Ownership integration
+      reports double move across chained bindings:                                          OK
+      borrow after move via call surfaces borrow-while-moved:                               OK
+      usage after scope exit is flagged as out-of-scope:                                    OK
+      type declarations do not mask ownership violations:                                   OK
+      shared borrows across helpers block later mutable borrows:                            OK
+    Integrated Compiler
+      surfaces multi-analyzer failures and propagates diagnostics:                          OK
+      filters warning-only diagnostics based on errorReportingLevel:                        OK
+      batchCheck honors TYPUS_SKIP_GO_BUILD
+        invokes Go toolchain when skip flag is absent:                                      OK
+        skips Go toolchain when skip flag is enabled:                                       OK
+    Full project workflow
+      batchConvert mirrors the project structure:                                           OK
+      batchCheck triggers Go validation:                                                    OK
+      batchCheck honours the skip flag:                                                     OK
+      convertFile passes Go sources through unchanged:                                      OK
+      batchCheck surfaces syntax validation errors:                                         OK
+      batchCheck surfaces go build failures:                                                OK
+    CLI smoke tests
+      typus --version prints the version banner:                                            OK
+      typus convert emits Go output:                                                        OK
+      typus check reports success for well-formed modules:                                  OK
+      typus check fails fast on syntax errors:                                              OK
+      typus build converts directories and invokes go:                                      OK
+      typus build --strict-embed surfaces missing assets:                                   OK
+      typus run shells out to go run via the stub:                                          OK
+      typus run fails when the entrypoint is missing:                                       OK
+  Golden
+    Golden
+      simple program renders canonical Go:                                                  OK
+      statements without package/import infer a runnable main:                              OK
+      generic type parameters render Go square bracket notation:                            OK
 
-All 270 tests passed (0.22s)
-
-
-
-typus> Test suite typus-test passed
-Completed 2 action(s).
+All 319 tests passed (0.40s)
+Test suite typus-test: PASS
+Test suite logged to:
+/home/runner/work/Typus/Typus/./dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/test/typus-0.12.0-typus-test.log
+1 of 1 test suites (1 of 1 test cases) passed.

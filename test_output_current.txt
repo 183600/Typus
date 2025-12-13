@@ -1,13 +1,9 @@
 Build profile: -w ghc-9.12.2 -O1
 In order, the following will be built (use -v for more details):
- - typus-0.12.0 (test:typus-test) (file test/Test/Unit/ErrorHandlingSpec.hs changed)
+ - typus-0.12.0 (test:typus-test) (first run)
 Preprocessing test suite 'typus-test' for typus-0.12.0...
 Building test suite 'typus-test' for typus-0.12.0...
-[20 of 38] Compiling Test.Unit.ErrorHandlingSpec ( test/Test/Unit/ErrorHandlingSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ErrorHandlingSpec.o ) [Source file changed]
-[36 of 38] Compiling Test.Unit.Tests  ( test/Test/Unit/Tests.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/Tests.o ) [Test.Unit.ErrorHandlingSpec changed]
-[37 of 38] Compiling Test.Unit        ( test/Test/Unit.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit.o ) [Test.Unit.Tests changed]
-[38 of 38] Compiling Main             ( test/Main.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Main.o ) [Test.Unit changed]
-[39 of 39] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test [Objects changed]
+[39 of 39] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test [Flags changed]
 Running 1 test suites...
 Test suite typus-test: RUNNING...
 Typus
@@ -186,56 +182,10 @@ Typus
       handles circular dependency detection:                                                OK
       reports type mismatch errors with expected and actual types:                          OK
       provides context for errors in nested blocks:                                         OK
-      handles errors in dependent type constraints:                                         OKActual error message: === Compilation Errors ===
-
-
-
---- OwnershipAnalysisPhase (1 errors) ---
-?:?: [ERROR] [Ownership] Value 'data' used after move
-      reports ownership violations with clear explanations:                                 Suggestions:
-  - Use a reference (&value) if you need to reuse it
-  - Consider cloning the value before moving
-
-Phase: OwnershipAnalysisPhase
-[OK] Recoverable error - compilation can continue
-Recovery Confidence: 70%
-
-
-OKActual error message: === Compilation Errors ===
-
-
---- TypeCheckingPhase (2 errors) ---
-1:1-1:1: [ERROR] [TypeChecking] Type errors detected during semantic analysis
-Suggestions:
-
-  - Inspect intermediate type-checking diagnostics for precise locations
-  - Add explicit type annotations to clarify intent
-
-      provides error recovery suggestions:                                                  Phase: TypeCheckingPhase
-
-Stack Trace:
-  Compiler.ensureNoTypeErrors
-
-[OK] Recoverable error - compilation can continue
-Recovery Confidence: 70%
-1:1-1:1: [ERROR] [TypeChecking] Type error in 'main': Variable 'x': expected type int, got string
-Suggestions:
-  - Inspect intermediate type-checking diagnostics for precise locations
-  - Add explicit type annotations to clarify intent
-
-Phase: TypeCheckingPhase
-
-Stack Trace:
-  Compiler.ensureNoTypeErrors
-  Type context: main
-
-[OK] Recoverable error - compilation can continue
-Recovery Confidence: 70%
-
-
-OK
-      handles malformed directive errors:                                                   OKActual error message: Line 3:5 [UnterminatedBlock] if statement missing opening brace
-
+      handles errors in dependent type constraints:                                         OK
+      reports ownership violations with clear explanations:                                 OK
+      provides error recovery suggestions:                                                  OK
+      handles malformed directive errors:                                                   OK
       reports syntax errors with position information:                                      OK
     Embedded assets
       handleMissingEmbeds warns but succeeds in non-strict mode:                            OK
@@ -253,11 +203,7 @@ OK
       runGoCommand logs when Go is skipped:                                                 OK
     CommandLineDebug
       does not trigger breakpoint when condition is False:                                  OK
-Debug output disabled
-      disable command keeps debugging disabled when already disabled:                       Debugging disabled
-Debug output disabled
-Debugging disabled
-OK
+      disable command keeps debugging disabled when already disabled:                       OK
     CLI argument parsing
       parses convert command:                                                               OK
       parses check command:                                                                 OK
@@ -342,11 +288,11 @@ OK
       handles edge cases in parsing and compilation:                                        OK
       preserves comments and formatting:                                                    OK
     Performance tests
-      parses large files efficiently:                                                       OK (0.01s)
-      compiles complex types efficiently:                                                   OK (0.01s)
+      parses large files efficiently:                                                       OK
+      compiles complex types efficiently:                                                   OK
       handles deeply nested structures efficiently:                                         OK
-      processes many small functions efficiently:                                           OK (0.11s)
-      memory usage remains reasonable for large files:                                      OK (0.10s)
+      processes many small functions efficiently:                                           OK (0.09s)
+      memory usage remains reasonable for large files:                                      OK (0.07s)
       compilation time scales linearly with file size:                                      OK
       error handling doesn't significantly impact performance:                              OK
       parallel processing potential:                                                        OK
@@ -355,7 +301,7 @@ OK
       handles empty input:                                                                  OK
       handles whitespace-only input:                                                        OK
       handles comments-only input:                                                          OK
-      handles extremely long lines:                                                         OK (0.01s)
+      handles extremely long lines:                                                         OK
       handles deeply nested parentheses:                                                    OK
       handles unusual unicode characters:                                                   OK
       handles escape sequences:                                                             OK
@@ -374,7 +320,7 @@ OK
       handles memory pressure simulation:                                                   OK
   Integration
     Integration
-      compiles sample program and optionally builds with Go:                                OK (0.12s)
+      compiles sample program and optionally builds with Go:                                OK (0.13s)
       ownership analysis flags complex violations:                                          OK
       dependent type directives propagate from fixture:                                     OK
     Integrated Analyzer
@@ -438,7 +384,7 @@ OK
       statements without package/import infer a runnable main:                              OK
       generic type parameters render Go square bracket notation:                            OK
 
-All 319 tests passed (0.50s)
+All 319 tests passed (0.42s)
 Test suite typus-test: PASS
 Test suite logged to:
 /home/runner/work/Typus/Typus/./dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/test/typus-0.12.0-typus-test.log

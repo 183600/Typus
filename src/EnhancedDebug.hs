@@ -28,7 +28,7 @@ module EnhancedDebug
 
 import Control.Exception (evaluate)
 import Control.Monad (when)
-import Data.IORef
+import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -126,7 +126,7 @@ logWithLevel level config message = do
         mapM_ (\output -> output level message) outputs
         
         -- Update log count
-        modifyIORef (dlLogCount (edcLogger config)) 
+        modifyIORef' (dlLogCount (edcLogger config)) 
             (Map.insertWith (+) level 1)
 
 -- Set log level
@@ -138,25 +138,25 @@ setLogLevel config level = do
 -- Add log output
 addLogOutput :: EnhancedDebugConfig -> (LogLevel -> String -> IO ()) -> IO ()
 addLogOutput config output = do
-    modifyIORef (dlOutputs (edcLogger config)) (output :)
+    modifyIORef' (dlOutputs (edcLogger config)) (output :)
 
 -- Create breakpoint
 createBreakpoint :: EnhancedDebugConfig -> String -> IO ()
 createBreakpoint config location = do
-    modifyIORef (edcBreakpoints config) (Set.insert location)
+    modifyIORef' (edcBreakpoints config) (Set.insert location)
     logInfo config $ "Breakpoint set at: " ++ location
 
 -- Create conditional breakpoint
 createConditionalBreakpoint :: EnhancedDebugConfig -> String -> (String -> Bool) -> IO ()
 createConditionalBreakpoint config location condition = do
-    modifyIORef (edcConditionalBreakpoints config) (Map.insert location condition)
+    modifyIORef' (edcConditionalBreakpoints config) (Map.insert location condition)
     logInfo config $ "Conditional breakpoint set at: " ++ location
 
 -- Check and handle breakpoint
 checkAndHandleBreakpoint :: EnhancedDebugConfig -> String -> IO ()
 checkAndHandleBreakpoint config location = do
     -- Update execution count
-    modifyIORef (edcExecutionCounts config) 
+    modifyIORef' (edcExecutionCounts config) 
         (Map.insertWith (+) location 1)
     
     -- Check regular breakpoints
@@ -175,7 +175,7 @@ checkAndHandleBreakpoint config location = do
     
     when (isBreakpoint || conditionMet) $ do
         -- Update breakpoint hit count
-        modifyIORef (edcBreakpointHitCount config) 
+        modifyIORef' (edcBreakpointHitCount config) 
             (Map.insertWith (+) location 1)
         
         handleBreakpoint config location isBreakpoint conditionMet
@@ -316,7 +316,7 @@ debugTrace config label action = do
 -- Enter function
 debugEnterFunction :: EnhancedDebugConfig -> String -> IO ()
 debugEnterFunction config functionName = do
-    modifyIORef (edcFunctionStack config) (functionName :)
+    modifyIORef' (edcFunctionStack config) (functionName :)
     logDebug config $ "ENTER: " ++ functionName
 
 -- Exit function
@@ -339,7 +339,7 @@ debugMeasureTime config label action = do
     result <- action
     endTime <- getCurrentTime
     let duration = realToFrac $ diffUTCTime endTime startTime :: Double
-    modifyIORef (edcTimings config) (Map.insertWith (+) label duration)
+    modifyIORef' (edcTimings config) (Map.insertWith (+) label duration)
     logDebug config $ "TIME: " ++ label ++ " took " ++ printf "%.3f" duration ++ "s"
     return result
 

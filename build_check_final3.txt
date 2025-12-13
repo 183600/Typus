@@ -1,0 +1,36 @@
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (file src/Ownership/Analyzer.hs changed)
+ - typus-0.12.0 (exe:typus) (dependency rebuilt)
+Preprocessing library for typus-0.12.0...
+Building library for typus-0.12.0...
+[31 of 54] Compiling Compiler.Errors.Compiler ( src/Compiler/Errors/Compiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Compiler.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/Errors/Compiler.dyn_o ) [Source file changed]
+src/Compiler/Errors/Compiler.hs:92:28: error: [GHC-88464]
+    Variable not in scope:
+      runStateT
+        :: CompilerM a
+           -> [a0] -> Either [CompilerError] (a, [CompilerError])
+    Suggested fixes:
+      • Perhaps use ‘runState’ (imported from Control.Monad.State)
+      • Add ‘runStateT’ to the import list in the import of
+        ‘Control.Monad.State’ (at src/Compiler/Errors/Compiler.hs:58:1-76).
+   |
+92 | runCompilerM action = case runStateT action [] of
+   |                            ^^^^^^^^^
+
+src/Compiler/Errors/Compiler.hs:229:29: error: [GHC-88464]
+    Variable not in scope:
+      runStateT
+        :: CompilerM ()
+           -> [a1] -> Either [CompilerError] (a2, [CompilerError])
+    Suggested fixes:
+      • Perhaps use ‘runState’ (imported from Control.Monad.State)
+      • Add ‘runStateT’ to the import list in the import of
+        ‘Control.Monad.State’ (at src/Compiler/Errors/Compiler.hs:58:1-76).
+    |
+229 | collectErrors action = case runStateT action [] of
+    |                             ^^^^^^^^^
+
+Error: [Cabal-7125]
+Failed to build typus-0.12.0 (which is required by exe:typus from typus-0.12.0).
+

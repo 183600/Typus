@@ -55,8 +55,8 @@ import SourceLocation
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Maybe (catMaybes)
-import Control.Monad.State
-import Control.Monad.Except
+import Control.Monad.State (StateT, modify, runStateT)
+import Control.Monad.Except (catchError)
 import qualified Data.Map.Strict as Map
 
 -- ============================================================================

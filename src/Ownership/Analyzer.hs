@@ -6,9 +6,9 @@ module Ownership.Analyzer
   ) where
 
 import Control.Monad (when)
-import Control.Monad.State
+import Control.Monad.State (State, modify, get, put, execState)
 import Data.List (isInfixOf)
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, listToMaybe, fromMaybe)
 import qualified Data.Map.Strict as Map
 
 import Ownership.Common.Lexer (Token(..), TokenKind(..))
@@ -422,7 +422,7 @@ collectPlainIdents ts = go Nothing ts
   where
     go _ [] = []
     go mPrev (cur:rest) =
-      let next = case rest of { (x:_) -> Just x; [] -> Nothing }
+      let next = listToMaybe rest
           acc = go (Just cur) rest
        in case cur of
             Token (TId s) _
@@ -626,7 +626,7 @@ heuristicOwnershipErrors src =
                         , all isVarChar rhs
                  ]
       usesAfter v = any (\l -> ("println(" ++ v ++ ")") `isInfixOf` filter (/= ' ') l) (lines src)
-      firstVar = case movedFrom of { (v:_) -> v; _ -> "" }
+      firstVar = fromMaybe "" $ listToMaybe movedFrom
       txt = filter (/= ' ') src
       hasSeq a b = case (search a txt, search b txt) of
                      (Just ia, Just ib) -> ia < ib
