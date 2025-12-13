@@ -120,6 +120,8 @@ while true; do
   if [[ $CABAL_STATUS -eq 0 && $HAS_WARNINGS -eq 0 ]]; then
     echo "✅ 未发现任何问题（包括 warning）——进行提交并增加测试用例"
 
+    run_with_heartbeat iflow "给这个项目增加大量的测试用例 think:high" --yolo || true
+
     # 在 git add . 之前，先用 iflow 清理根目录多余的 .md/.txt 文件
     echo "🧹 正在清理项目根目录多余的 .md/.txt 文件（如 TEST_ENHANCEMENT_SUMMARY.md、test_wall_production.txt）..."
     run_with_heartbeat iflow '删除项目根目录多余的.md文件或者.txt文件（像TEST_ENHANCEMENT_SUMMARY.md和test_wall_production.txt这样的）' --yolo || true
@@ -130,8 +132,6 @@ while true; do
     else
       git commit -m "测试通过" || true
     fi
-
-    run_with_heartbeat iflow "给这个项目增加大量的测试用例 think:high" --yolo || true
   else
     echo "⚠️ 发现问题或 warning（退出码=$CABAL_STATUS），调用 iflow 修复..."
     run_with_heartbeat iflow '解决cabal test --flags="-fast production" --test-show-details=direct显示的所有问题（包括warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点 think:high' --yolo || true
