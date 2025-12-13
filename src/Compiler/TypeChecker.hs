@@ -5,6 +5,7 @@ module Compiler.TypeChecker (
     TypeCheckDiagnostic(..),
     FunctionInfo(..),
     FunctionSignature(..),
+    FunctionParam(..),
     hasTypeErrors,
     diagnoseTypeErrors,
     diagnoseTypeErrorsWithPackage,

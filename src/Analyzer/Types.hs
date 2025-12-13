@@ -4,6 +4,7 @@ module Analyzer.Types (
     CombinedError(..),
     AnalysisResult(..),
     SymbolInfo(..),
+    SymbolKind(..),
     AnalysisPhase(..),
     AnalysisContext(..),
     AnalyzerState(..),
@@ -16,6 +17,16 @@ import qualified Data.Map.Strict as Map
 import qualified Ownership as Own
 import qualified Dependencies as Dep
 import Compiler.Errors.Core (ErrorSeverity(..), CombinedError(..))
+
+-- Symbol kind classification
+data SymbolKind
+    = SymbolVariable
+    | SymbolFunction
+    | SymbolType
+    | SymbolConstant
+    | SymbolPackage
+    | SymbolModule
+    deriving (Show, Eq)
 
 data AnalysisResult = AnalysisResult
     { ownershipErrors :: [(ErrorSeverity, Own.OwnershipError)]

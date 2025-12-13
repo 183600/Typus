@@ -24,6 +24,19 @@ import qualified Test.Unit.IntegrationSpec
 import qualified Test.Unit.PerformanceSpec
 import qualified Test.Unit.EdgeCaseSpec
 
+-- QuickCheck test modules
+import qualified Test.Unit.ParserQuickCheckSpec
+import qualified Test.Unit.CompilerQuickCheckSpec
+import qualified Test.Unit.TypeCheckerQuickCheckSpec
+import qualified Test.Unit.OwnershipQuickCheckSpec
+import qualified Test.Unit.AnalyzerQuickCheckSpec
+import qualified Test.Unit.UtilsQuickCheckSpec
+import qualified Test.Unit.SymbolTableQuickCheckSpec
+import qualified Test.Unit.ValueAnalysisQuickCheckSpec
+import qualified Test.Unit.SyntaxValidatorQuickCheckSpec
+import qualified Test.Unit.ErrorHandlingQuickCheckSpec
+import qualified Test.Unit.DependentTypesQuickCheckSpec
+
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
 tests :: TestTree
@@ -50,4 +63,17 @@ tests =
     , Test.Unit.IntegrationSpec.tests
     , Test.Unit.PerformanceSpec.tests
     , Test.Unit.EdgeCaseSpec.tests
+    , testGroup "QuickCheck Tests"
+        [ Test.Unit.ParserQuickCheckSpec.tests
+        , Test.Unit.CompilerQuickCheckSpec.tests
+        , Test.Unit.TypeCheckerQuickCheckSpec.tests
+        , Test.Unit.OwnershipQuickCheckSpec.tests
+        , Test.Unit.AnalyzerQuickCheckSpec.tests
+        , Test.Unit.UtilsQuickCheckSpec.tests
+        , Test.Unit.SymbolTableQuickCheckSpec.tests
+        , Test.Unit.ValueAnalysisQuickCheckSpec.tests
+        , Test.Unit.SyntaxValidatorQuickCheckSpec.tests
+        , Test.Unit.ErrorHandlingQuickCheckSpec.tests
+        , Test.Unit.DependentTypesQuickCheckSpec.tests
+        ]
     ]

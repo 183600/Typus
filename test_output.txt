@@ -1,394 +1,1325 @@
 Build profile: -w ghc-9.12.2 -O1
 In order, the following will be built (use -v for more details):
- - typus-0.12.0 (test:typus-test) (first run)
+ - typus-0.12.0 (test:typus-test) (file test/Test/Integration/CLISpec.hs changed)
 /bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
 Preprocessing test suite 'typus-test' for typus-0.12.0...
 Building test suite 'typus-test' for typus-0.12.0...
 /bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-[39 of 39] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test [Flags changed]
-Running 1 test suites...
-Test suite typus-test: RUNNING...
-Typus
-  Unit
-    Parser
-      parses file-level directives:                                                         OK
-      treats file-level constraints directive as dependent type alias:                      OK
-      captures block directives with associated code:                                       OK
-      parses README-style block directives without inline closing brace:                    OK
-      ignores trailing whitespace-only files:                                               OK
-      collects build tags before the first code block:                                      OK
-      rejects unknown file directives:                                                      OK
-      requires directive blocks to close:                                                   OK
-      parses complex function signatures:                                                   OK
-      handles interface definitions:                                                        OK
-      parses struct definitions with multiple fields:                                       OK
-      handles method definitions:                                                           OK
-      parses channel operations:                                                            OK
-      handles go statements and goroutines:                                                 OK
-      parses defer statements:                                                              OK
-      handles complex literals:                                                             OK
-      parses generic types and functions:                                                   OK
-      handles embedded structs:                                                             OK
-      parses import statements:                                                             OK
-      handles multiple package declarations:                                                OK
-      parses constants and variables:                                                       OK
-    Ownership analysis
-      does not report errors for simple value usage:                                        OK
-      detects use-after-move patterns:                                                      OK
-      detects borrow while mutable borrow is active:                                        OK
-      detects mutable borrow while immutable borrows exist:                                 OK
-      detects borrow after a move operation:                                                OK
-      detects use of value while it has a mutable borrow:                                   OK
-      detects multiple mutable borrows:                                                     OK
-      detects double move attempts:                                                         OK
-      reports out-of-scope variable usage:                                                  OK
-      allows reborrowing after scoped mutable borrow ends:                                  OK
-      fmt.Println is treated as pure usage:                                                 OK
-      mutex locking and unlocking are treated as safe usages:                               OK
-      respects ownership off directive:                                                     OK
-      line directive toggles ownership tracking back on:                                    OK
-      releases immutable borrows when leaving nested scope:                                 OK
-      mutable borrow scope ending allows subsequent immutable borrow:                       OK
-      block directive limits ownership disabling to its block:                              OK
-      nested block directives re-enable ownership tracking:                                 OK
-      for loop introduces synthetic iteration bindings:                                     OK
-      assignment after move resets ownership flags:                                         OK
-      len built-in counts as pure usage:                                                    OK
-      temporary mutable borrows used as arguments are released:                             OK
-    OwnershipBridge
-      filtered ownership errors do not mutate the symbol table:                             OK
-      processOwnershipErrors only reports names tracked in the symbol table:                OK
-      processOwnershipErrors synthesizes use-after-move patterns when missing:              OK
-    Dependent types parser
-      parses type and function declarations:                                                OK
-      reports syntax problems:                                                              OK
-      runDependentTypesParser recovers from invalid declarations:                           OK
-      extracts constraints from multiline type declarations:                                OK
-      collects parameter and declaration constraints:                                       OK
-      supports type class constraints in type definitions:                                  OK
-      extractTypeDefinitions handles parameter types referencing other parameters:          OK
-      translates nonempty shorthand constraint to TypeSizeGT:                               OK
-      extracts numeric equality constraints as concrete values:                             OK
-      ignores aliases and dependent functions when extracting types:                        OK
-      analyzeAST accepts well-formed declarations:                                          OK
-      analyzeAST reports missing type references:                                           OK
-      validateStatement registers dependent type definitions:                               OK
-      validateStatement reports missing alias targets:                                      OK
-      solveConstraints succeeds with satisfiable constraints:                               OK
-      solveConstraints reports invalid range constraints:                                   OK
-      extractTypeDefinitions preserves equality between parameters:                         OK
-      extractTypeDefinitions treats uppercase constants as concrete types:                  OK
-      extractTypeDefinitions converts custom constraints to predicates:                     OK
-      parseDependentType parses dependent functions with constraints:                       OK
-      parseTypeDeclaration captures inline parameter constraints:                           OK
-      validateDependentTypeSyntax reports duplicate type definitions:                       OK
-      parseDependentType parses alias definitions with constraints:                         OK
-      parseDependentType handles nested function bodies:                                    OK
-      extractTypeDefinitions categorizes predicate arguments precisely:                     OK
-      extractTypeDefinitions records bounded ranges:                                        OK
-      extractTypeDefinitions handles type class constraints with generics:                  OK
-      extractTypeDefinitions treats lowercase equality targets as symbolic variables:       OK
-      analyzeAST accepts generated safe programs:                                           OK
-        +++ OK, passed 100 tests.
-    Type system
-      prelude exposes primitive definitions:                                                OK
-      checkType accepts known types:                                                        OK
-      checkType reports unknown types:                                                      OK
-      checkTypeInstantiation validates type arity:                                          OK
-      checkTypeInstantiation accepts valid instantiation:                                   OK
-      solveConstraints flags conflicting equalities:                                        OK
-      unify produces substitutions:                                                         OK
-      unify enforces occurs check:                                                          OK
-      convertTypeExprAndRefinements accumulates refinement constraints:                     OK
-      convertConstraint preserves nested generic predicate arguments:                       OK
-      convertTypeExprAndRefinements handles refined function returns:                       OK
-      solveConstraints accepts reflexive equalities:                                        OK
-        +++ OK, passed 100 tests.
-      solveConstraints clears pending constraints:                                          OK
-        +++ OK, passed 100 tests.
-    SymbolTable
-      collectSymbolsAndTypes extracts top-level declarations:                               OK
-      augmentSymbolTableWithLocals adds owned locals:                                       OK
-      collectSymbolsAndTypes surfaces parse errors:                                         OK
-    SourceLocation
-      Position arithmetic
-        posAfter newline increments the line and resets the column:                         OK
-        posAfter tab jumps to the next tab stop:                                            OK
-        advancePosByText keeps track of multiline progress:                                 OK
-        advancePosByLine bumps the line number and resets the column:                       OK
-      Span utilities
-        spanFrom is equivalent to emptySpan:                                                OK
-        spanTo produces a zero-length span ending at the position:                          OK
-        spanBetween preserves the provided bounds:                                          OK
-        mergeSpans chooses the earliest start and latest end:                               OK
-        isValidSpan rejects spans whose start follows their end:                            OK
-      Located helpers
-        locatedAt anchors the value at an empty span:                                       OK
-        mapLocated transforms the payload while preserving the span:                        OK
-      Location tracking state
-        markSpanStart/markSpanEnd capture the advanced range:                               OK
-      Error conversions
-        toErrorLocation keeps only the point information:                                   OK
-        toErrorLocationWithSpan preserves both ends of the span:                            OK
-    SyntaxValidator
-      returns no errors for an empty file:                                                  OK
-      detects missing package declarations in Go files:                                     OK
-      reports unclosed braces with the original opening location:                           OK
-      flags malformed Typus directives:                                                     OK
-      detects duplicate variable declarations in the same scope:                            OK
-      requires braces after control-flow keywords:                                          OK
-      validateFile delegates to validateSyntax:                                             OK
-      ignores import formatting errors that are filtered as false positives:                OK
-      successfully validates a minimal, well-formed Go file:                                OK
-      formatSyntaxError includes the location prefix and context line:                      OK
-    Compiler
-      generates Go code for valid Typus input:                                              OK
-      fails when dependent type blocks contain errors:                                      OK
-      file-level dependent type directives are enforced without blocks:                     OK
-      reports detailed diagnostics when type checking fails:                                OK
-      rejects malformed syntax with unbalanced braces:                                      OK
-      compiles complex expressions:                                                         OK
-      handles struct compilation:                                                           OK
-      compiles interface definitions:                                                       OK
-      handles method compilation:                                                           OK
-      compiles generic types:                                                               OK
-      handles channel compilation:                                                          OK
-      compiles goroutines:                                                                  OK
-      handles defer statements:                                                             OK
-      compiles complex literals:                                                            OK
-      handles import statements:                                                            OK
-      compiles constants and variables:                                                     OK
-      handles error types:                                                                  OK
-      compiles ownership-enabled code:                                                      OK
-      compiles dependent types code:                                                        OK
-      handles mixed ownership and dependent types:                                          OK
-      reports multiple compilation errors:                                                  OK
-      handles undefined variables:                                                          OK
-      detects circular dependencies:                                                        OK
-    ValueAnalysis
-      handles comments, strings, and multi-line references:                                 OK
-      classifies short declarations inside guards:                                          OK
-      handles composite literals and builder patterns:                                      OK
-      Property-based guarantees
-        ampersand-prefixed expressions are references:                                      OK
-          +++ OK, passed 100 tests.
-        whitespace does not affect builtin value types:                                     OK
-          +++ OK, passed 100 tests.
-        pointer-prefixed types are not treated as values:                                   OK
-          +++ OK, passed 100 tests.
-    Error handling
-      handles parse errors gracefully:                                                      OK
-      reports compilation errors with source locations:                                     OK
-      aggregates multiple errors in single compilation:                                     OK
-      provides helpful error messages for undefined variables:                              OK
-      handles circular dependency detection:                                                OK
-      reports type mismatch errors with expected and actual types:                          OK
-      provides context for errors in nested blocks:                                         OK
-      handles errors in dependent type constraints:                                         OK
-      reports ownership violations with clear explanations:                                 OK
-      provides error recovery suggestions:                                                  OK
-      handles malformed directive errors:                                                   OK
-      reports syntax errors with position information:                                      OK
-    Embedded assets
-      handleMissingEmbeds warns but succeeds in non-strict mode:                            OK
-      handleMissingEmbeds fails fast when strict mode is enabled:                           OK
-      mirrorEmbeddedResources copies referenced files:                                      OK
-      mirrorEmbeddedResources handles indented go:embed directives:                         OK
-      mirrorEmbeddedResources reports missing patterns:                                     OK
-      copyEmbeddedForBuild mirrors directories for go:embed patterns:                       OK
-    GoToolchain
-      isEnvVarEnabled recognises truthy values:                                             OK
-      shouldSkipGoToolchain mirrors environment state:                                      OK
-      writeGoModule creates a go.mod file with canned contents:                             OK
-      createTempGoFile derives the prefix from the source file:                             OK
-      withTemporaryGoProject writes go.mod and reuses the provided prefix:                  OK
-      runGoCommand logs when Go is skipped:                                                 OK
-    CommandLineDebug
-      does not trigger breakpoint when condition is False:                                  OK
-      disable command keeps debugging disabled when already disabled:                       OK
-    CLI argument parsing
-      parses convert command:                                                               OK
-      parses check command:                                                                 OK
-      parses --version option:                                                              OK
-      parses build strict embed flag:                                                       OK
-      parses build strict embed flag after positional argument:                             OK
-      allows passing --strict-embed through to Go arguments:                                OK
-      parses build forwarding go arguments:                                                 OK
-      parses run defaults to non-strict:                                                    OK
-      parses run with strict embed flag:                                                    OK
-      parses run strict embed flag after file argument:                                     OK
-      parses run command with additional arguments:                                         OK
-    Verbosity helpers
-      defaults to quiet when env var is missing:                                            OK
-      parses truthy values case-insensitively:                                              OK
-      treats other values as quiet:                                                         OK
-      whenVerbose executes action only when verbose:                                        OK
-    Utils helpers
-      Whitespace and splitting
-        trim removes leading and trailing whitespace:                                       OK
-        splitBy preserves empty segments:                                                   OK
-        splitBy on empty input returns a singleton empty chunk:                             OK
-        splitByCollapsed removes empty segments:                                            OK
-        splitByCollapsed returns [] when the string only has delimiters:                    OK
-        splitByComma delegates to splitBy:                                                  OK
-        splitByCommaCollapsed yields [] on empty input:                                     OK
-        splitByCommaCollapsed collapses trailing delimiter chains:                          OK
-      Comment stripping
-        removeLineComments respects string and char literals:                               OK
-        removeLineComments keeps escaped quotes inside strings:                             OK
-        removeLineComments maintains blank lines when an entire line is a comment:          OK
-        removeComments removes multiline block comments and retains line information:       OK
-        removeComments removes sequential inline block comments:                            OK
-        removeComments ignores comment markers that appear inside strings or char literals: OK
-        removeComments preserves file-leading block comments:                               OK
-        removeComments tolerates unterminated block comments by dropping the remainder:     OK
-      Indentation helpers
-        normalizeIndentation removes the common leading indentation but keeps structure:    OK
-        normalizeIndentation keeps leading blank lines intact:                              OK
-        normalizeIndentation leaves purely whitespace input untouched:                      OK
-        forceSingleTabIndentation enforces a single leading tab on non-empty lines:         OK
-        forceSingleTabIndentation collapses whitespace-only lines:                          OK
-        fixIndentation is an alias for normalizeIndentation:                                OK
-      Search helpers
-        breakOn returns prefix and suffix when the pattern exists:                          OK
-        breakOn falls back to the original string when the pattern is missing:              OK
-        breakOn with an empty pattern returns the whole string as the suffix:               OK
-        breakOn returns empty suffix when the pattern matches the entire string:            OK
-      Property-based regression
-        trim is idempotent:                                                                 OK
-          +++ OK, passed 100 tests.
-        splitByCollapsed never yields empty chunks:                                         OK
-          +++ OK, passed 100 tests.
-    Advanced Parser
-      parses complex nested directives:                                                     OK
-      handles malformed directive syntax gracefully:                                        OK
-      parses complex type definitions:                                                      OK
-      handles multiple build tags:                                                          OK
-      parses deeply nested code blocks:                                                     OK
-      handles unicode and special characters:                                               OK
-      parses complex function signatures:                                                   OK
-      handles interface definitions:                                                        OK
-      parses channel operations:                                                            OK
-      handles go statements and goroutines:                                                 OK
-      parses defer statements:                                                              OK
-      handles complex literals:                                                             OK
-      parses method definitions:                                                            OK
-      handles error types and error handling:                                               OK
-      parses generic types and functions:                                                   OK
-      handles embedded structs:                                                             OK
-    Integration tests
-      compiles and runs simple program:                                                     OK
-      compiles program with multiple functions:                                             OK
-      handles complex type definitions:                                                     OK
-      processes ownership and dependent types together:                                     OK
-      handles block-level directives:                                                       OK
-      integrates error handling across phases:                                              OK
-      handles Go toolchain integration:                                                     OK
-      processes complex expressions:                                                        OK
-      handles multiple source files:                                                        OK
-      maintains type safety across compilation phases:                                      OK
-      handles edge cases in parsing and compilation:                                        OK
-      preserves comments and formatting:                                                    OK
-    Performance tests
-      parses large files efficiently:                                                       OK
-      compiles complex types efficiently:                                                   OK
-      handles deeply nested structures efficiently:                                         OK
-      processes many small functions efficiently:                                           OK (0.08s)
-      memory usage remains reasonable for large files:                                      OK (0.06s)
-      compilation time scales linearly with file size:                                      OK
-      error handling doesn't significantly impact performance:                              OK
-      parallel processing potential:                                                        OK
-      cache effectiveness:                                                                  OK
-    Edge case tests
-      handles empty input:                                                                  OK
-      handles whitespace-only input:                                                        OK
-      handles comments-only input:                                                          OK
-      handles extremely long lines:                                                         OK
-      handles deeply nested parentheses:                                                    OK
-      handles unusual unicode characters:                                                   OK
-      handles escape sequences:                                                             OK
-      handles numeric edge cases:                                                           OK
-      handles conflicting directives:                                                       OK
-      handles malformed block directives:                                                   OK
-      handles recursive type definitions:                                                   OK
-      handles circular imports simulation:                                                  OK
-      handles extremely long identifiers:                                                   OK
-      handles zero-width and invisible characters:                                          OK
-      handles mixed line endings:                                                           OK
-      handles BOM (Byte Order Mark):                                                        OK
-      handles invalid UTF-8 sequences:                                                      OK
-      handles extreme indentation:                                                          OK
-      handles concurrent access patterns:                                                   OK
-      handles memory pressure simulation:                                                   OK
-  Integration
-    Integration
-      compiles sample program and optionally builds with Go:                                OK (0.12s)
-      ownership analysis flags complex violations:                                          OK
-      dependent type directives propagate from fixture:                                     OK
-    Integrated Analyzer
-      Cross-Analysis
-        file-level dependent type directives trigger analysis without blocks:               OK
-        ownership transfer in dependent-type context:                                       OK
-        use-after-move with type constraints:                                               OK
-        cross-analysis errors are returned to callers:                                      OK
-        integrated compiler blocks on cross-analysis errors:                                OK
-        borrow with type refinement:                                                        OK
-        mutable borrow with constraints:                                                    OK
-      Error Handling
-        fails fast when Go AST parsing fails:                                               OK
-      Error Prioritization
-        ownership error takes precedence over type error:                                   OK
-        multiple analyzer warnings combined:                                                OK
-        warnings retain severity in combined errors:                                        OK
-        compiler config filters out warning-only diagnostics:                               OK
-      Analysis Context Metadata
-        records provided source path in analysis context:                                   OK
-        uses custom label when no path is provided:                                         OK
-      Full Pipeline Integration
-        complete project with mixed directives:                                             OK
-        selective feature enabling:                                                         OK
-        complex nested ownership transfer:                                                  OK
-        dependent types with ownership constraints:                                         OK
-      Symbolic State Management
-        symbol table consistency across phases:                                             OK
-        type environment preservation:                                                      OK
-    Ownership integration
-      reports double move across chained bindings:                                          OK
-      borrow after move via call surfaces borrow-while-moved:                               OK
-      usage after scope exit is flagged as out-of-scope:                                    OK
-      type declarations do not mask ownership violations:                                   OK
-      shared borrows across helpers block later mutable borrows:                            OK
-    Integrated Compiler
-      surfaces multi-analyzer failures and propagates diagnostics:                          OK
-      filters warning-only diagnostics based on errorReportingLevel:                        OK
-      batchCheck honors TYPUS_SKIP_GO_BUILD
-        invokes Go toolchain when skip flag is absent:                                      OK
-        skips Go toolchain when skip flag is enabled:                                       OK
-    Full project workflow
-      batchConvert mirrors the project structure:                                           OK
-      batchCheck triggers Go validation:                                                    OK
-      batchCheck honours the skip flag:                                                     OK
-      convertFile passes Go sources through unchanged:                                      OK
-      batchCheck surfaces syntax validation errors:                                         OK
-      batchCheck surfaces go build failures:                                                OK
-    CLI smoke tests
-      typus --version prints the version banner:                                            OK
-      typus convert emits Go output:                                                        OK
-      typus check reports success for well-formed modules:                                  OK
-      typus check fails fast on syntax errors:                                              OK
-      typus build converts directories and invokes go:                                      OK
-      typus build --strict-embed surfaces missing assets:                                   OK
-      typus run shells out to go run via the stub:                                          OK
-      typus run fails when the entrypoint is missing:                                       OK
-  Golden
-    Golden
-      simple program renders canonical Go:                                                  OK
-      statements without package/import infer a runnable main:                              OK
-      generic type parameters render Go square bracket notation:                            OK
+[34 of 48] Compiling Test.Unit.ValueAnalysisQuickCheckSpec ( test/Test/Unit/ValueAnalysisQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ValueAnalysisQuickCheckSpec.o )
+test/Test/Unit/ValueAnalysisQuickCheckSpec.hs:146:5: error: [GHC-39999]
+    * No instance for `Test.QuickCheck.Arbitrary.Arbitrary ValueKind'
+        arising from a use of `fastProperty'
+    * In the expression:
+        fastProperty "value info construction" prop_value_info_construction
+      In the second argument of `testGroup', namely
+        `[fastProperty
+            "value info construction" prop_value_info_construction,
+          fastProperty "value kinds comparable" prop_value_kinds_comparable,
+          fastProperty "value info equality" prop_value_info_equality,
+          fastProperty "value kind variants" prop_value_kind_variants, ....]'
+      In the expression:
+        testGroup
+          "ValueAnalysis QuickCheck Tests"
+          [fastProperty
+             "value info construction" prop_value_info_construction,
+           fastProperty "value kinds comparable" prop_value_kinds_comparable,
+           fastProperty "value info equality" prop_value_info_equality,
+           fastProperty "value kind variants" prop_value_kind_variants, ....]
+    |
+146 |   [ fastProperty "value info construction" prop_value_info_construction
+    |     ^^^^^^^^^^^^
 
-All 319 tests passed (0.41s)
-Test suite typus-test: PASS
-Test suite logged to:
-/home/runner/work/Typus/Typus/./dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/test/typus-0.12.0-typus-test.log
-1 of 1 test suites (1 of 1 test cases) passed.
+test/Test/Unit/ValueAnalysisQuickCheckSpec.hs:148:5: error: [GHC-39999]
+    * No instance for `Test.QuickCheck.Arbitrary.Arbitrary ValueInfo'
+        arising from a use of `fastProperty'
+    * In the expression:
+        fastProperty "value info equality" prop_value_info_equality
+      In the second argument of `testGroup', namely
+        `[fastProperty
+            "value info construction" prop_value_info_construction,
+          fastProperty "value kinds comparable" prop_value_kinds_comparable,
+          fastProperty "value info equality" prop_value_info_equality,
+          fastProperty "value kind variants" prop_value_kind_variants, ....]'
+      In the expression:
+        testGroup
+          "ValueAnalysis QuickCheck Tests"
+          [fastProperty
+             "value info construction" prop_value_info_construction,
+           fastProperty "value kinds comparable" prop_value_kinds_comparable,
+           fastProperty "value info equality" prop_value_info_equality,
+           fastProperty "value kind variants" prop_value_kind_variants, ....]
+    |
+148 |   , fastProperty "value info equality" prop_value_info_equality
+    |     ^^^^^^^^^^^^
+
+[36 of 48] Compiling Test.Unit.UtilsQuickCheckSpec ( test/Test/Unit/UtilsQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsQuickCheckSpec.o )
+test/Test/Unit/UtilsQuickCheckSpec.hs:45:1: error: [GHC-44432]
+    The type signature for `prop_splitBy_preserves_empty'
+      lacks an accompanying binding
+    Suggested fix:
+      Perhaps use `prop_split_by_preserves_empty' (Defined at test/Test/Unit/UtilsQuickCheckSpec.hs:46:1)
+   |
+45 | prop_splitBy_preserves_empty :: Char -> String -> Property
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[37 of 48] Compiling Test.Unit.TypeCheckerQuickCheckSpec ( test/Test/Unit/TypeCheckerQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeCheckerQuickCheckSpec.o )
+test/Test/Unit/TypeCheckerQuickCheckSpec.hs:39:42: error: [GHC-88464]
+    Variable not in scope: (==>) :: Bool -> Bool -> Property
+    Suggested fixes:
+      * Perhaps use one of these:
+          `==' (imported from Prelude), `===' (imported from Test.QuickCheck)
+      * Add `==>' to the import list in the import of `Test.QuickCheck'
+        (at test/Test/Unit/TypeCheckerQuickCheckSpec.hs:5:1-81).
+   |
+39 |   in paramCount >= 0 && returnCount >= 0 ==> -- Basic sanity checks
+   |                                          ^^^
+
+test/Test/Unit/TypeCheckerQuickCheckSpec.hs:49:42: error: [GHC-88464]
+    Variable not in scope: (==>) :: Bool -> Bool -> Property
+    Suggested fixes:
+      * Perhaps use one of these:
+          `==' (imported from Prelude), `===' (imported from Test.QuickCheck)
+      * Add `==>' to the import list in the import of `Test.QuickCheck'
+        (at test/Test/Unit/TypeCheckerQuickCheckSpec.hs:5:1-81).
+   |
+49 |   in paramCount >= 0 && returnCount >= 0 ==> -- Basic sanity checks
+   |                                          ^^^
+
+test/Test/Unit/TypeCheckerQuickCheckSpec.hs:140:12: error: [GHC-88464]
+    Variable not in scope: (==>) :: Bool -> Bool -> Property
+    Suggested fixes:
+      * Perhaps use one of these:
+          `==' (imported from Prelude), `===' (imported from Test.QuickCheck)
+      * Add `==>' to the import list in the import of `Test.QuickCheck'
+        (at test/Test/Unit/TypeCheckerQuickCheckSpec.hs:5:1-81).
+    |
+140 |   n <= 100 ==> -- Limit size to avoid timeouts
+    |            ^^^
+
+test/Test/Unit/TypeCheckerQuickCheckSpec.hs:149:11: error: [GHC-88464]
+    Variable not in scope: (==>) :: Bool -> Bool -> Property
+    Suggested fixes:
+      * Perhaps use one of these:
+          `==' (imported from Prelude), `===' (imported from Test.QuickCheck)
+      * Add `==>' to the import list in the import of `Test.QuickCheck'
+        (at test/Test/Unit/TypeCheckerQuickCheckSpec.hs:5:1-81).
+    |
+149 |   n <= 10 ==> -- Limit complexity
+    |           ^^^
+
+[38 of 48] Compiling Test.Unit.SyntaxValidatorQuickCheckSpec ( test/Test/Unit/SyntaxValidatorQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/SyntaxValidatorQuickCheckSpec.o )
+test/Test/Unit/SyntaxValidatorQuickCheckSpec.hs:27:7: error: [GHC-83865]
+    * Couldn't match expected type `SyntaxError -> ErrorType'
+                  with actual type `ErrorType'
+    * The function `errorType' is applied to one visible argument,
+        but its type `ErrorType' has none
+      In the first argument of `(===)', namely `errorType syntaxError'
+      In the first argument of `(.&.)', namely
+        `(errorType syntaxError === errorType)'
+   |
+27 |   in (errorType syntaxError === errorType) .&.
+   |       ^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/SyntaxValidatorQuickCheckSpec.hs:102:6: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: hasStringError
+      In the expression:
+        let
+          unclosedString = "\"" ++ content
+          errors = validateSyntax unclosedString
+          hasStringError = any (\ e -> errorType e == UnclosedString) errors
+        in hasStringError
+      In an equation for `prop_unclosed_string_detection':
+          prop_unclosed_string_detection content
+            = let
+                unclosedString = "\"" ++ content
+                errors = validateSyntax unclosedString
+                ....
+              in hasStringError
+    |
+102 |   in hasStringError
+    |      ^^^^^^^^^^^^^^
+
+test/Test/Unit/SyntaxValidatorQuickCheckSpec.hs:113:6: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression:
+        not (hasCommentError1) && not (hasCommentError2)
+      In the expression:
+        let
+          lineComment = "// " ++ content
+          blockComment = "/* " ++ content ++ " */"
+          errors1 = validateSyntax lineComment
+          ....
+        in not (hasCommentError1) && not (hasCommentError2)
+      In an equation for `prop_comment_validation':
+          prop_comment_validation content
+            = let
+                lineComment = "// " ++ content
+                blockComment = "/* " ++ content ++ " */"
+                ....
+              in not (hasCommentError1) && not (hasCommentError2)
+    |
+113 |   in not (hasCommentError1) && not (hasCommentError2)
+    |      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/SyntaxValidatorQuickCheckSpec.hs:121:6: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: hasCommentError
+      In the expression:
+        let
+          unclosedComment = "/* " ++ content
+          errors = validateSyntax unclosedComment
+          hasCommentError
+            = any (\ e -> errorType e == UnclosedComment) errors
+        in hasCommentError
+      In an equation for `prop_unclosed_comment_detection':
+          prop_unclosed_comment_detection content
+            = let
+                unclosedComment = "/* " ++ content
+                errors = validateSyntax unclosedComment
+                ....
+              in hasCommentError
+    |
+121 |   in hasCommentError
+    |      ^^^^^^^^^^^^^^^
+
+test/Test/Unit/SyntaxValidatorQuickCheckSpec.hs:168:7: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: line >= 0 && col >= 0 && not (null msg)
+      In a case alternative:
+          SyntaxError errType msg line col content
+            -> line >= 0 && col >= 0 && not (null msg)
+      In the expression:
+        case syntaxError of
+          SyntaxError errType msg line col content
+            -> line >= 0 && col >= 0 && not (null msg)
+    |
+168 |       line >= 0 && col >= 0 && not (null msg)
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/SyntaxValidatorQuickCheckSpec.hs:183:6: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: lineNum `isInfixOf` formatted
+      In the expression:
+        let
+          formatted = formatSyntaxError syntaxError
+          lineNum = show $ lineNumber syntaxError
+        in lineNum `isInfixOf` formatted
+      In an equation for `prop_error_formatting_includes_line':
+          prop_error_formatting_includes_line syntaxError
+            = let
+                formatted = formatSyntaxError syntaxError
+                lineNum = show $ lineNumber syntaxError
+              in lineNum `isInfixOf` formatted
+    |
+183 |   in lineNum `isInfixOf` formatted
+    |      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/SyntaxValidatorQuickCheckSpec.hs:190:6: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: typeName `isInfixOf` formatted
+      In the expression:
+        let
+          formatted = formatSyntaxError syntaxError
+          typeName = show $ errorType syntaxError
+        in typeName `isInfixOf` formatted
+      In an equation for `prop_error_formatting_includes_type':
+          prop_error_formatting_includes_type syntaxError
+            = let
+                formatted = formatSyntaxError syntaxError
+                typeName = show $ errorType syntaxError
+              in typeName `isInfixOf` formatted
+    |
+190 |   in typeName `isInfixOf` formatted
+    |      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[39 of 48] Compiling Test.Unit.SymbolTableQuickCheckSpec ( test/Test/Unit/SymbolTableQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/SymbolTableQuickCheckSpec.o )
+test/Test/Unit/SymbolTableQuickCheckSpec.hs:75:13: error: [GHC-88464]
+    Variable not in scope: (==>) :: Bool -> Property -> Property
+    Suggested fixes:
+      * Perhaps use one of these:
+          `==' (imported from Prelude), `===' (imported from Test.QuickCheck)
+      * Add `==>' to the import list in the import of `Test.QuickCheck'
+        (at test/Test/Unit/SymbolTableQuickCheckSpec.hs:5:1-91).
+   |
+75 |   n <= 1000 ==> -- Limit size to avoid timeouts
+   |             ^^^
+
+test/Test/Unit/SymbolTableQuickCheckSpec.hs:134:33: error: [GHC-88464]
+    Variable not in scope: (==>) :: Bool -> Bool -> Property
+    Suggested fixes:
+      * Perhaps use one of these:
+          `==' (imported from Prelude), `===' (imported from Test.QuickCheck)
+      * Add `==>' to the import list in the import of `Test.QuickCheck'
+        (at test/Test/Unit/SymbolTableQuickCheckSpec.hs:5:1-91).
+    |
+134 |   not (null name) && scope >= 0 ==>
+    |                                 ^^^
+
+[40 of 48] Compiling Test.Unit.ParserQuickCheckSpec ( test/Test/Unit/ParserQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ParserQuickCheckSpec.o )
+test/Test/Unit/ParserQuickCheckSpec.hs:104:55: error: [GHC-76037]
+    Not in scope: data constructor `Located'
+    Suggested fix:
+      Add `Located' to the import list in the import of `SourceLocation'
+      (at test/Test/Unit/ParserQuickCheckSpec.hs:10:1-65).
+    |
+104 |           ownershipPos = fdOwnership directives >>= \(Located _ span) -> Just (posLine $ spanStart span)
+    |                                                       ^^^^^^^
+
+test/Test/Unit/ParserQuickCheckSpec.hs:105:65: error: [GHC-76037]
+    Not in scope: data constructor `Located'
+    Suggested fix:
+      Add `Located' to the import list in the import of `SourceLocation'
+      (at test/Test/Unit/ParserQuickCheckSpec.hs:10:1-65).
+    |
+105 |           dependentTypesPos = fdDependentTypes directives >>= \(Located _ span) -> Just (posLine $ spanStart span)
+    |                                                                 ^^^^^^^
+
+test/Test/Unit/ParserQuickCheckSpec.hs:137:15: error: [GHC-76037]
+    Not in scope: data constructor `Located'
+    Suggested fix:
+      Add `Located' to the import list in the import of `SourceLocation'
+      (at test/Test/Unit/ParserQuickCheckSpec.hs:10:1-65).
+    |
+137 |         Just (Located True _) -> ["//! ownership: on"]
+    |               ^^^^^^^
+
+test/Test/Unit/ParserQuickCheckSpec.hs:138:15: error: [GHC-76037]
+    Not in scope: data constructor `Located'
+    Suggested fix:
+      Add `Located' to the import list in the import of `SourceLocation'
+      (at test/Test/Unit/ParserQuickCheckSpec.hs:10:1-65).
+    |
+138 |         Just (Located False _) -> ["//! ownership: off"]
+    |               ^^^^^^^
+
+test/Test/Unit/ParserQuickCheckSpec.hs:141:15: error: [GHC-76037]
+    Not in scope: data constructor `Located'
+    Suggested fix:
+      Add `Located' to the import list in the import of `SourceLocation'
+      (at test/Test/Unit/ParserQuickCheckSpec.hs:10:1-65).
+    |
+141 |         Just (Located True _) -> ["//! dependent_types: on"]
+    |               ^^^^^^^
+
+test/Test/Unit/ParserQuickCheckSpec.hs:142:15: error: [GHC-76037]
+    Not in scope: data constructor `Located'
+    Suggested fix:
+      Add `Located' to the import list in the import of `SourceLocation'
+      (at test/Test/Unit/ParserQuickCheckSpec.hs:10:1-65).
+    |
+142 |         Just (Located False _) -> ["//! dependent_types: off"]
+    |               ^^^^^^^
+
+test/Test/Unit/ParserQuickCheckSpec.hs:145:15: error: [GHC-76037]
+    Not in scope: data constructor `Located'
+    Suggested fix:
+      Add `Located' to the import list in the import of `SourceLocation'
+      (at test/Test/Unit/ParserQuickCheckSpec.hs:10:1-65).
+    |
+145 |         Just (Located True _) -> ["//! constraints: on"]
+    |               ^^^^^^^
+
+test/Test/Unit/ParserQuickCheckSpec.hs:146:15: error: [GHC-76037]
+    Not in scope: data constructor `Located'
+    Suggested fix:
+      Add `Located' to the import list in the import of `SourceLocation'
+      (at test/Test/Unit/ParserQuickCheckSpec.hs:10:1-65).
+    |
+146 |         Just (Located False _) -> ["//! constraints: off"]
+    |               ^^^^^^^
+
+test/Test/Unit/ParserQuickCheckSpec.hs:154:3: error: [GHC-88747]
+    Precedence parsing error
+        cannot mix `<$>' [infixl 4] and `==' [infix 4] in the same infix expression
+    |
+154 |   locatedValue <$> o1 == locatedValue <$> o2 &&
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/ParserQuickCheckSpec.hs:154:3: error: [GHC-88747]
+    Precedence parsing error
+        cannot mix `==' [infix 4] and `<$>' [infixl 4] in the same infix expression
+    |
+154 |   locatedValue <$> o1 == locatedValue <$> o2 &&
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/ParserQuickCheckSpec.hs:154:3: error: [GHC-88747]
+    Precedence parsing error
+        cannot mix `<$>' [infixl 4] and `==' [infix 4] in the same infix expression
+    |
+154 |   locatedValue <$> o1 == locatedValue <$> o2 &&
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+test/Test/Unit/ParserQuickCheckSpec.hs:154:3: error: [GHC-88747]
+    Precedence parsing error
+        cannot mix `==' [infix 4] and `<$>' [infixl 4] in the same infix expression
+    |
+154 |   locatedValue <$> o1 == locatedValue <$> o2 &&
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+test/Test/Unit/ParserQuickCheckSpec.hs:154:3: error: [GHC-88747]
+    Precedence parsing error
+        cannot mix `<$>' [infixl 4] and `==' [infix 4] in the same infix expression
+    |
+154 |   locatedValue <$> o1 == locatedValue <$> o2 &&
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+test/Test/Unit/ParserQuickCheckSpec.hs:154:3: error: [GHC-88747]
+    Precedence parsing error
+        cannot mix `==' [infix 4] and `<$>' [infixl 4] in the same infix expression
+    |
+154 |   locatedValue <$> o1 == locatedValue <$> o2 &&
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+test/Test/Unit/ParserQuickCheckSpec.hs:192:36: error: [GHC-76037]
+    Not in scope: `Data.List.isInfixOf'
+    Note: No module named `Data.List' is imported.
+    |
+192 | isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+    |                                    ^^^^^^^^^^^^^^^^^^^^^
+
+[41 of 48] Compiling Test.Unit.OwnershipQuickCheckSpec ( test/Test/Unit/OwnershipQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/OwnershipQuickCheckSpec.o )
+test/Test/Unit/OwnershipQuickCheckSpec.hs:31:29: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: var1 === context || var2 === context
+      In a case alternative:
+          DoubleMove var1 var2 -> var1 === context || var2 === context
+      In the second argument of `(==>)', namely
+        `case err of
+           UseAfterMove var -> var === context
+           DoubleMove var1 var2 -> var1 === context || var2 === context
+           BorrowWhileMoved var -> var === context
+           MutBorrowWhileBorrowed var -> var === context
+           BorrowWhileMutBorrowed var -> var === context
+           MultipleMutBorrows var -> var === context
+           UseWhileMutBorrowed var -> var === context
+           OutOfScope var -> var === context
+           BorrowError msg -> msg === context
+           ParseError msg -> msg === context
+           CrossFunctionMove func1 func2
+             -> func1 === context || func2 === context
+           ParameterMoveMismatch func -> func === context
+           ControlFlowError msg -> msg === context
+           PathSensitiveError msg -> msg === context
+           LoopOwnershipError msg -> msg === context'
+   |
+31 |     DoubleMove var1 var2 -> var1 === context || var2 === context
+   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:31:49: error: [GHC-83865]
+    * Couldn't match expected type `Bool' with actual type `Property'
+    * In the second argument of `(||)', namely `var2 === context'
+      In the expression: var1 === context || var2 === context
+      In a case alternative:
+          DoubleMove var1 var2 -> var1 === context || var2 === context
+   |
+31 |     DoubleMove var1 var2 -> var1 === context || var2 === context
+   |                                                 ^^^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:40:38: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: func1 === context || func2 === context
+      In a case alternative:
+          CrossFunctionMove func1 func2
+            -> func1 === context || func2 === context
+      In the second argument of `(==>)', namely
+        `case err of
+           UseAfterMove var -> var === context
+           DoubleMove var1 var2 -> var1 === context || var2 === context
+           BorrowWhileMoved var -> var === context
+           MutBorrowWhileBorrowed var -> var === context
+           BorrowWhileMutBorrowed var -> var === context
+           MultipleMutBorrows var -> var === context
+           UseWhileMutBorrowed var -> var === context
+           OutOfScope var -> var === context
+           BorrowError msg -> msg === context
+           ParseError msg -> msg === context
+           CrossFunctionMove func1 func2
+             -> func1 === context || func2 === context
+           ParameterMoveMismatch func -> func === context
+           ControlFlowError msg -> msg === context
+           PathSensitiveError msg -> msg === context
+           LoopOwnershipError msg -> msg === context'
+   |
+40 |     CrossFunctionMove func1 func2 -> func1 === context || func2 === context
+   |                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:40:59: error: [GHC-83865]
+    * Couldn't match expected type `Bool' with actual type `Property'
+    * In the second argument of `(||)', namely `func2 === context'
+      In the expression: func1 === context || func2 === context
+      In a case alternative:
+          CrossFunctionMove func1 func2
+            -> func1 === context || func2 === context
+   |
+40 |     CrossFunctionMove func1 func2 -> func1 === context || func2 === context
+   |                                                           ^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:51:6: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: areEqual || areNotEqual
+      In the expression:
+        let
+          areEqual = type1 == type2
+          areNotEqual = type1 /= type2
+        in areEqual || areNotEqual
+      In an equation for `prop_ownership_types_comparable':
+          prop_ownership_types_comparable type1 type2
+            = let
+                areEqual = type1 == type2
+                areNotEqual = type1 /= type2
+              in areEqual || areNotEqual
+   |
+51 |   in areEqual || areNotEqual -- Should be either equal or not equal
+   |      ^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:58:6: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: areEqual || areNotEqual
+      In the expression:
+        let
+          areEqual = error1 == error2
+          areNotEqual = error1 /= error2
+        in areEqual || areNotEqual
+      In an equation for `prop_ownership_errors_comparable':
+          prop_ownership_errors_comparable error1 error2
+            = let
+                areEqual = error1 == error2
+                areNotEqual = error1 /= error2
+              in areEqual || areNotEqual
+   |
+58 |   in areEqual || areNotEqual -- Should be either equal or not equal
+   |      ^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:65:6: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: areEqual || areNotEqual
+      In the expression:
+        let
+          areEqual = analyzer1 == analyzer2
+          areNotEqual = analyzer1 /= analyzer2
+        in areEqual || areNotEqual
+      In an equation for `prop_analyzer_equality':
+          prop_analyzer_equality analyzer1 analyzer2
+            = let
+                areEqual = analyzer1 == analyzer2
+                areNotEqual = analyzer1 /= analyzer2
+              in areEqual || areNotEqual
+   |
+65 |   in areEqual || areNotEqual -- Should be either equal or not equal
+   |      ^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:99:20: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null owner)
+      In a case alternative: Owned owner -> not (null owner)
+      In the expression:
+        case ownType of
+          Owned owner -> not (null owner)
+          Borrowed owner -> not (null owner)
+          MutBorrowed owner -> not (null owner)
+   |
+99 |     Owned owner -> not (null owner)
+   |                    ^^^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:100:23: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null owner)
+      In a case alternative: Borrowed owner -> not (null owner)
+      In the expression:
+        case ownType of
+          Owned owner -> not (null owner)
+          Borrowed owner -> not (null owner)
+          MutBorrowed owner -> not (null owner)
+    |
+100 |     Borrowed owner -> not (null owner)
+    |                       ^^^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:101:26: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null owner)
+      In a case alternative: MutBorrowed owner -> not (null owner)
+      In the expression:
+        case ownType of
+          Owned owner -> not (null owner)
+          Borrowed owner -> not (null owner)
+          MutBorrowed owner -> not (null owner)
+    |
+101 |     MutBorrowed owner -> not (null owner)
+    |                          ^^^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:107:25: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null var)
+      In a case alternative: UseAfterMove var -> not (null var)
+      In the expression:
+        case error of
+          UseAfterMove var -> not (null var)
+          DoubleMove var1 var2 -> not (null var1) && not (null var2)
+          BorrowWhileMoved var -> not (null var)
+          MutBorrowWhileBorrowed var -> not (null var)
+          BorrowWhileMutBorrowed var -> not (null var)
+          MultipleMutBorrows var -> not (null var)
+          UseWhileMutBorrowed var -> not (null var)
+          OutOfScope var -> not (null var)
+          BorrowError msg -> not (null msg)
+          ParseError msg -> not (null msg)
+          CrossFunctionMove func1 func2
+            -> not (null func1) && not (null func2)
+          ParameterMoveMismatch func -> not (null func)
+          ControlFlowError msg -> not (null msg)
+          PathSensitiveError msg -> not (null msg)
+          LoopOwnershipError msg -> not (null msg)
+    |
+107 |     UseAfterMove var -> not (null var)
+    |                         ^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:108:29: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null var1) && not (null var2)
+      In a case alternative:
+          DoubleMove var1 var2 -> not (null var1) && not (null var2)
+      In the expression:
+        case error of
+          UseAfterMove var -> not (null var)
+          DoubleMove var1 var2 -> not (null var1) && not (null var2)
+          BorrowWhileMoved var -> not (null var)
+          MutBorrowWhileBorrowed var -> not (null var)
+          BorrowWhileMutBorrowed var -> not (null var)
+          MultipleMutBorrows var -> not (null var)
+          UseWhileMutBorrowed var -> not (null var)
+          OutOfScope var -> not (null var)
+          BorrowError msg -> not (null msg)
+          ParseError msg -> not (null msg)
+          CrossFunctionMove func1 func2
+            -> not (null func1) && not (null func2)
+          ParameterMoveMismatch func -> not (null func)
+          ControlFlowError msg -> not (null msg)
+          PathSensitiveError msg -> not (null msg)
+          LoopOwnershipError msg -> not (null msg)
+    |
+108 |     DoubleMove var1 var2 -> not (null var1) && not (null var2)
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:109:29: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null var)
+      In a case alternative: BorrowWhileMoved var -> not (null var)
+      In the expression:
+        case error of
+          UseAfterMove var -> not (null var)
+          DoubleMove var1 var2 -> not (null var1) && not (null var2)
+          BorrowWhileMoved var -> not (null var)
+          MutBorrowWhileBorrowed var -> not (null var)
+          BorrowWhileMutBorrowed var -> not (null var)
+          MultipleMutBorrows var -> not (null var)
+          UseWhileMutBorrowed var -> not (null var)
+          OutOfScope var -> not (null var)
+          BorrowError msg -> not (null msg)
+          ParseError msg -> not (null msg)
+          CrossFunctionMove func1 func2
+            -> not (null func1) && not (null func2)
+          ParameterMoveMismatch func -> not (null func)
+          ControlFlowError msg -> not (null msg)
+          PathSensitiveError msg -> not (null msg)
+          LoopOwnershipError msg -> not (null msg)
+    |
+109 |     BorrowWhileMoved var -> not (null var)
+    |                             ^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:110:35: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null var)
+      In a case alternative: MutBorrowWhileBorrowed var -> not (null var)
+      In the expression:
+        case error of
+          UseAfterMove var -> not (null var)
+          DoubleMove var1 var2 -> not (null var1) && not (null var2)
+          BorrowWhileMoved var -> not (null var)
+          MutBorrowWhileBorrowed var -> not (null var)
+          BorrowWhileMutBorrowed var -> not (null var)
+          MultipleMutBorrows var -> not (null var)
+          UseWhileMutBorrowed var -> not (null var)
+          OutOfScope var -> not (null var)
+          BorrowError msg -> not (null msg)
+          ParseError msg -> not (null msg)
+          CrossFunctionMove func1 func2
+            -> not (null func1) && not (null func2)
+          ParameterMoveMismatch func -> not (null func)
+          ControlFlowError msg -> not (null msg)
+          PathSensitiveError msg -> not (null msg)
+          LoopOwnershipError msg -> not (null msg)
+    |
+110 |     MutBorrowWhileBorrowed var -> not (null var)
+    |                                   ^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:111:35: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null var)
+      In a case alternative: BorrowWhileMutBorrowed var -> not (null var)
+      In the expression:
+        case error of
+          UseAfterMove var -> not (null var)
+          DoubleMove var1 var2 -> not (null var1) && not (null var2)
+          BorrowWhileMoved var -> not (null var)
+          MutBorrowWhileBorrowed var -> not (null var)
+          BorrowWhileMutBorrowed var -> not (null var)
+          MultipleMutBorrows var -> not (null var)
+          UseWhileMutBorrowed var -> not (null var)
+          OutOfScope var -> not (null var)
+          BorrowError msg -> not (null msg)
+          ParseError msg -> not (null msg)
+          CrossFunctionMove func1 func2
+            -> not (null func1) && not (null func2)
+          ParameterMoveMismatch func -> not (null func)
+          ControlFlowError msg -> not (null msg)
+          PathSensitiveError msg -> not (null msg)
+          LoopOwnershipError msg -> not (null msg)
+    |
+111 |     BorrowWhileMutBorrowed var -> not (null var)
+    |                                   ^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:112:31: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null var)
+      In a case alternative: MultipleMutBorrows var -> not (null var)
+      In the expression:
+        case error of
+          UseAfterMove var -> not (null var)
+          DoubleMove var1 var2 -> not (null var1) && not (null var2)
+          BorrowWhileMoved var -> not (null var)
+          MutBorrowWhileBorrowed var -> not (null var)
+          BorrowWhileMutBorrowed var -> not (null var)
+          MultipleMutBorrows var -> not (null var)
+          UseWhileMutBorrowed var -> not (null var)
+          OutOfScope var -> not (null var)
+          BorrowError msg -> not (null msg)
+          ParseError msg -> not (null msg)
+          CrossFunctionMove func1 func2
+            -> not (null func1) && not (null func2)
+          ParameterMoveMismatch func -> not (null func)
+          ControlFlowError msg -> not (null msg)
+          PathSensitiveError msg -> not (null msg)
+          LoopOwnershipError msg -> not (null msg)
+    |
+112 |     MultipleMutBorrows var -> not (null var)
+    |                               ^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:113:32: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null var)
+      In a case alternative: UseWhileMutBorrowed var -> not (null var)
+      In the expression:
+        case error of
+          UseAfterMove var -> not (null var)
+          DoubleMove var1 var2 -> not (null var1) && not (null var2)
+          BorrowWhileMoved var -> not (null var)
+          MutBorrowWhileBorrowed var -> not (null var)
+          BorrowWhileMutBorrowed var -> not (null var)
+          MultipleMutBorrows var -> not (null var)
+          UseWhileMutBorrowed var -> not (null var)
+          OutOfScope var -> not (null var)
+          BorrowError msg -> not (null msg)
+          ParseError msg -> not (null msg)
+          CrossFunctionMove func1 func2
+            -> not (null func1) && not (null func2)
+          ParameterMoveMismatch func -> not (null func)
+          ControlFlowError msg -> not (null msg)
+          PathSensitiveError msg -> not (null msg)
+          LoopOwnershipError msg -> not (null msg)
+    |
+113 |     UseWhileMutBorrowed var -> not (null var)
+    |                                ^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:114:23: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null var)
+      In a case alternative: OutOfScope var -> not (null var)
+      In the expression:
+        case error of
+          UseAfterMove var -> not (null var)
+          DoubleMove var1 var2 -> not (null var1) && not (null var2)
+          BorrowWhileMoved var -> not (null var)
+          MutBorrowWhileBorrowed var -> not (null var)
+          BorrowWhileMutBorrowed var -> not (null var)
+          MultipleMutBorrows var -> not (null var)
+          UseWhileMutBorrowed var -> not (null var)
+          OutOfScope var -> not (null var)
+          BorrowError msg -> not (null msg)
+          ParseError msg -> not (null msg)
+          CrossFunctionMove func1 func2
+            -> not (null func1) && not (null func2)
+          ParameterMoveMismatch func -> not (null func)
+          ControlFlowError msg -> not (null msg)
+          PathSensitiveError msg -> not (null msg)
+          LoopOwnershipError msg -> not (null msg)
+    |
+114 |     OutOfScope var -> not (null var)
+    |                       ^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:115:24: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null msg)
+      In a case alternative: BorrowError msg -> not (null msg)
+      In the expression:
+        case error of
+          UseAfterMove var -> not (null var)
+          DoubleMove var1 var2 -> not (null var1) && not (null var2)
+          BorrowWhileMoved var -> not (null var)
+          MutBorrowWhileBorrowed var -> not (null var)
+          BorrowWhileMutBorrowed var -> not (null var)
+          MultipleMutBorrows var -> not (null var)
+          UseWhileMutBorrowed var -> not (null var)
+          OutOfScope var -> not (null var)
+          BorrowError msg -> not (null msg)
+          ParseError msg -> not (null msg)
+          CrossFunctionMove func1 func2
+            -> not (null func1) && not (null func2)
+          ParameterMoveMismatch func -> not (null func)
+          ControlFlowError msg -> not (null msg)
+          PathSensitiveError msg -> not (null msg)
+          LoopOwnershipError msg -> not (null msg)
+    |
+115 |     BorrowError msg -> not (null msg)
+    |                        ^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:116:23: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null msg)
+      In a case alternative: ParseError msg -> not (null msg)
+      In the expression:
+        case error of
+          UseAfterMove var -> not (null var)
+          DoubleMove var1 var2 -> not (null var1) && not (null var2)
+          BorrowWhileMoved var -> not (null var)
+          MutBorrowWhileBorrowed var -> not (null var)
+          BorrowWhileMutBorrowed var -> not (null var)
+          MultipleMutBorrows var -> not (null var)
+          UseWhileMutBorrowed var -> not (null var)
+          OutOfScope var -> not (null var)
+          BorrowError msg -> not (null msg)
+          ParseError msg -> not (null msg)
+          CrossFunctionMove func1 func2
+            -> not (null func1) && not (null func2)
+          ParameterMoveMismatch func -> not (null func)
+          ControlFlowError msg -> not (null msg)
+          PathSensitiveError msg -> not (null msg)
+          LoopOwnershipError msg -> not (null msg)
+    |
+116 |     ParseError msg -> not (null msg)
+    |                       ^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:117:38: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null func1) && not (null func2)
+      In a case alternative:
+          CrossFunctionMove func1 func2
+            -> not (null func1) && not (null func2)
+      In the expression:
+        case error of
+          UseAfterMove var -> not (null var)
+          DoubleMove var1 var2 -> not (null var1) && not (null var2)
+          BorrowWhileMoved var -> not (null var)
+          MutBorrowWhileBorrowed var -> not (null var)
+          BorrowWhileMutBorrowed var -> not (null var)
+          MultipleMutBorrows var -> not (null var)
+          UseWhileMutBorrowed var -> not (null var)
+          OutOfScope var -> not (null var)
+          BorrowError msg -> not (null msg)
+          ParseError msg -> not (null msg)
+          CrossFunctionMove func1 func2
+            -> not (null func1) && not (null func2)
+          ParameterMoveMismatch func -> not (null func)
+          ControlFlowError msg -> not (null msg)
+          PathSensitiveError msg -> not (null msg)
+          LoopOwnershipError msg -> not (null msg)
+    |
+117 |     CrossFunctionMove func1 func2 -> not (null func1) && not (null func2)
+    |                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:118:35: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null func)
+      In a case alternative:
+          ParameterMoveMismatch func -> not (null func)
+      In the expression:
+        case error of
+          UseAfterMove var -> not (null var)
+          DoubleMove var1 var2 -> not (null var1) && not (null var2)
+          BorrowWhileMoved var -> not (null var)
+          MutBorrowWhileBorrowed var -> not (null var)
+          BorrowWhileMutBorrowed var -> not (null var)
+          MultipleMutBorrows var -> not (null var)
+          UseWhileMutBorrowed var -> not (null var)
+          OutOfScope var -> not (null var)
+          BorrowError msg -> not (null msg)
+          ParseError msg -> not (null msg)
+          CrossFunctionMove func1 func2
+            -> not (null func1) && not (null func2)
+          ParameterMoveMismatch func -> not (null func)
+          ControlFlowError msg -> not (null msg)
+          PathSensitiveError msg -> not (null msg)
+          LoopOwnershipError msg -> not (null msg)
+    |
+118 |     ParameterMoveMismatch func -> not (null func)
+    |                                   ^^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:119:29: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null msg)
+      In a case alternative: ControlFlowError msg -> not (null msg)
+      In the expression:
+        case error of
+          UseAfterMove var -> not (null var)
+          DoubleMove var1 var2 -> not (null var1) && not (null var2)
+          BorrowWhileMoved var -> not (null var)
+          MutBorrowWhileBorrowed var -> not (null var)
+          BorrowWhileMutBorrowed var -> not (null var)
+          MultipleMutBorrows var -> not (null var)
+          UseWhileMutBorrowed var -> not (null var)
+          OutOfScope var -> not (null var)
+          BorrowError msg -> not (null msg)
+          ParseError msg -> not (null msg)
+          CrossFunctionMove func1 func2
+            -> not (null func1) && not (null func2)
+          ParameterMoveMismatch func -> not (null func)
+          ControlFlowError msg -> not (null msg)
+          PathSensitiveError msg -> not (null msg)
+          LoopOwnershipError msg -> not (null msg)
+    |
+119 |     ControlFlowError msg -> not (null msg)
+    |                             ^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:120:31: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null msg)
+      In a case alternative: PathSensitiveError msg -> not (null msg)
+      In the expression:
+        case error of
+          UseAfterMove var -> not (null var)
+          DoubleMove var1 var2 -> not (null var1) && not (null var2)
+          BorrowWhileMoved var -> not (null var)
+          MutBorrowWhileBorrowed var -> not (null var)
+          BorrowWhileMutBorrowed var -> not (null var)
+          MultipleMutBorrows var -> not (null var)
+          UseWhileMutBorrowed var -> not (null var)
+          OutOfScope var -> not (null var)
+          BorrowError msg -> not (null msg)
+          ParseError msg -> not (null msg)
+          CrossFunctionMove func1 func2
+            -> not (null func1) && not (null func2)
+          ParameterMoveMismatch func -> not (null func)
+          ControlFlowError msg -> not (null msg)
+          PathSensitiveError msg -> not (null msg)
+          LoopOwnershipError msg -> not (null msg)
+    |
+120 |     PathSensitiveError msg -> not (null msg)
+    |                               ^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:121:31: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: not (null msg)
+      In a case alternative: LoopOwnershipError msg -> not (null msg)
+      In the expression:
+        case error of
+          UseAfterMove var -> not (null var)
+          DoubleMove var1 var2 -> not (null var1) && not (null var2)
+          BorrowWhileMoved var -> not (null var)
+          MutBorrowWhileBorrowed var -> not (null var)
+          BorrowWhileMutBorrowed var -> not (null var)
+          MultipleMutBorrows var -> not (null var)
+          UseWhileMutBorrowed var -> not (null var)
+          OutOfScope var -> not (null var)
+          BorrowError msg -> not (null msg)
+          ParseError msg -> not (null msg)
+          CrossFunctionMove func1 func2
+            -> not (null func1) && not (null func2)
+          ParameterMoveMismatch func -> not (null func)
+          ControlFlowError msg -> not (null msg)
+          PathSensitiveError msg -> not (null msg)
+          LoopOwnershipError msg -> not (null msg)
+    |
+121 |     LoopOwnershipError msg -> not (null msg)
+    |                               ^^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:136:6: error: [GHC-83865]
+    * Couldn't match expected type `Bool' with actual type `Property'
+    * In the first argument of `(&&)', namely `checkOwned'
+      In the expression: checkOwned && checkBorrowed && checkMutBorrowed
+      In the second argument of `(==>)', namely
+        `let
+           owned = Owned name
+           borrowed = Borrowed name
+           mutBorrowed = MutBorrowed name
+           ....
+         in checkOwned && checkBorrowed && checkMutBorrowed'
+    |
+136 |   in checkOwned && checkBorrowed && checkMutBorrowed
+    |      ^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:136:20: error: [GHC-83865]
+    * Couldn't match expected type `Bool' with actual type `Property'
+    * In the first argument of `(&&)', namely `checkBorrowed'
+      In the second argument of `(&&)', namely
+        `checkBorrowed && checkMutBorrowed'
+      In the expression: checkOwned && checkBorrowed && checkMutBorrowed
+    |
+136 |   in checkOwned && checkBorrowed && checkMutBorrowed
+    |                    ^^^^^^^^^^^^^
+
+test/Test/Unit/OwnershipQuickCheckSpec.hs:136:37: error: [GHC-83865]
+    * Couldn't match expected type `Bool' with actual type `Property'
+    * In the second argument of `(&&)', namely `checkMutBorrowed'
+      In the second argument of `(&&)', namely
+        `checkBorrowed && checkMutBorrowed'
+      In the expression: checkOwned && checkBorrowed && checkMutBorrowed
+    |
+136 |   in checkOwned && checkBorrowed && checkMutBorrowed
+    |                                     ^^^^^^^^^^^^^^^^
+
+[42 of 48] Compiling Test.Unit.CompilerQuickCheckSpec ( test/Test/Unit/CompilerQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CompilerQuickCheckSpec.o )
+test/Test/Unit/CompilerQuickCheckSpec.hs:15:7: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression:
+        null buildTags && pkg == Nothing && null imports && null decls
+      In a case alternative:
+          GoModule buildTags pkg imports decls
+            -> null buildTags && pkg == Nothing && null imports && null decls
+      In the expression:
+        case goModule of
+          GoModule buildTags pkg imports decls
+            -> null buildTags && pkg == Nothing && null imports && null decls
+   |
+15 |       null buildTags && pkg == Nothing && null imports && null decls
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:22:30: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: alias == Nothing && path == "package"
+      In a case alternative:
+          ImportDecl alias path -> alias == Nothing && path == "package"
+      In the expression:
+        case importDecl of
+          ImportDecl alias path -> alias == Nothing && path == "package"
+   |
+22 |     ImportDecl alias path -> alias == Nothing && path == "package"
+   |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:27:27: error: [GHC-83865]
+    * Couldn't match type `Char' with `[Char]'
+      Expected: [String]
+        Actual: String
+    * In the first argument of `TypeDecl', namely `"MyType"'
+      In the expression: TypeDecl "MyType" True
+      In an equation for `typeDecl': typeDecl = TypeDecl "MyType" True
+   |
+27 |   let typeDecl = TypeDecl "MyType" True
+   |                           ^^^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:29:24: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: name == "MyType" && t == True
+      In a case alternative:
+          TypeDecl name t -> name == "MyType" && t == True
+      In the expression:
+        case typeDecl of TypeDecl name t -> name == "MyType" && t == True
+   |
+29 |     TypeDecl name t -> name == "MyType" && t == True
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:29:32: error: [GHC-83865]
+    * Couldn't match type `Char' with `[Char]'
+      Expected: [String]
+        Actual: String
+    * In the second argument of `(==)', namely `"MyType"'
+      In the first argument of `(&&)', namely `name == "MyType"'
+      In the expression: name == "MyType" && t == True
+   |
+29 |     TypeDecl name t -> name == "MyType" && t == True
+   |                                ^^^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:36:24: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: names == ["x", "y"] && t == True
+      In a case alternative:
+          VarDecl names t -> names == ["x", "y"] && t == True
+      In the expression:
+        case varDecl of VarDecl names t -> names == ["x", "y"] && t == True
+   |
+36 |     VarDecl names t -> names == ["x", "y"] && t == True
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:43:26: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: names == ["PI"] && t == True
+      In a case alternative:
+          ConstDecl names t -> names == ["PI"] && t == True
+      In the expression:
+        case constDecl of ConstDecl names t -> names == ["PI"] && t == True
+   |
+43 |     ConstDecl names t -> names == ["PI"] && t == True
+   |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:57:6: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: areEqual || areNotEqual
+      In the expression:
+        let
+          areEqual = decl1 == decl2
+          areNotEqual = decl1 /= decl2
+        in areEqual || areNotEqual
+      In an equation for `prop_godecl_variants':
+          prop_godecl_variants decl1 decl2
+            = let
+                areEqual = decl1 == decl2
+                areNotEqual = decl1 /= decl2
+              in areEqual || areNotEqual
+   |
+57 |   in areEqual || areNotEqual -- Should be either equal or not equal
+   |      ^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:74:7: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression:
+        null buildTags && pkg == Nothing && null imports && null decls
+      In a case alternative:
+          GoModule buildTags pkg imports decls
+            -> null buildTags && pkg == Nothing && null imports && null decls
+      In the expression:
+        case emptyModule of
+          GoModule buildTags pkg imports decls
+            -> null buildTags && pkg == Nothing && null imports && null decls
+   |
+74 |       null buildTags && pkg == Nothing && null imports && null decls
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:81:6: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: areEqual || areNotEqual
+      In the expression:
+        let
+          areEqual = module1 == module2
+          areNotEqual = module1 /= module2
+        in areEqual || areNotEqual
+      In an equation for `prop_gomodule_equality':
+          prop_gomodule_equality module1 module2
+            = let
+                areEqual = module1 == module2
+                areNotEqual = module1 /= module2
+              in areEqual || areNotEqual
+   |
+81 |   in areEqual || areNotEqual -- Should be either equal or not equal
+   |      ^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:88:6: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: areEqual || areNotEqual
+      In the expression:
+        let
+          areEqual = import1 == import2
+          areNotEqual = import1 /= import2
+        in areEqual || areNotEqual
+      In an equation for `prop_import_decl_equality':
+          prop_import_decl_equality import1 import2
+            = let
+                areEqual = import1 == import2
+                areNotEqual = import1 /= import2
+              in areEqual || areNotEqual
+   |
+88 |   in areEqual || areNotEqual -- Should be either equal or not equal
+   |      ^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:95:6: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: areEqual || areNotEqual
+      In the expression:
+        let
+          areEqual = type1 == type2
+          areNotEqual = type1 /= type2
+        in areEqual || areNotEqual
+      In an equation for `prop_type_decl_equality':
+          prop_type_decl_equality type1 type2
+            = let
+                areEqual = type1 == type2
+                areNotEqual = type1 /= type2
+              in areEqual || areNotEqual
+   |
+95 |   in areEqual || areNotEqual -- Should be either equal or not equal
+   |      ^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:102:6: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: areEqual || areNotEqual
+      In the expression:
+        let
+          areEqual = var1 == var2
+          areNotEqual = var1 /= var2
+        in areEqual || areNotEqual
+      In an equation for `prop_var_decl_equality':
+          prop_var_decl_equality var1 var2
+            = let
+                areEqual = var1 == var2
+                areNotEqual = var1 /= var2
+              in areEqual || areNotEqual
+    |
+102 |   in areEqual || areNotEqual -- Should be either equal or not equal
+    |      ^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:109:6: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: areEqual || areNotEqual
+      In the expression:
+        let
+          areEqual = const1 == const2
+          areNotEqual = const1 /= const2
+        in areEqual || areNotEqual
+      In an equation for `prop_const_decl_equality':
+          prop_const_decl_equality const1 const2
+            = let
+                areEqual = const1 == const2
+                areNotEqual = const1 /= const2
+              in areEqual || areNotEqual
+    |
+109 |   in areEqual || areNotEqual -- Should be either equal or not equal
+    |      ^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:116:6: error: [GHC-83865]
+    * Couldn't match expected type `Property' with actual type `Bool'
+    * In the expression: areEqual || areNotEqual
+      In the expression:
+        let
+          areEqual = func1 == func2
+          areNotEqual = func1 /= func2
+        in areEqual || areNotEqual
+      In an equation for `prop_func_decl_equality':
+          prop_func_decl_equality func1 func2
+            = let
+                areEqual = func1 == func2
+                areNotEqual = func1 /= func2
+              in areEqual || areNotEqual
+    |
+116 |   in areEqual || areNotEqual -- Should be either equal or not equal
+    |      ^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:123:34: error: [GHC-83865]
+    * Couldn't match type `Char' with `[Char]'
+      Expected: [String]
+        Actual: String
+    * In the first argument of `(++)', namely `"Type"'
+      In the first argument of `TypeDecl', namely `("Type" ++ show i)'
+      In the first argument of `GoType', namely
+        `(TypeDecl ("Type" ++ show i) True)'
+    |
+123 |       decls = [GoType (TypeDecl ("Type" ++ show i) True) | i <- [1..n]]
+    |                                  ^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:123:44: error: [GHC-83865]
+    * Couldn't match type `Char' with `[Char]'
+      Expected: [String]
+        Actual: String
+    * In the second argument of `(++)', namely `show i'
+      In the first argument of `TypeDecl', namely `("Type" ++ show i)'
+      In the first argument of `GoType', namely
+        `(TypeDecl ("Type" ++ show i) True)'
+    |
+123 |       decls = [GoType (TypeDecl ("Type" ++ show i) True) | i <- [1..n]]
+    |                                            ^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:126:29: error: [GHC-83865]
+    * Couldn't match expected type `Bool' with actual type `Property'
+    * In the first argument of `(&&)', namely `length imps === n'
+      In the expression: length imps === n && length ds === n
+      In a case alternative:
+          GoModule _ _ imps ds -> length imps === n && length ds === n
+    |
+126 |     GoModule _ _ imps ds -> length imps === n && length ds === n
+    |                             ^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CompilerQuickCheckSpec.hs:126:50: error: [GHC-83865]
+    * Couldn't match expected type `Bool' with actual type `Property'
+    * In the second argument of `(&&)', namely `length ds === n'
+      In the expression: length imps === n && length ds === n
+      In a case alternative:
+          GoModule _ _ imps ds -> length imps === n && length ds === n
+    |
+126 |     GoModule _ _ imps ds -> length imps === n && length ds === n
+    |                                                  ^^^^^^^^^^^^^^^
+
+[43 of 48] Compiling Test.Unit.AnalyzerQuickCheckSpec ( test/Test/Unit/AnalyzerQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/AnalyzerQuickCheckSpec.o )
+test/Test/Unit/AnalyzerQuickCheckSpec.hs:104:30: error: [GHC-76037]
+    Not in scope: type constructor or class `SymbolKind'
+    Suggested fix:
+      Add `SymbolKind' to the import list in the import of
+      `Analyzer.Types'
+      (at test/Test/Unit/AnalyzerQuickCheckSpec.hs:(7,1)-(15,3)).
+    |
+104 | prop_symbol_kind_variants :: SymbolKind -> Property
+    |                              ^^^^^^^^^^
+
+test/Test/Unit/AnalyzerQuickCheckSpec.hs:107:5: error: [GHC-76037]
+    Not in scope: data constructor `SymbolVariable'
+    Suggested fix:
+      Add `SymbolVariable' to the import list in the import of
+      `Analyzer.Types'
+      (at test/Test/Unit/AnalyzerQuickCheckSpec.hs:(7,1)-(15,3)).
+    |
+107 |     SymbolVariable -> property True
+    |     ^^^^^^^^^^^^^^
+
+test/Test/Unit/AnalyzerQuickCheckSpec.hs:108:5: error: [GHC-76037]
+    Not in scope: data constructor `SymbolFunction'
+    Suggested fix:
+      Add `SymbolFunction' to the import list in the import of
+      `Analyzer.Types'
+      (at test/Test/Unit/AnalyzerQuickCheckSpec.hs:(7,1)-(15,3)).
+    |
+108 |     SymbolFunction -> property True
+    |     ^^^^^^^^^^^^^^
+
+test/Test/Unit/AnalyzerQuickCheckSpec.hs:109:5: error: [GHC-76037]
+    Not in scope: data constructor `SymbolType'
+    Suggested fix:
+      Add `SymbolType' to the import list in the import of
+      `Analyzer.Types'
+      (at test/Test/Unit/AnalyzerQuickCheckSpec.hs:(7,1)-(15,3)).
+    |
+109 |     SymbolType -> property True
+    |     ^^^^^^^^^^
+
+test/Test/Unit/AnalyzerQuickCheckSpec.hs:110:5: error: [GHC-76037]
+    Not in scope: data constructor `SymbolConstant'
+    Suggested fix:
+      Add `SymbolConstant' to the import list in the import of
+      `Analyzer.Types'
+      (at test/Test/Unit/AnalyzerQuickCheckSpec.hs:(7,1)-(15,3)).
+    |
+110 |     SymbolConstant -> property True
+    |     ^^^^^^^^^^^^^^
+
+test/Test/Unit/AnalyzerQuickCheckSpec.hs:111:5: error: [GHC-76037]
+    Not in scope: data constructor `SymbolPackage'
+    Suggested fix:
+      Add `SymbolPackage' to the import list in the import of
+      `Analyzer.Types'
+      (at test/Test/Unit/AnalyzerQuickCheckSpec.hs:(7,1)-(15,3)).
+    |
+111 |     SymbolPackage -> property True
+    |     ^^^^^^^^^^^^^
+
+test/Test/Unit/AnalyzerQuickCheckSpec.hs:112:5: error: [GHC-76037]
+    Not in scope: data constructor `SymbolModule'
+    Suggested fix:
+      Add `SymbolModule' to the import list in the import of
+      `Analyzer.Types'
+      (at test/Test/Unit/AnalyzerQuickCheckSpec.hs:(7,1)-(15,3)).
+    |
+112 |     SymbolModule -> property True
+    |     ^^^^^^^^^^^^
+
+test/Test/Unit/AnalyzerQuickCheckSpec.hs:136:38: error: [GHC-76037]
+    Not in scope: data constructor `Dep.TypeMismatch'
+    Note: The module `Dependencies' does not export `TypeMismatch'.
+    |
+136 |       dependentTypeErrors = [(Error, Dep.TypeMismatch ("type" ++ show i)) | i <- [1..n]]
+    |                                      ^^^^^^^^^^^^^^^^
+

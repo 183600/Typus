@@ -1,6 +1,9 @@
 module Compiler.DependentTypeChecker (
     checkDependentTypes,
-    extractDependentTypeContent
+    extractDependentTypeContent,
+    DependentType(..),
+    TypeConstraint(..),
+    DependentTypeError(..)
 ) where
 
 import Data.Char (isSpace)
