@@ -1,29 +1,13 @@
 #!/usr/bin/env bash
 # scripts/typus_cabal_loop.sh
 #
-# 目标：
-# - 在 GitHub Actions 一轮运行内反复：
-#   1) cabal test
-#   2) 失败 -> 用 iflow 修到通过
-#   3) 通过 -> 可选做一次小改进（仍需测试通过）
-# - 最关键：一旦准备提交（commit）=> 先确保 iflow 已经完成全部修改与验证
-# - commit+push 成功后立刻退出（提交后不再修改代码）
+# 设计目标（满足你的要求）：
+# 1) 循环：cabal test -> (失败则 iflow 修) / (通过则 iflow 小改进可选) -> 再测试验证
+# 2) iflow 的修改永远发生在 commit 之前
+# 3) 本轮时间结束时，如果当前状态测试通过：commit + push，然后立刻退出（提交后不再修改）
+# 4) 本脚本自己负责 push，避免“脚本 commit 了但 workflow 末尾判断无 staged changes 导致不 push”的断循环
 #
-# 依赖：
-# - git, cabal, iflow
-#
-# 常用环境变量（可选）：
-#   RUN_HOURS=5                      单轮最多跑多久（小时）
-#   CABAL_TEST_CMD="cabal test all"  测试命令
-#   CABAL_IDLE_TIMEOUT_SEC=1800      cabal 无输出超时（秒）
-#   IFLOW_IDLE_TIMEOUT_SEC=1800      iflow 无输出超时（秒）
-#   IFLOW_TOTAL_TIMEOUT_SEC=3600     iflow 单次总超时（秒）
-#   IFLOW_EXTRA_ARGS="--all-files"   传给 iflow 的额外参数
-#   IFLOW_MAX_CONSEC_FAIL=3          iflow 连续失败上限
-#   LOOP_STOP_FILE=".iflow/STOP"     放这个文件就停机
-#   LOOP_DIR=".iflow_loop"           日志目录
-#   DO_IMPROVEMENT_ON_PASS=1         测试通过后是否做一次“小步改进”
-#   ALLOW_EMPTY_COMMIT=0             没有任何变更时是否允许空提交（一般不建议）
+# 依赖：git, cabal, iflow (iflow-cli)
 #
 set -Eeuo pipefail
 
@@ -33,19 +17,27 @@ die() { log "FATAL: $*"; exit 1; }
 
 # ---------------- Config ----------------
 RUN_HOURS="${RUN_HOURS:-${1:-5}}"
+TARGET_BRANCH="${TARGET_BRANCH:-master}"
 
 CABAL_TEST_CMD="${CABAL_TEST_CMD:-cabal test all}"
-CABAL_IDLE_TIMEOUT_SEC="${CABAL_IDLE_TIMEOUT_SEC:-1800}"   # 30min
+CABAL_IDLE_TIMEOUT_SEC="${CABAL_IDLE_TIMEOUT_SEC:-1800}"   # cabal 无输出超时(秒)，默认30min
 
-IFLOW_IDLE_TIMEOUT_SEC="${IFLOW_IDLE_TIMEOUT_SEC:-1800}"   # 30min
-IFLOW_TOTAL_TIMEOUT_SEC="${IFLOW_TOTAL_TIMEOUT_SEC:-3600}" # 1h
+IFLOW_IDLE_TIMEOUT_SEC="${IFLOW_IDLE_TIMEOUT_SEC:-1800}"   # iflow 无输出超时(秒)，默认30min
+IFLOW_TOTAL_TIMEOUT_SEC="${IFLOW_TOTAL_TIMEOUT_SEC:-3600}" # iflow 单次硬超时(秒)，默认1h
 IFLOW_EXTRA_ARGS="${IFLOW_EXTRA_ARGS:---all-files}"
 IFLOW_MAX_CONSEC_FAIL="${IFLOW_MAX_CONSEC_FAIL:-3}"
 
+# 放这个文件就停机（你可提交这个文件到仓库来“刹车”）
 LOOP_STOP_FILE="${LOOP_STOP_FILE:-.iflow/STOP}"
-LOOP_DIR="${LOOP_DIR:-.iflow_loop}"
 
+# 日志目录：优先放到 RUNNER_TEMP，避免被 git add -A 误加入仓库
+DEFAULT_LOOP_DIR="${RUNNER_TEMP:-/tmp}/iflow_loop"
+LOOP_DIR="${LOOP_DIR:-$DEFAULT_LOOP_DIR}"
+
+# 测试通过时是否让 iflow 做一次小改进（默认开启）
 DO_IMPROVEMENT_ON_PASS="${DO_IMPROVEMENT_ON_PASS:-1}"
+
+# 没有任何变更时是否允许空提交（一般不建议）
 ALLOW_EMPTY_COMMIT="${ALLOW_EMPTY_COMMIT:-0}"
 
 # ---------------- Helpers ----------------
@@ -59,6 +51,8 @@ mtime_epoch() {
   fi
 }
 
+need_cmd() { command -v "$1" >/dev/null 2>&1 || die "Missing required command: $1"; }
+
 ensure_repo_root() {
   local root
   root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
@@ -66,28 +60,59 @@ ensure_repo_root() {
   cd "$root"
 }
 
-need_cmd() { command -v "$1" >/dev/null 2>&1 || die "Missing required command: $1"; }
+ensure_git_identity() {
+  local name email
+  name="$(git config user.name || true)"
+  email="$(git config user.email || true)"
+  [[ -n "$name"  ]] || git config user.name  "github-actions[bot]"
+  [[ -n "$email" ]] || git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+}
 
+git_has_changes() {
+  [[ -n "$(git status --porcelain)" ]]
+}
+
+# run_with_idle_watchdog <idle_timeout_sec> <logfile> <cmd...>
+# - 将 cmd 的 stdout/stderr 合并输出到控制台和 logfile
+# - 若 idle_timeout_sec 内完全无新输出，则杀掉 cmd 并返回 124
 run_with_idle_watchdog() {
-  # run_with_idle_watchdog <idle_timeout_sec> <logfile> <cmd...>
   local idle_timeout="$1"; shift
   local logfile="$1"; shift
   local -a cmd=( "$@" )
 
+  mkdir -p "$(dirname "$logfile")"
   : >"$logfile"
 
-  local hb_file
+  local fifo hb_file killed_file
+  fifo="$(mktemp -u)"
   hb_file="$(mktemp)"
+  killed_file="$(mktemp)"
+  echo "0" >"$killed_file"
   touch "$hb_file"
+
+  mkfifo "$fifo"
 
   log "RUN: ${cmd[*]}"
   log "LOG: $logfile"
   log "Idle-timeout: ${idle_timeout}s"
 
-  # 用 coproc 读输出，逐行更新心跳
-  coproc RUNPROC { "${cmd[@]}" 2>&1; }
-  local cmd_pid="$RUNPROC_PID"
+  # reader：从 fifo 读行，更新心跳，并 tee 到控制台+log
+  (
+    set +e
+    while IFS= read -r line; do
+      printf '%s\n' "$line"
+      touch "$hb_file" >/dev/null 2>&1 || true
+    done <"$fifo"
+  ) | tee -a "$logfile" &
+  local reader_pid=$!
 
+  # 启动命令：把输出写入 fifo
+  set +e
+  "${cmd[@]}" >"$fifo" 2>&1 &
+  local cmd_pid=$!
+  set -e
+
+  # watchdog：检测 hb_file 的 mtime，超时则 kill
   (
     while kill -0 "$cmd_pid" >/dev/null 2>&1; do
       sleep 5
@@ -96,54 +121,37 @@ run_with_idle_watchdog() {
       last="$(mtime_epoch "$hb_file" 2>/dev/null || echo 0)"
       if (( now - last > idle_timeout )); then
         log "WATCHDOG: No output for ${idle_timeout}s. Terminating PID=$cmd_pid ..."
+        echo "1" >"$killed_file"
         kill -TERM "$cmd_pid" >/dev/null 2>&1 || true
         sleep 10
         kill -KILL "$cmd_pid" >/dev/null 2>&1 || true
-        exit 124
+        exit 0
       fi
     done
     exit 0
   ) &
-  local watchdog_pid="$!"
+  local watchdog_pid=$!
 
+  # 等待命令结束拿 rc
   set +e
-  while IFS= read -r -u "${RUNPROC[0]}" line; do
-    printf '%s\n' "$line" | tee -a "$logfile"
-    touch "$hb_file" >/dev/null 2>&1 || true
-  done
-
   wait "$cmd_pid"
   local rc=$?
-
-  wait "$watchdog_pid"
-  local wd_rc=$?
-
-  rm -f "$hb_file" >/dev/null 2>&1 || true
   set -e
 
-  if [[ "$wd_rc" == "124" ]]; then
-    log "WATCHDOG: Command killed due to idle timeout."
+  # 关闭 fifo：命令结束后 writer 已关闭，reader 会自然 EOF；但保险起见清理掉 fifo
+  # 等 watchdog/reader 退出
+  wait "$watchdog_pid" >/dev/null 2>&1 || true
+  wait "$reader_pid"   >/dev/null 2>&1 || true
+
+  local killed
+  killed="$(cat "$killed_file" 2>/dev/null || echo 0)"
+
+  rm -f "$fifo" "$hb_file" "$killed_file" >/dev/null 2>&1 || true
+
+  if [[ "$killed" == "1" ]]; then
     return 124
   fi
   return "$rc"
-}
-
-git_has_changes() {
-  [[ -n "$(git status --porcelain)" ]]
-}
-
-ensure_git_identity() {
-  # 如果 workflow 已经配了，这里不会覆盖；否则给默认值
-  local name email
-  name="$(git config user.name || true)"
-  email="$(git config user.email || true)"
-
-  if [[ -z "$name" ]]; then
-    git config user.name "github-actions[bot]"
-  fi
-  if [[ -z "$email" ]]; then
-    git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-  fi
 }
 
 build_prompt_on_fail() {
@@ -195,7 +203,7 @@ run_iflow_once() {
     cmd+=( ${IFLOW_EXTRA_ARGS} )
   fi
 
-  # 硬超时，避免单次 iflow 吃满整轮
+  # 给 iflow 一个硬超时（如果 timeout 不存在就直接跑）
   if command -v timeout >/dev/null 2>&1; then
     cmd=( timeout --foreground "${IFLOW_TOTAL_TIMEOUT_SEC}" "${cmd[@]}" )
   fi
@@ -208,6 +216,7 @@ commit_and_push_then_exit() {
 
   ensure_git_identity
 
+  # 只在 commit 前 add（保证“修改在提交之前”）
   git add -A
 
   if git diff --cached --quiet; then
@@ -222,9 +231,18 @@ commit_and_push_then_exit() {
     git commit -m "$msg"
   fi
 
-  # 关键：脚本内 push，避免“脚本 commit 后 workflow 末尾不 push”的断循环
-  log "Pushing to origin master..."
-  git push origin HEAD:master
+  # 为了降低因远端前进导致的 push 失败概率：commit 后 rebase 到远端（必要时）
+  # 注意：rebase 会改写 commit hash，但这是 CI 自动提交，一般可接受
+  log "Fetching origin/${TARGET_BRANCH}..."
+  git fetch origin "${TARGET_BRANCH}" || true
+
+  if git show-ref --verify --quiet "refs/remotes/origin/${TARGET_BRANCH}"; then
+    log "Rebasing onto origin/${TARGET_BRANCH}..."
+    git rebase "origin/${TARGET_BRANCH}"
+  fi
+
+  log "Pushing to origin ${TARGET_BRANCH}..."
+  git push origin "HEAD:${TARGET_BRANCH}"
 
   log "Commit+push done. Exiting now (no further modifications after commit)."
   exit 0
@@ -235,8 +253,9 @@ ensure_repo_root
 need_cmd git
 need_cmd cabal
 need_cmd iflow
+need_cmd mkfifo
 
-is_int "$RUN_HOURS" || die "RUN_HOURS must be an integer (hours). Got: $RUN_HOURS"
+is_int "$RUN_HOURS" || die "RUN_HOURS must be integer hours. Got: $RUN_HOURS"
 is_int "$CABAL_IDLE_TIMEOUT_SEC" || die "CABAL_IDLE_TIMEOUT_SEC must be integer. Got: $CABAL_IDLE_TIMEOUT_SEC"
 is_int "$IFLOW_IDLE_TIMEOUT_SEC" || die "IFLOW_IDLE_TIMEOUT_SEC must be integer. Got: $IFLOW_IDLE_TIMEOUT_SEC"
 is_int "$IFLOW_TOTAL_TIMEOUT_SEC" || die "IFLOW_TOTAL_TIMEOUT_SEC must be integer. Got: $IFLOW_TOTAL_TIMEOUT_SEC"
@@ -248,36 +267,38 @@ start_ts="$(date +%s)"
 end_ts=$(( start_ts + RUN_HOURS * 3600 ))
 
 log "Loop start. RUN_HOURS=${RUN_HOURS}h; end_epoch=${end_ts}"
+log "Branch:    ${TARGET_BRANCH}"
 log "STOP file: ${LOOP_STOP_FILE}"
-log "Work dir:  ${LOOP_DIR}"
+log "Log dir:   ${LOOP_DIR}"
 log "Test cmd:  ${CABAL_TEST_CMD}"
 
 consec_iflow_fail=0
 iter=0
+ever_changed=0
 
 # ---------------- Main loop ----------------
 while :; do
   iter=$((iter + 1))
 
   if [[ -f "$LOOP_STOP_FILE" ]]; then
-    log "STOP flag found at '${LOOP_STOP_FILE}'. Exiting."
+    log "STOP flag found at '${LOOP_STOP_FILE}'. Exiting without commit/push."
     exit 0
   fi
 
   now="$(date +%s)"
   if (( now >= end_ts )); then
-    # 到点了：如果此时测试通过，则提交；否则不提交（避免把坏状态推上去）
-    log "Time budget reached. Running final tests before deciding to commit..."
+    log "Time budget reached. Final test before commit..."
     final_log="${LOOP_DIR}/cabal_test_final_${iter}.log"
+
     set +e
     run_with_idle_watchdog "$CABAL_IDLE_TIMEOUT_SEC" "$final_log" bash -lc "$CABAL_TEST_CMD"
     final_rc=$?
     set -e
 
     if (( final_rc == 0 )); then
-      commit_and_push_then_exit "ci: batch update (run ${GITHUB_RUN_ID:-local}, iter ${iter})"
+      commit_and_push_then_exit "ci: loop update (run ${GITHUB_RUN_ID:-local}, iters ${iter})"
     else
-      log "Final tests still failing; exit without commit/push to avoid breaking master."
+      log "Final tests failing; exit 1 without commit/push to avoid breaking ${TARGET_BRANCH}."
       exit 1
     fi
   fi
@@ -288,13 +309,15 @@ while :; do
 
   test_log="${LOOP_DIR}/cabal_test_${iter}.log"
   iflow_log="${LOOP_DIR}/iflow_${iter}.log"
+  verify_log="${LOOP_DIR}/cabal_test_verify_${iter}.log"
 
-  # 1) 先跑测试，决定走 fix 还是 improve
+  # 1) 先跑测试
   set +e
   run_with_idle_watchdog "$CABAL_IDLE_TIMEOUT_SEC" "$test_log" bash -lc "$CABAL_TEST_CMD"
   test_rc=$?
   set -e
 
+  # 2) 根据结果决定 prompt
   if (( test_rc != 0 )); then
     log "cabal test: FAIL (rc=$test_rc) -> ask iFlow to fix"
     prompt="$(build_prompt_on_fail "$test_log")"
@@ -304,12 +327,15 @@ while :; do
       log "DO_IMPROVEMENT_ON_PASS=1 -> ask iFlow for a small improvement"
       prompt="$(build_prompt_on_pass_improve)"
     else
-      # 已经通过且不做改进：直接提交并退出（保证提交后不再修改）
-      commit_and_push_then_exit "ci: tests pass (run ${GITHUB_RUN_ID:-local}, iter ${iter})"
+      log "No improvement requested; continue until time budget ends."
+      sleep 2
+      continue
     fi
   fi
 
-  # 2) 用 iflow 修改（一定发生在 commit 前）
+  # 3) iflow 修改（一定发生在 commit 之前）
+  pre_status="$(git status --porcelain || true)"
+
   set +e
   run_iflow_once "$prompt" "$iflow_log"
   iflow_rc=$?
@@ -327,19 +353,24 @@ while :; do
 
   consec_iflow_fail=0
 
-  # 3) iflow 之后立刻再跑测试验证
-  verify_log="${LOOP_DIR}/cabal_test_verify_${iter}.log"
+  post_status="$(git status --porcelain || true)"
+  if [[ "$pre_status" != "$post_status" ]]; then
+    ever_changed=1
+    log "Repo changed by iFlow. Diff stat:"
+    git diff --stat || true
+  else
+    log "iFlow produced no diff this iteration."
+  fi
+
+  # 4) 验证测试：确保循环过程中始终往“可提交状态”收敛
   set +e
   run_with_idle_watchdog "$CABAL_IDLE_TIMEOUT_SEC" "$verify_log" bash -lc "$CABAL_TEST_CMD"
   verify_rc=$?
   set -e
 
   if (( verify_rc == 0 )); then
-    log "Verification tests: PASS"
-    # 关键：一旦准备提交 -> 立刻 commit+push 并退出（提交后不再修改）
-    commit_and_push_then_exit "ci: loop update (run ${GITHUB_RUN_ID:-local}, iter ${iter})"
+    log "Verification tests: PASS (continue looping until time ends, then commit once)."
   else
-    log "Verification tests: FAIL (rc=$verify_rc) -> continue loop to fix"
-    continue
+    log "Verification tests: FAIL (rc=$verify_rc) -> continue loop to fix."
   fi
 done
