@@ -4,7 +4,7 @@ module Ownership.Reporter
 
 import Data.List (intercalate)
 
-import Ownership.Common.Types (OwnershipError(..))
+import Ownership.Common.Types (OwnershipError(UseAfterMove, DoubleMove, BorrowWhileMoved, MutBorrowWhileBorrowed, BorrowWhileMutBorrowed, MultipleMutBorrows, UseWhileMutBorrowed, OutOfScope, BorrowError, ParseError, CrossFunctionMove, ParameterMoveMismatch, ControlFlowError, PathSensitiveError, LoopOwnershipError))
 
 formatOwnershipErrors :: [OwnershipError] -> String
 formatOwnershipErrors = intercalate "; " . map formatError

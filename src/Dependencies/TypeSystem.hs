@@ -35,7 +35,7 @@ module Dependencies.TypeSystem (
 ) where
 
 import Control.Monad (when)
-import Control.Monad.State
+import Control.Monad.State (State, get, put, modify)
 import Data.Either (partitionEithers)
 
 import qualified Data.Map.Strict as Map
@@ -43,7 +43,7 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
 
-import Dependencies.AST (TypeExpr(..), Constraint(..))
+import Dependencies.AST (TypeExpr(SimpleT, GenericT, RefineT, FuncT), Constraint(RangeC, PredC, SizeGE, SizeGT))
 
 -- Core type representations ----------------------------------------------------
 

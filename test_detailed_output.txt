@@ -1,19 +1,11 @@
-Resolving dependencies...
 Build profile: -w ghc-9.12.2 -O1
 In order, the following will be built (use -v for more details):
- - typus-0.12.0 (lib) (configuration changed)
- - typus-0.12.0 (exe:typus) (configuration changed)
- - typus-0.12.0 (test:typus-test) (configuration changed)
-Configuring library for typus-0.12.0...
-Preprocessing library for typus-0.12.0...
-Building library for typus-0.12.0...
-Configuring executable 'typus' for typus-0.12.0...
-Preprocessing executable 'typus' for typus-0.12.0...
-Building executable 'typus' for typus-0.12.0...
-[2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus [Flags changed]
-Configuring test suite 'typus-test' for typus-0.12.0...
+ - typus-0.12.0 (test:typus-test)  --enable-profiling (first run)
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
 Preprocessing test suite 'typus-test' for typus-0.12.0...
 Building test suite 'typus-test' for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
 [39 of 39] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test [Flags changed]
 Running 1 test suites...
 Test suite typus-test: RUNNING...
@@ -300,10 +292,10 @@ Typus
       preserves comments and formatting:                                                    OK
     Performance tests
       parses large files efficiently:                                                       OK
-      compiles complex types efficiently:                                                   OK
+      compiles complex types efficiently:                                                   OK (0.02s)
       handles deeply nested structures efficiently:                                         OK
-      processes many small functions efficiently:                                           OK (0.08s)
-      memory usage remains reasonable for large files:                                      OK (0.06s)
+      processes many small functions efficiently:                                           OK (0.14s)
+      memory usage remains reasonable for large files:                                      OK (0.12s)
       compilation time scales linearly with file size:                                      OK
       error handling doesn't significantly impact performance:                              OK
       parallel processing potential:                                                        OK
@@ -317,7 +309,7 @@ Typus
       handles unusual unicode characters:                                                   OK
       handles escape sequences:                                                             OK
       handles numeric edge cases:                                                           OK
-      handles conflicting directives:                                                       OK
+      handles conflicting directives:                                                       OK (0.02s)
       handles malformed block directives:                                                   OK
       handles recursive type definitions:                                                   OK
       handles circular imports simulation:                                                  OK
@@ -375,7 +367,7 @@ Typus
         skips Go toolchain when skip flag is enabled:                                       OK
     Full project workflow
       batchConvert mirrors the project structure:                                           OK
-      batchCheck triggers Go validation:                                                    OK
+      batchCheck triggers Go validation:                                                    OK (0.01s)
       batchCheck honours the skip flag:                                                     OK
       convertFile passes Go sources through unchanged:                                      OK
       batchCheck surfaces syntax validation errors:                                         OK
@@ -386,7 +378,7 @@ Typus
       typus check reports success for well-formed modules:                                  OK
       typus check fails fast on syntax errors:                                              OK
       typus build converts directories and invokes go:                                      OK
-      typus build --strict-embed surfaces missing assets:                                   OK
+      typus build --strict-embed surfaces missing assets:                                   OK (0.01s)
       typus run shells out to go run via the stub:                                          OK
       typus run fails when the entrypoint is missing:                                       OK
   Golden
@@ -395,7 +387,7 @@ Typus
       statements without package/import infer a runnable main:                              OK
       generic type parameters render Go square bracket notation:                            OK
 
-All 319 tests passed (0.39s)
+All 319 tests passed (0.66s)
 
 Test suite typus-test: PASS
 Test suite logged to:

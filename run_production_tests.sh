@@ -1,10 +1,27 @@
 #!/bin/bash
-# 运行生产模式测试的脚本，自动设置locale以避免警告
+# Script to run tests with production flags and check for warnings
 
+# Set C locale to avoid locale warnings
 export LC_ALL=C
-export LANG=C
 
-echo "运行测试命令: cabal test --flags=\"-fast production\" --test-show-details=direct"
+echo "Running tests with production flags..."
 cabal test --flags="-fast production" --test-show-details=direct
 
-exit $?
+if [ $? -eq 0 ]; then
+    echo "All tests passed successfully!"
+else
+    echo "Some tests failed!"
+    exit 1
+fi
+
+echo "Building with werror flag to check for warnings..."
+cabal build --flags="-fast production werror"
+
+if [ $? -eq 0 ]; then
+    echo "Build completed without warnings!"
+else
+    echo "Build failed with warnings!"
+    exit 1
+fi
+
+echo "All checks passed!"

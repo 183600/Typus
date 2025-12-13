@@ -9,3 +9,13 @@ test-show-details: direct
 -- 优化链接器选项
 package *
   ghc-options: -optl-Wl,-s
+
+-- 设置环境变量以解决locale警告
+-- 注意：这些设置需要在运行测试前在shell中设置
+-- export LC_ALL=C
+-- export LANG=C
+-- export LC_CTYPE=C
+-- export LC_MESSAGES=C
+-- export LC_COLLATE=C
+
+-- 为了避免locale警告，在运行命令时使用 LC_ALL=C 前缀

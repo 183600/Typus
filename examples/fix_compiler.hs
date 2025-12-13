@@ -1,5 +1,3 @@
-import System.IO
-
 main :: IO ()
 main = do
     -- Read the original file

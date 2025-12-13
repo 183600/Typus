@@ -17,6 +17,48 @@ Building library for typus-0.12.0...
 [ 5 of 54] Compiling Compiler.GoLexer ( src/Compiler/GoLexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoLexer.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Compiler/GoLexer.dyn_o )
 [ 6 of 54] Compiling Debug            ( src/Debug.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Debug.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Debug.dyn_o )
 [ 7 of 54] Compiling DebugIntegration ( src/DebugIntegration.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DebugIntegration.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DebugIntegration.dyn_o )
+src/DebugIntegration.hs:191:1: warning: [GHC-40910] [-Wunused-top-binds]
+    Defined but not used: `debugTypeCheckStep'
+    |
+191 | debugTypeCheckStep config filename action = do
+    | ^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:202:1: warning: [GHC-40910] [-Wunused-top-binds]
+    Defined but not used: `debugCodeGenStep'
+    |
+202 | debugCodeGenStep config filename action = do
+    | ^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:213:1: warning: [GHC-40910] [-Wunused-top-binds]
+    Defined but not used: `debugErrorWithContext'
+    |
+213 | debugErrorWithContext config location errorMsg context = do
+    | ^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:220:1: warning: [GHC-40910] [-Wunused-top-binds]
+    Defined but not used: `debugWarningWithContext'
+    |
+220 | debugWarningWithContext config location warningMsg context = do
+    | ^^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:226:1: warning: [GHC-40910] [-Wunused-top-binds]
+    Defined but not used: `showFullDebugState'
+    |
+226 | showFullDebugState config = do
+    | ^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:248:1: warning: [GHC-40910] [-Wunused-top-binds]
+    Defined but not used: `debugFunctionEntry'
+    |
+248 | debugFunctionEntry config funcName args context = do
+    | ^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:258:1: warning: [GHC-40910] [-Wunused-top-binds]
+    Defined but not used: `debugFunctionExit'
+    |
+258 | debugFunctionExit config funcName result = do
+    | ^^^^^^^^^^^^^^^^^
+
 [ 8 of 54] Compiling Dependencies.AST ( src/Dependencies/AST.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/AST.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/AST.dyn_o )
 [ 9 of 54] Compiling Dependencies.Parser ( src/Dependencies/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/Parser.dyn_o )
 [10 of 54] Compiling Dependencies.TypeSystem ( src/Dependencies/TypeSystem.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/TypeSystem.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/Dependencies/TypeSystem.dyn_o )

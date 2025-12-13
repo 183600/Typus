@@ -1,5 +1,5 @@
 import Data.Char (isSpace)
-import Data.List (isPrefixOf, isInfixOf, intercalate, filter)
+import Data.List (isPrefixOf, isInfixOf, intercalate)
 
 -- Utility function to trim whitespace
 trim :: String -> String

@@ -19,7 +19,7 @@ import qualified Text.Megaparsec as MP
 import Text.Megaparsec.Char (alphaNumChar, letterChar, char, string, space1)
 import qualified Text.Megaparsec.Char.Lexer as L
 
-import Dependencies.AST
+import Dependencies.AST (AST(Program), Statement(STypeDef, SVarDecl, SFuncDecl, SConstraintDef, STypeAlias, SExistsDecl), TypeExpr(SimpleT, GenericT, RefineT, FuncT), Constraint(RangeC, PredC))
 
 -- | The Megaparsec parser type specialised for Typus sources.
 type Parser = Parsec Void Text

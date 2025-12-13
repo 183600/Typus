@@ -1,0 +1,21 @@
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (file src/GoToolchain.hs changed)
+ - typus-0.12.0 (exe:typus) (dependency rebuilt)
+ - typus-0.12.0 (test:typus-test) (dependency rebuilt)
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+Preprocessing library for typus-0.12.0...
+Building library for typus-0.12.0...
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+[46 of 54] Compiling GoToolchain      ( src/GoToolchain.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/GoToolchain.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/GoToolchain.dyn_o ) [Source file changed]
+src/GoToolchain.hs:27:1: error: [GHC-66111] [-Wunused-imports, Werror=unused-imports]
+    The import of `Numeric' is redundant
+      except perhaps to import instances from `Numeric'
+    To import instances alone, use: import Numeric()
+   |
+27 | import Numeric (showHex)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: [Cabal-7125]
+Failed to build typus-0.12.0 (which is required by test:typus-test from typus-0.12.0).
+

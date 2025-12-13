@@ -5,6 +5,7 @@ import Criterion.Types
 
 import qualified Parser (parseTypus)
 import qualified Compiler (compile)
+import qualified Compiler.Errors (formatCompilerErrors)
 import qualified Ownership (analyzeOwnership)
 import System.Directory (doesFileExist)
 import System.FilePath ((</>))
@@ -81,7 +82,7 @@ fullPipeline fileName = do
         Left err -> error $ "Parser failed: " ++ err
         Right typusFile -> do
             case Compiler.compile typusFile of
-                Left err -> error $ "Compilation failed: " ++ err
+                Left err -> error $ "Compilation failed: " ++ Compiler.Errors.formatCompilerErrors err
                 Right goCode -> do
                     _ <- evaluate $ length goCode
                     _ <- evaluate $ "package main" `isInfixOf` goCode

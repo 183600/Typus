@@ -7,6 +7,7 @@ module CommandLineDebug
     , runWithCLIDebug
     , checkBreakpoint
     , setBreakpoint
+    , setConditionalBreakpoint
     , listBreakpoints
     , clearBreakpoints
     , toggleDebugOutput
@@ -15,6 +16,18 @@ module CommandLineDebug
     , processDebugCommandWithOutput
     , setDebugLevel
     , showDebugStatus
+    , addWatchVariable
+    , removeWatchVariable
+    , listWatchVariables
+    , getCallStack
+    , pushCallStack
+    , popCallStack
+    , evaluateExpression
+    , stepInto
+    , stepOver
+    , stepOut
+    , continue
+    , runToCursor
     ) where
 
 import Control.Monad (when)
@@ -32,6 +45,10 @@ data CommandLineDebugConfig = CommandLineDebugConfig
     , cldBreakpoints :: IORef (Set String)
     , cldBreakConditions :: IORef (Map String (String -> Bool))
     , cldInteractive :: IORef Bool
+    , cldCallStack :: IORef [String]
+    , cldWatchVariables :: IORef (Map String String)
+    , cldStepMode :: IORef Bool
+    , cldCurrentLocation :: IORef String
     }
 
 -- Default command line debug configuration
@@ -42,7 +59,11 @@ defaultCLIDebugConfig = do
     breakpointsRef <- newIORef Set.empty
     breakConditionsRef <- newIORef Map.empty
     interactiveRef <- newIORef True
-    return $ CommandLineDebugConfig enabledRef logLevelRef breakpointsRef breakConditionsRef interactiveRef
+    callStackRef <- newIORef []
+    watchVarsRef <- newIORef Map.empty
+    stepModeRef <- newIORef False
+    currentLocationRef <- newIORef ""
+    return $ CommandLineDebugConfig enabledRef logLevelRef breakpointsRef breakConditionsRef interactiveRef callStackRef watchVarsRef stepModeRef currentLocationRef
 
 -- Run action with command line debugging
 runWithCLIDebug :: CommandLineDebugConfig -> String -> IO a -> IO a
@@ -278,3 +299,87 @@ showDebugInfo :: String -> IO ()
 showDebugInfo location = do
     putStrLn $ "Location: " ++ location
     putStrLn "Debug info available at this location"
+
+-- Enhanced debugging functions
+
+-- Set conditional breakpoint
+setConditionalBreakpoint :: CommandLineDebugConfig -> String -> (String -> Bool) -> IO ()
+setConditionalBreakpoint config location condition = do
+    modifyIORef' (cldBreakConditions config) (Map.insert location condition)
+    putStrLn $ "Conditional breakpoint set at: " ++ location
+
+-- Watch variable
+addWatchVariable :: CommandLineDebugConfig -> String -> String -> IO ()
+addWatchVariable config varName value = do
+    modifyIORef' (cldWatchVariables config) (Map.insert varName value)
+    putStrLn $ "Watching variable: " ++ varName ++ " = " ++ value
+
+-- Remove watch variable
+removeWatchVariable :: CommandLineDebugConfig -> String -> IO ()
+removeWatchVariable config varName = do
+    modifyIORef' (cldWatchVariables config) (Map.delete varName)
+    putStrLn $ "Stopped watching variable: " ++ varName
+
+-- List watch variables
+listWatchVariables :: CommandLineDebugConfig -> IO ()
+listWatchVariables config = do
+    watchVars <- readIORef (cldWatchVariables config)
+    if Map.null watchVars
+        then putStrLn "No watch variables set"
+        else do
+            putStrLn "Watch variables:"
+            mapM_ (\(name, value) -> putStrLn $ "  " ++ name ++ " = " ++ value) (Map.toList watchVars)
+
+-- Get call stack
+getCallStack :: CommandLineDebugConfig -> IO [String]
+getCallStack config = readIORef (cldCallStack config)
+
+-- Push to call stack
+pushCallStack :: CommandLineDebugConfig -> String -> IO ()
+pushCallStack config location = do
+    modifyIORef' (cldCallStack config) (location :)
+    writeIORef (cldCurrentLocation config) location
+
+-- Pop from call stack
+popCallStack :: CommandLineDebugConfig -> IO ()
+popCallStack config = do
+    stack <- readIORef (cldCallStack config)
+    case stack of
+        [] -> return ()
+        (_:rest) -> do
+            writeIORef (cldCallStack config) rest
+            case rest of
+                [] -> writeIORef (cldCurrentLocation config) ""
+                (loc:_) -> writeIORef (cldCurrentLocation config) loc
+
+-- Evaluate expression (simplified)
+evaluateExpression :: CommandLineDebugConfig -> String -> IO String
+evaluateExpression _config expr = do
+    return $ "Expression evaluated: " ++ expr ++ " = <result>"
+
+-- Step debugging functions
+stepInto :: CommandLineDebugConfig -> IO ()
+stepInto config = do
+    writeIORef (cldStepMode config) True
+    putStrLn "Step into mode enabled"
+
+stepOver :: CommandLineDebugConfig -> IO ()
+stepOver config = do
+    writeIORef (cldStepMode config) True
+    putStrLn "Step over mode enabled"
+
+stepOut :: CommandLineDebugConfig -> IO ()
+stepOut config = do
+    writeIORef (cldStepMode config) False
+    putStrLn "Step out - continuing execution"
+
+continue :: CommandLineDebugConfig -> IO ()
+continue config = do
+    writeIORef (cldStepMode config) False
+    putStrLn "Continuing execution"
+
+-- Run to cursor
+runToCursor :: CommandLineDebugConfig -> String -> IO ()
+runToCursor config location = do
+    setBreakpoint config location
+    continue config

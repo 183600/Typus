@@ -21,39 +21,53 @@ module DebugIntegration
     , disableInteractiveMode
     ) where
 
-import Data.IORef
+import Data.IORef (writeIORef)
 
-import Debug
-import CommandLineDebug
+import Debug (debugLog, debugError, debugInfo, debugWarn, debugTrace)
+import CommandLineDebug (CommandLineDebugConfig, pushCallStack, popCallStack, listBreakpoints, setBreakpoint, clearBreakpoints, addWatchVariable, runWithCLIDebug, defaultCLIDebugConfig, getCallStack, listWatchVariables, cldEnabled, cldLogLevel, cldInteractive)
 
 -- Debug integration for compiler phases
 withDebugging :: CommandLineDebugConfig -> String -> IO a -> IO a
-withDebugging _config phase action = do
+withDebugging config phase action = do
+    pushCallStack config phase
     debugLog phase $ "Starting " ++ phase ++ " phase"
     result <- action
     debugLog phase $ "Completed " ++ phase ++ " phase"
+    popCallStack config
     return result
 
 -- Debug parse step with breakpoints
 debugParseStep :: CommandLineDebugConfig -> String -> IO a -> IO a
 debugParseStep config filename action = do
     let location = "parse:" ++ filename
+    pushCallStack config location
+    addWatchVariable config "currentFile" filename
     debugInfo location $ "Starting parsing of: " ++ filename
-    runWithCLIDebug config location action
+    result <- runWithCLIDebug config location action
+    popCallStack config
+    return result
 
 -- Debug compile step with breakpoints
 debugCompileStep :: CommandLineDebugConfig -> String -> IO a -> IO a
 debugCompileStep config filename action = do
     let location = "compile:" ++ filename
+    pushCallStack config location
+    addWatchVariable config "currentFile" filename
     debugInfo location $ "Starting compilation of: " ++ filename
-    runWithCLIDebug config location action
+    result <- runWithCLIDebug config location action
+    popCallStack config
+    return result
 
 -- Debug ownership step with breakpoints
 debugOwnershipStep :: CommandLineDebugConfig -> String -> IO a -> IO a
 debugOwnershipStep config filename action = do
     let location = "ownership:" ++ filename
+    pushCallStack config location
+    addWatchVariable config "currentFile" filename
     debugInfo location $ "Starting ownership analysis of: " ++ filename
-    runWithCLIDebug config location action
+    result <- runWithCLIDebug config location action
+    popCallStack config
+    return result
 
 -- Create standard breakpoints for compiler debugging
 createDebugBreakpoints :: CommandLineDebugConfig -> IO ()
@@ -169,3 +183,81 @@ disableInteractiveMode :: CommandLineDebugConfig -> IO ()
 disableInteractiveMode config = do
     writeIORef (cldInteractive config) False
     debugInfo "debug:mode" "Interactive mode disabled"
+
+-- Enhanced debugging functions for compiler
+
+-- Debug type checking step
+_debugTypeCheckStep :: CommandLineDebugConfig -> String -> IO a -> IO a
+_debugTypeCheckStep config filename action = do
+    let location = "typecheck:" ++ filename
+    pushCallStack config location
+    addWatchVariable config "currentFile" filename
+    debugInfo location $ "Starting type checking of: " ++ filename
+    result <- runWithCLIDebug config location action
+    popCallStack config
+    return result
+
+-- Debug code generation step
+_debugCodeGenStep :: CommandLineDebugConfig -> String -> IO a -> IO a
+_debugCodeGenStep config filename action = do
+    let location = "codegen:" ++ filename
+    pushCallStack config location
+    addWatchVariable config "currentFile" filename
+    debugInfo location $ "Starting code generation for: " ++ filename
+    result <- runWithCLIDebug config location action
+    popCallStack config
+    return result
+
+-- Debug error with context
+_debugErrorWithContext :: CommandLineDebugConfig -> String -> String -> [(String, String)] -> IO ()
+_debugErrorWithContext config location errorMsg context = do
+    debugError location $ "Error: " ++ errorMsg
+    mapM_ (\(key, value) -> addWatchVariable config key value) context
+    runWithCLIDebug config ("error:" ++ location) $ return ()
+
+-- Debug warning with context
+_debugWarningWithContext :: CommandLineDebugConfig -> String -> String -> [(String, String)] -> IO ()
+_debugWarningWithContext config location warningMsg context = do
+    debugWarn location $ "Warning: " ++ warningMsg
+    mapM_ (\(key, value) -> addWatchVariable config key value) context
+
+-- Show full debug state
+_showFullDebugState :: CommandLineDebugConfig -> IO ()
+_showFullDebugState config = do
+    putStrLn "\n=== DEBUG STATE ==="
+    
+    -- Show call stack
+    callStack <- getCallStack config
+    putStrLn "\nCall Stack:"
+    if null callStack
+        then putStrLn "  (empty)"
+        else mapM_ (\frame -> putStrLn $ "  " ++ frame) callStack
+    let _ = callStack -- Suppress unused variable warning
+    
+    -- Show watch variables
+    putStrLn "\nWatch Variables:"
+    listWatchVariables config
+    
+    -- Show breakpoints
+    putStrLn "\nBreakpoints:"
+    listBreakpoints config
+    
+    putStrLn "==================\n"
+
+-- Debug function entry
+_debugFunctionEntry :: CommandLineDebugConfig -> String -> String -> [(String, String)] -> IO ()
+_debugFunctionEntry config funcName args context = do
+    let location = "func:" ++ funcName
+    pushCallStack config location
+    addWatchVariable config "function" funcName
+    addWatchVariable config "arguments" args
+    mapM_ (\(key, value) -> addWatchVariable config key value) context
+    debugInfo location $ "Entering function: " ++ funcName ++ " with args: " ++ args
+
+-- Debug function exit
+_debugFunctionExit :: CommandLineDebugConfig -> String -> String -> IO ()
+_debugFunctionExit config funcName result = do
+    let location = "func:" ++ funcName
+    addWatchVariable config "result" result
+    debugInfo location $ "Exiting function: " ++ funcName ++ " with result: " ++ result
+    popCallStack config

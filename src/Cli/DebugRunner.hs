@@ -6,8 +6,8 @@ module Cli.DebugRunner
     , DebugCommand(..)
     ) where
 
-import CommandLineDebug
-import EnhancedDebug
+import CommandLineDebug (CommandLineDebugConfig, defaultCLIDebugConfig, setBreakpoint, listBreakpoints, clearBreakpoints)
+import EnhancedDebug (EnhancedDebugConfig, defaultEnhancedDebugConfig, createBreakpoint, LogLevel(Debug, Info, Warning, Error), setLogLevel, getDebugStats)
 import System.Directory (doesFileExist)
 import System.IO (hFlush, stdout)
 import qualified Data.Map.Strict as Map

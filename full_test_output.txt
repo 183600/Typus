@@ -6,6 +6,7 @@ Preprocessing test suite 'typus-test' for typus-0.12.0...
 Building test suite 'typus-test' for typus-0.12.0...
 /bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
 /bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
+[39 of 39] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test [Flags changed]
 Running 1 test suites...
 Test suite typus-test: RUNNING...
 Typus
@@ -294,7 +295,7 @@ Typus
       compiles complex types efficiently:                                                   OK
       handles deeply nested structures efficiently:                                         OK
       processes many small functions efficiently:                                           OK (0.08s)
-      memory usage remains reasonable for large files:                                      OK (0.05s)
+      memory usage remains reasonable for large files:                                      OK (0.06s)
       compilation time scales linearly with file size:                                      OK
       error handling doesn't significantly impact performance:                              OK
       parallel processing potential:                                                        OK
@@ -372,7 +373,7 @@ Typus
       batchCheck surfaces syntax validation errors:                                         OK
       batchCheck surfaces go build failures:                                                OK
     CLI smoke tests
-      typus --version prints the version banner:                                            OK
+      typus --version prints the version banner:                                            OK (0.01s)
       typus convert emits Go output:                                                        OK
       typus check reports success for well-formed modules:                                  OK
       typus check fails fast on syntax errors:                                              OK
@@ -386,7 +387,7 @@ Typus
       statements without package/import infer a runnable main:                              OK
       generic type parameters render Go square bracket notation:                            OK
 
-All 319 tests passed (0.38s)
+All 319 tests passed (0.43s)
 Test suite typus-test: PASS
 Test suite logged to:
 /home/runner/work/Typus/Typus/./dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/test/typus-0.12.0-typus-test.log

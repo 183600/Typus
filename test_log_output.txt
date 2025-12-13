@@ -1,0 +1,4 @@
+Test suite typus-test: RUNNING...
+Test suite typus-test: PASS
+Test suite logged to: /home/runner/work/Typus/Typus/./dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/test/typus-0.12.0-typus-test.log
+PackageLog {package = PackageIdentifier {pkgName = PackageName "typus", pkgVersion = mkVersion [0,12,0]}, compiler = CompilerId GHC (mkVersion [9,12,2]), platform = Platform X86_64 Linux, testSuites = [TestSuiteLog {testSuiteName = UnqualComponentName "typus-test", testLogs = TestLog {testName = "typus-test", testOptionsReturned = [], testResult = Pass}, logFile = "/home/runner/work/Typus/Typus/./dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/test/typus-0.12.0-typus-test.log"}]}

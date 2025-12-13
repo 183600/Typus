@@ -2,7 +2,7 @@
 
 module Cli (Args(..), parseArgs, parseArgsFromList) where
 
-import Options.Applicative
+import Options.Applicative (Parser, ParserInfo, execParser, helper, str, argument, strOption, switch, flag', subparser, command, info, long, short, metavar, help, progDesc, fullDesc, header, (<**>), (<|>), many)
 import System.Environment (getArgs, withArgs)
 
 data Args

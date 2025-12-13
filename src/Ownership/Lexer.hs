@@ -8,7 +8,7 @@ module Ownership.Lexer (
 
 import Data.Char (isDigit, isAlpha)
 
-import Ownership.Common.Lexer (Token(..), LexerSpec(..), lexWithSpec)
+import Ownership.Common.Lexer (Token, LexerSpec(LexerSpec), lexWithSpec, specKeywords, specMultiSymbols, specSingleSymbols, specNewlineSymbol, specIsNumChar, specIsIdentStart, specIsIdentChar)
 
 data Keyword
   = KwVar | KwLet | KwFunc | KwReturn | KwIf | KwElse | KwFor

@@ -7,7 +7,7 @@ module Compiler.GoVarSpec (
     parseVarSpecRaw
 ) where
 
-import Compiler.GoAst (ConstDecl(..), VarDecl(..))
+import Compiler.GoAst (ConstDecl(ConstDecl), VarDecl(VarDecl), varIsGroup, varLines, constIsGroup, constLines)
 import Compiler.GoParsing (consumeNames, findAssignmentIndex, nestingDelta, removeTrailingComma, splitTopLevel, stripLineComment)
 import Control.Applicative ((<|>))
 import Utils (trim)

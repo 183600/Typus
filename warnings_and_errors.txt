@@ -1,0 +1,39 @@
+      does not report errors for simple value usage:                                        OK
+      filtered ownership errors do not mutate the symbol table:                             OK
+      processOwnershipErrors only reports names tracked in the symbol table:                OK
+      processOwnershipErrors synthesizes use-after-move patterns when missing:              OK
+      collectSymbolsAndTypes surfaces parse errors:                                         OK
+      Error conversions
+        toErrorLocation keeps only the point information:                                   OK
+        toErrorLocationWithSpan preserves both ends of the span:                            OK
+      returns no errors for an empty file:                                                  OK
+      ignores import formatting errors that are filtered as false positives:                OK
+      formatSyntaxError includes the location prefix and context line:                      OK
+      fails when dependent type blocks contain errors:                                      OK
+      handles error types:                                                                  OK
+      reports multiple compilation errors:                                                  OK
+    Error handling
+      handles parse errors gracefully:                                                      OK
+      reports compilation errors with source locations:                                     OK
+      aggregates multiple errors in single compilation:                                     OK
+      provides helpful error messages for undefined variables:                              OK
+      reports type mismatch errors with expected and actual types:                          OK
+      provides context for errors in nested blocks:                                         OK
+      handles errors in dependent type constraints:                                         OK
+      provides error recovery suggestions:                                                  OK
+      handles malformed directive errors:                                                   OK
+      reports syntax errors with position information:                                      OK
+      handles error types and error handling:                                               OK
+      integrates error handling across phases:                                              OK
+      error handling doesn't significantly impact performance:                              OK
+        cross-analysis errors are returned to callers:                                      OK
+        integrated compiler blocks on cross-analysis errors:                                OK
+      Error Handling
+      Error Prioritization
+        ownership error takes precedence over type error:                                   OK
+        multiple analyzer warnings combined:                                                OK
+        warnings retain severity in combined errors:                                        OK
+        compiler config filters out warning-only diagnostics:                               OK
+      filters warning-only diagnostics based on errorReportingLevel:                        OK
+      batchCheck surfaces syntax validation errors:                                         OK
+      typus check fails fast on syntax errors:                                              OK

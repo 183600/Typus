@@ -1,0 +1,17 @@
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (configuration changed)
+ - typus-0.12.0 (exe:typus) (configuration changed)
+ - typus-0.12.0 (test:typus-test) (configuration changed)
+Configuring library for typus-0.12.0...
+on the commandline: warning: [GHC-53692] [-Wdeprecated-flags]
+    -Wmissing-monadfail-instances is deprecated: fail is no longer a method of Monad
+
+Preprocessing library for typus-0.12.0...
+Building library for typus-0.12.0...
+/tmp/ghc63365-0.rsp: error: [GHC-53692] [-Wdeprecated-flags, Werror=deprecated-flags]
+    -Wmissing-monadfail-instances is deprecated: fail is no longer a method of Monad
+
+Error: [Cabal-7125]
+Failed to build typus-0.12.0 (which is required by test:typus-test from typus-0.12.0).
+

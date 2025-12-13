@@ -1,0 +1,399 @@
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (file src/DebugIntegration.hs changed)
+ - typus-0.12.0 (exe:typus) (dependency rebuilt)
+ - typus-0.12.0 (test:typus-test) (dependency rebuilt)
+Preprocessing library for typus-0.12.0...
+Building library for typus-0.12.0...
+[ 7 of 54] Compiling DebugIntegration ( src/DebugIntegration.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DebugIntegration.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DebugIntegration.dyn_o ) [Source file changed]
+Preprocessing executable 'typus' for typus-0.12.0...
+Building executable 'typus' for typus-0.12.0...
+[2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus [Library changed]
+Preprocessing test suite 'typus-test' for typus-0.12.0...
+Building test suite 'typus-test' for typus-0.12.0...
+[39 of 39] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test [Library changed]
+Running 1 test suites...
+Test suite typus-test: RUNNING...
+Typus
+  Unit
+    Parser
+      parses file-level directives:                                                         OK
+      treats file-level constraints directive as dependent type alias:                      OK
+      captures block directives with associated code:                                       OK
+      parses README-style block directives without inline closing brace:                    OK
+      ignores trailing whitespace-only files:                                               OK
+      collects build tags before the first code block:                                      OK
+      rejects unknown file directives:                                                      OK
+      requires directive blocks to close:                                                   OK
+      parses complex function signatures:                                                   OK
+      handles interface definitions:                                                        OK
+      parses struct definitions with multiple fields:                                       OK
+      handles method definitions:                                                           OK
+      parses channel operations:                                                            OK
+      handles go statements and goroutines:                                                 OK
+      parses defer statements:                                                              OK
+      handles complex literals:                                                             OK
+      parses generic types and functions:                                                   OK
+      handles embedded structs:                                                             OK
+      parses import statements:                                                             OK
+      handles multiple package declarations:                                                OK
+      parses constants and variables:                                                       OK
+    Ownership analysis
+      does not report errors for simple value usage:                                        OK
+      detects use-after-move patterns:                                                      OK
+      detects borrow while mutable borrow is active:                                        OK
+      detects mutable borrow while immutable borrows exist:                                 OK
+      detects borrow after a move operation:                                                OK
+      detects use of value while it has a mutable borrow:                                   OK
+      detects multiple mutable borrows:                                                     OK
+      detects double move attempts:                                                         OK
+      reports out-of-scope variable usage:                                                  OK
+      allows reborrowing after scoped mutable borrow ends:                                  OK
+      fmt.Println is treated as pure usage:                                                 OK
+      mutex locking and unlocking are treated as safe usages:                               OK
+      respects ownership off directive:                                                     OK
+      line directive toggles ownership tracking back on:                                    OK
+      releases immutable borrows when leaving nested scope:                                 OK
+      mutable borrow scope ending allows subsequent immutable borrow:                       OK
+      block directive limits ownership disabling to its block:                              OK
+      nested block directives re-enable ownership tracking:                                 OK
+      for loop introduces synthetic iteration bindings:                                     OK
+      assignment after move resets ownership flags:                                         OK
+      len built-in counts as pure usage:                                                    OK
+      temporary mutable borrows used as arguments are released:                             OK
+    OwnershipBridge
+      filtered ownership errors do not mutate the symbol table:                             OK
+      processOwnershipErrors only reports names tracked in the symbol table:                OK
+      processOwnershipErrors synthesizes use-after-move patterns when missing:              OK
+    Dependent types parser
+      parses type and function declarations:                                                OK
+      reports syntax problems:                                                              OK
+      runDependentTypesParser recovers from invalid declarations:                           OK
+      extracts constraints from multiline type declarations:                                OK
+      collects parameter and declaration constraints:                                       OK
+      supports type class constraints in type definitions:                                  OK
+      extractTypeDefinitions handles parameter types referencing other parameters:          OK
+      translates nonempty shorthand constraint to TypeSizeGT:                               OK
+      extracts numeric equality constraints as concrete values:                             OK
+      ignores aliases and dependent functions when extracting types:                        OK
+      analyzeAST accepts well-formed declarations:                                          OK
+      analyzeAST reports missing type references:                                           OK
+      validateStatement registers dependent type definitions:                               OK
+      validateStatement reports missing alias targets:                                      OK
+      solveConstraints succeeds with satisfiable constraints:                               OK
+      solveConstraints reports invalid range constraints:                                   OK
+      extractTypeDefinitions preserves equality between parameters:                         OK
+      extractTypeDefinitions treats uppercase constants as concrete types:                  OK
+      extractTypeDefinitions converts custom constraints to predicates:                     OK
+      parseDependentType parses dependent functions with constraints:                       OK
+      parseTypeDeclaration captures inline parameter constraints:                           OK
+      validateDependentTypeSyntax reports duplicate type definitions:                       OK
+      parseDependentType parses alias definitions with constraints:                         OK
+      parseDependentType handles nested function bodies:                                    OK
+      extractTypeDefinitions categorizes predicate arguments precisely:                     OK
+      extractTypeDefinitions records bounded ranges:                                        OK
+      extractTypeDefinitions handles type class constraints with generics:                  OK
+      extractTypeDefinitions treats lowercase equality targets as symbolic variables:       OK
+      analyzeAST accepts generated safe programs:                                           OK
+        +++ OK, passed 100 tests.
+    Type system
+      prelude exposes primitive definitions:                                                OK
+      checkType accepts known types:                                                        OK
+      checkType reports unknown types:                                                      OK
+      checkTypeInstantiation validates type arity:                                          OK
+      checkTypeInstantiation accepts valid instantiation:                                   OK
+      solveConstraints flags conflicting equalities:                                        OK
+      unify produces substitutions:                                                         OK
+      unify enforces occurs check:                                                          OK
+      convertTypeExprAndRefinements accumulates refinement constraints:                     OK
+      convertConstraint preserves nested generic predicate arguments:                       OK
+      convertTypeExprAndRefinements handles refined function returns:                       OK
+      solveConstraints accepts reflexive equalities:                                        OK
+        +++ OK, passed 100 tests.
+      solveConstraints clears pending constraints:                                          OK
+        +++ OK, passed 100 tests.
+    SymbolTable
+      collectSymbolsAndTypes extracts top-level declarations:                               OK
+      augmentSymbolTableWithLocals adds owned locals:                                       OK
+      collectSymbolsAndTypes surfaces parse errors:                                         OK
+    SourceLocation
+      Position arithmetic
+        posAfter newline increments the line and resets the column:                         OK
+        posAfter tab jumps to the next tab stop:                                            OK
+        advancePosByText keeps track of multiline progress:                                 OK
+        advancePosByLine bumps the line number and resets the column:                       OK
+      Span utilities
+        spanFrom is equivalent to emptySpan:                                                OK
+        spanTo produces a zero-length span ending at the position:                          OK
+        spanBetween preserves the provided bounds:                                          OK
+        mergeSpans chooses the earliest start and latest end:                               OK
+        isValidSpan rejects spans whose start follows their end:                            OK
+      Located helpers
+        locatedAt anchors the value at an empty span:                                       OK
+        mapLocated transforms the payload while preserving the span:                        OK
+      Location tracking state
+        markSpanStart/markSpanEnd capture the advanced range:                               OK
+      Error conversions
+        toErrorLocation keeps only the point information:                                   OK
+        toErrorLocationWithSpan preserves both ends of the span:                            OK
+    SyntaxValidator
+      returns no errors for an empty file:                                                  OK
+      detects missing package declarations in Go files:                                     OK
+      reports unclosed braces with the original opening location:                           OK
+      flags malformed Typus directives:                                                     OK
+      detects duplicate variable declarations in the same scope:                            OK
+      requires braces after control-flow keywords:                                          OK
+      validateFile delegates to validateSyntax:                                             OK
+      ignores import formatting errors that are filtered as false positives:                OK
+      successfully validates a minimal, well-formed Go file:                                OK
+      formatSyntaxError includes the location prefix and context line:                      OK
+    Compiler
+      generates Go code for valid Typus input:                                              OK
+      fails when dependent type blocks contain errors:                                      OK
+      file-level dependent type directives are enforced without blocks:                     OK
+      reports detailed diagnostics when type checking fails:                                OK
+      rejects malformed syntax with unbalanced braces:                                      OK
+      compiles complex expressions:                                                         OK
+      handles struct compilation:                                                           OK
+      compiles interface definitions:                                                       OK
+      handles method compilation:                                                           OK
+      compiles generic types:                                                               OK
+      handles channel compilation:                                                          OK
+      compiles goroutines:                                                                  OK
+      handles defer statements:                                                             OK
+      compiles complex literals:                                                            OK
+      handles import statements:                                                            OK
+      compiles constants and variables:                                                     OK
+      handles error types:                                                                  OK
+      compiles ownership-enabled code:                                                      OK
+      compiles dependent types code:                                                        OK
+      handles mixed ownership and dependent types:                                          OK
+      reports multiple compilation errors:                                                  OK
+      handles undefined variables:                                                          OK
+      detects circular dependencies:                                                        OK
+    ValueAnalysis
+      handles comments, strings, and multi-line references:                                 OK
+      classifies short declarations inside guards:                                          OK
+      handles composite literals and builder patterns:                                      OK
+      Property-based guarantees
+        ampersand-prefixed expressions are references:                                      OK
+          +++ OK, passed 100 tests.
+        whitespace does not affect builtin value types:                                     OK
+          +++ OK, passed 100 tests.
+        pointer-prefixed types are not treated as values:                                   OK
+          +++ OK, passed 100 tests.
+    Error handling
+      handles parse errors gracefully:                                                      OK
+      reports compilation errors with source locations:                                     OK
+      aggregates multiple errors in single compilation:                                     OK
+      provides helpful error messages for undefined variables:                              OK
+      handles circular dependency detection:                                                OK
+      reports type mismatch errors with expected and actual types:                          OK
+      provides context for errors in nested blocks:                                         OK
+      handles errors in dependent type constraints:                                         OK
+      reports ownership violations with clear explanations:                                 OK
+      provides error recovery suggestions:                                                  OK
+      handles malformed directive errors:                                                   OK
+      reports syntax errors with position information:                                      OK
+    Embedded assets
+      handleMissingEmbeds warns but succeeds in non-strict mode:                            OK
+      handleMissingEmbeds fails fast when strict mode is enabled:                           OK
+      mirrorEmbeddedResources copies referenced files:                                      OK
+      mirrorEmbeddedResources handles indented go:embed directives:                         OK
+      mirrorEmbeddedResources reports missing patterns:                                     OK
+      copyEmbeddedForBuild mirrors directories for go:embed patterns:                       OK
+    GoToolchain
+      isEnvVarEnabled recognises truthy values:                                             OK
+      shouldSkipGoToolchain mirrors environment state:                                      OK
+      writeGoModule creates a go.mod file with canned contents:                             OK
+      createTempGoFile derives the prefix from the source file:                             OK
+      withTemporaryGoProject writes go.mod and reuses the provided prefix:                  OK
+      runGoCommand logs when Go is skipped:                                                 OK
+    CommandLineDebug
+      does not trigger breakpoint when condition is False:                                  OK
+      disable command keeps debugging disabled when already disabled:                       OK
+    CLI argument parsing
+      parses convert command:                                                               OK
+      parses check command:                                                                 OK
+      parses --version option:                                                              OK
+      parses build strict embed flag:                                                       OK
+      parses build strict embed flag after positional argument:                             OK
+      allows passing --strict-embed through to Go arguments:                                OK
+      parses build forwarding go arguments:                                                 OK
+      parses run defaults to non-strict:                                                    OK
+      parses run with strict embed flag:                                                    OK
+      parses run strict embed flag after file argument:                                     OK
+      parses run command with additional arguments:                                         OK
+    Verbosity helpers
+      defaults to quiet when env var is missing:                                            OK
+      parses truthy values case-insensitively:                                              OK
+      treats other values as quiet:                                                         OK
+      whenVerbose executes action only when verbose:                                        OK
+    Utils helpers
+      Whitespace and splitting
+        trim removes leading and trailing whitespace:                                       OK
+        splitBy preserves empty segments:                                                   OK
+        splitBy on empty input returns a singleton empty chunk:                             OK
+        splitByCollapsed removes empty segments:                                            OK
+        splitByCollapsed returns [] when the string only has delimiters:                    OK
+        splitByComma delegates to splitBy:                                                  OK
+        splitByCommaCollapsed yields [] on empty input:                                     OK
+        splitByCommaCollapsed collapses trailing delimiter chains:                          OK
+      Comment stripping
+        removeLineComments respects string and char literals:                               OK
+        removeLineComments keeps escaped quotes inside strings:                             OK
+        removeLineComments maintains blank lines when an entire line is a comment:          OK
+        removeComments removes multiline block comments and retains line information:       OK
+        removeComments removes sequential inline block comments:                            OK
+        removeComments ignores comment markers that appear inside strings or char literals: OK
+        removeComments preserves file-leading block comments:                               OK
+        removeComments tolerates unterminated block comments by dropping the remainder:     OK
+      Indentation helpers
+        normalizeIndentation removes the common leading indentation but keeps structure:    OK
+        normalizeIndentation keeps leading blank lines intact:                              OK
+        normalizeIndentation leaves purely whitespace input untouched:                      OK
+        forceSingleTabIndentation enforces a single leading tab on non-empty lines:         OK
+        forceSingleTabIndentation collapses whitespace-only lines:                          OK
+        fixIndentation is an alias for normalizeIndentation:                                OK
+      Search helpers
+        breakOn returns prefix and suffix when the pattern exists:                          OK
+        breakOn falls back to the original string when the pattern is missing:              OK
+        breakOn with an empty pattern returns the whole string as the suffix:               OK
+        breakOn returns empty suffix when the pattern matches the entire string:            OK
+      Property-based regression
+        trim is idempotent:                                                                 OK
+          +++ OK, passed 100 tests.
+        splitByCollapsed never yields empty chunks:                                         OK
+          +++ OK, passed 100 tests.
+    Advanced Parser
+      parses complex nested directives:                                                     OK
+      handles malformed directive syntax gracefully:                                        OK
+      parses complex type definitions:                                                      OK
+      handles multiple build tags:                                                          OK
+      parses deeply nested code blocks:                                                     OK
+      handles unicode and special characters:                                               OK
+      parses complex function signatures:                                                   OK
+      handles interface definitions:                                                        OK
+      parses channel operations:                                                            OK
+      handles go statements and goroutines:                                                 OK
+      parses defer statements:                                                              OK
+      handles complex literals:                                                             OK
+      parses method definitions:                                                            OK
+      handles error types and error handling:                                               OK
+      parses generic types and functions:                                                   OK
+      handles embedded structs:                                                             OK
+    Integration tests
+      compiles and runs simple program:                                                     OK
+      compiles program with multiple functions:                                             OK
+      handles complex type definitions:                                                     OK
+      processes ownership and dependent types together:                                     OK
+      handles block-level directives:                                                       OK
+      integrates error handling across phases:                                              OK
+      handles Go toolchain integration:                                                     OK
+      processes complex expressions:                                                        OK
+      handles multiple source files:                                                        OK
+      maintains type safety across compilation phases:                                      OK
+      handles edge cases in parsing and compilation:                                        OK
+      preserves comments and formatting:                                                    OK
+    Performance tests
+      parses large files efficiently:                                                       OK
+      compiles complex types efficiently:                                                   OK
+      handles deeply nested structures efficiently:                                         OK
+      processes many small functions efficiently:                                           OK (0.08s)
+      memory usage remains reasonable for large files:                                      OK (0.07s)
+      compilation time scales linearly with file size:                                      OK
+      error handling doesn't significantly impact performance:                              OK
+      parallel processing potential:                                                        OK
+      cache effectiveness:                                                                  OK
+    Edge case tests
+      handles empty input:                                                                  OK
+      handles whitespace-only input:                                                        OK
+      handles comments-only input:                                                          OK
+      handles extremely long lines:                                                         OK
+      handles deeply nested parentheses:                                                    OK
+      handles unusual unicode characters:                                                   OK
+      handles escape sequences:                                                             OK
+      handles numeric edge cases:                                                           OK
+      handles conflicting directives:                                                       OK
+      handles malformed block directives:                                                   OK
+      handles recursive type definitions:                                                   OK
+      handles circular imports simulation:                                                  OK
+      handles extremely long identifiers:                                                   OK
+      handles zero-width and invisible characters:                                          OK
+      handles mixed line endings:                                                           OK
+      handles BOM (Byte Order Mark):                                                        OK
+      handles invalid UTF-8 sequences:                                                      OK
+      handles extreme indentation:                                                          OK
+      handles concurrent access patterns:                                                   OK
+      handles memory pressure simulation:                                                   OK
+  Integration
+    Integration
+      compiles sample program and optionally builds with Go:                                OK (0.12s)
+      ownership analysis flags complex violations:                                          OK
+      dependent type directives propagate from fixture:                                     OK
+    Integrated Analyzer
+      Cross-Analysis
+        file-level dependent type directives trigger analysis without blocks:               OK
+        ownership transfer in dependent-type context:                                       OK
+        use-after-move with type constraints:                                               OK
+        cross-analysis errors are returned to callers:                                      OK
+        integrated compiler blocks on cross-analysis errors:                                OK
+        borrow with type refinement:                                                        OK
+        mutable borrow with constraints:                                                    OK
+      Error Handling
+        fails fast when Go AST parsing fails:                                               OK
+      Error Prioritization
+        ownership error takes precedence over type error:                                   OK
+        multiple analyzer warnings combined:                                                OK
+        warnings retain severity in combined errors:                                        OK
+        compiler config filters out warning-only diagnostics:                               OK
+      Analysis Context Metadata
+        records provided source path in analysis context:                                   OK
+        uses custom label when no path is provided:                                         OK
+      Full Pipeline Integration
+        complete project with mixed directives:                                             OK
+        selective feature enabling:                                                         OK
+        complex nested ownership transfer:                                                  OK
+        dependent types with ownership constraints:                                         OK
+      Symbolic State Management
+        symbol table consistency across phases:                                             OK
+        type environment preservation:                                                      OK
+    Ownership integration
+      reports double move across chained bindings:                                          OK
+      borrow after move via call surfaces borrow-while-moved:                               OK
+      usage after scope exit is flagged as out-of-scope:                                    OK
+      type declarations do not mask ownership violations:                                   OK
+      shared borrows across helpers block later mutable borrows:                            OK
+    Integrated Compiler
+      surfaces multi-analyzer failures and propagates diagnostics:                          OK
+      filters warning-only diagnostics based on errorReportingLevel:                        OK
+      batchCheck honors TYPUS_SKIP_GO_BUILD
+        invokes Go toolchain when skip flag is absent:                                      OK
+        skips Go toolchain when skip flag is enabled:                                       OK
+    Full project workflow
+      batchConvert mirrors the project structure:                                           OK
+      batchCheck triggers Go validation:                                                    OK
+      batchCheck honours the skip flag:                                                     OK
+      convertFile passes Go sources through unchanged:                                      OK
+      batchCheck surfaces syntax validation errors:                                         OK
+      batchCheck surfaces go build failures:                                                OK
+    CLI smoke tests
+      typus --version prints the version banner:                                            OK
+      typus convert emits Go output:                                                        OK
+      typus check reports success for well-formed modules:                                  OK
+      typus check fails fast on syntax errors:                                              OK
+      typus build converts directories and invokes go:                                      OK
+      typus build --strict-embed surfaces missing assets:                                   OK
+      typus run shells out to go run via the stub:                                          OK
+      typus run fails when the entrypoint is missing:                                       OK
+  Golden
+    Golden
+      simple program renders canonical Go:                                                  OK
+      statements without package/import infer a runnable main:                              OK
+      generic type parameters render Go square bracket notation:                            OK
+
+All 319 tests passed (0.40s)
+Test suite typus-test: PASS
+Test suite logged to:
+/home/runner/work/Typus/Typus/./dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/test/typus-0.12.0-typus-test.log
+1 of 1 test suites (1 of 1 test cases) passed.

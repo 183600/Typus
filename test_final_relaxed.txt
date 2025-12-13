@@ -1,0 +1,219 @@
+Build profile: -w ghc-9.12.2 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.0 (lib) (configuration changed)
+ - typus-0.12.0 (exe:typus) (first run)
+ - typus-0.12.0 (test:typus-test) (first run)
+Configuring library for typus-0.12.0...
+Preprocessing library for typus-0.12.0...
+Building library for typus-0.12.0...
+[ 7 of 54] Compiling DebugIntegration ( src/DebugIntegration.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DebugIntegration.o, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/build/DebugIntegration.dyn_o )
+src/DebugIntegration.hs:30:18: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+   |
+30 | withDebugging :: CommandLineDebugConfig -> String -> IO a -> IO a
+   |                  ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:40:19: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+   |
+40 | debugParseStep :: CommandLineDebugConfig -> String -> IO a -> IO a
+   |                   ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:51:21: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+   |
+51 | debugCompileStep :: CommandLineDebugConfig -> String -> IO a -> IO a
+   |                     ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:62:23: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+   |
+62 | debugOwnershipStep :: CommandLineDebugConfig -> String -> IO a -> IO a
+   |                       ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:73:27: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+   |
+73 | createDebugBreakpoints :: CommandLineDebugConfig -> IO ()
+   |                           ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:90:30: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+   |
+90 | setupCompilerDebugging :: IO CommandLineDebugConfig
+   |                              ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:110:23: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+110 | debugCompilerStart :: CommandLineDebugConfig -> String -> IO ()
+    |                       ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:117:21: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+117 | debugCompilerEnd :: CommandLineDebugConfig -> String -> IO ()
+    |                     ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:122:21: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+122 | debugErrorReport :: CommandLineDebugConfig -> String -> String -> IO ()
+    |                     ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:127:23: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+127 | debugWarningReport :: CommandLineDebugConfig -> String -> String -> IO ()
+    |                       ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:131:21: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+131 | debugPerformance :: CommandLineDebugConfig -> String -> String -> IO ()
+    |                     ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:168:27: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+168 | showCurrentBreakpoints :: CommandLineDebugConfig -> IO ()
+    |                           ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:171:24: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+171 | addCustomBreakpoint :: CommandLineDebugConfig -> String -> IO ()
+    |                        ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:174:25: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+174 | removeAllBreakpoints :: CommandLineDebugConfig -> IO ()
+    |                         ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:177:26: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+177 | enableInteractiveMode :: CommandLineDebugConfig -> IO ()
+    |                          ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:182:27: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+182 | disableInteractiveMode :: CommandLineDebugConfig -> IO ()
+    |                           ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:190:24: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+190 | _debugTypeCheckStep :: CommandLineDebugConfig -> String -> IO a -> IO a
+    |                        ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:201:22: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+201 | _debugCodeGenStep :: CommandLineDebugConfig -> String -> IO a -> IO a
+    |                      ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:212:27: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+212 | _debugErrorWithContext :: CommandLineDebugConfig -> String -> String -> [(String, String)] -> IO ()
+    |                           ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:219:29: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+219 | _debugWarningWithContext :: CommandLineDebugConfig -> String -> String -> [(String, String)] -> IO ()
+    |                             ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:225:24: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+225 | _showFullDebugState :: CommandLineDebugConfig -> IO ()
+    |                        ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:247:24: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+247 | _debugFunctionEntry :: CommandLineDebugConfig -> String -> String -> [(String, String)] -> IO ()
+    |                        ^^^^^^^^^^^^^^^^^^^^^^
+
+src/DebugIntegration.hs:257:23: error: [GHC-76037]
+    Not in scope: type constructor or class `CommandLineDebugConfig'
+    Suggested fix:
+      Add `CommandLineDebugConfig' to the import list in the import of
+      `CommandLineDebug' (at src/DebugIntegration.hs:27:1-236).
+    |
+257 | _debugFunctionExit :: CommandLineDebugConfig -> String -> String -> IO ()
+    |                       ^^^^^^^^^^^^^^^^^^^^^^
+
+Error: [Cabal-7125]
+Failed to build typus-0.12.0 (which is required by test:typus-test from typus-0.12.0).
+

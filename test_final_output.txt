@@ -2,7 +2,7 @@ Build profile: -w ghc-9.12.2 -O1
 In order, the following will be built (use -v for more details):
  - typus-0.12.0 (lib) (configuration changed)
  - typus-0.12.0 (exe:typus) (configuration changed)
- - typus-0.12.0 (test:typus-test) (first run)
+ - typus-0.12.0 (test:typus-test) (dependency rebuilt)
 Configuring library for typus-0.12.0...
 Preprocessing library for typus-0.12.0...
 Building library for typus-0.12.0...
@@ -10,48 +10,9 @@ Configuring executable 'typus' for typus-0.12.0...
 Preprocessing executable 'typus' for typus-0.12.0...
 Building executable 'typus' for typus-0.12.0...
 [2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/x/typus/build/typus/typus [Flags changed]
-Configuring test suite 'typus-test' for typus-0.12.0...
 Preprocessing test suite 'typus-test' for typus-0.12.0...
 Building test suite 'typus-test' for typus-0.12.0...
-[ 1 of 38] Compiling Test.Dependencies.Arbitrary ( test/Test/Dependencies/Arbitrary.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Dependencies/Arbitrary.o )
-[ 2 of 38] Compiling Test.Golden.CompilerSpec ( test/Test/Golden/CompilerSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Golden/CompilerSpec.o )
-[ 3 of 38] Compiling Test.Golden.Tests ( test/Test/Golden/Tests.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Golden/Tests.o )
-[ 4 of 38] Compiling Test.Golden      ( test/Test/Golden.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Golden.o )
-[ 5 of 38] Compiling Test.Integration.AnalyzerSpec ( test/Test/Integration/AnalyzerSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/AnalyzerSpec.o )
-[ 6 of 38] Compiling Test.Integration.CLISpec ( test/Test/Integration/CLISpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/CLISpec.o )
-[ 7 of 38] Compiling Test.Integration.FullProjectSpec ( test/Test/Integration/FullProjectSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/FullProjectSpec.o )
-[ 8 of 38] Compiling Test.Integration.IntegratedCompilerSpec ( test/Test/Integration/IntegratedCompilerSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/IntegratedCompilerSpec.o )
-[ 9 of 38] Compiling Test.Integration.OwnershipSpec ( test/Test/Integration/OwnershipSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/OwnershipSpec.o )
-[10 of 38] Compiling Test.Integration.PipelineSpec ( test/Test/Integration/PipelineSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/PipelineSpec.o )
-[11 of 38] Compiling Test.Integration.Tests ( test/Test/Integration/Tests.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration/Tests.o )
-[12 of 38] Compiling Test.Integration ( test/Test/Integration.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Integration.o )
-[13 of 38] Compiling Test.Unit.AdvancedParserSpec ( test/Test/Unit/AdvancedParserSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/AdvancedParserSpec.o )
-[14 of 38] Compiling Test.Unit.CLISpec ( test/Test/Unit/CLISpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CLISpec.o )
-[15 of 38] Compiling Test.Unit.CommandLineDebugSpec ( test/Test/Unit/CommandLineDebugSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CommandLineDebugSpec.o )
-[16 of 38] Compiling Test.Unit.CompilerSpec ( test/Test/Unit/CompilerSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CompilerSpec.o )
-[17 of 38] Compiling Test.Unit.DependentTypesSpec ( test/Test/Unit/DependentTypesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/DependentTypesSpec.o )
-[18 of 38] Compiling Test.Unit.EdgeCaseSpec ( test/Test/Unit/EdgeCaseSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/EdgeCaseSpec.o )
-[19 of 38] Compiling Test.Unit.EmbedAssetsSpec ( test/Test/Unit/EmbedAssetsSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/EmbedAssetsSpec.o )
-[20 of 38] Compiling Test.Unit.ErrorHandlingSpec ( test/Test/Unit/ErrorHandlingSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ErrorHandlingSpec.o )
-[21 of 38] Compiling Test.Unit.GoToolchainSpec ( test/Test/Unit/GoToolchainSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/GoToolchainSpec.o )
-[22 of 38] Compiling Test.Unit.IntegrationSpec ( test/Test/Unit/IntegrationSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/IntegrationSpec.o )
-[23 of 38] Compiling Test.Unit.OwnershipBridgeSpec ( test/Test/Unit/OwnershipBridgeSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/OwnershipBridgeSpec.o )
-[24 of 38] Compiling Test.Unit.OwnershipSpec ( test/Test/Unit/OwnershipSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/OwnershipSpec.o )
-[25 of 38] Compiling Test.Unit.ParserSpec ( test/Test/Unit/ParserSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ParserSpec.o )
-[26 of 38] Compiling Test.Unit.PerformanceSpec ( test/Test/Unit/PerformanceSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/PerformanceSpec.o )
-[27 of 38] Compiling Test.Unit.SourceLocationSpec ( test/Test/Unit/SourceLocationSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/SourceLocationSpec.o )
-[28 of 38] Compiling Test.Unit.SymbolTableSpec ( test/Test/Unit/SymbolTableSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/SymbolTableSpec.o )
-[29 of 38] Compiling Test.Unit.SyntaxValidatorSpec ( test/Test/Unit/SyntaxValidatorSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/SyntaxValidatorSpec.o )
-[30 of 38] Compiling Test.Unit.TypeSystemSpec ( test/Test/Unit/TypeSystemSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeSystemSpec.o )
-[31 of 38] Compiling TestSupport.QuickCheck ( test/TestSupport/QuickCheck.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/TestSupport/QuickCheck.o )
-[32 of 38] Compiling Test.Unit.ValueAnalysisSpec ( test/Test/Unit/ValueAnalysisSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ValueAnalysisSpec.o )
-[33 of 38] Compiling Test.Unit.UtilsSpec ( test/Test/Unit/UtilsSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsSpec.o )
-[34 of 38] Compiling TestSupport.Verbosity ( test/TestSupport/Verbosity.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/TestSupport/Verbosity.o )
-[35 of 38] Compiling Test.Unit.VerbositySpec ( test/Test/Unit/VerbositySpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/VerbositySpec.o )
-[36 of 38] Compiling Test.Unit.Tests  ( test/Test/Unit/Tests.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/Tests.o )
-[37 of 38] Compiling Test.Unit        ( test/Test/Unit.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit.o )
-[38 of 38] Compiling Main             ( test/Main.hs, dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test-tmp/Main.o )
-[39 of 39] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test
+[39 of 39] Linking dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/build/typus-test/typus-test [Flags changed]
 Running 1 test suites...
 Test suite typus-test: RUNNING...
 Typus
@@ -340,7 +301,7 @@ Typus
       compiles complex types efficiently:                                                   OK
       handles deeply nested structures efficiently:                                         OK
       processes many small functions efficiently:                                           OK (0.08s)
-      memory usage remains reasonable for large files:                                      OK (0.06s)
+      memory usage remains reasonable for large files:                                      OK (0.07s)
       compilation time scales linearly with file size:                                      OK
       error handling doesn't significantly impact performance:                              OK
       parallel processing potential:                                                        OK
@@ -432,7 +393,7 @@ Typus
       statements without package/import infer a runnable main:                              OK
       generic type parameters render Go square bracket notation:                            OK
 
-All 319 tests passed (0.40s)
+All 319 tests passed (0.41s)
 Test suite typus-test: PASS
 Test suite logged to:
 /home/runner/work/Typus/Typus/./dist-newstyle/build/x86_64-linux/ghc-9.12.2/typus-0.12.0/t/typus-test/test/typus-0.12.0-typus-test.log
