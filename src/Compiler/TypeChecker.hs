@@ -43,6 +43,9 @@ import Utils (trim)
 -- | Lightweight representation of a type in the simplified checker.
 data Type
     = TypeName String
+    | TypeFunction [Type] Type
+    | TypeRecord [(String, Type)]
+    | TypeUnion [Type]
     | UnknownType
     deriving (Eq, Ord, Show)
 
@@ -51,19 +54,19 @@ data FunctionParam = FunctionParam
     { fpName :: Maybe String
     , fpType :: Type
     , fpVariadic :: Bool
-    } deriving (Eq, Show)
+    } deriving (Eq, Ord, Show)
 
 -- | Function signature containing positional parameters and return types.
 data FunctionSignature = FunctionSignature
     { fsParams :: [FunctionParam]
     , fsReturns :: [Type]
-    } deriving (Eq, Show)
+    } deriving (Eq, Ord, Show)
 
 -- | Environment containing discovered variable and function types.
 data TypeEnv = TypeEnv
     { varTypes :: Map String Type
     , functionTypes :: Map String FunctionSignature
-    } deriving (Show)
+    } deriving (Eq, Show)
 
 data VarSpec = VarSpec
     { vsNames :: [String]
@@ -74,18 +77,18 @@ data VarSpec = VarSpec
 data CallExpr = CallExpr
     { callName :: String
     , callArgs :: [String]
-    } deriving (Eq, Show)
+    } deriving (Eq, Ord, Show)
 
 data TypeError = TypeError
     { teContext :: Maybe String
     , teMessage :: String
-    } deriving (Eq, Show)
+    } deriving (Eq, Ord, Show)
 
 -- | Public diagnostic representation exposed to the compiler pipeline.
 data TypeCheckDiagnostic = TypeCheckDiagnostic
     { tcdContext :: Maybe String
     , tcdMessage :: String
-    } deriving (Eq, Show)
+    } deriving (Eq, Ord, Show)
 
 
 -- | Determine whether the given Typus file has malformed Go syntax.

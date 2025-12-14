@@ -48,7 +48,7 @@ data SymbolInfo = SymbolInfo
     } deriving (Show, Eq)
 
 data AnalysisPhase = InitialPhase | OwnershipPhase | DependentTypePhase | IntegrationPhase
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 
 data AnalysisContext = AnalysisContext
     { enableOwnership :: Bool

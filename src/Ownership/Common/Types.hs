@@ -2,6 +2,7 @@ module Ownership.Common.Types (
     OwnershipType(..),
     OwnershipError(..),
     OwnershipAnalyzer(..),
+    OwnershipTransfer(..),
     newOwnershipAnalyzer
 ) where
 
@@ -38,6 +39,12 @@ data OwnershipError
 -- | Lightweight handle that keeps the public API stable while allowing the
 -- implementation to evolve behind the scenes.
 newtype OwnershipAnalyzer = OwnershipAnalyzer () deriving (Show, Eq)
+
+-- | Ownership transfer operation between variables
+data OwnershipTransfer = OwnershipTransfer
+  { transferFrom :: String
+  , transferTo :: String
+  } deriving (Show, Eq)
 
 -- | Smart constructor used by higher level code to obtain an analyzer handle.
 newOwnershipAnalyzer :: OwnershipAnalyzer

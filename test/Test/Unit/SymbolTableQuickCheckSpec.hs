@@ -6,7 +6,8 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property)
+import TestSupport.ExtendedArbitrary
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.))
 
 import Analyzer.SymbolTable
 import Analyzer.Types
@@ -21,13 +22,13 @@ import qualified Data.Map.Strict as Map
 prop_empty_symboltable :: Property
 prop_empty_symboltable =
   let symbolTable = Map.empty :: Map.Map String SymbolInfo
-  in Map.null symbolTable
+  in property $ Map.null symbolTable
 
 -- Property: symbol table with one entry
 prop_symboltable_one_entry :: String -> SymbolInfo -> Property
 prop_symboltable_one_entry name symbolInfo =
   let symbolTable = Map.singleton name symbolInfo
-  in Map.size symbolTable === 1 &&
+  in Map.size symbolTable === 1 .&&.
      Map.lookup name symbolTable === Just symbolInfo
 
 -- Property: symbol table with multiple entries
@@ -55,7 +56,7 @@ prop_symboltable_insert :: [(String, SymbolInfo)] -> String -> SymbolInfo -> Pro
 prop_symboltable_insert pairs key value =
   let symbolTable = Map.fromList pairs
       newTable = Map.insert key value symbolTable
-  in Map.lookup key newTable === Just value &&
+  in Map.lookup key newTable === Just value .&&.
      Map.size newTable === if Map.member key symbolTable 
                            then Map.size symbolTable 
                            else Map.size symbolTable + 1
@@ -66,7 +67,7 @@ prop_symboltable_delete pairs key =
   let symbolTable = Map.fromList pairs
       newTable = Map.delete key symbolTable
       hadKey = Map.member key symbolTable
-  in Map.lookup key newTable === Nothing &&
+  in Map.lookup key newTable === Nothing .&&.
      Map.size newTable === if hadKey then Map.size symbolTable - 1 else Map.size symbolTable
 
 -- Property: symbol table member
@@ -81,8 +82,8 @@ prop_symboltable_keys pairs =
   let symbolTable = Map.fromList pairs
       keys = Map.keys symbolTable
       expectedKeys = uniqueKeys pairs
-  in length keys === length expectedKeys &&
-     all (`elem` expectedKeys) keys
+  in length keys === length expectedKeys .&&.
+     property (all (`elem` expectedKeys) keys)
   where
     uniqueKeys = map fst . Map.toList . Map.fromList
 
@@ -100,10 +101,10 @@ prop_symboltable_union pairs1 pairs2 =
   let table1 = Map.fromList pairs1
       table2 = Map.fromList pairs2
       unionTable = Map.union table1 table2
-  in Map.size unionTable >= Map.size table1 &&
-     Map.size unionTable >= Map.size table2 &&
-     all (`Map.member` unionTable) (Map.keys table1) &&
-     all (`Map.member` unionTable) (Map.keys table2)
+  in Map.size unionTable >= Map.size table1 .&&.
+     Map.size unionTable >= Map.size table2 .&&.
+     property (all (`Map.member` unionTable) (Map.keys table1)) .&&.
+     property (all (`Map.member` unionTable) (Map.keys table2))
 
 -- Property: symbol table intersection
 prop_symboltable_intersection :: [(String, SymbolInfo)] -> [(String, SymbolInfo)] -> Property
@@ -112,7 +113,7 @@ prop_symboltable_intersection pairs1 pairs2 =
       table2 = Map.fromList pairs2
       intersectTable = Map.intersection table1 table2
       commonKeys = filter (`Map.member` table2) (Map.keys table1)
-  in Map.size intersectTable === length commonKeys &&
+  in property $ Map.size intersectTable === length commonKeys .&&.
      all (`Map.member` intersectTable) commonKeys
 
 -- Property: symbol table difference
@@ -122,7 +123,7 @@ prop_symboltable_difference pairs1 pairs2 =
       table2 = Map.fromList pairs2
       diffTable = Map.difference table1 table2
       exclusiveKeys = filter (not . (`Map.member` table2)) (Map.keys table1)
-  in Map.size diffTable === length exclusiveKeys &&
+  in property $ Map.size diffTable === length exclusiveKeys .&&.
      all (`Map.member` diffTable) exclusiveKeys
 
 -- Property: symbol table map
@@ -130,7 +131,7 @@ prop_symboltable_map :: [(String, SymbolInfo)] -> Property
 prop_symboltable_map pairs =
   let symbolTable = Map.fromList pairs
       mappedTable = Map.map (\si -> si { symbolScope = symbolScope si + 1 }) symbolTable
-  in Map.size mappedTable === Map.size symbolTable &&
+  in property $ Map.size mappedTable === Map.size symbolTable .&&.
      all (\(k, v) -> symbolScope v == symbolScope (Map.findWithDefault undefined k symbolTable) + 1) 
          (Map.toList mappedTable)
 
@@ -147,14 +148,14 @@ prop_symboltable_duplicate_keys :: String -> SymbolInfo -> SymbolInfo -> Propert
 prop_symboltable_duplicate_keys key value1 value2 =
   let table1 = Map.singleton key value1
       table2 = Map.insert key value2 table1
-  in Map.size table2 === 1 &&
+  in Map.size table2 === 1 .&&.
      Map.lookup key table2 === Just value2
 
 -- Property: symbol table with empty key
 prop_symboltable_empty_key :: SymbolInfo -> Property
 prop_symboltable_empty_key value =
   let table = Map.singleton "" value
-  in Map.size table === 1 &&
+  in Map.size table === 1 .&&.
      Map.lookup "" table === Just value
 
 -- Property: symbol table with special character keys
@@ -162,7 +163,7 @@ prop_symboltable_special_chars :: SymbolInfo -> Property
 prop_symboltable_special_chars value =
   let specialChars = "!@#$%^&*()_+-=[]{}|;':\",./<>?"
       table = Map.singleton specialChars value
-  in Map.size table === 1 &&
+  in Map.size table === 1 .&&.
      Map.lookup specialChars table === Just value
 
 -- Property: symbol table with Unicode keys
@@ -170,7 +171,7 @@ prop_symboltable_unicode :: SymbolInfo -> Property
 prop_symboltable_unicode value =
   let unicode = "测试键名🚀"
       table = Map.singleton unicode value
-  in Map.size table === 1 &&
+  in Map.size table === 1 .&&.
      Map.lookup unicode table === Just value
 
 -- Property: symbol table with SymbolKind Variable
@@ -196,7 +197,7 @@ prop_symboltable_different_scopes :: String -> [Int] -> Property
 prop_symboltable_different_scopes name scopes =
   let symbolInfos = map (\scope -> SymbolInfo name Nothing Nothing scope False False []) scopes
       tables = map (\si -> Map.singleton name si) symbolInfos
-  in all (\t -> Map.size t === 1) tables &&
+  in property $ all (\t -> Map.size t == 1) tables .&&.
      all (\t -> case Map.lookup name t of
                    Just si -> symbolScope si `elem` scopes
                    Nothing -> False) tables
@@ -207,7 +208,7 @@ prop_symboltable_moved_borrowed name moved borrowed =
   let symbolInfo = SymbolInfo name Nothing Nothing 0 moved borrowed []
       table = Map.singleton name symbolInfo
   in case Map.lookup name table of
-    Just si -> isMoved si === moved && isBorrowed si === borrowed
+    Just si -> isMoved si === moved .&&. isBorrowed si === borrowed
     Nothing -> property False
 
 -- Property: symbol table with type information
@@ -243,12 +244,12 @@ prop_symboltable_complete name typeVar ownershipType scope moved borrowed constr
   let symbolInfo = SymbolInfo name (Just typeVar) (Just ownershipType) scope moved borrowed constraintList
       table = Map.singleton name symbolInfo
   in case Map.lookup name table of
-    Just si -> symbolName si === name &&
-               symbolType si === Just typeVar &&
-               ownershipState si === Just ownershipType &&
-               symbolScope si === scope &&
-               isMoved si === moved &&
-               isBorrowed si === borrowed &&
+    Just si -> symbolName si === name .&&.
+               symbolType si === Just typeVar .&&.
+               ownershipState si === Just ownershipType .&&.
+               symbolScope si === scope .&&.
+               isMoved si === moved .&&.
+               isBorrowed si === borrowed .&&.
                constraints si === constraintList
     Nothing -> property False
 
@@ -270,13 +271,13 @@ prop_symboltable_size_empty =
 prop_symboltable_size_single :: String -> SymbolInfo -> Property
 prop_symboltable_size_single name symbolInfo =
   let symbolTable = Map.singleton name symbolInfo
-  in Map.size symbolTable === 1
+  in property $ Map.size symbolTable === 1
 
 -- Property: symbol table size with multiple entries
 prop_symboltable_size_multiple :: [(String, SymbolInfo)] -> Property
 prop_symboltable_size_multiple pairs =
   let symbolTable = Map.fromList pairs
-  in Map.size symbolTable === length (uniqueKeys pairs)
+  in property $ Map.size symbolTable === length (uniqueKeys pairs)
   where
     uniqueKeys = map fst . Map.toList . Map.fromList
 

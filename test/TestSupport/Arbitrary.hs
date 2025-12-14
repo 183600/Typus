@@ -43,6 +43,7 @@ import Analyzer.Types
   )
 import qualified Compiler.TypeChecker as TC
   ( Type(..)
+  , TypeEnv(..)
   , FunctionParam(..)
   , FunctionSignature(..)
   , CallExpr(..)
@@ -214,6 +215,9 @@ instance Arbitrary TC.TypeError where
 
 instance Arbitrary TC.TypeCheckDiagnostic where
   arbitrary = TC.TypeCheckDiagnostic <$> arbitrary <*> genIdentifier
+
+instance Arbitrary TC.TypeEnv where
+  arbitrary = TC.TypeEnv <$> arbitrary <*> arbitrary
 
 -- Error severity generators
 instance Arbitrary ErrorSeverity where

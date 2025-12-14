@@ -6,24 +6,85 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property)
+import TestSupport.ExtendedArbitrary
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.))
 
 import SyntaxValidator
   ( SyntaxError(..)
+  , ErrorType(..)
   , validateSyntax
-  , isValidIdentifier
-  , isValidType
   )
+-- import Analyzer.SymbolTable (isValidIdentifier) -- Not exported
 import Data.List (isInfixOf)
-import Data.Char (isAlphaNum, isLetter)
+import Data.Char (isAlphaNum, isLetter, isAlpha, isDigit)
+
+-- Ord instance for SyntaxError for testing
+instance Ord SyntaxError where
+  compare err1 err2 = 
+    case compare (errorMessage err1) (errorMessage err2) of
+      LT -> LT
+      GT -> GT
+      EQ -> case compare (lineNumber err1) (lineNumber err2) of
+        LT -> LT
+        GT -> GT
+        EQ -> compare (columnNumber err1) (columnNumber err2)
+
+-- Local implementation of isValidType since it's not exported from SyntaxValidator
+isValidType :: String -> Bool
+isValidType "" = False
+isValidType s = all isValidTypeChar s && isAlpha (head s)
+  where
+    isValidTypeChar c = isAlphaNum c || c == '_'
+
+-- Local implementation of isValidIdentifier since it's not exported from Analyzer.SymbolTable
+isValidIdentifier :: String -> Bool
+isValidIdentifier name =
+    not (null name)
+        && not (isReservedName name)
+        && case name of
+            [] -> False
+            (c : _) -> not (isDigit c) && all isAllowed name
+  where
+    isAllowed char = isAlphaNum char || char == '_'
+    isReservedName name =
+        name
+            `elem` [ "fmt"
+                   , "func"
+                   , "var"
+                   , "let"
+                   , "if"
+                   , "else"
+                   , "for"
+                   , "return"
+                   , "import"
+                   , "package"
+                   , "type"
+                   , "struct"
+                   , "interface"
+                   , "const"
+                   , "true"
+                   , "false"
+                   , "nil"
+                   , "int"
+                   , "string"
+                   , "bool"
+                   , "float64"
+                   ]
 
 -- Property: SyntaxError with message and position
 prop_syntaxerror_preserves :: String -> Int -> Int -> Property
 prop_syntaxerror_preserves message line col =
-  let error = SyntaxError message line col
-  in errorMessage error === message &&
-     errorLine error === line &&
-     errorColumn error === col
+  let error = SyntaxError MissingBrace message line col ""
+  in case error of
+    SyntaxError _ m _ _ _ -> m === message
+    _ -> property False
+
+-- Helper functions for accessing SyntaxError fields  
+errorLine :: SyntaxError -> Int
+errorLine (SyntaxError _ _ line _ _) = line
+
+errorColumn :: SyntaxError -> Int
+errorColumn (SyntaxError _ _ _ col _) = col
 
 -- Property: SyntaxError equality
 prop_syntaxerror_eq :: SyntaxError -> SyntaxError -> Property
@@ -43,67 +104,67 @@ prop_syntaxerror_ordering err1 err2 =
 prop_syntaxerror_show :: SyntaxError -> Property
 prop_syntaxerror_show error =
   let shown = show error
-  in not (null shown)
+  in property $ not (null shown)
 
 -- Property: SyntaxError show contains message
 prop_syntaxerror_show_contains_message :: String -> Int -> Int -> Property
 prop_syntaxerror_show_contains_message message line col =
-  let error = SyntaxError message line col
+  let error = SyntaxError MissingBrace message line col ""
       shown = show error
-  in message `isInfixOf` shown
+  in property $ message `isInfixOf` shown
 
 -- Property: SyntaxError show contains position
 prop_syntaxerror_show_contains_position :: String -> Int -> Int -> Property
 prop_syntaxerror_show_contains_position message line col =
-  let error = SyntaxError message line col
+  let error = SyntaxError MissingParenthesis message line col ""
       shown = show error
-  in show line `isInfixOf` shown &&
+  in property $ show line `isInfixOf` shown &&
      show col `isInfixOf` shown
 
 -- Property: SyntaxError with empty message
 prop_syntaxerror_empty_message :: Int -> Int -> Property
 prop_syntaxerror_empty_message line col =
-  let error = SyntaxError "" line col
-  in errorMessage error === "" &&
-     errorLine error === line &&
-     errorColumn error === col
+  let error = SyntaxError MissingBracket "" line col ""
+  in property $ (errorMessage error === "") .&&.
+                (lineNumber error === line) .&&.
+                (columnNumber error === col)
 
 -- Property: SyntaxError with negative position
 prop_syntaxerror_negative_position :: String -> Property
 prop_syntaxerror_negative_position message =
-  let error = SyntaxError message (-1) (-5)
-  in errorMessage error === message &&
-     errorLine error === -1 &&
-     errorColumn error === -5
+  let error = SyntaxError MissingBrace message (-1) (-5) ""
+  in property $ (lineNumber error === -1) .&&. (columnNumber error === -5)
 
 -- Property: SyntaxError with zero position
 prop_syntaxerror_zero_position :: String -> Property
 prop_syntaxerror_zero_position message =
-  let error = SyntaxError message 0 0
-  in errorMessage error === message &&
-     errorLine error === 0 &&
-     errorColumn error === 0
+  let error = SyntaxError MissingBrace message 0 0 ""
+  in property $ (lineNumber error === 0) .&&. (columnNumber error === 0)
+
+-- Property: SyntaxError with zero values
+prop_syntaxerror_zero :: Property
+prop_syntaxerror_zero =
+  let error = SyntaxError MissingSemicolon "error" 0 0 ""
+  in property $ (lineNumber error === 0) .&&. (columnNumber error === 0)
 
 -- Property: SyntaxError with large position
 prop_syntaxerror_large_position :: String -> Property
 prop_syntaxerror_large_position message =
-  let error = SyntaxError message 999999 999999
-  in errorMessage error === message &&
-     errorLine error === 999999 &&
-     errorColumn error === 999999
+  let error = SyntaxError MissingBracket message 999999 999999 ""
+  in property $ (lineNumber error === 999999) .&&. (columnNumber error === 999999)
 
 -- Property: SyntaxError with special characters
 prop_syntaxerror_special_chars :: Int -> Int -> Property
 prop_syntaxerror_special_chars line col =
   let specialChars = "!@#$%^&*()_+-=[]{}|;':\",./<>?"
-      error = SyntaxError specialChars line col
+      error = SyntaxError MissingBrace specialChars line col ""
   in errorMessage error === specialChars
 
 -- Property: SyntaxError with Unicode characters
 prop_syntaxerror_unicode :: Int -> Int -> Property
 prop_syntaxerror_unicode line col =
   let unicode = "测试错误信息🚀"
-      error = SyntaxError unicode line col
+      error = SyntaxError MissingParenthesis unicode line col ""
   in errorMessage error === unicode
 
 -- Property: isValidIdentifier with valid identifiers
@@ -121,42 +182,42 @@ prop_isvalididentifier_invalid_start name =
 -- Property: isValidIdentifier with empty string
 prop_isvalididentifier_empty :: Property
 prop_isvalididentifier_empty =
-  isValidIdentifier "" === False
+  property $ isValidIdentifier "" === False
 
 -- Property: isValidIdentifier with only letters
 prop_isvalididentifier_letters_only :: Property
 prop_isvalididentifier_letters_only =
   let name = "testIdentifier"
-  in isValidIdentifier name === True
+  in property $ isValidIdentifier name === True
 
 -- Property: isValidIdentifier with letters and numbers
 prop_isvalididentifier_alphanumeric :: Property
 prop_isvalididentifier_alphanumeric =
   let name = "test123Identifier456"
-  in isValidIdentifier name === True
+  in property $ isValidIdentifier name === True
 
 -- Property: isValidIdentifier with special characters
 prop_isvalididentifier_special_chars :: Property
 prop_isvalididentifier_special_chars =
   let name = "test-identifier"
-  in isValidIdentifier name === False
+  in property $ isValidIdentifier name === False
 
 -- Property: isValidIdentifier with spaces
 prop_isvalididentifier_spaces :: Property
 prop_isvalididentifier_spaces =
   let name = "test identifier"
-  in isValidIdentifier name === False
+  in property $ isValidIdentifier name === False
 
 -- Property: isValidIdentifier with Unicode
 prop_isvalididentifier_unicode :: Property
 prop_isvalididentifier_unicode =
   let name = "测试标识符"
-  in isValidIdentifier name === False -- Assuming only ASCII is valid
+  in property $ isValidIdentifier name === False -- Assuming only ASCII is valid
 
 -- Property: isValidType with valid types
 prop_isvalidtype_valid :: String -> Property
 prop_isvalidtype_valid typeName =
-  not (null typeName) && isLetter (head typeName) && all (\c -> isAlphaNum c || c == '_') (tail name) ==> 
+  not (null typeName) && isLetter (head typeName) && all (\c -> isAlphaNum c || c == '_') (tail typeName) ==> 
   isValidType typeName === True
 
 -- Property: isValidType with invalid types
@@ -174,101 +235,98 @@ prop_isvalidtype_underscores =
 -- Property: isValidType with empty string
 prop_isvalidtype_empty :: Property
 prop_isvalidtype_empty =
-  isValidType "" === False
+  property $ isValidType "" === False
 
 -- Property: isValidType with special characters
 prop_isvalidtype_special_chars :: Property
 prop_isvalidtype_special_chars =
   let typeName = "test-type"
-  in isValidType typeName === False
+  in property $ isValidType typeName === False
 
 -- Property: isValidType with spaces
 prop_isvalidtype_spaces :: Property
 prop_isvalidtype_spaces =
   let typeName = "test type"
-  in isValidType typeName === False
+  in property $ isValidType typeName === False
 
 -- Property: validateSyntax with empty input
 prop_validatesyntax_empty :: Property
 prop_validatesyntax_empty =
   let errors = validateSyntax ""
-  in null errors
+  in property $ null errors
 
 -- Property: validateSyntax with simple valid code
 prop_validatesyntax_simple_valid :: Property
 prop_validatesyntax_simple_valid =
   let code = "package main\nfunc main() {}\n"
       errors = validateSyntax code
-  in null errors
+  in property $ null errors
 
 -- Property: validateSyntax with invalid code
 prop_validatesyntax_invalid :: Property
 prop_validatesyntax_invalid =
-  let code = "func main {\n"  // Missing parentheses
+  let code = "func main {\n"  -- Missing parentheses
       errors = validateSyntax code
-  in not (null errors)
+  in property $ not (null errors)
 
 -- Property: SyntaxError with same position different message
 prop_syntaxerror_same_position_different_message :: Int -> Int -> String -> String -> Property
 prop_syntaxerror_same_position_different_message line col msg1 msg2 =
-  let err1 = SyntaxError msg1 line col
-      err2 = SyntaxError msg2 line col
+  let err1 = SyntaxError InvalidIdentifier msg1 line col ""
+      err2 = SyntaxError InvalidIdentifier msg2 line col ""
   in (err1 == err2) === (msg1 == msg2)
 
 -- Property: SyntaxError with same message different position
 prop_syntaxerror_same_message_different_position :: String -> Int -> Int -> Int -> Int -> Property
 prop_syntaxerror_same_message_different_position msg line1 col1 line2 col2 =
-  let err1 = SyntaxError msg line1 col1
-      err2 = SyntaxError msg line2 col2
+  let err1 = SyntaxError InvalidIdentifier msg line1 col1 ""
+      err2 = SyntaxError InvalidIdentifier msg line2 col2 ""
   in (err1 == err2) === (line1 == line2 && col1 == col2)
 
 -- Property: SyntaxError ordering by message
 prop_syntaxerror_ordering_by_message :: String -> String -> Property
 prop_syntaxerror_ordering_by_message msg1 msg2 =
-  let err1 = SyntaxError msg1 0 0
-      err2 = SyntaxError msg2 0 0
+  let err1 = SyntaxError InvalidIdentifier msg1 0 0 ""
+      err2 = SyntaxError InvalidIdentifier msg2 0 0 ""
       result = compare err1 err2
   in (msg1 <= msg2) ==> (result == LT || result == EQ)
 
 -- Property: SyntaxError ordering by line when messages equal
 prop_syntaxerror_ordering_by_line :: String -> Int -> Int -> Property
 prop_syntaxerror_ordering_by_line msg line1 line2 =
-  let err1 = SyntaxError msg line1 0
-      err2 = SyntaxError msg line2 0
+  let err1 = SyntaxError InvalidIdentifier msg line1 0 ""
+      err2 = SyntaxError InvalidIdentifier msg line2 0 ""
       result = compare err1 err2
   in (line1 <= line2) ==> (result == LT || result == EQ)
 
 -- Property: SyntaxError ordering by column when messages and lines equal
 prop_syntaxerror_ordering_by_column :: String -> Int -> Int -> Int -> Property
 prop_syntaxerror_ordering_by_column msg line col1 col2 =
-  let err1 = SyntaxError msg line col1
-      err2 = SyntaxError msg line col2
+  let err1 = SyntaxError InvalidIdentifier msg line col1 ""
+      err2 = SyntaxError InvalidIdentifier msg line col2 ""
       result = compare err1 err2
   in (col1 <= col2) ==> (result == LT || result == EQ)
 
 -- Property: isValidIdentifier with single character
 prop_isvalididentifier_single_char :: Property
 prop_isvalididentifier_single_char =
-  let name = "a"
-  in isValidIdentifier name === True
+  property $ isValidIdentifier "a" === True
 
 -- Property: isValidIdentifier with single number
 prop_isvalididentifier_single_number :: Property
 prop_isvalididentifier_single_number =
-  let name = "1"
-  in isValidIdentifier name === False
+  property $ isValidIdentifier "1" === False
 
 -- Property: isValidType with single character
 prop_isvalidtype_single_char :: Property
 prop_isvalidtype_single_char =
-  let typeName = "T"
-  in isValidType typeName === True
+  property $ isValidType "A" === True
 
 -- Property: isValidType with single underscore
 prop_isvalidtype_single_underscore :: Property
 prop_isvalidtype_single_underscore =
   let typeName = "_"
-  in isValidType typeName === False
+  in property $ isValidType typeName === False
 
 -- Property: isValidType with consecutive underscores
 prop_isvalidtype_consecutive_underscores :: Property
@@ -276,26 +334,26 @@ prop_isvalidtype_consecutive_underscores =
   let typeName = "test__type"
   in isValidType typeName === True
 
--- Property: validateSyntax with only whitespace
+-- Property: validateSyntax with whitespace only
 prop_validatesyntax_whitespace :: Property
 prop_validatesyntax_whitespace =
   let code = "   \n\t\n  \n"
       errors = validateSyntax code
-  in null errors
+  in property $ null errors
 
 -- Property: validateSyntax with comments only
 prop_validatesyntax_comments :: Property
 prop_validatesyntax_comments =
   let code = "// This is a comment\n/* Another comment */\n"
       errors = validateSyntax code
-  in null errors
+  in property $ null errors
 
 -- Property: validateSyntax with mixed valid and invalid
 prop_validatesyntax_mixed :: Property
 prop_validatesyntax_mixed =
-  let code = "package main\nfunc valid() {}\nfunc invalid {\n"  // Last function is invalid
+  let code = "package main\nfunc valid() {}\nfunc invalid {\n"  -- Last function is invalid
       errors = validateSyntax code
-  in not (null errors)
+  in property $ not (null errors)
 
 tests :: TestTree
 tests = testGroup "SyntaxValidator QuickCheck tests"

@@ -2,6 +2,7 @@ module Ownership
   ( OwnershipType(..)
   , OwnershipError(..)
   , OwnershipAnalyzer
+  , OwnershipTransfer(..)
   , newOwnershipAnalyzer
   , analyzeOwnership
   , analyzeOwnershipFile
@@ -22,6 +23,7 @@ import Ownership.Common.Types
   ( OwnershipAnalyzer
   , OwnershipError(..)
   , OwnershipType(..)
+  , OwnershipTransfer(..)
   , newOwnershipAnalyzer
   )
 import Ownership.Lexer (lexAll)

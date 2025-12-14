@@ -24,13 +24,13 @@ data ValueKind
     = ValueCopy
     | Reference
     | Unknown
-    deriving (Eq, Show)
+    deriving (Eq, Ord, Show)
 
 data ValueInfo = ValueInfo
     { viName :: String
     , viKind :: ValueKind
     , viLine :: Int
-    } deriving (Eq, Show)
+    } deriving (Eq, Ord, Show)
 
 type ValueTypeSet = Set.Set String
 

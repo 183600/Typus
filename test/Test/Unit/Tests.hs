@@ -36,6 +36,9 @@ import qualified Test.Unit.ValueAnalysisQuickCheckSpec
 import qualified Test.Unit.SyntaxValidatorQuickCheckSpec
 import qualified Test.Unit.ErrorHandlingQuickCheckSpec
 import qualified Test.Unit.DependentTypesQuickCheckSpec
+import qualified Test.Unit.DependenciesQuickCheckSpec
+import qualified Test.Unit.AdvancedQuickCheckSpec
+import qualified Test.Unit.PerformanceQuickCheckSpec
 
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
@@ -75,5 +78,8 @@ tests =
         , Test.Unit.SyntaxValidatorQuickCheckSpec.tests
         , Test.Unit.ErrorHandlingQuickCheckSpec.tests
         , Test.Unit.DependentTypesQuickCheckSpec.tests
+        , Test.Unit.DependenciesQuickCheckSpec.tests
+        , Test.Unit.AdvancedQuickCheckSpec.tests
+        , Test.Unit.PerformanceQuickCheckSpec.tests
         ]
     ]
