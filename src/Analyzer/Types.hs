@@ -57,6 +57,10 @@ data AnalysisContext = AnalysisContext
     , analysisPhase :: AnalysisPhase
     } deriving (Show, Eq)
 
+-- Accessor for ownership enabled flag
+acOwnershipEnabled :: AnalysisContext -> Bool
+acOwnershipEnabled = enableOwnership
+
 data AnalyzerState = AnalyzerState
     { ownershipAnalyzer :: Own.OwnershipAnalyzer
     , dependentTypeChecker :: Dep.DependentTypeChecker

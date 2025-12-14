@@ -198,7 +198,7 @@ instance NFData ErrorType where
     UndeclaredVariable -> ()
 
 instance NFData a => NFData (Located a) where
-  rnf (Located span value) = span `deepseq` value `deepseq` ()
+  rnf (Located value pos span) = value `deepseq` pos `deepseq` span `deepseq` ()
 
 instance NFData FileDirectives where
   rnf (FileDirectives ownership dependentTypes constraints) = 

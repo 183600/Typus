@@ -134,8 +134,9 @@ isValidSpan srcSpan = spanStart srcSpan <= spanEnd srcSpan
 -- ============================================================================
 
 data Located a = Located
-    { locSpan :: SourceSpan
-    , locValue :: a
+    { locValue :: a
+    , locPos :: SourcePos  
+    , locSpan :: SourceSpan
     } deriving (Show, Eq, Functor)
 
 -- Class for things that have locations
@@ -147,11 +148,11 @@ instance HasLocation (Located a) where
 
 -- Create located value at position
 locatedAt :: SourcePos -> a -> Located a
-locatedAt pos = locatedWithSpan (emptySpan pos)
+locatedAt pos value = locatedWithSpan (emptySpan pos) value
 
 -- Create located value with span
 locatedWithSpan :: SourceSpan -> a -> Located a
-locatedWithSpan = Located
+locatedWithSpan span value = Located value (spanStart span) span
 
 -- Extract value from located
 locatedValue :: Located a -> a

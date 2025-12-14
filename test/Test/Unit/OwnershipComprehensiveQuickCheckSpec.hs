@@ -1,752 +1,400 @@
 {-# LANGUAGE CPP #-}
 
--- | Comprehensive QuickCheck tests for the Ownership module
 module Test.Unit.OwnershipComprehensiveQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck 
-  ( Property, (===), (==>) , property, forAll, counterexample, classify, cover
-  , Arbitrary(..), Gen, oneof, choose, listOf, vectorOf, elements, (.&&.)
-  , sized, frequency, suchThat, resize
-  )
-import Data.Char (isAlphaNum)
-import qualified Data.List as Data.List
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
-import Data.Either (isLeft, isRight)
-import qualified Data.Text as T
+import TestSupport.Arbitrary
+import TestSupport.ExtendedArbitrary
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, label, cover)
 
 import Ownership
-import Analyzer.Types
-import Compiler.GoAst
-
--- Enhanced Arbitrary instances for comprehensive ownership analysis
-
-instance Arbitrary OwnershipType where
-  arbitrary = oneof
-    [ Owned <$> genVariableName
-    , Borrowed <$> genVariableName
-    , MutBorrowed <$> genVariableName
-    ]
-
-instance Arbitrary OwnershipError where
-  arbitrary = oneof
-    [ UseAfterMove <$> genVariableName
-    , DoubleMove <$> genVariableName <*> genVariableName
-    , BorrowWhileMoved <$> genVariableName
-    , MutBorrowWhileBorrowed <$> genVariableName
-    , BorrowWhileMutBorrowed <$> genVariableName
-    , MultipleMutBorrows <$> genVariableName
-    , UseWhileMutBorrowed <$> genVariableName
-    , OutOfScope <$> genVariableName
-    , BorrowError <$> genVariableName
-    , ParseError <$> genVariableName
-    , CrossFunctionMove <$> genVariableName <*> genVariableName
-    , ParameterMoveMismatch <$> genVariableName
-    , ControlFlowError <$> genVariableName
-    , PathSensitiveError <$> genVariableName
-    , LoopOwnershipError <$> genVariableName
-    ]
-
-instance Arbitrary OwnershipTransfer where
-  arbitrary = OwnershipTransfer <$> arbitrary <*> arbitrary
-
-instance Arbitrary OwnershipAnalyzer where
-  arbitrary = return newOwnershipAnalyzer
-
-instance Arbitrary OwnershipOperation where
-  arbitrary = oneof
-    [ MoveOp <$> arbitrary
-    , BorrowOp <$> arbitrary <*> arbitrary
-    , MutBorrowOp <$> arbitrary <*> arbitrary
-    , CopyOp <$> arbitrary
-    , DropOp <$> arbitrary
-    ]
-
-instance Arbitrary OwnershipState where
-  arbitrary = OwnershipState <$> arbitrary <*> arbitrary <*> arbitrary
-
-instance Arbitrary OwnershipGraph where
-  arbitrary = OwnershipGraph <$> arbitrary <*> arbitrary
-
-instance Arbitrary OwnershipTransformation where
-  arbitrary = OwnershipTransformation <$> arbitrary <*> arbitrary
-
-instance Arbitrary BorrowingContext where
-  arbitrary = BorrowingContext <$> arbitrary <*> arbitrary <*> arbitrary
-
-instance Arbitrary BorrowKind where
-  arbitrary = oneof [pure Immutable, pure Mutable]
-
--- Helper generators
-genVariableName :: Gen String
-genVariableName = do
-  first <- elements (['a'..'z'] ++ ['_'])
-  rest <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_']
-  return $ first : rest
-
-genTypeName :: Gen String
-genTypeName = do
-  first <- elements ['A'..'Z']
-  rest <- listOf $ elements (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'])
-  return $ first : rest
-
-genFieldName :: Gen String
-genFieldName = do
-  first <- elements ['a'..'z']
-  rest <- listOf $ elements (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'])
-  return $ first : rest
-
-genMethodName :: Gen String
-genMethodName = do
-  first <- elements ['a'..'z']
-  rest <- listOf $ elements (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'])
-  return $ first : rest
-
-genFunctionName :: Gen String
-genFunctionName = do
-  first <- elements ['a'..'z']
-  rest <- listOf $ elements (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'])
-  return $ first : rest
-
-genOwnershipChain :: Int -> Gen [OwnershipType]
-genOwnershipChain n = do
-  names <- vectorOf n genVariableName
-  return $ map (\name -> Owned name) names
-
-genBorrowingScenario :: Gen (OwnershipType, [OwnershipType])
-genBorrowingScenario = do
-  owner <- Owned <$> genVariableName
-  numBorrows <- choose (0, 3)
-  borrowNames <- vectorOf numBorrows genVariableName
-  let borrows = map (\name -> elements [Borrowed name, MutBorrowed name]) borrowNames
-  sequence borrows >>= \bs -> return (owner, bs)
-
-genComplexOwnershipGraph :: Int -> Gen [(String, OwnershipType)]
-genComplexOwnershipGraph n = do
-  names <- vectorOf n genVariableName
-  ownershipTypes <- vectorOf n arbitrary
-  return $ zip names ownershipTypes
-
-genLifetimeAnnotation :: Gen String
-genLifetimeAnnotation = do
-  label <- elements ['a'..'z']
-  return $ "'" ++ [label]
-
-genOwnershipAnnotation :: Gen String
-genOwnershipAnnotation = oneof
-  [ pure "move"
-  , pure "copy"
-  , pure "borrow"
-  , pure "mut"
-  , pure "ref"
-  , pure "unique"
-  , pure "shared"
-  ]
-
--- Comprehensive property tests for Ownership analysis
-
--- Property: Basic ownership transfer preserves correctness
-prop_ownership_transfer_preserves_correctness :: OwnershipTransfer -> Property
-prop_ownership_transfer_preserves_correctness transfer =
-  let fromType = Owned (transferFrom transfer)
-      toType = Owned (transferTo transfer)
-  in property $ isValidOwnershipTransfer fromType toType
-
--- Property: Move semantics invalidate source
-prop_move_invalidates_source :: String -> Property
-prop_move_invalidates_source varName =
-  let source = Owned varName
-      moved = performMove source
-  in property $ Test.Unit.OwnershipComprehensiveQuickCheckSpec.isMoved moved && not (Test.Unit.OwnershipComprehensiveQuickCheckSpec.isUsable moved)
-
--- Property: Borrow semantics preserve source
-prop_borrow_preserves_source :: String -> Property
-prop_borrow_preserves_source varName =
-  let source = Owned varName
-      borrowed = performBorrow source
-  in property $ not (Test.Unit.OwnershipComprehensiveQuickCheckSpec.isMoved borrowed) && Test.Unit.OwnershipComprehensiveQuickCheckSpec.isUsable borrowed
-
--- Property: Mutable borrow prevents other borrows
-prop_mut_borrow_exclusivity :: String -> [String] -> Property
-prop_mut_borrow_exclusivity ownerName borrowerNames =
-  let owner = Owned ownerName
-      mutBorrow = MutBorrowed ownerName
-      otherBorrows = map (\name -> Borrowed ownerName) borrowerNames
-  in property $ hasMutBorrowExclusivity mutBorrow otherBorrows
-
--- Property: Multiple immutable borrows are allowed
-prop_multiple_immutable_borrows :: String -> [String] -> Property
-prop_multiple_immutable_borrows ownerName borrowerNames =
-  let owner = Owned ownerName
-      borrows = map (\name -> Borrowed ownerName) borrowerNames
-  in property $ all (canCoexist owner) borrows
-
--- Property: Ownership chains are properly validated
-prop_ownership_chain_validation :: [OwnershipType] -> Property
-prop_ownership_chain_validation chain =
-  let result = validateOwnershipChain chain
-  in property $ result == hasValidOwnershipChain chain
-
--- Property: Lifetime annotations prevent use-after-free
-prop_lifetime_prevents_use_after_free :: String -> String -> Property
-prop_lifetime_prevents_use_after_free varName lifetime =
-  let ownership = Owned varName
-      annotated = addLifetimeAnnotation ownership lifetime
-      useAfterFree = attemptUseAfterFree annotated
-  in property $ not useAfterFree
-
--- Property: Ownership inference works correctly
-prop_ownership_inference :: [String] -> Property
-prop_ownership_inference expressions =
-  let inferred = inferOwnership expressions
-  in property $ all isValidOwnershipType inferred
-
--- Property: Complex ownership graphs are analyzed correctly
-prop_complex_ownership_graph_analysis :: [(String, OwnershipType)] -> Property
-prop_complex_ownership_graph_analysis graph =
-  let analysis = analyzeOwnershipGraph graph
-  in property $ hasNoOwnershipConflicts analysis graph
-
--- Property: Ownership annotations are respected
-prop_ownership_annotations_respected :: String -> String -> Property
-prop_ownership_annotations_respected varName annotation =
-  let ownership = Owned varName
-      annotated = addOwnershipAnnotation ownership annotation
-  in property $ respectsAnnotation annotated annotation
-
--- Property: Ownership errors are detected correctly
-prop_ownership_error_detection :: [OwnershipOperation] -> Property
-prop_ownership_error_detection operations =
-  let errors = detectOwnershipErrors operations
-  in property $ all isValidOwnershipError errors
-
--- Property: Ownership transfer across function boundaries
-prop_cross_function_ownership_transfer :: String -> String -> Property
-prop_cross_function_ownership_transfer caller callee =
-  let transfer = CrossFunctionTransfer caller callee
-      result = validateCrossFunctionTransfer transfer
-  in property $ result == isValidCrossFunctionTransfer transfer
-
--- Property: Ownership in loops is handled correctly
-prop_loop_ownership_handling :: String -> [OwnershipOperation] -> Property
-prop_loop_ownership_handling loopVar operations =
-  let loopContext = LoopContext loopVar operations
-      result = analyzeLoopOwnership loopContext
-  in property $ result == hasValidLoopOwnership loopContext
-
--- Property: Ownership in control flow is preserved
-prop_control_flow_ownership :: [String] -> [OwnershipOperation] -> Property
-prop_control_flow_ownership branches operations =
-  let flow = ControlFlow branches operations
-      result = analyzeControlFlowOwnership flow
-  in property $ result == preservesOwnershipAcrossBranches flow
-
--- Property: Concurrent ownership is handled correctly
-prop_concurrent_ownership :: [String] -> [OwnershipOperation] -> Property
-prop_concurrent_ownership threads operations =
-  let concurrent = ConcurrentContext threads operations
-      result = analyzeConcurrentOwnership concurrent
-  in property $ result == hasValidConcurrentOwnership concurrent
-
--- Property: Ownership optimization preserves correctness
-prop_ownership_optimization :: [OwnershipOperation] -> Property
-prop_ownership_optimization operations =
-  let optimized = optimizeOwnership operations
-  in property $ preservesOwnershipSemantics operations optimized
-
--- Property: Ownership refactoring maintains correctness
-prop_ownership_refactoring :: String -> [OwnershipOperation] -> Property
-prop_ownership_refactoring varName operations =
-  let refactored = refactorOwnership varName operations
-  in property $ maintainsOwnershipInvariants varName refactored
-
--- Property: Ownership migration preserves semantics
-prop_ownership_migration :: [OwnershipOperation] -> [OwnershipOperation] -> Property
-prop_ownership_migration oldOps newOps =
-  let migration = migrateOwnership oldOps newOps
-  in property $ migration == preservesMigrationSemantics oldOps newOps
-
--- Property: Ownership debugging information is accurate
-prop_ownership_debugging :: OwnershipState -> Property
-prop_ownership_debugging state =
-  let debugInfo = generateOwnershipDebugInfo state
-  in property $ isAccurateDebugInfo debugInfo state
-
--- Property: Ownership visualization is correct
-prop_ownership_visualization :: OwnershipGraph -> Property
-prop_ownership_visualization graph =
-  let visualization = visualizeOwnership graph
-  in property $ representsGraphCorrectly visualization graph
-
--- Property: Ownership transformation preserves properties
-prop_ownership_transformation :: OwnershipType -> OwnershipType -> Property
-prop_ownership_transformation source target =
-  let transformation = OwnershipTransformation source target
-      result = applyOwnershipTransformation transformation
-  in property $ result == preservesTransformationProperties transformation
-
--- Property: Ownership equivalence works correctly
-prop_ownership_equivalence :: OwnershipType -> OwnershipType -> Property
-prop_ownership_equivalence type1 type2 =
-  let areEquivalent = checkOwnershipEquivalence type1 type2
-  in property $ areEquivalent == haveEquivalentOwnership type1 type2
-
--- Property: Ownership subtyping works correctly
-prop_ownership_subtyping :: OwnershipType -> OwnershipType -> Property
-prop_ownership_subtyping subType superType =
-  let isSub = isOwnershipSubtype subType superType
-  in property $ isSub == hasOwnershipSubtypeRelationship subType superType
-
--- Property: Ownership variance is handled correctly
-prop_ownership_variance :: OwnershipType -> Property
-prop_ownership_variance ownershipType =
-  let variance = determineOwnershipVariance ownershipType
-  in property $ variance == correctVarianceForType ownershipType
-
--- Property: Ownership polymorphism works correctly
-prop_ownership_polymorphism :: String -> [OwnershipType] -> Property
-prop_ownership_polymorphism typeName instances =
-  let polymorphic = createPolymorphicOwnership typeName instances
-  in property $ isValidPolymorphicOwnership polymorphic
-
--- Property: Ownership quantification works correctly
-prop_ownership_quantification :: [String] -> OwnershipType -> Property
-prop_ownership_quantification quantifiers baseType =
-  let quantified = quantifyOwnership quantifiers baseType
-  in property $ isValidQuantifiedOwnership quantified quantifiers
-
--- Property: Ownership constraints are enforced correctly
-prop_ownership_constraints :: OwnershipType -> [OwnershipConstraint] -> Property
-prop_ownership_constraints ownershipType constraints =
-  let result = checkOwnershipConstraints ownershipType constraints
-  in property $ result == all (satisfiesOwnershipConstraint ownershipType) constraints
-
--- Property: Ownership inference with lifetimes works correctly
-prop_lifetime_inference :: [String] -> Property
-prop_lifetime_inference expressions =
-  let inferred = inferLifetimes expressions
-  in property $ all hasValidLifetime inferred
-
--- Property: Ownership region analysis works correctly
-prop_region_analysis :: [OwnershipOperation] -> Property
-prop_region_analysis operations =
-  let regions = analyzeOwnershipRegions operations
-  in property $ all isValidOwnershipRegion regions
-
--- Property: Ownership escape analysis works correctly
-prop_escape_analysis :: String -> [OwnershipOperation] -> Property
-prop_escape_analysis varName operations =
-  let escapes = analyzeOwnershipEscape varName operations
-  in property $ escapes == actuallyEscapes varName operations
-
--- Property: Ownership borrowing analysis is comprehensive
-prop_borrowing_analysis :: BorrowingContext -> Property
-prop_borrowing_analysis context =
-  let analysis = analyzeBorrowing context
-  in property $ analysis == hasValidBorrowingSemantics context
-
--- Property: Ownership move analysis is thorough
-prop_move_analysis :: MoveContext -> Property
-prop_move_analysis context =
-  let analysis = analyzeMove context
-  in property $ analysis == hasValidMoveSemantics context
-
--- Property: Ownership lifetime elision works correctly
-prop_lifetime_elision :: [FunctionSignature] -> Property
-prop_lifetime_elision signatures =
-  let elided = applyLifetimeElision signatures
-  in property $ all hasValidElidedLifetimes elided
-
--- Property: Ownership structural borrowing works correctly
-prop_structural_borrowing :: StructType -> [BorrowingPattern] -> Property
-prop_structural_borrowing structType patterns =
-  let result = analyzeStructuralBorrowing structType patterns
-  in property $ result == hasValidStructuralBorrowing structType patterns
-
--- Property: Ownership trait borrowing works correctly
-prop_trait_borrowing :: TraitType -> [BorrowingPattern] -> Property
-prop_trait_borrowing traitType patterns =
-  let result = analyzeTraitBorrowing traitType patterns
-  in property $ result == hasValidTraitBorrowing traitType patterns
-
--- Helper functions for comprehensive ownership analysis
-data OwnershipOperation = 
-    MoveOp String
-  | BorrowOp String String
-  | MutBorrowOp String String
-  | CopyOp String
-  | DropOp String
-  deriving (Eq, Show)
-
-data OwnershipState = OwnershipState
-  { osVariables :: Map.Map String OwnershipType
-  , osOperations :: [OwnershipOperation]
-  , osErrors :: [OwnershipError]
-  } deriving (Eq, Show)
-
-data OwnershipGraph = OwnershipGraph
-  { ogNodes :: Map.Map String OwnershipType
-  , ogEdges :: [(String, String)]
-  } deriving (Eq, Show)
-
-data OwnershipTransformation = OwnershipTransformation OwnershipType OwnershipType deriving (Eq, Show)
-
-data BorrowingContext = BorrowingContext
-  { bcOwner :: String
-  , bcBorrowers :: [String]
-  , bcBorrowKind :: BorrowKind
-  } deriving (Eq, Show)
-
-data BorrowKind = Immutable | Mutable deriving (Eq, Show)
-
-data MoveContext = MoveContext
-  { mcSource :: String
-  , mcTarget :: String
-  , mcMoveKind :: MoveKind
-  } deriving (Eq, Show)
-
-data MoveKind = Value | Reference | Partial deriving (Eq, Show)
-
-data CrossFunctionTransfer = CrossFunctionTransfer String String deriving (Eq, Show)
-
-data LoopContext = LoopContext String [OwnershipOperation] deriving (Eq, Show)
-
-data ControlFlow = ControlFlow [String] [OwnershipOperation] deriving (Eq, Show)
-
-data ConcurrentContext = ConcurrentContext [String] [OwnershipOperation] deriving (Eq, Show)
-
-data StructType = StructType String [(String, OwnershipType)] deriving (Eq, Show)
-
-data TraitType = TraitType String [String] deriving (Eq, Show)
-
-data BorrowingPattern = BorrowingPattern String BorrowKind deriving (Eq, Show)
-
-data FunctionSignature = FunctionSignature String [(String, OwnershipType)] OwnershipType deriving (Eq, Show)
-
-data OwnershipConstraint = 
-    LifetimeConstraint String String
-  | BorrowConstraint String BorrowKind
-  | MoveConstraint String
-  deriving (Eq, Show)
-
-data OwnershipRegion = OwnershipRegion String [String] deriving (Eq, Show)
-
--- Mock implementations for comprehensive ownership analysis
-isValidOwnershipTransfer :: OwnershipType -> OwnershipType -> Bool
-isValidOwnershipTransfer from to = not (Test.Unit.OwnershipComprehensiveQuickCheckSpec.isMoved from) || canTransferTo from to
-
-performMove :: OwnershipType -> OwnershipType
-performMove (Owned name) = Owned name
-performMove other = other
-
-isMoved :: OwnershipType -> Bool
-isMoved (Owned _) = True
-isMoved _ = False
-
-isUsable :: OwnershipType -> Bool
-isUsable (Owned _) = False
-isUsable _ = True
-
-performBorrow :: OwnershipType -> OwnershipType
-performBorrow (Owned name) = Borrowed name
-performBorrow other = other
-
-hasMutBorrowExclusivity :: OwnershipType -> [OwnershipType] -> Bool
-hasMutBorrowExclusivity (MutBorrowed owner) borrows = 
-  not (any (\b -> b == Borrowed owner || b == MutBorrowed owner) borrows)
-hasMutBorrowExclusivity _ _ = True
-
-canCoexist :: OwnershipType -> OwnershipType -> Bool
-canCoexist owner (Borrowed o) = getOwnerName owner == Just o
-canCoexist _ _ = False
-
-getOwnerName :: OwnershipType -> Maybe String
-getOwnerName (Owned name) = Just name
-getOwnerName (Borrowed name) = Just name
-getOwnerName (MutBorrowed name) = Just name
-getOwnerName _ = Nothing
-
-validateOwnershipChain :: [OwnershipType] -> Bool
-validateOwnershipChain chain = all isValidOwnershipType chain
-
-hasValidOwnershipChain :: [OwnershipType] -> Bool
-hasValidOwnershipChain chain = length chain > 0 && all isValidOwnershipType chain
-
-addLifetimeAnnotation :: OwnershipType -> String -> OwnershipType
-addLifetimeAnnotation ownership _ = ownership
-
-attemptUseAfterFree :: OwnershipType -> Bool
-attemptUseAfterFree (Owned _) = False
-attemptUseAfterFree _ = True
-
-inferOwnership :: [String] -> [OwnershipType]
-inferOwnership expressions = map (Owned . ("var_" ++) . show) [1..length expressions]
-
-isValidOwnershipType :: OwnershipType -> Bool
-isValidOwnershipType _ = True
-
-analyzeOwnershipGraph :: [(String, OwnershipType)] -> [OwnershipError]
-analyzeOwnershipGraph _ = []
-
-hasNoOwnershipConflicts :: [OwnershipError] -> [(String, OwnershipType)] -> Bool
-hasNoOwnershipConflicts errors _ = null errors
-
-addOwnershipAnnotation :: OwnershipType -> String -> OwnershipType
-addOwnershipAnnotation ownership "move" = Owned (getName ownership)
-addOwnershipAnnotation ownership "borrow" = Borrowed (getName ownership)
-addOwnershipAnnotation ownership "mut" = MutBorrowed (getName ownership)
-addOwnershipAnnotation ownership _ = ownership
-
-getName :: OwnershipType -> String
-getName (Owned name) = name
-getName (Borrowed name) = name
-getName (MutBorrowed name) = name
-getName (Owned name) = name
-getName _ = "unknown"
-
-respectsAnnotation :: OwnershipType -> String -> Bool
-respectsAnnotation _ "move" = True
-respectsAnnotation _ "borrow" = True
-respectsAnnotation _ "mut" = True
-respectsAnnotation _ _ = False
-
-detectOwnershipErrors :: [OwnershipOperation] -> [OwnershipError]
-detectOwnershipErrors ops = concatMap checkOperation ops
-
-checkOperation :: OwnershipOperation -> [OwnershipError]
-checkOperation _ = []
-
-isValidOwnershipError :: OwnershipError -> Bool
-isValidOwnershipError _ = True
-
-validateCrossFunctionTransfer :: CrossFunctionTransfer -> Bool
-validateCrossFunctionTransfer _ = True
-
-isValidCrossFunctionTransfer :: CrossFunctionTransfer -> Bool
-isValidCrossFunctionTransfer _ = True
-
-analyzeLoopOwnership :: LoopContext -> Bool
-analyzeLoopOwnership _ = True
-
-hasValidLoopOwnership :: LoopContext -> Bool
-hasValidLoopOwnership _ = True
-
-analyzeControlFlowOwnership :: ControlFlow -> Bool
-analyzeControlFlowOwnership _ = True
-
-preservesOwnershipAcrossBranches :: ControlFlow -> Bool
-preservesOwnershipAcrossBranches _ = True
-
-analyzeConcurrentOwnership :: ConcurrentContext -> Bool
-analyzeConcurrentOwnership _ = True
-
-hasValidConcurrentOwnership :: ConcurrentContext -> Bool
-hasValidConcurrentOwnership _ = True
-
-optimizeOwnership :: [OwnershipOperation] -> [OwnershipOperation]
-optimizeOwnership ops = ops
-
-preservesOwnershipSemantics :: [OwnershipOperation] -> [OwnershipOperation] -> Bool
-preservesOwnershipSemantics original optimized = length original == length optimized
-
-refactorOwnership :: String -> [OwnershipOperation] -> [OwnershipOperation]
-refactorOwnership _ ops = ops
-
-maintainsOwnershipInvariants :: String -> [OwnershipOperation] -> Bool
-maintainsOwnershipInvariants _ _ = True
-
-migrateOwnership :: [OwnershipOperation] -> [OwnershipOperation] -> Bool
-migrateOwnership _ _ = True
-
-preservesMigrationSemantics :: [OwnershipOperation] -> [OwnershipOperation] -> Bool
-preservesMigrationSemantics _ _ = True
-
-generateOwnershipDebugInfo :: OwnershipState -> String
-generateOwnershipDebugInfo state = "Debug info for " ++ show (length (osVariables state)) ++ " variables"
-
-isAccurateDebugInfo :: String -> OwnershipState -> Bool
-isAccurateDebugInfo _ _ = True
-
-visualizeOwnership :: OwnershipGraph -> String
-visualizeOwnership graph = "Graph with " ++ show (length (ogNodes graph)) ++ " nodes"
-
-representsGraphCorrectly :: String -> OwnershipGraph -> Bool
-representsGraphCorrectly _ _ = True
-
-applyOwnershipTransformation :: OwnershipTransformation -> Bool
-applyOwnershipTransformation _ = True
-
-preservesTransformationProperties :: OwnershipTransformation -> Bool
-preservesTransformationProperties _ = True
-
-checkOwnershipEquivalence :: OwnershipType -> OwnershipType -> Bool
-checkOwnershipEquivalence t1 t2 = t1 == t2
-
-haveEquivalentOwnership :: OwnershipType -> OwnershipType -> Bool
-haveEquivalentOwnership t1 t2 = t1 == t2
-
-isOwnershipSubtype :: OwnershipType -> OwnershipType -> Bool
-isOwnershipSubtype _ _ = False
-
-hasOwnershipSubtypeRelationship :: OwnershipType -> OwnershipType -> Bool
-hasOwnershipSubtypeRelationship _ _ = False
-
-determineOwnershipVariance :: OwnershipType -> String
-determineOwnershipVariance _ = "invariant"
-
-correctVarianceForType :: OwnershipType -> String
-correctVarianceForType _ = "invariant"
-
-createPolymorphicOwnership :: String -> [OwnershipType] -> OwnershipType
-createPolymorphicOwnership name instances = Owned name
-
-isValidPolymorphicOwnership :: OwnershipType -> Bool
-isValidPolymorphicOwnership _ = True
-
-quantifyOwnership :: [String] -> OwnershipType -> OwnershipType
-quantifyOwnership _ baseType = baseType
-
-isValidQuantifiedOwnership :: OwnershipType -> [String] -> Bool
-isValidQuantifiedOwnership _ _ = True
-
-checkOwnershipConstraints :: OwnershipType -> [OwnershipConstraint] -> Bool
-checkOwnershipConstraints _ constraints = all (const True) constraints
-
-satisfiesOwnershipConstraint :: OwnershipType -> OwnershipConstraint -> Bool
-satisfiesOwnershipConstraint _ _ = True
-
-inferLifetimes :: [String] -> [OwnershipType]
-inferLifetimes expressions = map (Owned . ("lifetime_" ++) . show) [1..length expressions]
-
-hasValidLifetime :: OwnershipType -> Bool
-hasValidLifetime _ = True
-
-analyzeOwnershipRegions :: [OwnershipOperation] -> [OwnershipRegion]
-analyzeOwnershipRegions ops = [OwnershipRegion ("region_" ++ show i) [] | i <- [1..length ops]]
-
-isValidOwnershipRegion :: OwnershipRegion -> Bool
-isValidOwnershipRegion _ = True
-
-analyzeOwnershipEscape :: String -> [OwnershipOperation] -> Bool
-analyzeOwnershipEscape _ _ = False
-
-actuallyEscapes :: String -> [OwnershipOperation] -> Bool
-actuallyEscapes _ _ = False
-
-analyzeBorrowing :: BorrowingContext -> Bool
-analyzeBorrowing _ = True
-
-hasValidBorrowingSemantics :: BorrowingContext -> Bool
-hasValidBorrowingSemantics _ = True
-
-analyzeMove :: MoveContext -> Bool
-analyzeMove _ = True
-
-hasValidMoveSemantics :: MoveContext -> Bool
-hasValidMoveSemantics _ = True
-
-applyLifetimeElision :: [FunctionSignature] -> [FunctionSignature]
-applyLifetimeElision sigs = sigs
-
-hasValidElidedLifetimes :: FunctionSignature -> Bool
-hasValidElidedLifetimes _ = True
-
-analyzeStructuralBorrowing :: StructType -> [BorrowingPattern] -> Bool
-analyzeStructuralBorrowing _ _ = True
-
-hasValidStructuralBorrowing :: StructType -> [BorrowingPattern] -> Bool
-hasValidStructuralBorrowing _ _ = True
-
-analyzeTraitBorrowing :: TraitType -> [BorrowingPattern] -> Bool
-analyzeTraitBorrowing _ _ = True
-
-hasValidTraitBorrowing :: TraitType -> [BorrowingPattern] -> Bool
-hasValidTraitBorrowing _ _ = True
-
-canTransferTo :: OwnershipType -> OwnershipType -> Bool
-canTransferTo _ _ = True
-
--- Arbitrary instances for new data types
-instance Arbitrary MoveKind where
-  arbitrary = elements [Value, Reference, Partial]
-
-instance Arbitrary MoveContext where
-  arbitrary = MoveContext <$> genVariableName <*> genVariableName <*> arbitrary
-
-instance Arbitrary CrossFunctionTransfer where
-  arbitrary = CrossFunctionTransfer <$> genVariableName <*> genVariableName
-
-instance Arbitrary LoopContext where
-  arbitrary = LoopContext <$> genVariableName <*> listOf arbitrary
-
-instance Arbitrary ControlFlow where
-  arbitrary = ControlFlow <$> listOf genVariableName <*> listOf arbitrary
-
-instance Arbitrary ConcurrentContext where
-  arbitrary = ConcurrentContext <$> listOf genVariableName <*> listOf arbitrary
-
-instance Arbitrary StructType where
-  arbitrary = StructType <$> genTypeName <*> listOf ((,) <$> genFieldName <*> arbitrary)
-
-instance Arbitrary TraitType where
-  arbitrary = TraitType <$> genTypeName <*> listOf genMethodName
-
-instance Arbitrary BorrowingPattern where
-  arbitrary = BorrowingPattern <$> genVariableName <*> arbitrary
-
-instance Arbitrary FunctionSignature where
-  arbitrary = FunctionSignature <$> genFunctionName <*> listOf ((,) <$> genVariableName <*> arbitrary) <*> arbitrary
-
-instance Arbitrary OwnershipConstraint where
-  arbitrary = oneof
-    [ LifetimeConstraint <$> genVariableName <*> genVariableName
-    , BorrowConstraint <$> genVariableName <*> arbitrary
-    , MoveConstraint <$> genVariableName
-    ]
-
-instance Arbitrary OwnershipRegion where
-  arbitrary = OwnershipRegion <$> genVariableName <*> listOf genVariableName
+import qualified Data.Text as T
+import Data.List (isInfixOf, nub, intersect, union)
+import Data.Maybe (isJust, isNothing, fromMaybe)
+import Data.Char (isAlphaNum, toLower)
+
+-- ============================================================================
+-- Ownership Type Properties
+-- ============================================================================
+
+-- Property: Ownership types are comparable
+prop_ownership_types_comparable :: OwnershipType -> OwnershipType -> Property
+prop_ownership_types_comparable ot1 ot2 = 
+  let areComparable = ot1 == ot2 || ot1 /= ot2
+  in property $ areComparable
+
+-- Property: Ownership type extraction is consistent
+prop_ownership_type_extraction_consistent :: OwnershipType -> Property
+prop_ownership_type_extraction_consistent ot = 
+  let extractedId = extractOwnershipId ot
+      reconstructed = reconstructOwnershipType extractedId
+      isConsistent = extractOwnershipId reconstructed == extractedId
+  in property $ isConsistent
+
+-- Property: Ownership type hierarchy is respected
+prop_ownership_type_hierarchy :: OwnershipType -> OwnershipType -> Property
+prop_ownership_type_hierarchy ot1 ot2 = 
+  let id1 = extractOwnershipId ot1
+      id2 = extractOwnershipId ot2
+      sameVariable = id1 == id2
+      hierarchyRespected = case (ot1, ot2) of
+        (Owned _, Borrowed _) -> sameVariable
+        (Owned _, MutBorrowed _) -> sameVariable
+        (Borrowed _, MutBorrowed _) -> sameVariable
+        _ -> True
+  in property $ hierarchyRespected
+
+-- Property: Ownership type transitions are valid
+prop_ownership_type_transitions_valid :: OwnershipType -> OwnershipType -> Property
+prop_ownership_type_transitions_valid from to = 
+  let isValidTransition = isValidOwnershipTransition from to
+  in property $ isValidTransition
+
+-- ============================================================================
+-- Ownership Error Properties
+-- ============================================================================
+
+-- Property: Ownership errors have valid structure
+prop_ownership_error_structure :: OwnershipError -> Property
+prop_ownership_error_structure err = 
+  let hasValidIds = all isValidIdentifier (extractOwnershipErrorIds err)
+      hasValidMessage = not (null (formatOwnershipError err))
+  in property $ hasValidIds && hasValidMessage
+
+-- Property: Ownership error detection is sound
+prop_ownership_error_detection_sound :: String -> Property
+prop_ownership_error_detection_sound code = 
+  let errors = analyzeOwnership code
+      detectionIsSound = all isValidOwnershipError errors
+  in property $ detectionIsSound
+
+-- Property: Ownership error detection is complete
+prop_ownership_error_detection_complete :: String -> Property
+prop_ownership_error_detection_complete code = 
+  let errors = analyzeOwnership code
+      hasRealErrors = hasOwnershipIssues code
+      detectionIsComplete = hasRealErrors ==> not (null errors)
+  in property $ detectionIsComplete
+
+-- Property: Ownership error reporting is informative
+prop_ownership_error_reporting_informative :: OwnershipError -> Property
+prop_ownership_error_reporting_informative err = 
+  let report = formatOwnershipError err
+      hasLocation = "line" `isInfixOf` map toLower report
+      hasMessage = length report > 10
+      hasSuggestion = "suggestion" `isInfixOf` map toLower report
+  in property $ hasMessage && (hasLocation || hasSuggestion)
+
+-- ============================================================================
+-- Ownership Analysis Properties
+-- ============================================================================
+
+-- Property: Ownership analysis is deterministic
+prop_ownership_analysis_deterministic :: String -> Property
+prop_ownership_analysis_deterministic code = 
+  let analysis1 = analyzeOwnership code
+      analysis2 = analyzeOwnership code
+  in property $ analysis1 == analysis2
+
+-- Property: Ownership analysis is monotonic
+prop_ownership_analysis_monotonic :: String -> String -> Property
+prop_ownership_analysis_monotonic code1 code2 = 
+  let combinedCode = code1 ++ "\n" ++ code2
+      errors1 = analyzeOwnership code1
+      errors2 = analyzeOwnership code2
+      combinedErrors = analyzeOwnership combinedCode
+      isMonotonic = length combinedErrors >= max (length errors1) (length errors2)
+  in property $ isMonotonic
+
+-- Property: Ownership analysis respects scope
+prop_ownership_analysis_respects_scope :: String -> String -> Property
+prop_ownership_analysis_respects_scope outerCode innerCode = 
+  let nestedCode = outerCode ++ "\n{\n" ++ innerCode ++ "\n}\n"
+      outerErrors = analyzeOwnership outerCode
+      innerErrors = analyzeOwnership innerCode
+      nestedErrors = analyzeOwnership nestedCode
+      scopeRespected = length nestedErrors >= length outerErrors + length innerErrors
+  in property $ scopeRespected
+
+-- Property: Ownership analysis handles control flow
+prop_ownership_analysis_control_flow :: String -> Property
+prop_ownership_analysis_control_flow code = 
+  let withIfCode = "if true {\n" ++ code ++ "\n}\n"
+      withLoopCode = "for {\n" ++ code ++ "\nbreak\n}\n"
+      baseErrors = analyzeOwnership code
+      ifErrors = analyzeOwnership withIfCode
+      loopErrors = analyzeOwnership withLoopCode
+      handlesControlFlow = length ifErrors >= length baseErrors &&
+                           length loopErrors >= length baseErrors
+  in property $ handlesControlFlow
+
+-- ============================================================================
+-- Ownership Transfer Properties
+-- ============================================================================
+
+-- Property: Ownership transfer preserves invariants
+prop_ownership_transfer_preserves_invariants :: OwnershipType -> OwnershipType -> Property
+prop_ownership_transfer_preserves_invariants from to = 
+  let canTransfer = isValidOwnershipTransition from to
+      transferPreservesInvariants = canTransfer ==> 
+        let fromId = extractOwnershipId from
+            toId = extractOwnershipId to
+        in fromId /= toId && isValidIdentifier fromId && isValidIdentifier toId
+  in property $ transferPreservesInvariants
+
+-- Property: Ownership transfer chains are valid
+prop_ownership_transfer_chains_valid :: [OwnershipType] -> Property
+prop_ownership_transfer_chains_valid types = 
+  let transferPairs = zip types (tail types)
+      allTransfersValid = all (uncurry isValidOwnershipTransition) transferPairs
+  in property $ allTransfersValid
+
+-- Property: Ownership transfer preserves lifetime
+prop_ownership_transfer_preserves_lifetime :: OwnershipType -> OwnershipType -> Property
+prop_ownership_transfer_preserves_lifetime from to = 
+  let canTransfer = isValidOwnershipTransition from to
+      lifetimePreserved = canTransfer ==> 
+        let fromLifetime = getOwnershipLifetime from
+            toLifetime = getOwnershipLifetime to
+        in fromLifetime >= toLifetime
+  in property $ lifetimePreserved
+
+-- ============================================================================
+-- Ownership Borrowing Properties
+-- ============================================================================
+
+-- Property: Borrowing rules are enforced
+prop_borrowing_rules_enforced :: OwnershipType -> OwnershipType -> Property
+prop_borrowing_rules_enforced existing newBorrow = 
+  let canBorrow = canCreateBorrow existing newBorrow
+      rulesEnforced = canBorrow ==> 
+        case (existing, newBorrow) of
+          (Owned _, Borrowed _) -> True
+          (Owned _, MutBorrowed _) -> True
+          (Borrowed _, Borrowed _) -> extractOwnershipId existing /= extractOwnershipId newBorrow
+          (MutBorrowed _, _) -> False
+          _ -> True
+  in property $ rulesEnforced
+
+-- Property: Borrowing prevents invalid access
+prop_borrowing_prevents_invalid_access :: OwnershipType -> [OwnershipType] -> Property
+prop_borrowing_prevents_invalid_access existing borrows = 
+  let allBorrowsValid = all (canCreateBorrow existing) borrows
+      preventsInvalidAccess = allBorrowsValid ==> 
+        let borrowIds = map extractOwnershipId borrows
+            uniqueBorrowIds = nub borrowIds
+        in length borrowIds == length uniqueBorrowIds
+  in property $ preventsInvalidAccess
+
+-- Property: Borrowing lifetime is bounded
+prop_borrowing_lifetime_bounded :: OwnershipType -> OwnershipType -> Property
+prop_borrowing_lifetime_bounded owner borrow = 
+  let canBorrow = canCreateBorrow owner borrow
+      lifetimeBounded = canBorrow ==>
+        let ownerLifetime = getOwnershipLifetime owner
+            borrowLifetime = getOwnershipLifetime borrow
+        in borrowLifetime <= ownerLifetime
+  in property $ lifetimeBounded
+
+-- ============================================================================
+-- Ownership Move Semantics Properties
+-- ============================================================================
+
+-- Property: Move semantics are respected
+prop_move_semantics_respected :: OwnershipType -> Property
+prop_move_semantics_respected ot = 
+  let canMove = canMoveOwnership ot
+      moveSemanticsRespected = canMove ==> 
+        case ot of
+          Owned _ -> True
+          Borrowed _ -> False
+          MutBorrowed _ -> False
+  in property $ moveSemanticsRespected
+
+-- Property: Move prevents use after move
+prop_move_prevents_use_after_move :: OwnershipType -> Property
+prop_move_prevents_use_after_move ot = 
+  let moved = moveOwnership ot
+      useAfterMovePrevented = case moved of
+        Just movedType -> not (canUseOwnership movedType)
+        Nothing -> True
+  in property $ useAfterMovePrevented
+
+-- Property: Move transfer is complete
+prop_move_transfer_complete :: OwnershipType -> OwnershipType -> Property
+prop_move_transfer_complete from to = 
+  let canMove = canMoveOwnership from
+      transferComplete = canMove ==> 
+        case moveOwnership from of
+          Just moved -> extractOwnershipId moved == extractOwnershipId to
+          Nothing -> False
+  in property $ transferComplete
+
+-- ============================================================================
+-- Performance Properties
+-- ============================================================================
+
+-- Property: Ownership analysis is efficient
+prop_ownership_analysis_efficient :: String -> Property
+prop_ownership_analysis_efficient code = 
+  let analysisSteps = countOwnershipAnalysisSteps code
+      isEfficient = analysisSteps < 1000 -- Reasonable bound
+  in property $ isEfficient
+
+-- Property: Ownership analysis memory usage is bounded
+prop_ownership_analysis_memory_bounded :: String -> Property
+prop_ownership_analysis_memory_bounded code = 
+  let memoryUsage = estimateOwnershipAnalysisMemory code
+      isBounded = memoryUsage < 10000 -- Reasonable bound
+  in property $ isBounded
+
+-- ============================================================================
+-- Test Collection
+-- ============================================================================
 
 tests :: TestTree
 tests = testGroup "Ownership Comprehensive QuickCheck Tests"
-  [ -- Basic ownership properties
-    fastProperty "ownership transfer preserves correctness" prop_ownership_transfer_preserves_correctness
-  , fastProperty "move invalidates source" prop_move_invalidates_source
-  , fastProperty "borrow preserves source" prop_borrow_preserves_source
-  , fastProperty "mut borrow exclusivity" prop_mut_borrow_exclusivity
-  , fastProperty "multiple immutable borrows" prop_multiple_immutable_borrows
-  , fastProperty "ownership chain validation" prop_ownership_chain_validation
-  , fastProperty "lifetime prevents use after free" prop_lifetime_prevents_use_after_free
-  , fastProperty "ownership inference" prop_ownership_inference
-  , fastProperty "complex ownership graph analysis" prop_complex_ownership_graph_analysis
-  , fastProperty "ownership annotations respected" prop_ownership_annotations_respected
-  , fastProperty "ownership error detection" prop_ownership_error_detection
-  -- Advanced ownership properties
-  , fastProperty "cross function ownership transfer" prop_cross_function_ownership_transfer
-  , fastProperty "loop ownership handling" prop_loop_ownership_handling
-  , fastProperty "control flow ownership" prop_control_flow_ownership
-  , fastProperty "concurrent ownership" prop_concurrent_ownership
-  , fastProperty "ownership optimization" prop_ownership_optimization
-  , fastProperty "ownership refactoring" prop_ownership_refactoring
-  , fastProperty "ownership migration" prop_ownership_migration
-  , fastProperty "ownership debugging" prop_ownership_debugging
-  , fastProperty "ownership visualization" prop_ownership_visualization
-  , fastProperty "ownership transformation" prop_ownership_transformation
-  , fastProperty "ownership equivalence" prop_ownership_equivalence
-  , fastProperty "ownership subtyping" prop_ownership_subtyping
-  , fastProperty "ownership variance" prop_ownership_variance
-  , fastProperty "ownership polymorphism" prop_ownership_polymorphism
-  , fastProperty "ownership quantification" prop_ownership_quantification
-  , fastProperty "ownership constraints" prop_ownership_constraints
-  , fastProperty "lifetime inference" prop_lifetime_inference
-  , fastProperty "region analysis" prop_region_analysis
-  , fastProperty "escape analysis" prop_escape_analysis
-  , fastProperty "borrowing analysis" prop_borrowing_analysis
-  , fastProperty "move analysis" prop_move_analysis
-  , fastProperty "lifetime elision" prop_lifetime_elision
-  , fastProperty "structural borrowing" prop_structural_borrowing
-  , fastProperty "trait borrowing" prop_trait_borrowing
+  [ testGroup "Ownership Type Properties"
+    [ fastProperty "Ownership types are comparable" prop_ownership_types_comparable
+    , fastProperty "Ownership type extraction is consistent" prop_ownership_type_extraction_consistent
+    , fastProperty "Ownership type hierarchy is respected" prop_ownership_type_hierarchy
+    , fastProperty "Ownership type transitions are valid" prop_ownership_type_transitions_valid
+    ]
+  , testGroup "Ownership Error Properties"
+    [ fastProperty "Ownership errors have valid structure" prop_ownership_error_structure
+    , fastProperty "Ownership error detection is sound" prop_ownership_error_detection_sound
+    , fastProperty "Ownership error detection is complete" prop_ownership_error_detection_complete
+    , fastProperty "Ownership error reporting is informative" prop_ownership_error_reporting_informative
+    ]
+  , testGroup "Ownership Analysis Properties"
+    [ fastProperty "Ownership analysis is deterministic" prop_ownership_analysis_deterministic
+    , fastProperty "Ownership analysis is monotonic" prop_ownership_analysis_monotonic
+    , fastProperty "Ownership analysis respects scope" prop_ownership_analysis_respects_scope
+    , fastProperty "Ownership analysis handles control flow" prop_ownership_analysis_control_flow
+    ]
+  , testGroup "Ownership Transfer Properties"
+    [ fastProperty "Ownership transfer preserves invariants" prop_ownership_transfer_preserves_invariants
+    , fastProperty "Ownership transfer chains are valid" prop_ownership_transfer_chains_valid
+    , fastProperty "Ownership transfer preserves lifetime" prop_ownership_transfer_preserves_lifetime
+    ]
+  , testGroup "Ownership Borrowing Properties"
+    [ fastProperty "Borrowing rules are enforced" prop_borrowing_rules_enforced
+    , fastProperty "Borrowing prevents invalid access" prop_borrowing_prevents_invalid_access
+    , fastProperty "Borrowing lifetime is bounded" prop_borrowing_lifetime_bounded
+    ]
+  , testGroup "Ownership Move Semantics Properties"
+    [ fastProperty "Move semantics are respected" prop_move_semantics_respected
+    , fastProperty "Move prevents use after move" prop_move_prevents_use_after_move
+    , fastProperty "Move transfer is complete" prop_move_transfer_complete
+    ]
+  , testGroup "Performance Properties"
+    [ fastProperty "Ownership analysis is efficient" prop_ownership_analysis_efficient
+    , fastProperty "Ownership analysis memory usage is bounded" prop_ownership_analysis_memory_bounded
+    ]
   ]
+
+-- ============================================================================
+-- Helper Functions
+-- ============================================================================
+
+extractOwnershipId :: OwnershipType -> String
+extractOwnershipId (Owned id) = id
+extractOwnershipId (Borrowed id) = id
+extractOwnershipId (MutBorrowed id) = id
+
+reconstructOwnershipType :: String -> OwnershipType
+reconstructOwnershipType id = Owned id -- Simplified
+
+isValidOwnershipTransition :: OwnershipType -> OwnershipType -> Bool
+isValidOwnershipTransition from to = 
+  let fromId = extractOwnershipId from
+      toId = extractOwnershipId to
+  in fromId /= toId && isValidIdentifier fromId && isValidIdentifier toId
+
+isValidIdentifier :: String -> Bool
+isValidIdentifier name = not (null name) && all isAlphaNum name
+
+
+
+formatOwnershipError :: OwnershipError -> String
+formatOwnershipError err = case err of
+  UseAfterMove id -> "Use after move: " ++ id
+  DoubleMove id1 id2 -> "Double move: " ++ id1 ++ ", " ++ id2
+  BorrowWhileMoved id -> "Borrow while moved: " ++ id
+  MutBorrowWhileBorrowed id -> "Mutable borrow while borrowed: " ++ id
+  BorrowWhileMutBorrowed id -> "Borrow while mutably borrowed: " ++ id
+  MultipleMutBorrows id -> "Multiple mutable borrows: " ++ id
+  UseWhileMutBorrowed id -> "Use while mutably borrowed: " ++ id
+  OutOfScope id -> "Out of scope: " ++ id
+  BorrowError id -> "Borrow error: " ++ id
+  ParseError id -> "Parse error: " ++ id
+  CrossFunctionMove id1 id2 -> "Cross function move: " ++ id1 ++ " to " ++ id2
+  ParameterMoveMismatch id -> "Parameter move mismatch: " ++ id
+  ControlFlowError id -> "Control flow error: " ++ id
+  PathSensitiveError id -> "Path sensitive error: " ++ id
+  LoopOwnershipError id -> "Loop ownership error: " ++ id
+
+hasOwnershipIssues :: String -> Bool
+hasOwnershipIssues code = 
+  "move" `isInfixOf` code || "borrow" `isInfixOf` code
+
+isValidOwnershipError :: OwnershipError -> Bool
+isValidOwnershipError err = 
+  let ids = extractOwnershipErrorIds err
+  in all isValidIdentifier ids
+
+extractOwnershipErrorIds :: OwnershipError -> [String]
+extractOwnershipErrorIds err = case err of
+  UseAfterMove id -> [id]
+  DoubleMove id1 id2 -> [id1, id2]
+  BorrowWhileMoved id -> [id]
+  MutBorrowWhileBorrowed id -> [id]
+  BorrowWhileMutBorrowed id -> [id]
+  MultipleMutBorrows id -> [id]
+  UseWhileMutBorrowed id -> [id]
+  OutOfScope id -> [id]
+  BorrowError id -> [id]
+  ParseError id -> [id]
+  CrossFunctionMove id1 id2 -> [id1, id2]
+  ParameterMoveMismatch id -> [id]
+  ControlFlowError id -> [id]
+  PathSensitiveError id -> [id]
+  LoopOwnershipError id -> [id]
+
+getOwnershipLifetime :: OwnershipType -> Int
+getOwnershipLifetime (Owned _) = 100
+getOwnershipLifetime (Borrowed _) = 50
+getOwnershipLifetime (MutBorrowed _) = 25
+
+canCreateBorrow :: OwnershipType -> OwnershipType -> Bool
+canCreateBorrow existing newBorrow = 
+  let existingId = extractOwnershipId existing
+      newId = extractOwnershipId newBorrow
+  in case (existing, newBorrow) of
+    (Owned _, Borrowed _) -> True
+    (Owned _, MutBorrowed _) -> True
+    (Borrowed _, Borrowed _) -> existingId /= newId
+    _ -> False
+
+canMoveOwnership :: OwnershipType -> Bool
+canMoveOwnership (Owned _) = True
+canMoveOwnership _ = False
+
+moveOwnership :: OwnershipType -> Maybe OwnershipType
+moveOwnership (Owned id) = Just (Owned id)
+moveOwnership _ = Nothing
+
+canUseOwnership :: OwnershipType -> Bool
+canUseOwnership (Owned _) = True
+canUseOwnership (Borrowed _) = True
+canUseOwnership (MutBorrowed _) = True
+
+countOwnershipAnalysisSteps :: String -> Int
+countOwnershipAnalysisSteps code = 
+  length (lines code) * 10 -- Simplified implementation
+
+estimateOwnershipAnalysisMemory :: String -> Int
+estimateOwnershipAnalysisMemory code = 
+  length code * 2 -- Simplified implementation

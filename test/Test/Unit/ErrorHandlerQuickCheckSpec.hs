@@ -15,7 +15,7 @@ import Compiler.Errors.Core (ErrorCategory(..), ErrorSeverity(..), errorWithCate
 import ErrorHandler
 import EnhancedErrorHandler
 import SourceLocation (Located(..), SourcePos(..), SourceSpan(..), toErrorLocation, spanFrom, startPos, toErrorLocationWithSpan)
-import TestSupport.Arbitrary
+import TestSupport.ExtendedArbitrary
 import qualified Data.Text as T
 
 -- Property: Error message formatting

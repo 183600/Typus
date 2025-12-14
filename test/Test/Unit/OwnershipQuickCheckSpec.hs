@@ -6,6 +6,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
+import TestSupport.ExtendedArbitrary
 import Test.QuickCheck 
   ( Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.)
   , Arbitrary(..), Gen, oneof, choose, listOf, vectorOf, elements, sized, frequency

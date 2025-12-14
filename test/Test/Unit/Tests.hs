@@ -60,6 +60,17 @@ import qualified Test.Unit.ComprehensiveOwnershipQuickCheckSpec
 import qualified Test.Unit.ComprehensiveDependenciesQuickCheckSpec
 import qualified Test.Unit.ComprehensiveUtilsQuickCheckSpec
 import qualified Test.Unit.ComprehensiveAnalyzerQuickCheckSpec
+-- Additional comprehensive QuickCheck test modules
+import qualified Test.Unit.CoreQuickCheckSpec
+import qualified Test.Unit.ErrorHandlingComprehensiveQuickCheckSpec
+import qualified Test.Unit.DependentTypesComprehensiveQuickCheckSpec
+import qualified Test.Unit.OwnershipComprehensiveQuickCheckSpec
+import qualified Test.Unit.CoreDataStructuresQuickCheckSpec
+import qualified Test.Unit.ComprehensiveTypeCheckerQuickCheckSpec
+-- Simple QuickCheck test modules
+import qualified Test.Unit.SimpleParserQuickCheckSpec
+import qualified Test.Unit.SimpleDataStructuresQuickCheckSpec
+import qualified Test.Unit.SimpleTypeCheckerQuickCheckSpec
 
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
@@ -117,13 +128,24 @@ tests =
                 , Test.Unit.CliQuickCheckSpec.tests
                 , Test.Unit.GoToolchainQuickCheckSpec.tests
                 ]
-        , testGroup "Comprehensive QuickCheck Tests"
+, testGroup "Comprehensive QuickCheck Tests"
             [ Test.Unit.ComprehensiveParserQuickCheckSpec.tests
             , Test.Unit.ComprehensiveCompilerQuickCheckSpec.tests
             , Test.Unit.ComprehensiveOwnershipQuickCheckSpec.tests
             , Test.Unit.ComprehensiveDependenciesQuickCheckSpec.tests
             , Test.Unit.ComprehensiveUtilsQuickCheckSpec.tests
             , Test.Unit.ComprehensiveAnalyzerQuickCheckSpec.tests
+            , testGroup "Additional Comprehensive QuickCheck Tests"
+                [ Test.Unit.CoreQuickCheckSpec.tests
+                , Test.Unit.ErrorHandlingComprehensiveQuickCheckSpec.tests
+                , Test.Unit.DependentTypesComprehensiveQuickCheckSpec.tests
+                , Test.Unit.OwnershipComprehensiveQuickCheckSpec.tests
+                ]
+            ]
+        , testGroup "Simple QuickCheck Tests"
+            [ Test.Unit.SimpleParserQuickCheckSpec.tests
+            , Test.Unit.SimpleDataStructuresQuickCheckSpec.tests
+            , Test.Unit.SimpleTypeCheckerQuickCheckSpec.tests
             ]
             ]
         ]

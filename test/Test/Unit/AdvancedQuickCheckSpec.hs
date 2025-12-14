@@ -4,8 +4,9 @@ module Test.Unit.AdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
-import TestSupport.ExtendedArbitrary ()
+import TestSupport.ExtendedArbitrary
 import TestSupport.Arbitrary ()
+import TestSupport.ExtendedArbitrary
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set

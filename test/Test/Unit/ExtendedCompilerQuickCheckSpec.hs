@@ -53,7 +53,7 @@ prop_compile_directives_only directives =
 -- Property: Ownership directive affects compilation output
 prop_compile_ownership_directive_effect :: Bool -> Property
 prop_compile_ownership_directive_effect ownershipEnabled =
-  let directives = FileDirectives (Just $ Located undefined ownershipEnabled) Nothing Nothing
+  let directives = FileDirectives (Just $ Located ownershipEnabled undefined undefined) Nothing Nothing
       file = createSimpleTypusFileWithDirectives directives
       result = compile file
   in case result of
@@ -65,7 +65,7 @@ prop_compile_ownership_directive_effect ownershipEnabled =
 -- Property: Dependent types directive affects compilation output
 prop_compile_dependent_types_directive_effect :: Bool -> Property
 prop_compile_dependent_types_directive_effect dtEnabled =
-  let directives = FileDirectives Nothing (Just $ Located undefined dtEnabled) Nothing
+  let directives = FileDirectives Nothing (Just $ Located dtEnabled undefined undefined) Nothing
       file = createSimpleTypusFileWithDirectives directives
       result = compile file
   in case result of
@@ -77,7 +77,7 @@ prop_compile_dependent_types_directive_effect dtEnabled =
 -- Property: Constraints directive affects compilation output
 prop_compile_constraints_directive_effect :: Bool -> Property
 prop_compile_constraints_directive_effect constraintsEnabled =
-  let directives = FileDirectives Nothing Nothing (Just $ Located undefined constraintsEnabled)
+  let directives = FileDirectives Nothing Nothing (Just $ Located constraintsEnabled undefined undefined)
       file = createSimpleTypusFileWithDirectives directives
       result = compile file
   in case result of
@@ -90,9 +90,9 @@ prop_compile_constraints_directive_effect constraintsEnabled =
 prop_compile_multiple_directives_interaction :: Bool -> Bool -> Bool -> Property
 prop_compile_multiple_directives_interaction ownership dt constraints =
   let directives = FileDirectives 
-        (Just $ Located undefined ownership)
-        (Just $ Located undefined dt)
-        (Just $ Located undefined constraints)
+        (Just $ Located ownership undefined undefined)
+        (Just $ Located dt undefined undefined)
+        (Just $ Located constraints undefined undefined)
       file = createSimpleTypusFileWithDirectives directives
       result = compile file
   in case result of

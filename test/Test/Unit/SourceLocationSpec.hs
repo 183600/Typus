@@ -94,7 +94,7 @@ tests =
 
         , testCase "mapLocated transforms the payload while preserving the span" $ do
             let testSpan = SourceSpan (SourcePos 1 1 0) (SourcePos 1 5 4)
-                loc = Located testSpan "value"
+                loc = Located "value" (spanStart testSpan) testSpan
                 mapped = mapLocated length loc
             locatedSpan mapped @?= testSpan
             locatedValue mapped @?= length (locatedValue loc)

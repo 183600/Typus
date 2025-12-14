@@ -202,8 +202,8 @@ prop_parse_directive_positions =
     Left err -> counterexample ("Parse error: " ++ err) False
     Right file -> 
       let directives = tfDirectives file
-          ownershipPos = fdOwnership directives >>= \(Located span _) -> Just (posLine $ spanStart span)
-          dependentTypesPos = fdDependentTypes directives >>= \(Located span _) -> Just (posLine $ spanStart span)
+          ownershipPos = fdOwnership directives >>= \(Located _ pos _) -> Just (posLine pos)
+          dependentTypesPos = fdDependentTypes directives >>= \(Located _ pos _) -> Just (posLine pos)
       in property $ ownershipPos == Just 1 && dependentTypesPos == Just 2
 
 -- Property: Mixed directives and code are parsed correctly (renamed to avoid duplication)
@@ -235,16 +235,16 @@ reconstructDirectives :: FileDirectives -> [String]
 reconstructDirectives (FileDirectives ownership depTypes constraints) =
   let ownershipLine = case ownership of
         Nothing -> []
-        Just (Located _ True) -> ["//! ownership: on"]
-        Just (Located _ False) -> ["//! ownership: off"]
+        Just (Located True _ _) -> ["//! ownership: on"]
+        Just (Located False _ _) -> ["//! ownership: off"]
       depTypesLine = case depTypes of
         Nothing -> []
-        Just (Located _ True) -> ["//! dependent_types: on"]
-        Just (Located _ False) -> ["//! dependent_types: off"]
+        Just (Located True _ _) -> ["//! dependent_types: on"]
+        Just (Located False _ _) -> ["//! dependent_types: off"]
       constraintsLine = case constraints of
         Nothing -> []
-        Just (Located _ True) -> ["//! constraints: on"]
-        Just (Located _ False) -> ["//! constraints: off"]
+        Just (Located True _ _) -> ["//! constraints: on"]
+        Just (Located False _ _) -> ["//! constraints: off"]
   in ownershipLine ++ depTypesLine ++ constraintsLine
 
 reconstructBlock :: CodeBlock -> String

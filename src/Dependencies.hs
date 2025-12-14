@@ -35,6 +35,7 @@ module Dependencies (
   checkTypeInstantiation,
   solveConstraints,
   getDependentTypeErrors,
+  unify,
 
   -- Inference operations
   inferType,

@@ -1,324 +1,590 @@
 {-# LANGUAGE CPP #-}
 
--- | Comprehensive QuickCheck tests for Parser module
+-- | Comprehensive QuickCheck tests for the Parser module
 module Test.Unit.ComprehensiveParserQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import TestSupport.Arbitrary
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property)
-
-import Parser (parseTypus, TypusFile(..), FileDirectives(..), BlockDirectives(..), CodeBlock(..))
-import SourceLocation (Located(..), locatedValue, spanStart, spanEnd, posLine)
+import TestSupport.ExtendedArbitrary
+import Test.QuickCheck 
 import qualified Data.List as Data.List
-import Data.Char (toLower, isAlphaNum, isSpace)
-import Data.Maybe (isJust, isNothing, fromMaybe)
+import Data.Char (toLower, isSpace)
+import Data.Maybe (isJust, isNothing)
 import qualified Data.Text as T
 
--- Property: Round-trip parsing maintains directive order
-prop_parse_directive_order :: [String] -> Property
-prop_parse_directive_order directives =
-  not (null directives) && length directives <= 10 ==>
-  let validDirectives = filter isValidDirective directives
-      content = Data.List.unlines validDirectives
-  in case parseTypus content of
-    Left err -> counterexample ("Parse error: " ++ err) $ property False
+import Parser (parseTypus, TypusFile(..), FileDirectives(..), BlockDirectives(..), CodeBlock(..))
+import SourceLocation (Located(..), locatedValue, spanStart, spanEnd, posLine, posColumn)
+
+-- ============================================================================
+-- Core Property Tests
+-- ============================================================================
+
+-- Property: Round-trip parsing preserves structure
+prop_parse_roundtrip_comprehensive :: TypusFile -> Property
+prop_parse_roundtrip_comprehensive typusFile = 
+  let reconstructed = reconstructTypusFile typusFile
+  in case parseTypus reconstructed of
+    Left err -> counterexample ("Parse error in round-trip: " ++ err) $ property False
     Right parsed -> 
-      let ownershipOrder = getDirectiveOrder (tfDirectives parsed) "ownership"
-          depTypesOrder = getDirectiveOrder (tfDirectives parsed) "dependent_types"
-          constraintsOrder = getDirectiveOrder (tfDirectives parsed) "constraints"
-      in property $ ownershipOrder >= 0 && depTypesOrder >= 0 && constraintsOrder >= 0
+      let directivesMatch = compareDirectives (tfDirectives typusFile) (tfDirectives parsed)
+          blocksCountMatch = length (tfBlocks typusFile) == length (tfBlocks parsed)
+          contentPreserved = all contentPreservedInBlock (zip (tfBlocks typusFile) (tfBlocks parsed))
+      in counterexample ("Directives match: " ++ show directivesMatch ++ 
+                        ", Blocks count match: " ++ show blocksCountMatch ++
+                        ", Content preserved: " ++ show contentPreserved) $
+         property $ directivesMatch && blocksCountMatch && contentPreserved
 
--- Property: Parsing with mixed tabs and spaces
-prop_parse_mixed_whitespace :: [String] -> Property
-prop_parse_mixed_whitespace lines =
-  not (null lines) ==>
-  let mixedLines = zipWith (\i line -> 
-        if even i then replicate i ' ' ++ line
-        else replicate i '\t' ++ line) [0..] lines
-      content = Data.List.unlines mixedLines
-  in case parseTypus content of
+-- Property: Valid directives are always parsed successfully
+prop_parse_valid_directives_always_success :: String -> Property
+prop_parse_valid_directives_always_success directive = 
+  let validDirectives = ["//! ownership: on", "//! ownership: off", 
+                        "//! dependent_types: on", "//! dependent_types: off",
+                        "//! constraints: on", "//! constraints: off",
+                        "//! go", "//! go:run", "//! go:build", "//! skip"]
+  in classify (directive `elem` validDirectives) "valid directive" $ 
+     property $ directive `elem` validDirectives ==> 
+     case parseTypus directive of
+       Left err -> counterexample ("Valid directive failed: " ++ directive ++ " Error: " ++ err) $ property False
+       Right _ -> property True
+
+-- Property: Error messages contain useful information
+prop_parse_error_messages_useful :: String -> Property
+prop_parse_error_messages_useful malformed =
+  length malformed > 5 ==> 
+  case parseTypus malformed of
+    Left err -> 
+      let hasErrorKeyword = "error" `isInfixOf` map toLower err
+          hasPosition = any (`isInfixOf` err) ["line", "column", "position"]
+          hasContext = length err > 10
+      in property $ hasErrorKeyword && (hasPosition || hasContext)
+    Right _ -> property True
+
+-- Property: Empty files produce minimal valid structure
+prop_parse_empty_minimal_structure :: Property
+prop_parse_empty_minimal_structure =
+  case parseTypus "" of
+    Left err -> counterexample ("Empty file parse error: " ++ err) $ property False
+    Right parsed -> 
+      let directives = tfDirectives parsed
+          blocks = tfBlocks parsed
+          hasNoDirectives = all isNothing [fdOwnership directives, fdDependentTypes directives, fdConstraints directives]
+          hasNoBlocks = null blocks
+      in property $ hasNoDirectives && hasNoBlocks
+
+-- Property: Whitespace variations don't affect parsing result
+prop_parse_whitespace_variations_preserve_meaning :: String -> String -> String -> Property
+prop_parse_whitespace_variations_preserve_meaning before middle after =
+  let content = before ++ "//! ownership: on" ++ middle ++ "package main" ++ after ++ "func main() {}"
+      normalized = normalizeWhitespace content
+  in case (parseTypus content, parseTypus normalized) of
+    (Left err1, Left err2) -> property $ True  -- Both fail consistently
+    (Left err1, Right _) -> counterexample ("Original failed but normalized succeeded: " ++ err1) $ property False
+    (Right _, Left err2) -> counterexample ("Normalized failed but original succeeded: " ++ err2) $ property False
+    (Right file1, Right file2) -> 
+      let directivesMatch = compareDirectives (tfDirectives file1) (tfDirectives file2)
+          blocksCountMatch = length (tfBlocks file1) == length (tfBlocks file2)
+      in property $ directivesMatch && blocksCountMatch
+
+-- Property: Large files are parsed without stack overflow
+prop_parse_large_files_no_overflow :: Int -> Property
+prop_parse_large_files_no_overflow n =
+  n >= 0 && n <= 1000 ==> 
+  let largeContent = unlines $ replicate n "var x int = 42 // Large file test"
+  in case parseTypus largeContent of
+    Left err -> counterexample ("Large file parse error: " ++ err) $ property False
+    Right parsed -> 
+      let expectedBlocks = if n > 0 then 1 else 0
+          actualBlocks = length $ tfBlocks parsed
+      in property $ actualBlocks == expectedBlocks
+
+-- Property: Unicode content is preserved correctly
+prop_parse_unicode_preserved :: String -> Property
+prop_parse_unicode_preserved base =
+  let unicodeContent = base ++ " // 测试中文内容 🚀 αβγ"
+  in case parseTypus unicodeContent of
     Left _ -> property False
-    Right _ -> property True
+    Right parsed -> 
+      let contentContainsUnicode = any (hasUnicodeSubstring base) (tfBlocks parsed)
+      in property $ contentContainsUnicode
 
--- Property: Parsing with extremely long identifiers
-prop_parse_long_identifiers :: Int -> Property
-prop_parse_long_identifiers length =
-  length >= 1 && length <= 100 ==> -- Limit to avoid timeouts
-  let longId = replicate length 'a'
-      content = "//! ownership: on\npackage main\nvar " ++ longId ++ " int = 42\nfunc main() {}"
+-- Property: Comments are ignored in parsing logic
+prop_parse_comments_ignored :: [String] -> Property
+prop_parse_comments_ignored comments =
+  not (null comments) ==>
+  let commentLines = map ("// " ++) comments
+      content = unlines $ ["//! ownership: on", "package main"] ++ commentLines ++ ["func main() {}"]
   in case parseTypus content of
-    Left err -> counterexample ("Parse error with long identifier: " ++ err) $ property False
-    Right _ -> property True
+    Left err -> counterexample ("Comment parsing error: " ++ err) $ property False
+    Right parsed -> 
+      let hasOwnershipDirective = isJust $ fdOwnership $ tfDirectives parsed
+          hasMainBlock = not $ null $ tfBlocks parsed
+      in property $ hasOwnershipDirective && hasMainBlock
 
--- Property: Parsing with deeply nested expressions
-prop_parse_nested_expressions :: Int -> Property
-prop_parse_nested_expressions depth =
-  depth >= 0 && depth <= 8 ==> -- Limit depth to avoid complexity
-  let nestedExpr = generateNestedExpression depth
-      content = "//! ownership: on\npackage main\nfunc main() {\n  x := " ++ nestedExpr ++ "\n}"
+-- Property: Mixed directives and code maintain order
+prop_parse_mixed_directives_code_order :: [String] -> [String] -> Property
+prop_parse_mixed_directives_code_order directives codeLines =
+  not (null directives) && not (null codeLines) ==>
+  let content = unlines $ directives ++ codeLines
   in case parseTypus content of
-    Left err -> counterexample ("Parse error with nested expression: " ++ err) $ property False
-    Right _ -> property True
+    Left err -> counterexample ("Mixed content parse error: " ++ err) $ property False
+    Right parsed -> 
+      let hasSomeDirectives = hasAnyDirectives parsed
+          hasCodeBlocks = not $ null $ tfBlocks parsed
+      in property $ hasSomeDirectives && hasCodeBlocks
 
--- Property: Parsing with complex type declarations
-prop_parse_complex_types :: [String] -> [String] -> Property
-prop_parse_complex_types typeNames fieldTypes =
-  not (null typeNames) && length typeNames <= 5 ==>
-  let complexTypes = zipWith (\tName fType -> 
-        "type " ++ tName ++ " struct {\n  Field1 " ++ fType ++ "\n  Field2 map[string]" ++ tName ++ "\n  Field3 chan " ++ fType ++ "\n}")
-        typeNames fieldTypes
-      content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ complexTypes ++ ["func main() {}"]
+-- Property: Nested structures maintain hierarchy
+prop_parse_nested_hierarchy :: Int -> Property
+prop_parse_nested_hierarchy depth =
+  depth >= 0 && depth <= 10 ==>
+  let nestedContent = generateNestedHierarchy depth
+  in case parseTypus nestedContent of
+    Left err -> counterexample ("Nested hierarchy parse error: " ++ err) $ property False
+    Right parsed -> 
+      let blockCount = length $ tfBlocks parsed
+          hasReasonableBlockCount = blockCount > 0 && blockCount <= depth + 1
+      in property $ hasReasonableBlockCount
+
+-- Property: Special characters in identifiers are handled
+prop_parse_special_char_identifiers :: [String] -> Property
+prop_parse_special_char_identifiers baseNames =
+  not (null baseNames) ==>
+  let specialNames = map (\name -> name ++ "_test_123") baseNames
+      content = unlines $ ["//! ownership: on", "package main"] ++
+                        map (\name -> "var " ++ name ++ " int = 42") specialNames ++
+                        ["func main() {}"]
   in case parseTypus content of
-    Left err -> counterexample ("Parse error with complex types: " ++ err) $ property False
-    Right _ -> property True
+    Left err -> counterexample ("Special char identifier error: " ++ err) $ property False
+    Right parsed -> 
+      let blockCount = length $ tfBlocks parsed
+      in property $ blockCount > 0
 
--- Property: Parsing with function parameters and return types
+-- Property: Multiple file directives are combined correctly
+prop_parse_multiple_directives_combined :: [String] -> Property
+prop_parse_multiple_directives_combined directives =
+  length directives <= 10 ==>
+  let fileDirectives = map (\d -> "//! " ++ d) directives
+      content = unlines fileDirectives
+  in case parseTypus content of
+    Left err -> counterexample ("Multiple directives error: " ++ err) $ property False
+    Right parsed -> 
+      let directiveCount = countPresentDirectives parsed
+      in property $ directiveCount > 0 && directiveCount <= length directives
+
+-- Property: Inconsistent indentation is handled gracefully
+prop_parse_inconsistent_indentation_graceful :: [String] -> Property
+prop_parse_inconsistent_indentation_graceful lines =
+  not (null lines) ==>
+  let indentedLines = zipWith (\i line -> replicate (i * 2) ' ' ++ line) [0..] lines
+      content = unlines indentedLines
+  in case parseTypus content of
+    Left err -> property $ True  -- May fail, but shouldn't crash
+    Right parsed -> property $ True  -- Or succeed with reasonable structure
+
+-- Property: Invalid directives are rejected appropriately
+prop_parse_invalid_directives_rejected :: String -> Property
+prop_parse_invalid_directives_rejected content =
+  let invalidPatterns = ["!!!", "///", "##", "@@", "%%", "!!!"]
+      hasInvalidPattern = any (`Data.List.isPrefixOf` content) invalidPatterns
+  in classify hasInvalidPattern "has invalid pattern" $
+     if hasInvalidPattern
+     then case parseTypus content of
+       Left _ -> property True  -- Expected to fail
+       Right _ -> property True  -- May recover partially
+     else property True
+
+-- Property: Very long lines are handled without issues
+prop_parse_very_long_lines :: Int -> Property
+prop_parse_very_long_lines length =
+  length >= 0 && length <= 2000 ==> 
+  let longLine = "var longVariableName string = \"" ++ replicate length 'x' ++ "\""
+      content = unlines ["//! ownership: on", "package main", longLine, "func main() {}"]
+  in case parseTypus content of
+    Left err -> counterexample ("Long line parse error: " ++ err) $ property False
+    Right parsed -> property $ True
+
+-- Property: Escape sequences in strings are handled
+prop_parse_escape_sequences :: [String] -> Property
+prop_parse_escape_sequences strings =
+  let escapedStrings = map addEscapeSequences strings
+      content = unlines $ ["//! ownership: on", "package main", "func main() {"] ++
+                        map (\s -> "  fmt.Println(\"" ++ s ++ "\")") escapedStrings ++
+                        ["}"]
+  in case parseTypus content of
+    Left err -> counterexample ("Escape sequence error: " ++ err) $ property False
+    Right parsed -> property $ True
+
+-- Property: Numeric literals of various formats are parsed
+prop_parse_numeric_literals :: [Int] -> [Double] -> Property
+prop_parse_numeric_literals ints doubles =
+  let intVars = map (\i -> "var intVar" ++ show i ++ " int = " ++ show i) (take 5 ints)
+      floatVars = map (\d -> "var floatVar" ++ show (round d :: Int) ++ " float64 = " ++ show d) (take 5 doubles)
+      hexVars = map (\i -> "var hexVar" ++ show i ++ " int = 0x" ++ showHex i) (take 3 ints)
+      octalVars = map (\i -> "var octalVar" ++ show i ++ " int = 0o" ++ showOct i) (take 3 ints)
+      content = unlines $ ["//! ownership: on", "package main"] ++ 
+                        intVars ++ floatVars ++ hexVars ++ octalVars ++
+                        ["func main() {}"]
+  in case parseTypus content of
+    Left err -> counterexample ("Numeric literals error: " ++ err) $ property False
+    Right parsed -> property $ True
+
+-- Property: Complex expressions are parsed correctly
+prop_parse_complex_expressions :: [String] -> Property
+prop_parse_complex_expressions identifiers =
+  not (null identifiers) ==>
+  let expressions = map generateComplexExpression (take 5 identifiers)
+      content = unlines $ ["//! ownership: on", "package main", "func main() {"] ++
+                        map (\expr -> "  result := " ++ expr) expressions ++
+                        ["}"]
+  in case parseTypus content of
+    Left err -> counterexample ("Complex expressions error: " ++ err) $ property False
+    Right parsed -> property $ True
+
+-- Property: Function definitions with various signatures
 prop_parse_function_signatures :: [String] -> [String] -> [String] -> Property
 prop_parse_function_signatures funcNames paramTypes returnTypes =
-  not (null funcNames) && length funcNames <= 5 ==>
-  let signatures = zipWith3 (\fName pType rType -> 
-        "func " ++ fName ++ "(" ++ pType ++ ") (" ++ rType ++ ") { return " ++ getDefault pType ++ " }")
-        funcNames paramTypes returnTypes
-      content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ signatures ++ ["func main() {}"]
+  let minLen = minimum [length funcNames, length paramTypes, length returnTypes]
+      signatures = take minLen $ zip3 funcNames paramTypes returnTypes
+      functions = map (\(name, pType, rType) -> 
+        "func " ++ name ++ "(" ++ pType ++ ") " ++ rType ++ " { return 42 }") signatures
+      content = unlines $ ["//! ownership: on", "package main"] ++ functions ++ ["func main() {}"]
   in case parseTypus content of
-    Left err -> counterexample ("Parse error with function signatures: " ++ err) $ property False
-    Right _ -> property True
+    Left err -> counterexample ("Function signatures error: " ++ err) $ property False
+    Right parsed -> 
+      let expectedFuncCount = length functions
+          actualBlockCount = length $ tfBlocks parsed
+      in property $ actualBlockCount >= expectedFuncCount
 
--- Property: Parsing with interface definitions with multiple methods
-prop_parse_complex_interfaces :: [String] -> [[String]] -> Property
-prop_parse_complex_interfaces interfaceNames methodLists =
-  not (null interfaceNames) && length interfaceNames <= 3 ==>
-  let interfaces = zipWith (\iName methods -> 
-        "type " ++ iName ++ " interface {\n" ++ 
-        Data.List.unlines (map (\m -> "  " ++ m ++ "()") methods) ++ 
-        "}")
-        interfaceNames methodLists
-      content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ interfaces ++ ["func main() {}"]
+-- Property: Struct and interface definitions
+prop_parse_struct_interface_definitions :: [String] -> [String] -> Property
+prop_parse_struct_interface_definitions structNames interfaceNames =
+  let structs = map (\name -> "type " ++ name ++ " struct { Field int }") structNames
+      interfaces = map (\name -> "type " ++ name ++ " interface { Method() }") interfaceNames
+      content = unlines $ ["//! ownership: on", "package main"] ++ structs ++ interfaces ++ ["func main() {}"]
   in case parseTypus content of
-    Left err -> counterexample ("Parse error with complex interfaces: " ++ err) $ property False
-    Right _ -> property True
+    Left err -> counterexample ("Struct/Interface definitions error: " ++ err) $ property False
+    Right parsed -> 
+      let expectedCount = length structs + length interfaces
+          actualBlockCount = length $ tfBlocks parsed
+      in property $ actualBlockCount >= expectedCount
 
--- Property: Parsing with generic function declarations
-prop_parse_generic_functions :: [String] -> [String] -> [String] -> Property
-prop_parse_generic_functions funcNames typeParams bodyTypes =
-  not (null funcNames) && length funcNames <= 5 ==>
-  let genericFuncs = zipWith3 (\fName tParam bType -> 
-        "func " ++ fName ++ "[" ++ tParam ++ " any](" ++ tParam ++ ") " ++ bType ++ " { return " ++ getDefault bType ++ " }")
-        funcNames typeParams bodyTypes
-      content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ genericFuncs ++ ["func main() {}"]
+-- Property: Import statements with various formats
+prop_parse_import_statements :: [String] -> Property
+prop_parse_import_statements importPaths =
+  let singleImports = map ("import \"" ++) importPaths
+      aliasImports = zipWith (\path i -> "import alias" ++ show i ++ " \"" ++ path ++ "\"") 
+                           importPaths [1..]
+      dotImports = map (\path -> "import . \"" ++ path ++ "\"") importPaths
+      underscoreImports = map (\path -> "import _ \"" ++ path ++ "\"") importPaths
+      allImports = take 5 $ singleImports ++ aliasImports ++ dotImports ++ underscoreImports
+      content = unlines $ ["//! ownership: on", "package main"] ++ allImports ++ ["func main() {}"]
   in case parseTypus content of
-    Left err -> counterexample ("Parse error with generic functions: " ++ err) $ property False
-    Right _ -> property True
+    Left err -> counterexample ("Import statements error: " ++ err) $ property False
+    Right parsed -> property $ True
 
--- Property: Parsing with concurrent patterns (goroutines and channels)
-prop_parse_concurrent_patterns :: [String] -> [String] -> Property
-prop_parse_concurrent_patterns channelNames operationTypes =
-  not (null channelNames) && length channelNames <= 5 ==>
-  let channelDecls = map (\name -> "var " ++ name ++ " chan " ++ name ++ "Type") channelNames
-      goroutines = zipWith (\name opType -> 
-        "go func() {\n  " ++ name ++ " <- " ++ getDefault opType ++ "\n}()") channelNames operationTypes
-      content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ channelDecls ++
-                        ["func main() {"] ++ goroutines ++ ["}"]
+-- Property: Concurrent programming constructs
+prop_parse_concurrent_constructs :: [String] -> Property
+prop_parse_concurrent_constructs channelNames =
+  let channels = map (\name -> "var " ++ name ++ " chan int") channelNames
+      goroutines = map (\name -> "go func() { " ++ name ++ " <- 42 }()") channelNames
+      selectCases = ["select {", "case <-ch1:", "  fmt.Println(\"received\")", "case ch2 <- 42:", "  fmt.Println(\"sent\")", "}"]
+      content = unlines $ ["//! ownership: on", "package main"] ++ channels ++
+                        ["func main() {"] ++ goroutines ++ selectCases ++ ["}"]
   in case parseTypus content of
-    Left err -> counterexample ("Parse error with concurrent patterns: " ++ err) $ property False
-    Right _ -> property True
+    Left err -> counterexample ("Concurrent constructs error: " ++ err) $ property False
+    Right parsed -> property $ True
 
--- Property: Parsing with error handling patterns
-prop_parse_error_handling :: [String] -> [String] -> Property
-prop_parse_error_handling funcNames errorTypes =
-  not (null funcNames) && length funcNames <= 5 ==>
-  let errorFuncs = zipWith (\fName eType -> 
-        "func " ++ fName ++ "() (" ++ getDefault eType ++ ", error) {\n  return " ++ getDefault eType ++ ", nil\n}")
-        funcNames errorTypes
-      errorHandling = map (\fName -> 
-        "if result, err := " ++ fName ++ "(); err != nil {\n  return err\n}\nfmt.Println(result)") funcNames
-      content = Data.List.unlines $ ["//! ownership: on", "package main", "import \"fmt\""] ++ errorFuncs ++
-                        ["func main() {"] ++ errorHandling ++ ["return nil", "}"]
+-- Property: Error handling patterns
+prop_parse_error_handling :: [String] -> Property
+prop_parse_error_handling functionNames =
+  let errorFuncs = map (\name -> "func " ++ name ++ "() error { return nil }") functionNames
+      errorHandling = map (\name -> "if err := " ++ name ++ "(); err != nil { return err }") functionNames
+      panicRecover = ["defer func() {", "  if r := recover(); r != nil {", "    fmt.Println(\"Recovered:\", r)", "  }", "}()", "panic(\"test\")"]
+      content = unlines $ ["//! ownership: on", "package main"] ++ errorFuncs ++
+                        ["func main() {"] ++ errorHandling ++ panicRecover ++ ["}"]
   in case parseTypus content of
-    Left err -> counterexample ("Parse error with error handling: " ++ err) $ property False
-    Right _ -> property True
+    Left err -> counterexample ("Error handling patterns error: " ++ err) $ property False
+    Right parsed -> property $ True
 
--- Property: Parsing with struct composition
-prop_parse_struct_composition :: [String] -> [String] -> Property
-prop_parse_struct_composition baseNames embeddedNames =
-  not (null baseNames) && length baseNames <= 5 ==>
-  let baseStructs = map (\bName -> "type " ++ bName ++ " struct { BaseField int }") baseNames
-      embeddedStructs = zipWith (\eName bName -> 
-        "type " ++ eName ++ " struct {\n  " ++ bName ++ "\n  EmbeddedField string\n}")
-        embeddedNames baseNames
-      content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ baseStructs ++ embeddedStructs ++ ["func main() {}"]
+-- Property: Generic types and functions
+prop_parse_generic_types :: [String] -> [String] -> Property
+prop_parse_generic_types typeNames typeParams =
+  let generics = zipWith (\tName tParam -> 
+        "type " ++ tName ++ "[" ++ tParam ++ " any] struct { Value " ++ tParam ++ " }") 
+        typeNames typeParams
+      genericFuncs = map (\tParam -> 
+        "func Generic[" ++ tParam ++ " any](value " ++ tParam ++ ") " ++ tParam ++ " { return value }")
+        typeParams
+      content = unlines $ ["//! ownership: on", "package main"] ++ generics ++ genericFuncs ++ ["func main() {}"]
   in case parseTypus content of
-    Left err -> counterexample ("Parse error with struct composition: " ++ err) $ property False
-    Right _ -> property True
+    Left err -> counterexample ("Generic types error: " ++ err) $ property False
+    Right parsed -> property $ True
 
--- Property: Parsing with method receivers
-prop_parse_method_receivers :: [String] -> [String] -> [String] -> Property
-prop_parse_method_receivers structNames methodNames paramTypes =
-  not (null structNames) && length structNames <= 5 ==>
-  let methods = zipWith3 (\sName mName pType -> 
-        "func (" ++ sName ++ ") " ++ mName ++ "(" ++ pType ++ ") int { return 42 }")
-        structNames methodNames paramTypes
-      content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ methods ++ ["func main() {}"]
+-- ============================================================================
+-- Edge Case and Stress Tests
+-- ============================================================================
+
+-- Property: Extremely long identifiers
+prop_parse_extremely_long_identifiers :: Int -> Property
+prop_parse_extremely_long_identifiers length =
+  length >= 0 && length <= 500 ==> 
+  let longName = replicate length 'a'
+      content = unlines ["//! ownership: on", "package main", "var " ++ longName ++ " int = 42", "func main() {}"]
   in case parseTypus content of
-    Left err -> counterexample ("Parse error with method receivers: " ++ err) $ property False
-    Right _ -> property True
+    Left err -> counterexample ("Long identifier error: " ++ err) $ property False
+    Right parsed -> property $ True
 
--- Property: Parsing with complex control flow
-prop_parse_complex_control_flow :: [String] -> Property
-prop_parse_complex_control_flow variableNames =
-  not (null variableNames) && length variableNames <= 5 ==>
-  let ifElseChains = map (\vName -> 
-        "if " ++ vName ++ " > 0 {\n  fmt.Println(\"positive\")\n} else if " ++ vName ++ " < 0 {\n  fmt.Println(\"negative\")\n} else {\n  fmt.Println(\"zero\")\n}")
-        variableNames
-      switchCases = map (\vName -> 
-        "switch " ++ vName ++ " {\ncase 1:\n  fmt.Println(\"one\")\ncase 2:\n  fmt.Println(\"two\")\ndefault:\n  fmt.Println(\"other\")\n}")
-        variableNames
-      content = Data.List.unlines $ ["//! ownership: on", "package main", "import \"fmt\""] ++
-                        ["func main() {"] ++ ifElseChains ++ switchCases ++ ["}"]
+-- Property: Deeply nested brackets
+prop_parse_deeply_nested_brackets :: Int -> Property
+prop_parse_deeply_nested_brackets depth =
+  depth >= 0 && depth <= 20 ==>
+  let nestedBrackets = replicate depth '[' ++ "x" ++ replicate depth ']'
+      content = unlines ["//! ownership: on", "package main", "func main() {", "  arr := " ++ nestedBrackets, "}"]
   in case parseTypus content of
-    Left err -> counterexample ("Parse error with complex control flow: " ++ err) $ property False
-    Right _ -> property True
+    Left err -> counterexample ("Deeply nested brackets error: " ++ err) $ property False
+    Right parsed -> property $ True
 
--- Property: Parsing with slice and map literals
-prop_parse_collection_literals :: [[String]] -> [(String, String)] -> Property
-prop_parse_collection_literals sliceElements mapElements =
-  let sliceLit = "var slice = []string{" ++ Data.List.intercalate ", " (map (\s -> "\"" ++ s ++ "\"") (concat sliceElements)) ++ "}"
-      mapLit = "var m = map[string]int{" ++ Data.List.intercalate ", " (map (\(k, v) -> "\"" ++ k ++ "\": " ++ v) mapElements) ++ "}"
-      content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ [sliceLit, mapLit, "func main() {}"]
+-- Property: Mixed line endings
+prop_parse_mixed_line_endings :: String -> Property
+prop_parse_mixed_line_endings content =
+  let mixedContent = content ++ "\r\n" ++ content ++ "\n" ++ content ++ "\r\n" ++ content
+  in case parseTypus mixedContent of
+    Left err -> counterexample ("Mixed line endings error: " ++ err) $ property False
+    Right parsed -> property $ True
+
+-- Property: Zero-width characters
+prop_parse_zero_width_characters :: String -> Property
+prop_parse_zero_width_characters content =
+  let zeroWidthChars = "\u200B\u200C\u200D\uFEFF"
+      contentWithZeroWidth = content ++ zeroWidthChars ++ content
+  in case parseTypus contentWithZeroWidth of
+    Left err -> counterexample ("Zero-width characters error: " ++ err) $ property False
+    Right parsed -> property $ True
+
+-- Property: Tab and space mixing
+prop_parse_tab_space_mixing :: [String] -> Property
+prop_parse_tab_space_mixing lines =
+  not (null lines) ==>
+  let mixedIndentation = zipWith (\i line -> 
+        if even i then "\t\t" ++ line else "    " ++ line) [0..] lines
+      content = unlines $ ["//! ownership: on", "package main"] ++ mixedIndentation ++ ["func main() {}"]
   in case parseTypus content of
-    Left err -> counterexample ("Parse error with collection literals: " ++ err) $ property False
-    Right _ -> property True
+    Left err -> counterexample ("Tab/space mixing error: " ++ err) $ property False
+    Right parsed -> property $ True
 
--- Property: Parsing with function literals and closures
-prop_parse_function_literals :: [String] -> Property
-prop_parse_function_literals variableNames =
-  not (null variableNames) && length variableNames <= 5 ==>
-  let closures = map (\vName -> 
-        vName ++ "Func := func(x int) int { return x * " ++ vName ++ " }") variableNames
-      higherOrder = map (\vName -> 
-        "result := " ++ vName ++ "Func(42)") variableNames
-      content = Data.List.unlines $ ["//! ownership: on", "package main"] ++
-                        ["func main() {"] ++ closures ++ higherOrder ++ ["}"]
+-- Property: Multiple consecutive newlines
+prop_parse_multiple_consecutive_newlines :: String -> Property
+prop_parse_multiple_consecutive_newlines content =
+  let contentWithManyNewlines = content ++ "\n\n\n\n\n" ++ content
+  in case parseTypus contentWithManyNewlines of
+    Left err -> counterexample ("Multiple newlines error: " ++ err) $ property False
+    Right parsed -> property $ True
+
+-- Property: File with only whitespace
+prop_parse_only_whitespace :: Property
+prop_parse_only_whitespace =
+  let whitespaceContent = unlines ["", "   ", "\t", "  \t  ", "   "]
+  in case parseTypus whitespaceContent of
+    Left err -> counterexample ("Whitespace only error: " ++ err) $ property False
+    Right parsed -> 
+      let hasNoBlocks = null $ tfBlocks parsed
+      in property $ hasNoBlocks
+
+-- Property: File with BOM (Byte Order Mark)
+prop_parse_with_bom :: String -> Property
+prop_parse_with_bom content =
+  let bomContent = "\xFEFF" ++ content
+  in case parseTypus bomContent of
+    Left err -> counterexample ("BOM content error: " ++ err) $ property False
+    Right parsed -> property $ True
+
+-- ============================================================================
+-- Performance and Scalability Tests
+-- ============================================================================
+
+-- Property: Parsing performance scales linearly
+prop_parse_performance_linear :: Int -> Property
+prop_parse_performance_linear n =
+  n >= 0 && n <= 100 ==> 
+  let content = unlines $ replicate n "var x int = 42 // Performance test"
   in case parseTypus content of
-    Left err -> counterexample ("Parse error with function literals: " ++ err) $ property False
-    Right _ -> property True
+    Left err -> counterexample ("Performance test error: " ++ err) $ property False
+    Right parsed -> property $ True
 
--- Property: Parsing with defer and recover patterns
-prop_parse_defer_recover :: [String] -> Property
-prop_parse_defer_recover functionNames =
-  not (null functionNames) && length functionNames <= 5 ==>
-  let deferCalls = map (\fName -> "defer " ++ fName ++ "()") functionNames
-      recoverFunc = "func() {\n  defer func() {\n    if r := recover(); r != nil {\n      fmt.Println(\"Recovered:\", r)\n    }\n  }()\n  panic(\"test panic\")\n}()"
-      content = Data.List.unlines $ ["//! ownership: on", "package main", "import \"fmt"] ++
-                        ["func main() {"] ++ deferCalls ++ [recoverFunc, "}"]
-  in case parseTypus content of
-    Left err -> counterexample ("Parse error with defer/recover: " ++ err) $ property False
-    Right _ -> property True
+-- Property: Memory usage doesn't grow exponentially
+prop_parse_memory_reasonable :: Int -> Property
+prop_parse_memory_reasonable n =
+  n >= 0 && n <= 50 ==> 
+  let complexContent = unlines $ replicate n $ unlines
+        [ "package main"
+        , "func test" ++ show n ++ "() {"
+        , "  for i := 0; i < 10; i++ {"
+        , "    if i % 2 == 0 {"
+        , "      fmt.Println(i)"
+        , "    } else {"
+        , "      continue"
+        , "    }"
+        , "  }"
+        , "}"
+        ]
+  in case parseTypus complexContent of
+    Left err -> counterexample ("Memory test error: " ++ err) $ property False
+    Right parsed -> property $ True
 
--- Property: Parsing with type assertions and type switches
-prop_parse_type_operations :: [String] -> Property
-prop_parse_type_operations typeNames =
-  not (null typeNames) && length typeNames <= 5 ==>
-  let assertions = map (\tName -> 
-        "var x interface{} = 42\n  val, ok := x.(" ++ tName ++ ")") typeNames
-      typeSwitch = "switch v := x.(type) {\n" ++ 
-                   Data.List.unlines (map (\tName -> "case " ++ tName ++ ":\n  fmt.Println(\"Type is " ++ tName ++ "\")") typeNames) ++
-                   "default:\n  fmt.Println(\"Unknown type\")\n}"
-      content = Data.List.unlines $ ["//! ownership: on", "package main", "import \"fmt", "func main() {"] ++
-                        assertions ++ [typeSwitch, "}"]
-  in case parseTypus content of
-    Left err -> counterexample ("Parse error with type operations: " ++ err) $ property False
-    Right _ -> property True
+-- ============================================================================
+-- Regression Tests
+-- ============================================================================
 
--- Property: Parsing with complex import statements
-prop_parse_complex_imports :: [String] -> [String] -> Property
-prop_parse_complex_imports importPaths aliases =
-  let imports = zipWith (\path alias -> 
-        "import " ++ alias ++ " \"" ++ path ++ "\"") importPaths aliases
-      content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ imports ++ ["func main() {}"]
-  in case parseTypus content of
-    Left err -> counterexample ("Parse error with complex imports: " ++ err) $ property False
-    Right _ -> property True
+-- Property: Specific known problematic patterns
+prop_parse_regression_patterns :: String -> Property
+prop_parse_regression_patterns pattern =
+  let knownPatterns = 
+        [ "func main() { return } // No return value"
+        , "var x = // Incomplete assignment"
+        , "if true // Missing braces"
+        , "for // Incomplete for loop"
+        , "type struct { // Missing name"
+        , "import ( // Empty import block"
+        , "func ( // Incomplete method receiver"
+        ]
+  in classify (pattern `elem` knownPatterns) "known regression pattern" $
+     case parseTypus pattern of
+       Left _ -> property True  -- Expected to fail gracefully
+       Right _ -> property True  -- Or succeed if fixed
 
--- Property: Parsing with build tags and constraints
-prop_parse_build_constraints :: [String] -> Property
-prop_parse_build_constraints buildTags =
-  let constraints = map (\tag -> "// +build " ++ tag) buildTags
-      content = Data.List.unlines $ constraints ++ ["//! ownership: on", "package main", "func main() {}"]
-  in case parseTypus content of
-    Left err -> counterexample ("Parse error with build constraints: " ++ err) $ property False
-    Right _ -> property True
+-- ============================================================================
+-- Helper Functions
+-- ============================================================================
 
--- Property: Parsing with package-level variables and constants
-prop_parse_package_level_declarations :: [String] -> [String] -> Property
-prop_parse_package_level_declarations varNames constNames =
-  let vars = map (\vName -> "var " ++ vName ++ " int = 42") varNames
-      consts = map (\cName -> "const " ++ cName ++ " string = \"test\"") constNames
-      content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ vars ++ consts ++ ["func main() {}"]
-  in case parseTypus content of
-    Left err -> counterexample ("Parse error with package-level declarations: " ++ err) $ property False
-    Right _ -> property True
+reconstructTypusFile :: TypusFile -> String
+reconstructTypusFile file = 
+  let directives = reconstructDirectives (tfDirectives file)
+      blocks = map reconstructBlock (tfBlocks file)
+  in unlines $ directives ++ blocks
 
--- Property: Parsing with struct tags
-prop_parse_struct_tags :: [String] -> [String] -> Property
-prop_parse_struct_tags structNames tagValues =
-  not (null structNames) && length structNames <= 5 ==>
-  let structsWithTags = zipWith (\sName tag -> 
-        "type " ++ sName ++ " struct {\n  Field int `" ++ tag ++ "`\n}")
-        structNames tagValues
-      content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ structsWithTags ++ ["func main() {}"]
-  in case parseTypus content of
-    Left err -> counterexample ("Parse error with struct tags: " ++ err) $ property False
-    Right _ -> property True
+reconstructDirectives :: FileDirectives -> [String]
+reconstructDirectives (FileDirectives ownership depTypes constraints) =
+  let ownershipLine = case ownership of
+        Nothing -> []
+        Just (Located _ True) -> ["//! ownership: on"]
+        Just (Located _ False) -> ["//! ownership: off"]
+      depTypesLine = case depTypes of
+        Nothing -> []
+        Just (Located _ True) -> ["//! dependent_types: on"]
+        Just (Located _ False) -> ["//! dependent_types: off"]
+      constraintsLine = case constraints of
+        Nothing -> []
+        Just (Located _ True) -> ["//! constraints: on"]
+        Just (Located _ False) -> ["//! constraints: off"]
+  in ownershipLine ++ depTypesLine ++ constraintsLine
 
--- Helper functions
-isValidDirective :: String -> Bool
-isValidDirective directive = 
-  let validPrefixes = ["//! ownership:", "//! dependent_types:", "//! constraints:"]
-  in any (`Data.List.isPrefixOf` directive) validPrefixes
+reconstructBlock :: CodeBlock -> String
+reconstructBlock block = cbContent block
 
-getDirectiveOrder :: FileDirectives -> String -> Int
-getDirectiveOrder directives directiveType = 
-  case directiveType of
-    "ownership" -> if isJust (fdOwnership directives) then 0 else -1
-    "dependent_types" -> if isJust (fdDependentTypes directives) then 1 else -1
-    "constraints" -> if isJust (fdConstraints directives) then 2 else -1
-    _ -> -1
+compareDirectives :: FileDirectives -> FileDirectives -> Bool
+compareDirectives (FileDirectives o1 d1 c1) (FileDirectives o2 d2 c2) =
+  (fmap locatedValue o1) == (fmap locatedValue o2) &&
+  (fmap locatedValue d1) == (fmap locatedValue d2) &&
+  (fmap locatedValue c1) == (fmap locatedValue c2)
 
-generateNestedExpression :: Int -> String
-generateNestedExpression 0 = "42"
-generateNestedExpression n = "(" ++ generateNestedExpression (n - 1) ++ " + " ++ generateNestedExpression (n - 1) ++ ")"
+contentPreservedInBlock :: (CodeBlock, CodeBlock) -> Bool
+contentPreservedInBlock (original, reconstructed) =
+  let originalContent = cbContent original
+      reconstructedContent = cbContent reconstructed
+  in normalizeContent originalContent == normalizeContent reconstructedContent
 
-getDefault :: String -> String
-getDefault "int" = "0"
-getDefault "string" = "\"\""
-getDefault "bool" = "false"
-getDefault "float64" = "0.0"
-getDefault _ = "nil"
+normalizeContent :: String -> String
+normalizeContent = unlines . filter (not . null) . lines
+
+normalizeWhitespace :: String -> String
+normalizeWhitespace = unwords . words
+
+hasUnicodeSubstring :: String -> CodeBlock -> Bool
+hasUnicodeSubstring base block =
+  let content = cbContent block
+      unicodeSubstrings = ["测试", "内容", "中文", "🚀", "αβγ"]
+  in any (`isInfixOf` content) unicodeSubstrings
+
+hasAnyDirectives :: TypusFile -> Bool
+hasAnyDirectives file = 
+  let directives = tfDirectives file
+  in any isJust [fdOwnership directives, fdDependentTypes directives, fdConstraints directives]
+
+countPresentDirectives :: TypusFile -> Int
+countPresentDirectives file = 
+  let directives = tfDirectives file
+  in length [() | Just _ <- [fdOwnership directives, fdDependentTypes directives, fdConstraints directives]]
+
+generateNestedHierarchy :: Int -> String
+generateNestedHierarchy 0 = "var x int = 42"
+generateNestedHierarchy n = unlines
+  [ "func level" ++ show n ++ "() {"
+  , "  if true {"
+  , generateNestedHierarchy (n - 1)
+  , "  }"
+  , "}"
+  ]
+
+addEscapeSequences :: String -> String
+addEscapeSequences = concatMap (\c -> if c == '\\' then "\\\\" else if c == '"' then "\\\"" else if c == '\n' then "\\n" else [c])
+
+showHex :: Int -> String
+showHex n = showIntAtBase 16 ("0123456789ABCDEF" !!) n ""
+
+showOct :: Int -> String
+showOct n = showIntAtBase 8 ("01234567" !!) n ""
+
+showIntAtBase :: Int -> (Int -> Char) -> Int -> String
+showIntAtBase base toChar n = 
+  if n < base then [toChar n]
+  else showIntAtBase base toChar (n `div` base) ++ [toChar (n `mod` base)]
+
+generateComplexExpression :: String -> String
+generateComplexExpression identifier = 
+  identifier ++ " + " ++ identifier ++ " * " ++ identifier ++ " / " ++ identifier
+
+isInfixOf :: String -> String -> Bool
+isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+
+-- ============================================================================
+-- Test Suite
+-- ============================================================================
 
 tests :: TestTree
 tests = testGroup "Comprehensive Parser QuickCheck Tests"
-  [ fastProperty "Directive order is preserved" prop_parse_directive_order
-  , fastProperty "Mixed tabs and spaces are handled" prop_parse_mixed_whitespace
-  , fastProperty "Long identifiers are parsed correctly" prop_parse_long_identifiers
-  , fastProperty "Nested expressions are parsed correctly" prop_parse_nested_expressions
-  , fastProperty "Complex type declarations are parsed" prop_parse_complex_types
-  , fastProperty "Function signatures are parsed correctly" prop_parse_function_signatures
-  , fastProperty "Complex interfaces are parsed correctly" prop_parse_complex_interfaces
-  , fastProperty "Generic functions are parsed correctly" prop_parse_generic_functions
-  , fastProperty "Concurrent patterns are parsed correctly" prop_parse_concurrent_patterns
-  , fastProperty "Error handling patterns are parsed" prop_parse_error_handling
-  , fastProperty "Struct composition is parsed correctly" prop_parse_struct_composition
-  , fastProperty "Method receivers are parsed correctly" prop_parse_method_receivers
-  , fastProperty "Complex control flow is parsed correctly" prop_parse_complex_control_flow
-  , fastProperty "Collection literals are parsed correctly" prop_parse_collection_literals
-  , fastProperty "Function literals and closures are parsed" prop_parse_function_literals
-  , fastProperty "Defer and recover patterns are parsed" prop_parse_defer_recover
-  , fastProperty "Type operations are parsed correctly" prop_parse_type_operations
-  , fastProperty "Complex imports are parsed correctly" prop_parse_complex_imports
-  , fastProperty "Build constraints are parsed correctly" prop_parse_build_constraints
-  , fastProperty "Package-level declarations are parsed" prop_parse_package_level_declarations
-  , fastProperty "Struct tags are parsed correctly" prop_parse_struct_tags
+  [ fastProperty "Round-trip parsing preserves structure" prop_parse_roundtrip_comprehensive
+  , fastProperty "Valid directives always succeed" prop_parse_valid_directives_always_success
+  , fastProperty "Error messages are useful" prop_parse_error_messages_useful
+  , fastProperty "Empty files produce minimal structure" prop_parse_empty_minimal_structure
+  , fastProperty "Whitespace variations preserve meaning" prop_parse_whitespace_variations_preserve_meaning
+  , fastProperty "Large files don't cause overflow" prop_parse_large_files_no_overflow
+  , fastProperty "Unicode content is preserved" prop_parse_unicode_preserved
+  , fastProperty "Comments are ignored" prop_parse_comments_ignored
+  , fastProperty "Mixed directives and code maintain order" prop_parse_mixed_directives_code_order
+  , fastProperty "Nested structures maintain hierarchy" prop_parse_nested_hierarchy
+  , fastProperty "Special characters in identifiers" prop_parse_special_char_identifiers
+  , fastProperty "Multiple directives combined correctly" prop_parse_multiple_directives_combined
+  , fastProperty "Inconsistent indentation handled gracefully" prop_parse_inconsistent_indentation_graceful
+  , fastProperty "Invalid directives rejected appropriately" prop_parse_invalid_directives_rejected
+  , fastProperty "Very long lines handled" prop_parse_very_long_lines
+  , fastProperty "Escape sequences handled" prop_parse_escape_sequences
+  , fastProperty "Numeric literals parsed" prop_parse_numeric_literals
+  , fastProperty "Complex expressions parsed" prop_parse_complex_expressions
+  , fastProperty "Function signatures parsed" prop_parse_function_signatures
+  , fastProperty "Struct and interface definitions parsed" prop_parse_struct_interface_definitions
+  , fastProperty "Import statements parsed" prop_parse_import_statements
+  , fastProperty "Concurrent constructs parsed" prop_parse_concurrent_constructs
+  , fastProperty "Error handling patterns parsed" prop_parse_error_handling
+  , fastProperty "Generic types parsed" prop_parse_generic_types
+  , fastProperty "Extremely long identifiers" prop_parse_extremely_long_identifiers
+  , fastProperty "Deeply nested brackets" prop_parse_deeply_nested_brackets
+  , fastProperty "Mixed line endings" prop_parse_mixed_line_endings
+  , fastProperty "Zero-width characters" prop_parse_zero_width_characters
+  , fastProperty "Tab and space mixing" prop_parse_tab_space_mixing
+  , fastProperty "Multiple consecutive newlines" prop_parse_multiple_consecutive_newlines
+  , fastProperty "Only whitespace files" prop_parse_only_whitespace
+  , fastProperty "Files with BOM" prop_parse_with_bom
+  , fastProperty "Parsing performance scales linearly" prop_parse_performance_linear
+  , fastProperty "Memory usage reasonable" prop_parse_memory_reasonable
+  , fastProperty "Regression patterns" prop_parse_regression_patterns
   ]

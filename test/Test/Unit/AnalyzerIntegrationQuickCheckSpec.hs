@@ -28,6 +28,7 @@ import Analyzer.State
 import Analyzer.SymbolTable
 import SourceLocation (Located(..), SourcePos(..), SourceSpan(..))
 import TestSupport.Arbitrary
+import TestSupport.ExtendedArbitrary
 
 -- Property: Analyzer state preservation
 prop_analyzer_state_preservation :: AnalyzerState -> Property

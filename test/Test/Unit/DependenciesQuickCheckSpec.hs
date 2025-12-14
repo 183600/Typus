@@ -19,6 +19,7 @@ import qualified Dependencies.Parser as DP
 import qualified Dependencies.Inference as DI
 import Dependencies.TypeSystem (TypeVar, TypeConstraint)
 import TestSupport.Arbitrary
+import TestSupport.ExtendedArbitrary
 
 -- Property: Type variable equality
 prop_typevar_equality :: TypeVar -> TypeVar -> Property
