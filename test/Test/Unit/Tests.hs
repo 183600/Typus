@@ -39,6 +39,27 @@ import qualified Test.Unit.DependentTypesQuickCheckSpec
 import qualified Test.Unit.DependenciesQuickCheckSpec
 import qualified Test.Unit.AdvancedQuickCheckSpec
 import qualified Test.Unit.PerformanceQuickCheckSpec
+-- Extended QuickCheck test modules
+import qualified Test.Unit.ExtendedParserQuickCheckSpec
+import qualified Test.Unit.ExtendedCompilerQuickCheckSpec
+import qualified Test.Unit.ExtendedOwnershipQuickCheckSpec
+import qualified Test.Unit.ExtendedTypeCheckerQuickCheckSpec
+import qualified Test.Unit.ExtendedAnalyzerQuickCheckSpec
+import qualified Test.Unit.ExtendedUtilsQuickCheckSpec
+-- Additional QuickCheck test modules
+import qualified Test.Unit.IRQuickCheckSpec
+import qualified Test.Unit.GoAstQuickCheckSpec
+import qualified Test.Unit.ErrorHandlerQuickCheckSpec
+import qualified Test.Unit.AnalyzerIntegrationQuickCheckSpec
+import qualified Test.Unit.CliQuickCheckSpec
+import qualified Test.Unit.GoToolchainQuickCheckSpec
+-- Comprehensive QuickCheck test modules
+import qualified Test.Unit.ComprehensiveParserQuickCheckSpec
+import qualified Test.Unit.ComprehensiveCompilerQuickCheckSpec
+import qualified Test.Unit.ComprehensiveOwnershipQuickCheckSpec
+import qualified Test.Unit.ComprehensiveDependenciesQuickCheckSpec
+import qualified Test.Unit.ComprehensiveUtilsQuickCheckSpec
+import qualified Test.Unit.ComprehensiveAnalyzerQuickCheckSpec
 
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
@@ -81,5 +102,29 @@ tests =
         , Test.Unit.DependenciesQuickCheckSpec.tests
         , Test.Unit.AdvancedQuickCheckSpec.tests
         , Test.Unit.PerformanceQuickCheckSpec.tests
+        , testGroup "Extended QuickCheck Tests"
+            [ Test.Unit.ExtendedParserQuickCheckSpec.tests
+            , Test.Unit.ExtendedCompilerQuickCheckSpec.tests
+            , Test.Unit.ExtendedOwnershipQuickCheckSpec.tests
+            , Test.Unit.ExtendedTypeCheckerQuickCheckSpec.tests
+            , Test.Unit.ExtendedAnalyzerQuickCheckSpec.tests
+            , Test.Unit.ExtendedUtilsQuickCheckSpec.tests
+            , testGroup "Additional QuickCheck Tests"
+                [ Test.Unit.IRQuickCheckSpec.tests
+                , Test.Unit.GoAstQuickCheckSpec.tests
+                , Test.Unit.ErrorHandlerQuickCheckSpec.tests
+                , Test.Unit.AnalyzerIntegrationQuickCheckSpec.tests
+                , Test.Unit.CliQuickCheckSpec.tests
+                , Test.Unit.GoToolchainQuickCheckSpec.tests
+                ]
+        , testGroup "Comprehensive QuickCheck Tests"
+            [ Test.Unit.ComprehensiveParserQuickCheckSpec.tests
+            , Test.Unit.ComprehensiveCompilerQuickCheckSpec.tests
+            , Test.Unit.ComprehensiveOwnershipQuickCheckSpec.tests
+            , Test.Unit.ComprehensiveDependenciesQuickCheckSpec.tests
+            , Test.Unit.ComprehensiveUtilsQuickCheckSpec.tests
+            , Test.Unit.ComprehensiveAnalyzerQuickCheckSpec.tests
+            ]
+            ]
         ]
     ]

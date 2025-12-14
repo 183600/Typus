@@ -196,9 +196,6 @@ instance Arbitrary OwnershipAnalyzer where
 instance Arbitrary SyntaxError where
   arbitrary = SyntaxError <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
-instance Arbitrary ErrorLocation where
-  arbitrary = ErrorLocation <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-
 instance Arbitrary Dep.Constraint where
   arbitrary = oneof
     [ Dep.SizeGT <$> arbitrary <*> arbitrary

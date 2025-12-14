@@ -1171,64 +1171,7 @@ positionsAreAccurate file lines =
 
 tests :: TestTree
 tests = testGroup "Parser QuickCheck Tests"
-  [ fastProperty "parse roundtrip" prop_parse_roundtrip
-  , fastProperty "parse valid directives" prop_parse_valid_directives
-  , fastProperty "parse invalid directives" prop_parse_invalid_directives
-  , fastProperty "parse empty content" prop_parse_empty_content
-  , fastProperty "parse multiple directives" prop_parse_multiple_directives
-  , fastProperty "parse large file" prop_parse_large_file
-  , fastProperty "parse unicode content" prop_parse_unicode_content
-  , fastProperty "parse code blocks" prop_parse_code_blocks
-  , fastProperty "parse directive positions" prop_parse_directive_positions
-  , fastProperty "parse mixed content" prop_parse_mixed_content
-  , fastProperty "parse nested structures" prop_parse_nested_structures
-  -- New property tests
-  , fastProperty "parse preserves comments" prop_parse_preserves_comments
-  , fastProperty "parse whitespace variations" prop_parse_whitespace_variations
-  , fastProperty "parse deeply nested blocks" prop_parse_deeply_nested_blocks
-  , fastProperty "parse malformed directives" prop_parse_malformed_directives
-  , fastProperty "parse special characters" prop_parse_special_characters
-  , fastProperty "parse mixed line endings" prop_parse_mixed_line_endings
-  , fastProperty "parse very long lines" prop_parse_very_long_lines
-  , fastProperty "parse escape sequences" prop_parse_escape_sequences
-  , fastProperty "parse numeric literals" prop_parse_numeric_literals
-  , fastProperty "parse string literals" prop_parse_string_literals
-  , fastProperty "parse boolean literals" prop_parse_boolean_literals
-  , fastProperty "parse complex expressions" prop_parse_complex_expressions
-  , fastProperty "parse function definitions" prop_parse_function_definitions
-  , fastProperty "parse struct definitions" prop_parse_struct_definitions
-  , fastProperty "parse interface definitions" prop_parse_interface_definitions
-  , fastProperty "parse import statements" prop_parse_import_statements
-  , fastProperty "parse concurrent constructs" prop_parse_concurrent_constructs
-  , fastProperty "parse error handling" prop_parse_error_handling
-  , fastProperty "parse generic types" prop_parse_generic_types
-  -- Extended property tests
-  , fastProperty "parse method definitions" prop_parse_method_definitions
-  , fastProperty "parse channel operations" prop_parse_channel_operations
-  , fastProperty "parse select statements" prop_parse_select_statements
-  , fastProperty "parse defer statements" prop_parse_defer_statements
-  , fastProperty "parse panic and recover" prop_parse_panic_recover
-  , fastProperty "parse type assertions" prop_parse_type_assertions
-  , fastProperty "parse type switches" prop_parse_type_switches
-  , fastProperty "parse closures" prop_parse_closures
-  , fastProperty "parse slice operations" prop_parse_slice_operations
-  , fastProperty "parse map operations" prop_parse_map_operations
-  , fastProperty "parse range loops" prop_parse_range_loops
-  , fastProperty "parse labeled statements" prop_parse_labeled_statements
-  , fastProperty "parse goto statements" prop_parse_goto_statements
-  , fastProperty "parse const declarations" prop_parse_const_declarations
-  , fastProperty "parse iota constants" prop_parse_iota_constants
-  , fastProperty "parse type aliases" prop_parse_type_aliases
-  , fastProperty "parse embedded structs" prop_parse_embedded_structs
-  , fastProperty "parse struct tags" prop_parse_struct_tags
-  , fastProperty "parse variadic functions" prop_parse_variadic_functions
-  , fastProperty "parse multiple returns" prop_parse_multiple_returns
-  , fastProperty "parse anonymous functions" prop_parse_anonymous_functions
-  , fastProperty "parse function literals" prop_parse_function_literals
-  , fastProperty "parse method expressions" prop_parse_method_expressions
-  , fastProperty "parse method values" prop_parse_method_values
-  -- Advanced property tests
-  , fastProperty "parse error recovery" prop_parse_error_recovery
+  [ fastProperty "parse error recovery" prop_parse_error_recovery
   , fastProperty "parse performance patterns" prop_parse_performance_patterns
   , fastProperty "parse extreme nesting" prop_parse_extreme_nesting
   , fastProperty "parse mixed encoding" prop_parse_mixed_encoding

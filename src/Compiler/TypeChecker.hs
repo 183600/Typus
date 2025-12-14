@@ -32,7 +32,7 @@ import qualified Compiler.IR as IR
 import Control.Applicative ((<|>))
 import Control.Monad (forM)
 import Data.Char (isAlphaNum, isDigit, isSpace)
-import Data.List (intercalate, isInfixOf, isPrefixOf, stripPrefix, (\\))
+import Data.List (intercalate, intersperse, isInfixOf, isPrefixOf, stripPrefix, (\\))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -1032,9 +1032,19 @@ typesCompatible :: Type -> Type -> Bool
 typesCompatible UnknownType _ = True
 typesCompatible _ UnknownType = True
 typesCompatible (TypeName a) (TypeName b) = normalizeTypeName a == normalizeTypeName b
+typesCompatible (TypeFunction params1 ret1) (TypeFunction params2 ret2) = 
+    length params1 == length params2 && all (uncurry typesCompatible) (zip params1 params2) && typesCompatible ret1 ret2
+typesCompatible (TypeRecord fields1) (TypeRecord fields2) = 
+    length fields1 == length fields2 && all (\((n1, t1), (n2, t2)) -> n1 == n2 && typesCompatible t1 t2) (zip fields1 fields2)
+typesCompatible (TypeUnion types1) (TypeUnion types2) = 
+    length types1 == length types2 && all (uncurry typesCompatible) (zip types1 types2)
+typesCompatible _ _ = False  -- Different type constructors are incompatible
 
 showType :: Type -> String
 showType (TypeName n) = n
+showType (TypeFunction params ret) = "(" ++ concat (intersperse " -> " (map showType params ++ [showType ret])) ++ ")"
+showType (TypeRecord fields) = "{" ++ concat (intersperse ", " (map (\(n, t) -> n ++ ": " ++ showType t) fields)) ++ "}"
+showType (TypeUnion types) = "(" ++ concat (intersperse " | " (map showType types)) ++ ")"
 showType UnknownType = "unknown"
 
 -- | Check for circular dependencies between functions

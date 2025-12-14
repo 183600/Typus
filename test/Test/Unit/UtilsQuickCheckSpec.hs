@@ -22,9 +22,9 @@ import Utils
   , breakOn
   )
 
-import Data.Char (isSpace)
+import Data.Char (isSpace, toLower)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf)
+import Data.List (isPrefixOf, tails, isInfixOf, sort)
 
 -- Property: trim removes leading and trailing whitespace
 prop_trim_removes_leading_trailing :: String -> String -> Property
@@ -659,20 +659,17 @@ prop_string_processing_control_characters content =
       processed = trim contentWithControls
   in property $ length processed >= length content * 2 - length controlChars
 
--- Import missing functions
-import Data.List (sort)
+-- Additional comprehensive QuickCheck tests for Utils module
 
 -- Helper function for pipeline operations
 (|>) :: a -> (a -> b) -> b
 (|>) x f = f x
 
--- Additional comprehensive QuickCheck tests for Utils module
-
 -- Property: Advanced text processing with regex patterns
 prop_regex_pattern_processing :: [String] -> Property
 prop_regex_pattern_processing patterns =
   let testStrings = map (\p -> "test_" ++ p ++ "_pattern") patterns
-      processed = map processWithPatterns testStrings patterns
+      processed = map (\text -> processWithPatterns text patterns) testStrings
   in property $ all isValidProcessedString processed
 
 -- Property: Multi-language text normalization
@@ -922,7 +919,7 @@ generateRandomIndices :: [String] -> [Index]
 generateRandomIndices strings = map (\i -> Index (i `mod` 100)) [0..length strings - 1]
 
 sliceStrings :: [String] -> [Index] -> [SlicedString]
-sliceStrings strings indices = map (\(s, i) -> SlicedString (take i s)) (zip strings indices)
+sliceStrings strings indices = map (\(s, i) -> SlicedString (take (fromIndex i) s)) (zip strings indices)
 
 checkSlicingCorrectness :: [String] -> [Index] -> [SlicedString] -> Bool
 checkSlicingCorrectness original indices sliced = length original == length sliced
@@ -949,19 +946,26 @@ checkSummaryQuality documents summaries = all (\s -> summaryLength s <= 50) summ
   where
     summaryLength (Summary s) = length s
 
--- Import missing functions
-import Data.List (sort)
+
 
 -- Additional data types for helper functions
 data ProcessedString = ProcessedString String
 data NormalizedText = NormalizedText String
 data TransformationPipeline = TransformationPipeline [String]
+
+-- Helper function to convert Index to Int
+fromIndex :: Index -> Int
+fromIndex = fromEnum
 data ProcessedScript = ProcessedScript String
 data CompressedStrings = CompressedStrings [String]
 data SimilarityMatrix = SimilarityMatrix Int
 data Match = Match String String
 data TokenizedString = TokenizedString String
 data Index = Index Int
+
+instance Enum Index where
+  toEnum = Index
+  fromEnum (Index i) = i
 data SlicedString = SlicedString String
 data FormattedString = FormattedString String
 data SanitizedString = SanitizedString String

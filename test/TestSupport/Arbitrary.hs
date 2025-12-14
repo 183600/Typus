@@ -52,7 +52,10 @@ import qualified Compiler.TypeChecker as TC
   )
 import Compiler.ValueAnalysis (ValueInfo(..), ValueKind(..))
 import Ownership (OwnershipType(..), OwnershipError(..))
-import Compiler.Errors.Core (ErrorSeverity(..))
+import Compiler.Errors.Core (ErrorSeverity(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..), emptyContext, TypeError(..))
+import Compiler.Errors (CompilerError(..), CompilationPhase(..))
+import qualified Compiler.Errors.Core as Core
+import qualified Compiler.ValueAnalysis as ValueAnalysis
 import qualified Dependencies as Dep
 
 -- Helper generators
@@ -131,6 +134,9 @@ instance Arbitrary VarDecl where
 instance Arbitrary ConstDecl where
   arbitrary = ConstDecl <$> listOf genIdentifier <*> arbitrary
 
+instance Arbitrary PackageDecl where
+  arbitrary = PackageDecl <$> genIdentifier
+
 instance Arbitrary GoDecl where
   arbitrary = oneof
     [ GoFunc <$> arbitrary
@@ -189,7 +195,7 @@ instance Arbitrary Dep.TypeVar where
 
 -- Value system generators
 instance Arbitrary ValueKind where
-  arbitrary = elements [ValueCopy, Reference, Unknown]
+  arbitrary = elements [ValueCopy, Reference, ValueAnalysis.Unknown]
 
 instance Arbitrary ValueInfo where
   arbitrary = ValueInfo <$> genIdentifier <*> arbitrary <*> genInt
@@ -299,10 +305,89 @@ instance Arbitrary AnalyzerState where
     <*> pure undefined -- DependentTypeChecker
     <*> genInt
     <*> pure mempty -- SymbolTable
-    <*> arbitrary
-    <*> pure []
-    <*> pure []
-    <*> pure []
+    <*> arbitrary -- AnalysisContext
+    <*> pure [] -- CombinedError
+    <*> pure [] -- OwnershipErrors
+    <*> pure [] -- DependentTypeErrors
+
+instance Arbitrary CompilationPhase where
+  arbitrary = elements 
+    [ LexingPhase
+    , ParsingPhase
+    , TypeCheckingPhase
+    , OwnershipAnalysisPhase
+    , DependentTypeCheckingPhase
+    , CodeGenerationPhase
+    , OptimizationPhase
+    ]
+
+instance Arbitrary Core.ErrorRecovery where
+  arbitrary = frequency
+    [ (1, pure Core.fatalRecovery)
+    , (2, pure Core.errorRecovery)
+    , (3, pure Core.warningRecovery)
+    , (4, pure Core.infoRecovery)
+    ]
+
+instance Arbitrary Core.ErrorLocation where
+  arbitrary = Core.ErrorLocation
+    <$> frequency [(1, pure Nothing), (3, Just <$> genIdentifier)]
+    <*> genInt
+    <*> genInt
+    <*> frequency [(1, pure Nothing), (2, Just <$> genInt)]
+    <*> frequency [(1, pure Nothing), (2, Just <$> genInt)]
+
+instance Arbitrary Core.ErrorCategory where
+  arbitrary = elements
+    [ Core.TypeChecking
+    , Core.Ownership
+    , Core.Parsing
+    , Core.Semantic
+    , Core.Runtime
+    , Core.Constraint
+    , Core.Inference
+    , Core.Integration
+    , Core.Unknown
+    ]
+
+instance Arbitrary CompilerError where
+  arbitrary = do
+    errorId <- genIdentifier
+    severity <- arbitrary
+    category <- arbitrary
+    message <- T.pack <$> genNonEmptyString
+    location <- arbitrary
+    context <- pure emptyContext
+    recovery <- arbitrary
+    suggestions <- listOf (T.pack <$> genNonEmptyString)
+    relatedErrors <- pure []
+    errorChain <- pure []
+    timestamp <- pure Nothing
+    
+    let typeError = Core.TypeError
+          { Core.errorId = errorId
+          , Core.severity = severity
+          , Core.category = category
+          , Core.message = message
+          , Core.location = location
+          , Core.context = context
+          , Core.recovery = recovery
+          , Core.suggestions = suggestions
+          , Core.relatedErrors = relatedErrors
+          , Core.errorChain = errorChain
+          , Core.timestamp = timestamp
+          }
+    
+    sourceContext <- frequency [(1, pure Nothing), (2, Just <$> genNonEmptyString)]
+    stackTrace <- listOf genIdentifier
+    phase <- arbitrary
+    
+    return $ CompilerError
+      { ceError = typeError
+      , ceSourceContext = sourceContext
+      , ceStackTrace = stackTrace
+      , cePhase = phase
+      }
 
 -- String generators for testing edge cases
 genValidIdentifier :: Gen String
