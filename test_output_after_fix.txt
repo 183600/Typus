@@ -1,8 +1,0 @@
-Resolving dependencies...
-Error: [Cabal-7107]
-Could not resolve dependencies:
-[__0] trying: typus-0.12.0 (user goal)
-[__1] unknown package: tempfile (dependency of typus)
-[__1] fail (backjumping, conflict set: tempfile, typus)
-After searching the rest of the dependency tree exhaustively, these were the goals I've had most trouble fulfilling: typus, tempfile
-

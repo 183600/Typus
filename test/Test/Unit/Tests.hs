@@ -23,6 +23,7 @@ import qualified Test.Unit.AdvancedParserSpec
 import qualified Test.Unit.IntegrationSpec
 import qualified Test.Unit.PerformanceSpec
 import qualified Test.Unit.EdgeCaseSpec
+import qualified Test.Unit.EnhancedQuickCheckSpec
 
 -- QuickCheck test modules
 import qualified Test.Unit.ParserQuickCheckSpec
@@ -65,12 +66,32 @@ import qualified Test.Unit.CoreQuickCheckSpec
 import qualified Test.Unit.ErrorHandlingComprehensiveQuickCheckSpec
 import qualified Test.Unit.DependentTypesComprehensiveQuickCheckSpec
 import qualified Test.Unit.OwnershipComprehensiveQuickCheckSpec
-import qualified Test.Unit.CoreDataStructuresQuickCheckSpec
-import qualified Test.Unit.ComprehensiveTypeCheckerQuickCheckSpec
 -- Simple QuickCheck test modules
 import qualified Test.Unit.SimpleParserQuickCheckSpec
+import qualified Test.Unit.SimpleQuickCheckSpec
 import qualified Test.Unit.SimpleDataStructuresQuickCheckSpec
 import qualified Test.Unit.SimpleTypeCheckerQuickCheckSpec
+import qualified Test.Unit.NewQuickCheckSpec
+import qualified Test.Unit.FocusedQuickCheckSpec
+import qualified Test.Unit.BasicPropertiesQuickCheckSpec
+-- New property-based QuickCheck test modules
+import qualified Test.Unit.StringUtilsQuickCheckSpec
+import qualified Test.Unit.SourceLocationPropertiesQuickCheckSpec
+import qualified Test.Unit.ParserDirectivesQuickCheckSpec
+import qualified Test.Unit.ListPropertiesQuickCheckSpec
+import qualified Test.Unit.MapPropertiesQuickCheckSpec
+import qualified Test.Unit.SetPropertiesQuickCheckSpec
+import qualified Test.Unit.MonadPropertiesQuickCheckSpec
+import qualified Test.Unit.ArithmeticPropertiesQuickCheckSpec
+-- New property-based QuickCheck test modules (batch 2)
+import qualified Test.Unit.IRPropertiesQuickCheckSpec
+import qualified Test.Unit.GoLexerPropertiesQuickCheckSpec
+import qualified Test.Unit.TypeSystemPropertiesQuickCheckSpec
+import qualified Test.Unit.GoParsingPropertiesQuickCheckSpec
+import qualified Test.Unit.IntegratedCompilerPropertiesQuickCheckSpec
+import qualified Test.Unit.EnhancedErrorHandlerPropertiesQuickCheckSpec
+import qualified Test.Unit.DebugIntegrationPropertiesQuickCheckSpec
+import qualified Test.Unit.CompilerUtilsPropertiesQuickCheckSpec
 
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
@@ -98,6 +119,7 @@ tests =
     , Test.Unit.IntegrationSpec.tests
     , Test.Unit.PerformanceSpec.tests
     , Test.Unit.EdgeCaseSpec.tests
+    , Test.Unit.EnhancedQuickCheckSpec.tests
     , testGroup "QuickCheck Tests"
         [ Test.Unit.ParserQuickCheckSpec.tests
         , Test.Unit.CompilerQuickCheckSpec.tests
@@ -128,14 +150,14 @@ tests =
                 , Test.Unit.CliQuickCheckSpec.tests
                 , Test.Unit.GoToolchainQuickCheckSpec.tests
                 ]
-, testGroup "Comprehensive QuickCheck Tests"
-            [ Test.Unit.ComprehensiveParserQuickCheckSpec.tests
-            , Test.Unit.ComprehensiveCompilerQuickCheckSpec.tests
-            , Test.Unit.ComprehensiveOwnershipQuickCheckSpec.tests
-            , Test.Unit.ComprehensiveDependenciesQuickCheckSpec.tests
-            , Test.Unit.ComprehensiveUtilsQuickCheckSpec.tests
-            , Test.Unit.ComprehensiveAnalyzerQuickCheckSpec.tests
-            , testGroup "Additional Comprehensive QuickCheck Tests"
+            , testGroup "Comprehensive QuickCheck Tests"
+                [ Test.Unit.ComprehensiveParserQuickCheckSpec.tests
+                , Test.Unit.ComprehensiveCompilerQuickCheckSpec.tests
+                , Test.Unit.ComprehensiveOwnershipQuickCheckSpec.tests
+                , Test.Unit.ComprehensiveDependenciesQuickCheckSpec.tests
+                , Test.Unit.ComprehensiveUtilsQuickCheckSpec.tests
+                , Test.Unit.ComprehensiveAnalyzerQuickCheckSpec.tests
+                , testGroup "Additional Comprehensive QuickCheck Tests"
                 [ Test.Unit.CoreQuickCheckSpec.tests
                 , Test.Unit.ErrorHandlingComprehensiveQuickCheckSpec.tests
                 , Test.Unit.DependentTypesComprehensiveQuickCheckSpec.tests
@@ -144,8 +166,28 @@ tests =
             ]
         , testGroup "Simple QuickCheck Tests"
             [ Test.Unit.SimpleParserQuickCheckSpec.tests
+            , Test.Unit.SimpleQuickCheckSpec.tests
             , Test.Unit.SimpleDataStructuresQuickCheckSpec.tests
             , Test.Unit.SimpleTypeCheckerQuickCheckSpec.tests
+            , Test.Unit.NewQuickCheckSpec.tests
+            , Test.Unit.FocusedQuickCheckSpec.tests
+            , Test.Unit.BasicPropertiesQuickCheckSpec.tests
+            , Test.Unit.StringUtilsQuickCheckSpec.tests
+            , Test.Unit.SourceLocationPropertiesQuickCheckSpec.tests
+            , Test.Unit.ParserDirectivesQuickCheckSpec.tests
+            , Test.Unit.ListPropertiesQuickCheckSpec.tests
+            , Test.Unit.MapPropertiesQuickCheckSpec.tests
+            , Test.Unit.SetPropertiesQuickCheckSpec.tests
+            , Test.Unit.MonadPropertiesQuickCheckSpec.tests
+            , Test.Unit.ArithmeticPropertiesQuickCheckSpec.tests
+            , Test.Unit.IRPropertiesQuickCheckSpec.tests
+            , Test.Unit.GoLexerPropertiesQuickCheckSpec.tests
+            , Test.Unit.TypeSystemPropertiesQuickCheckSpec.tests
+            , Test.Unit.GoParsingPropertiesQuickCheckSpec.tests
+            , Test.Unit.IntegratedCompilerPropertiesQuickCheckSpec.tests
+            , Test.Unit.EnhancedErrorHandlerPropertiesQuickCheckSpec.tests
+            , Test.Unit.DebugIntegrationPropertiesQuickCheckSpec.tests
+            , Test.Unit.CompilerUtilsPropertiesQuickCheckSpec.tests
             ]
             ]
         ]

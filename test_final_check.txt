@@ -1,1 +1,0 @@
-./run_without_locale_warnings.sh: line 21: exec: cabal: not found

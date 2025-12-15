@@ -1,6 +1,0 @@
-Configuration is affected by cabal.project and cabal.project.local at
-'/home/runner/work/Typus/Typus'.
-Up to date
-Executing install plan in parallel using Just 4 threads.
-creating /home/runner/work/Typus/Typus/dist-newstyle/build
-creating /home/runner/work/Typus/Typus/dist-newstyle/tmp

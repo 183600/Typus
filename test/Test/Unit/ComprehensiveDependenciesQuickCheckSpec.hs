@@ -7,7 +7,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
-import TestSupport.ExtendedArbitrary
+import TestSupport.ExtendedArbitrary ()
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property)
 
 import Dependencies 
@@ -22,22 +22,22 @@ import Dependencies.Inference (TypeInference(..))
 
 import qualified Dependencies as Dep
 
--- Add Show instance for TypeEnvironment
-instance Show TypeEnvironment where
-  show env = "TypeEnvironment { types=" ++ show (teTypes env) ++ "}"
 import Control.Monad.Except (runExceptT)
 import Control.Monad.State (evalStateT)
 
 import Parser (TypusFile(..))
 import Compiler.TypeChecker (Type(..), TypeEnv(..))
-
-import qualified Data.List as Data.List
+import qualified Data.List as List
 import Data.Char (toLower, isSpace, isLower)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Map (Map)
 import qualified Data.Map as Map
+
+-- Add Show instance for TypeEnvironment
+instance Show TypeEnvironment where
+  show env = "TypeEnvironment { types=" ++ show (teTypes env) ++ "}"
 
 -- Property: Type variables are properly normalized
 prop_typevar_normalization :: TypeVar -> Property

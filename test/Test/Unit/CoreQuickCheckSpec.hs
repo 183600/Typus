@@ -5,7 +5,7 @@ module Test.Unit.CoreQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import TestSupport.ExtendedArbitrary
+import TestSupport.ExtendedArbitrary ()
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, label, cover)
 
 import Parser (parseTypus, TypusFile(..), FileDirectives(..), BlockDirectives(..), CodeBlock(..))

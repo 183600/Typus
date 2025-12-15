@@ -42,7 +42,7 @@ import qualified Data.Text as T
 data SourceIR = SourceIR
     { sourceTypusFile :: TypusFile
     , sourceText :: String
-    }
+    } deriving (Show)
 
 -- | Semantic IR captures the Go AST after structural rewrites have been
 -- applied (imports inferred, main function synthesised, ...).
@@ -50,13 +50,13 @@ data SemanticIR = SemanticIR
     { semanticTypusFile :: TypusFile
     , semanticModule :: GoModule
     , semanticValueInfo :: [ValueInfo]
-    }
+    } deriving (Show)
 
 -- | Final Go artefact ready to be rendered to source code.
 data GoIR = GoIR
     { goModule :: GoModule
     , goSource :: String
-    }
+    } deriving (Show)
 
 buildSourceIR :: TypusFile -> SourceIR
 buildSourceIR typusFile = SourceIR

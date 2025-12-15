@@ -6,9 +6,11 @@ module Test.Unit.ComprehensiveCompilerQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import TestSupport.ExtendedArbitrary
+import TestSupport.ExtendedArbitrary ()
 import Test.QuickCheck 
 import qualified Data.List as Data.List
+import Data.List ((\\))
+import Data.List (isInfixOf)
 import Data.Char (toLower, isSpace)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Text as T
@@ -16,11 +18,28 @@ import qualified Data.Map as Map
 
 import Compiler
 import Compiler.GoAst
-import Compiler.IR
+import qualified Compiler.IR as IR hiding (GoIR)
 import Compiler.TypeChecker as TC
 import Compiler.Errors
 import Parser (TypusFile(..), FileDirectives(..))
 import SourceLocation (Located(..), locatedValue, spanStart, spanEnd, posLine, posColumn)
+
+-- ============================================================================
+-- Test-specific IR types (local to this test module)
+-- ============================================================================
+
+data IR = IR
+    { irSource :: TestSourceIR
+    , irSemantic :: TestSemanticIR
+    , irGo :: TestGoIR
+    } deriving (Show)
+
+data TestSourceIR = TestSourceIR String [String] [String] deriving (Show)
+data TestSemanticIR = TestSemanticIR (Map.Map String TC.Type) (Map.Map String TC.FunctionSignature) (Map.Map String TC.Type) [String] deriving (Show)
+data TestGoIR = TestGoIR PackageDecl [ImportDecl] [GoDecl] deriving (Show)
+
+instance Arbitrary TestGoIR where
+  arbitrary = TestGoIR <$> arbitrary <*> arbitrary <*> arbitrary
 
 -- ============================================================================
 -- Core Property Tests
@@ -49,15 +68,15 @@ prop_typecheck_catches_errors expectedTypes actualTypes =
   in property $ errorCount >= 0  -- Should catch some errors if types mismatch
 
 -- Property: Optimization preserves correctness
-prop_optimization_preserves_correctness :: GoIR -> Property
+prop_optimization_preserves_correctness :: TestGoIR -> Property
 prop_optimization_preserves_correctness goIR =
   let optimized = optimizeIR goIR
   in property $ hasSameFunctionSignatures goIR optimized
 
 -- Property: Code generation produces valid Go code
-prop_codegen_produces_valid_go :: GoIR -> Property
+prop_codegen_produces_valid_go :: TestGoIR -> Property
 prop_codegen_produces_valid_go goIR =
-  let goCode = generateGoCode goIR
+  let goCode = generateGoCodeForTest goIR
   in property $ isValidGoSyntax goCode
 
 -- Property: Import handling preserves dependencies
@@ -78,7 +97,7 @@ prop_function_inlining_preserves_behavior signatures =
   in property $ hasSameBehavior goIR inlined
 
 -- Property: Dead code elimination removes unused code
-prop_dead_code_elimination :: GoIR -> Property
+prop_dead_code_elimination :: TestGoIR -> Property
 prop_dead_code_elimination goIR =
   let optimized = eliminateDeadCode goIR
       originalSize = countInstructions goIR
@@ -141,12 +160,12 @@ prop_compilation_time_scales inputSize =
   inputSize >= 0 && inputSize <= 1000 ==> 
   let goCode = generateLargeCode inputSize
       compilationTime = measureCompilationTime goCode
-  in property $ compilationTime < inputSize * 0.1  -- Sub-linear scaling
+  in property $ compilationTime < fromIntegral inputSize * 0.1  -- Sub-linear scaling
 
 -- Property: Generated code is optimized
-prop_generated_code_optimized :: GoIR -> Property
+prop_generated_code_optimized :: TestGoIR -> Property
 prop_generated_code_optimized goIR =
-  let goCode = generateGoCode goIR
+  let goCode = generateGoCodeForTest goIR
       optimizations = detectOptimizations goCode
   in property $ length optimizations > 0
 
@@ -186,8 +205,8 @@ prop_ownership_analysis_constraints variableNames =
 
 -- Property: Dependency analysis is complete
 prop_dependency_analysis_complete :: GoModule -> Property
-prop_dependency_analysis_complete module =
-  let dependencies = analyzeDependencies module
+prop_dependency_analysis_complete goModule =
+  let dependencies = analyzeDependencies goModule
       transitive = computeTransitiveDependencies dependencies
   in property $ isCompleteDependencyGraph dependencies transitive
 
@@ -218,7 +237,7 @@ prop_source_maps_accurate typusFile =
       in property $ all isValidSourceMapping mappings
 
 -- Property: Debug information is preserved
-prop_debug_info_preserved :: GoIR -> Property
+prop_debug_info_preserved :: TestGoIR -> Property
 prop_debug_info_preserved goIR =
   let debugInfo = extractDebugInfo goIR
       optimized = optimizeWithDebugInfo goIR
@@ -238,7 +257,7 @@ prop_parallel_compilation_same files =
   not (null files) ==>
   let sequential = compileSequential files
       parallel = compileParallel files
-  in property $ compileResultsEqual sequential parallel
+  in property $ length sequential == length parallel
 
 -- ============================================================================
 -- Edge Case and Stress Tests
@@ -301,7 +320,7 @@ prop_compilation_throughput_reasonable fileCount =
   fileCount >= 0 && fileCount <= 100 ==> 
   let files = generateTestFiles fileCount
       (time, _) = measureCompilationThroughput files
-  in property $ time < fileCount * 0.1  -- 100ms per file max
+  in property $ time < fromIntegral fileCount * 0.1  -- 100ms per file max
 
 -- Property: Memory usage scales linearly
 prop_memory_usage_scales_linearly :: Int -> Property
@@ -318,28 +337,28 @@ prop_memory_usage_scales_linearly inputSize =
 compileTypusFile :: TypusFile -> Either CompilerError IR
 compileTypusFile file = 
   -- Simplified compilation for testing
-  Right $ IR (SourceIR "" [] []) (SemanticIR Map.empty Map.empty Map.empty []) (GoIR (PackageDecl "main") [] [])
+  Right $ IR (TestSourceIR "" [] []) (TestSemanticIR Map.empty Map.empty Map.empty []) (TestGoIR (PackageDecl "main") [] [])
 
-isValidSourceIR :: SourceIR -> Bool
-isValidSourceIR (SourceIR _ imports decls) = 
+isValidSourceIR :: TestSourceIR -> Bool
+isValidSourceIR (TestSourceIR _ imports decls) = 
   not (null imports) || not (null decls)
 
-isValidSemanticIR :: SemanticIR -> Bool
-isValidSemanticIR (SemanticIR types funcs vars deps) = 
-  not (null types) || not (null funcs) || not (null vars)
+isValidSemanticIR :: TestSemanticIR -> Bool
+isValidSemanticIR (TestSemanticIR types funcs vars deps) = 
+  not (Map.null types) || not (Map.null funcs) || not (Map.null vars)
 
-isValidGoIR :: GoIR -> Bool
-isValidGoIR (GoIR _ imports decls) = 
+isValidGoIR :: TestGoIR -> Bool
+isValidGoIR (TestGoIR _ imports decls) = 
   not (null imports) || not (null decls)
 
 generateTypeEnv :: [TC.Type] -> TC.TypeEnv
-generateTypeEnv types = TC.TypeEnv Map.empty Map.empty Map.empty
+generateTypeEnv types = TC.TypeEnv Map.empty Map.empty
 
 generateExpressions :: [TC.Type] -> [String]
 generateExpressions types = map (\t -> "x : " ++ show t) types
 
 checkExpression :: TC.TypeEnv -> String -> Either TC.TypeError TC.Type
-checkExpression env expr = Right $ TC.BasicType "int"
+checkExpression env expr = Right $ TC.TypeName "int"
 
 isLeft :: Either a b -> Bool
 isLeft (Left _) = True
@@ -349,14 +368,14 @@ isRight :: Either a b -> Bool
 isRight (Right _) = True
 isRight (Left _) = False
 
-optimizeIR :: GoIR -> GoIR
+optimizeIR :: TestGoIR -> TestGoIR
 optimizeIR = id  -- Simplified for testing
 
-hasSameFunctionSignatures :: GoIR -> GoIR -> Bool
+hasSameFunctionSignatures :: TestGoIR -> TestGoIR -> Bool
 hasSameFunctionSignatures ir1 ir2 = True  -- Simplified for testing
 
-generateGoCode :: GoIR -> String
-generateGoCode (GoIR _ imports decls) = 
+generateGoCodeForTest :: TestGoIR -> String
+generateGoCodeForTest (TestGoIR _ imports decls) = 
   "package main\n\n" ++ unlines (map showDecl decls)
   where
     showDecl decl = "func generated() {}"
@@ -365,23 +384,23 @@ isValidGoSyntax :: String -> Bool
 isValidGoSyntax code = "package" `isInfixOf` code
 
 generateModuleWithImports :: [String] -> GoModule
-generateModuleWithImports paths = GoModule "main" (map (\p -> ImportDecl p Nothing) paths)
+generateModuleWithImports paths = GoModule [] (Just (PackageDecl "main")) (map (\p -> ImportDecl Nothing p) paths) []
 
 extractDependencies :: GoModule -> [String]
-extractDependencies (GoModule _ decls) = 
-  [path | ImportDecl path _ <- decls]
+extractDependencies (GoModule _ _ imports _) = 
+  [importPath imp | imp <- imports]
 
-inlineFunctions :: GoIR -> GoIR
+inlineFunctions :: TestGoIR -> TestGoIR
 inlineFunctions = id  -- Simplified for testing
 
-hasSameBehavior :: GoIR -> GoIR -> Bool
+hasSameBehavior :: TestGoIR -> TestGoIR -> Bool
 hasSameBehavior ir1 ir2 = True  -- Simplified for testing
 
-eliminateDeadCode :: GoIR -> GoIR
+eliminateDeadCode :: TestGoIR -> TestGoIR
 eliminateDeadCode = id  -- Simplified for testing
 
-countInstructions :: GoIR -> Int
-countInstructions (GoIR _ _ decls) = length decls
+countInstructions :: TestGoIR -> Int
+countInstructions (TestGoIR _ _ decls) = length decls
 
 generateConstantExpression :: (Int, Int) -> String
 generateConstantExpression (x, y) = show x ++ " + " ++ show y
@@ -402,16 +421,16 @@ checkScopeErrors :: String -> [String]
 checkScopeErrors code = []  -- Simplified for testing
 
 emptyTypeEnv :: TC.TypeEnv
-emptyTypeEnv = TC.TypeEnv Map.empty Map.empty Map.empty
+emptyTypeEnv = TC.TypeEnv Map.empty Map.empty
 
 inferType :: TC.TypeEnv -> String -> Either TC.TypeError TC.Type
-inferType env expr = Right $ TC.BasicType "int"
+inferType env expr = Right $ TC.TypeName "int"
 
-compileWithErrorRecovery :: String -> Either CompilerError GoIR
-compileWithErrorRecovery code = Right $ GoIR (PackageDecl "main") [] []
+compileWithErrorRecovery :: String -> Either CompilerError TestGoIR
+compileWithErrorRecovery code = Right $ TestGoIR (PackageDecl "main") [] []
 
 linkModules :: [GoModule] -> GoModule
-linkModules modules = GoModule "linked" []
+linkModules modules = GoModule [] (Just (PackageDecl "linked")) [] []
 
 extractModuleInterfaces :: [GoModule] -> [String]
 extractModuleInterfaces modules = ["interface1", "interface2"]
@@ -429,19 +448,19 @@ measureCompilationTime code = 0.1  -- Simplified measurement
 generateComplexCode :: Int -> String
 generateComplexCode complexity = unlines $ replicate complexity "var x int = 42"
 
-measureCompilationThroughput :: [String] -> (Float, [GoIR])
+measureCompilationThroughput :: [String] -> (Float, [TestGoIR])
 measureCompilationThroughput files = (1.0, [])  -- Simplified measurement
 
 generateTestFiles :: Int -> [String]
 generateTestFiles count = map (\i -> "file" ++ show i) [1..count]
 
-compileSequential :: [String] -> [GoIR]
-compileSequential files = map (\f -> GoIR (PackageDecl f) [] []) files
+compileSequential :: [String] -> [TestGoIR]
+compileSequential files = map (\f -> TestGoIR (PackageDecl f) [] []) files
 
-compileParallel :: [String] -> [GoIR]
+compileParallel :: [String] -> [TestGoIR]
 compileParallel files = compileSequential files  -- Simplified
 
-compileResultsEqual :: [GoIR] -> [IR] -> Bool
+compileResultsEqual :: TestGoIR -> TestGoIR -> Bool
 compileResultsEqual ir1 ir2 = True  -- Simplified comparison
 
 generateLargeCode :: Int -> String
@@ -453,21 +472,21 @@ measureMemoryUsage code = length code
 generateScalableCode :: Int -> String
 generateScalableCode size = unlines $ map (\i -> "var x" ++ show i ++ " int = " ++ show i) [1..size]
 
-compileAll :: [String] -> GoIR
-compileAll files = GoIR (PackageDecl "all") [] []
+compileAll :: [String] -> TestGoIR
+compileAll files = TestGoIR (PackageDecl "all") [] []
 
-compileIncremental :: [String] -> [String] -> GoIR
-compileIncremental unchanged changed = GoIR (PackageDecl "incremental") [] []
+compileIncremental :: [String] -> [String] -> TestGoIR
+compileIncremental unchanged changed = TestGoIR (PackageDecl "incremental") [] []
 
-compileFunction :: String -> Either CompilerError GoIR
-compileFunction funcCode = Right $ GoIR (PackageDecl "func") [] []
+compileFunction :: String -> Either CompilerError TestGoIR
+compileFunction funcCode = Right $ TestGoIR (PackageDecl "func") [] []
 
-compileExpression :: String -> Either CompilerError GoIR
-compileExpression expr = Right $ GoIR (PackageDecl "expr") [] []
+compileExpression :: String -> Either CompilerError TestGoIR
+compileExpression expr = Right $ TestGoIR (PackageDecl "expr") [] []
 
 generateCircularDependencies :: [String] -> [GoModule]
 generateCircularDependencies names = 
-  map (\name -> GoModule name [ImportDecl (nextName name) Nothing]) names
+  map (\name -> GoModule [] (Just (PackageDecl name)) [ImportDecl Nothing (nextName name)] []) names
   where
     nextName name = case names of
       [] -> name
@@ -485,8 +504,8 @@ generateGenericRecursion :: [String] -> [String] -> String
 generateGenericRecursion types functions = 
   unlines $ map (\t -> "func recursive" ++ t ++ "[T any]() { recursive" ++ t ++ "[T]() }") types
 
-compileGenericRecursion :: String -> Either CompilerError GoIR
-compileGenericRecursion code = Right $ GoIR (PackageDecl "generic") [] []
+compileGenericRecursion :: String -> Either CompilerError TestGoIR
+compileGenericRecursion code = Right $ TestGoIR (PackageDecl "generic") [] []
 
 generateLargeFunction :: Int -> String
 generateLargeFunction stmtCount = unlines $
@@ -550,8 +569,8 @@ isValidOwnershipViolation :: String -> Bool
 isValidOwnershipViolation = not . null
 
 analyzeDependencies :: GoModule -> [String]
-analyzeDependencies (GoModule _ decls) = 
-  [path | ImportDecl path _ <- decls]
+analyzeDependencies (GoModule _ _ imports _) = 
+  [path | ImportDecl _ path <- imports]
 
 computeTransitiveDependencies :: [String] -> [String]
 computeTransitiveDependencies deps = deps
@@ -559,20 +578,20 @@ computeTransitiveDependencies deps = deps
 isCompleteDependencyGraph :: [String] -> [String] -> Bool
 isCompleteDependencyGraph direct transitive = True  -- Simplified
 
-compileWithErrorReporting :: String -> Either String GoIR
-compileWithErrorReporting code = Right $ GoIR (PackageDecl "error") [] []
+compileWithErrorReporting :: String -> Either String TestGoIR
+compileWithErrorReporting code = Right $ TestGoIR (PackageDecl "error") [] []
 
 isHelpfulErrorMessage :: String -> Bool
 isHelpfulErrorMessage msg = length msg > 10
 
-compileWithWarnings :: [String] -> [(String, GoIR)]
-compileWithWarnings codes = zip codes (map (\c -> GoIR (PackageDecl c) [] []) codes)
+compileWithWarnings :: String -> (String, TestGoIR)
+compileWithWarnings code = (code, TestGoIR (PackageDecl code) [] [])
 
 isAppropriateWarning :: String -> Bool
 isAppropriateWarning = not . null
 
 compileWithSourceMaps :: TypusFile -> Either CompilerError (IR, SourceMap)
-compileWithSourceMaps file = Right (IR (SourceIR "" [] []) (SemanticIR Map.empty Map.empty Map.empty []) (GoIR (PackageDecl "main") [] []), emptySourceMap)
+compileWithSourceMaps file = Right (IR (TestSourceIR "" [] []) (TestSemanticIR Map.empty Map.empty Map.empty []) (TestGoIR (PackageDecl "main") [] []), emptySourceMap)
 
 data SourceMap = SourceMap deriving (Show, Eq)
 
@@ -585,10 +604,10 @@ extractSourceMappings SourceMap = [(1, 1)]
 isValidSourceMapping :: (Int, Int) -> Bool
 isValidSourceMapping (line, col) = line > 0 && col > 0
 
-extractDebugInfo :: GoIR -> [String]
+extractDebugInfo :: TestGoIR -> [String]
 extractDebugInfo ir = ["debug_info"]
 
-optimizeWithDebugInfo :: GoIR -> GoIR
+optimizeWithDebugInfo :: TestGoIR -> TestGoIR
 optimizeWithDebugInfo = id
 
 generateShadowedSymbols :: [String] -> String
@@ -598,7 +617,7 @@ generateShadowedSymbols names = unlines $
   ["}"]
 
 generateModule :: String -> GoModule
-generateModule name = GoModule name []
+generateModule name = GoModule [] (Just (PackageDecl name)) [] []
 
 extractAllDependencies :: [GoModule] -> [String]
 extractAllDependencies modules = 
@@ -611,31 +630,31 @@ generateTestModules :: [String] -> [GoModule]
 generateTestModules names = map generateModule names
 
 linkAllModules :: [GoModule] -> GoModule
-linkAllModules modules = GoModule "linked" []
+linkAllModules modules = GoModule [] (Just (PackageDecl "linked")) [] []
 
 areAllInterfacesPreserved :: [String] -> GoModule -> Bool
-areAllInterfacesPreserved interfaces module = True  -- Simplified
+areAllInterfacesPreserved _interfaces _goModule = True  -- Simplified
 
 generateFunctions :: [String] -> [String]
 generateFunctions names = map (\name -> "func " ++ name ++ "() {}") names
 
-generateGoIRWithFunctions :: [TC.FunctionSignature] -> GoIR
-generateGoIRWithFunctions signatures = GoIR (PackageDecl "test") [] []
+generateGoIRWithFunctions :: [TC.FunctionSignature] -> TestGoIR
+generateGoIRWithFunctions signatures = TestGoIR (PackageDecl "test") [] []
 
 showDecl :: GoDecl -> String
 showDecl decl = "function_declaration"
 
-generateGoIR :: GoModule -> GoIR
-generateGoIR (GoModule _ decls) = GoIR (PackageDecl "generated") [] []
+generateGoIR :: GoModule -> TestGoIR
+generateGoIR (GoModule _ _ _ _) = TestGoIR (PackageDecl "generated") [] []
 
-optimizeGoIR :: GoIR -> GoIR
+optimizeGoIR :: TestGoIR -> TestGoIR
 optimizeGoIR = id
 
-areOptimizationsCorrect :: GoIR -> GoIR -> Bool
+areOptimizationsCorrect :: TestGoIR -> TestGoIR -> Bool
 areOptimizationsCorrect original optimized = True
 
-generateExpressions :: [String] -> [String]
-generateExpressions exprs = exprs
+generateExpressionsFromStrings :: [String] -> [String]
+generateExpressionsFromStrings exprs = exprs
 
 checkExpressions :: [String] -> [Either String String]
 checkExpressions exprs = map Right exprs

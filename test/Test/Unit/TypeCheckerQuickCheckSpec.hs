@@ -4,11 +4,9 @@
 module Test.Unit.TypeCheckerQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import TestSupport.Arbitrary
-import TestSupport.ExtendedArbitrary
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import TestSupport.ExtendedArbitrary ()
+import Test.QuickCheck (Property, (===), (==>), property, (.&&.), (.||.))
 
 import Compiler.TypeChecker
   ( Type(..)
@@ -28,7 +26,7 @@ data TypeLevelComputation = TypeLevelComputation [Type] deriving (Eq, Show)
 data TypeLevelProgram = TypeLevelProgram [Type] deriving (Eq, Show)
 
 evaluateTypeComputation :: TypeLevelComputation -> Type
-evaluateTypeComputation (TypeLevelComputation types) = UnknownType
+evaluateTypeComputation (TypeLevelComputation _types) = UnknownType
 
 isValidComputationResult :: Type -> Bool
 isValidComputationResult _ = True
@@ -1210,6 +1208,17 @@ tests = testGroup "TypeChecker QuickCheck tests"
   , fastProperty "TypeEnv with empty maps" prop_typeenv_empty
   , fastProperty "TypeEnv with only vars" prop_typeenv_only_vars
   , fastProperty "TypeEnv with only functions" prop_typeenv_only_functions
+  , fastProperty "FunctionSignature param count" prop_functionsig_param_count
+  , fastProperty "FunctionSignature return type" prop_functionsig_return_type
+  , fastProperty "CallExpr arg count" prop_callexpr_arg_count
+  , fastProperty "CallExpr func name" prop_callexpr_func_name
+  , fastProperty "TypeEnv lookup" prop_typeenv_lookup
+  , fastProperty "TypeEnv insert preserves" prop_typeenv_insert_preserves
+  , fastProperty "TypeVar uniqueness" prop_typevar_uniqueness
+  , fastProperty "TypeFunction param ordering" prop_typefunction_param_ordering
+  , fastProperty "TypeRecord field ordering" prop_typerecord_field_ordering
+  , fastProperty "TypeUnion variant preservation" prop_typeunion_variant_preservation
+  , fastProperty "TypeIntersection consistency" prop_typeintersection_consistency
   , fastProperty "CallExpr with name and args" prop_callexpr_name_args
   , fastProperty "CallExpr with no args" prop_callexpr_no_args
   , fastProperty "CallExpr with empty name" prop_callexpr_empty_name

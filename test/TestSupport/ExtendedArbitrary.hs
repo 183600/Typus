@@ -1,14 +1,43 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
-module TestSupport.ExtendedArbitrary where
+module TestSupport.ExtendedArbitrary
+  ( genUniqueIdentifier
+  , genCamelCaseIdentifier
+  , genSnakeCaseIdentifier
+  , genPascalCaseIdentifier
+  , genGoTypeName
+  , genGoVarName
+  , genGoPackageName
+  , genGoImportPath
+  , genIdentifier
+  , genBool
+  , genNonEmptyString
+  , genLocated
+  , genGoFunctionDecl
+  , genGoVarDecl
+  , genGoTypeDecl
+  , genGoCodeSnippet
+  , genTypeError
+  , WellFormedExtended(..)
+  , genWellFormedExtendedGoModule
+  , genWellFormedExtendedImportDecl
+  , genWellFormedExtendedType
+  , genNonEmptyList
+  , genSortedIntList
+  , genUniqueStringList
+  , genValidGoCode
+  , prop_roundtrip_consistency
+  , prop_idempotent
+  , prop_associative
+  , prop_commutative
+  ) where
 
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, sized, frequency, choose, suchThat, Property, resize, listOf1, vectorOf, property, (===))
 import qualified Data.Text as T
-import Data.List (nub, sort, group, intersperse, isPrefixOf)
-import Data.Char (isAlphaNum, isSpace, isLower, isUpper, toLower, toUpper)
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import qualified Data.Sequence as Seq
+import Data.List (nub, sort, intersperse, isPrefixOf)
+import Data.Char (toLower, toUpper)
+import TestSupport.Arbitrary ()
 
 import Parser
   ( FileDirectives(..)
@@ -20,7 +49,6 @@ import SourceLocation
   ( Located(..)
   , SourcePos(..)
   , SourceSpan(..)
-  , locatedWithSpan
   )
 
 import Compiler.GoAst
@@ -33,7 +61,7 @@ import Compiler.GoAst
   , ConstDecl(..)
   , PackageDecl(..)
   )
-import Compiler.IR (SourceIR(..), SemanticIR(..), GoIR(..))
+import Compiler.IR (SourceIR(..))
 import Analyzer.Types
   ( SymbolInfo(..)
   , SymbolKind(..)
@@ -51,15 +79,16 @@ import qualified Compiler.TypeChecker as TC
   , CallExpr(..)
   , TypeError(..)
   , TypeCheckDiagnostic(..)
+  , TypeConstraint(..)
   )
-import Compiler.ValueAnalysis (ValueInfo(..), ValueKind(..))
 import Ownership (OwnershipType(..), OwnershipError(..))
-import Compiler.Errors.Core (ErrorSeverity(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..))
+import qualified Ownership.Common.Types as Own (OwnershipAnalyzer(..))
+import Compiler.Errors.Core (ErrorSeverity(..))
 import Compiler.Errors (CompilerError(..), CompilationPhase(..))
 import qualified Compiler.Errors.Core as Core
-import qualified Compiler.ValueAnalysis as ValueAnalysis
 import qualified Dependencies as Dep
-import qualified Dependencies.TypeSystem as DepT (TypeConstraint(..), DependentTypeError(..), TypeEnv(..), TypeDef(..))
+import qualified Dependencies.TypeSystem as DepT (TypeEnv(..), TypeDef(..), DependentTypeChecker(..))
+import qualified Dependencies.AST as DepAST (DependencyGraph(..), DependencyNode(..))
 import SyntaxValidator (SyntaxError(..), ErrorType(..))
 
 -- Arbitrary instances for SyntaxValidator types
@@ -94,20 +123,6 @@ instance Arbitrary SyntaxError where
     <*> choose (1, 1000)
     <*> genNonEmptyString
 
--- Arbitrary instances for SourceLocation types
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- choose (1, 1000)
-    col <- choose (1, 1000)
-    offset <- choose (0, 100000)
-    return $ SourcePos line col offset
-
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
-
 -- =================================================================
 -- Extended Arbitrary instances for more comprehensive testing
 -- =================================================================
@@ -115,41 +130,38 @@ instance Arbitrary SourceSpan where
 -- Generate unique identifiers to avoid naming conflicts
 genUniqueIdentifier :: Gen String
 genUniqueIdentifier = do
-  n <- choose (1, 10)
   first <- elements $ ['a'..'z'] ++ ['A'..'Z']
   middle <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_']
-  suffix <- choose (1000, 9999)
+  suffix <- choose (1000, 9999 :: Int)
   return $ first : middle ++ show suffix
 
 -- Generate identifiers with specific patterns
 genCamelCaseIdentifier :: Gen String
 genCamelCaseIdentifier = do
-  parts <- choose (1, 4) `suchThat` (\x -> x >= 1)
-  words <- listOf $ do
-    n <- choose (2, 6)
+  wordList <- listOf $ do
     first <- elements $ ['a'..'z']
     rest <- listOf $ elements $ ['a'..'z'] ++ ['0'..'9']
     return $ first : rest
-  return $ concat $ zipWith (\i w -> if i == 0 then w else toUpper (head w) : tail w) [0..] words
+  return $ concat $ zipWith (\(i :: Int) w -> case w of
+    [] -> ""
+    (c:cs) -> if i == 0 then w else toUpper c : cs) [0..] wordList
 
 genSnakeCaseIdentifier :: Gen String
 genSnakeCaseIdentifier = do
-  parts <- choose (1, 4) `suchThat` (\x -> x >= 1)
-  words <- listOf $ do
-    n <- choose (2, 6)
+  wordList <- listOf $ do
     chars <- listOf $ elements $ ['a'..'z'] ++ ['0'..'9']
     return chars
-  return $ concat $ intersperse "_" words
+  return $ concat $ intersperse "_" wordList
 
 genPascalCaseIdentifier :: Gen String
 genPascalCaseIdentifier = do
-  parts <- choose (1, 4) `suchThat` (\x -> x >= 1)
-  words <- listOf $ do
-    n <- choose (2, 6)
+  wordList <- listOf $ do
     first <- elements $ ['a'..'z']
     rest <- listOf $ elements $ ['a'..'z'] ++ ['0'..'9']
     return $ first : rest
-  return $ concat $ map (\w -> toUpper (head w) : tail w) words
+  return $ concat $ map (\w -> case w of
+    [] -> ""
+    (c:cs) -> toUpper c : cs) wordList
 
 -- Generate type names following Go conventions
 genGoTypeName :: Gen String
@@ -166,7 +178,7 @@ genGoPackageName = do
 -- Generate valid Go import paths
 genGoImportPath :: Gen String
 genGoImportPath = do
-  parts <- choose (1, 3)
+  parts <- choose (1 :: Int, 3 :: Int)
   domain <- elements ["github.com", "gitlab.com", "golang.org", "example.com"]
   user <- genSnakeCaseIdentifier
   repo <- genSnakeCaseIdentifier
@@ -195,8 +207,8 @@ genLocated :: Gen a -> Gen (Located a)
 genLocated gen = do
   value <- gen
   pos <- arbitrary
-  span <- arbitrary
-  return $ Located value pos span
+  srcSpan <- arbitrary
+  return $ Located value pos srcSpan
 
 -- Generate realistic Go code snippets
 genGoFunctionDecl :: Gen String
@@ -234,7 +246,7 @@ genGoTypeDecl = do
 
 genGoCodeSnippet :: Gen String
 genGoCodeSnippet = do
-  lines <- listOf $ oneof
+  codeLines <- listOf $ oneof
     [ pure "package main"
     , genGoImportPath >>= \path -> return $ "import \"" ++ path ++ "\""
     , genGoFunctionDecl
@@ -244,71 +256,7 @@ genGoCodeSnippet = do
     , pure "if err != nil { return err }"
     , pure "fmt.Println(\"test\")"
     ]
-  return $ unlines lines
-
--- Extended Parser Arbitrary instances with more realistic data
-instance Arbitrary FileDirectives where
-  arbitrary = FileDirectives
-    <$> frequency [(3, pure Nothing), (7, Just <$> genLocated genBool)]
-    <*> frequency [(3, pure Nothing), (7, Just <$> genLocated genBool)]
-    <*> frequency [(3, pure Nothing), (7, Just <$> genLocated genBool)]
-
-instance Arbitrary BlockDirectives where
-  arbitrary = BlockDirectives
-    <$> frequency [(3, pure Nothing), (7, Just <$> genLocated genBool)]
-    <*> frequency [(3, pure Nothing), (7, Just <$> genLocated genBool)]
-    <*> frequency [(3, pure Nothing), (7, Just <$> genLocated genBool)]
-
-instance Arbitrary CodeBlock where
-  arbitrary = do
-    directives <- arbitrary
-    code <- frequency [(3, genNonEmptyString), (7, genGoCodeSnippet)]
-    span <- arbitrary
-    return $ CodeBlock directives code span
-
-instance Arbitrary TypusFile where
-  arbitrary = do
-    directives <- arbitrary
-    buildTags <- listOf (genLocated genUniqueIdentifier)
-    blocks <- listOf arbitrary
-    syntaxErrors <- pure [] -- Simplified for now
-    return $ TypusFile directives buildTags blocks syntaxErrors
-
--- Extended Go AST instances with more realistic data
-instance Arbitrary ImportDecl where
-  arbitrary = ImportDecl 
-    <$> frequency [(2, pure Nothing), (3, Just <$> genGoVarName)] 
-    <*> genGoImportPath
-
-instance Arbitrary FuncDecl where
-  arbitrary = FuncDecl <$> listOf genGoCodeSnippet
-
-instance Arbitrary TypeDecl where
-  arbitrary = TypeDecl <$> listOf genGoTypeName <*> arbitrary
-
-instance Arbitrary VarDecl where
-  arbitrary = VarDecl <$> listOf genGoVarName <*> arbitrary
-
-instance Arbitrary ConstDecl where
-  arbitrary = ConstDecl <$> listOf genGoVarName <*> arbitrary
-
-instance Arbitrary PackageDecl where
-  arbitrary = PackageDecl <$> genGoPackageName
-
-instance Arbitrary GoDecl where
-  arbitrary = oneof
-    [ GoFunc <$> arbitrary
-    , GoType <$> arbitrary
-    , GoVar <$> arbitrary
-    , GoConst <$> arbitrary
-    ]
-
-instance Arbitrary GoModule where
-  arbitrary = GoModule
-    <$> listOf genUniqueIdentifier
-    <*> frequency [(1, pure Nothing), (3, Just <$> (PackageDecl <$> genGoPackageName))]
-    <*> listOf arbitrary
-    <*> listOf arbitrary
+  return $ unlines codeLines
 
 -- Extended Type instances
 instance Arbitrary TC.Type where
@@ -347,6 +295,7 @@ instance Arbitrary DepT.TypeEnv where
   arbitrary = DepT.TypeEnv <$> arbitrary <*> arbitrary
 
 -- Extended Symbol instances
+
 instance Arbitrary SymbolInfo where
   arbitrary = SymbolInfo
     <$> arbitrary
@@ -470,7 +419,34 @@ instance Arbitrary Dep.Constraint where
     , Dep.PredC <$> (T.pack <$> genIdentifier) <*> listOf arbitrary
     ]
 
+instance Arbitrary TC.TypeConstraint where
+  arbitrary = oneof
+    [ TC.Equal <$> arbitrary <*> arbitrary
+    , TC.Subtype <$> arbitrary <*> arbitrary
+    , TC.Predicate <$> genIdentifier <*> listOf arbitrary
+    , TC.TypeSizeGE <$> arbitrary <*> choose (0, 100)
+    , TC.TypeSizeGT <$> arbitrary <*> choose (0, 100)
+    , TC.TypeRange <$> arbitrary <*> choose (0, 100) <*> choose (0, 100)
+    ]
+
 -- Extended Analyzer instances
+instance Arbitrary Own.OwnershipAnalyzer where
+  arbitrary = pure $ Own.OwnershipAnalyzer ()
+
+instance Arbitrary DepT.DependentTypeChecker where
+  arbitrary = DepT.DependentTypeChecker
+    <$> arbitrary
+    <*> listOf arbitrary
+
+instance Arbitrary DepAST.DependencyNode where
+  arbitrary = DepAST.DependencyNode
+    <$> genUniqueIdentifier
+    <*> listOf genUniqueIdentifier
+
+instance Arbitrary DepAST.DependencyGraph where
+  arbitrary = DepAST.DependencyGraph
+    <$> arbitrary
+
 instance Arbitrary AnalysisResult where
   arbitrary = AnalysisResult
     <$> listOf ((,) <$> arbitrary <*> arbitrary)
@@ -486,17 +462,6 @@ instance Arbitrary CombinedError where
     , Core.DependentTypeErrorCombined <$> arbitrary <*> arbitrary
     , Core.IntegrationError <$> genIdentifier <*> arbitrary
     , Core.CrossAnalyzerError <$> genIdentifier <*> arbitrary <*> listOf arbitrary
-    ]
-
-instance Arbitrary CompilationPhase where
-  arbitrary = elements 
-    [ LexingPhase
-    , ParsingPhase
-    , TypeCheckingPhase
-    , OwnershipAnalysisPhase
-    , DependentTypeCheckingPhase
-    , CodeGenerationPhase
-    , OptimizationPhase
     ]
 
 instance Arbitrary CompilerError where
@@ -546,7 +511,7 @@ instance WellFormedExtended ImportDecl where
     not (isPrefixOf "." path) -- No relative imports
 
 instance WellFormedExtended GoModule where
-  isWellFormedExtended (GoModule _ pkg imports decls) = 
+  isWellFormedExtended (GoModule _ _pkg imports decls) = 
     all isWellFormedExtended imports && 
     length (nub imports) == length imports && -- No duplicate imports
     all isWellFormedExtended decls

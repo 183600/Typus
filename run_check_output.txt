@@ -1,3 +1,0 @@
-Compilation successful
-Converted: test.typus -> /tmp/typus_check-dda68770a3996df9/test-XXXXXX290569-0.go
-Typus syntax and compilation OK: test.typus

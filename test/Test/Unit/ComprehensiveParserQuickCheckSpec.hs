@@ -6,7 +6,7 @@ module Test.Unit.ComprehensiveParserQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import TestSupport.ExtendedArbitrary
+import TestSupport.ExtendedArbitrary ()
 import Test.QuickCheck 
 import qualified Data.List as Data.List
 import Data.Char (toLower, isSpace)
@@ -355,7 +355,7 @@ prop_parse_mixed_line_endings content =
 -- Property: Zero-width characters
 prop_parse_zero_width_characters :: String -> Property
 prop_parse_zero_width_characters content =
-  let zeroWidthChars = "\u200B\u200C\u200D\uFEFF"
+  let zeroWidthChars = "\x200B\x200C\x200D\xFEFF"
       contentWithZeroWidth = content ++ zeroWidthChars ++ content
   in case parseTypus contentWithZeroWidth of
     Left err -> counterexample ("Zero-width characters error: " ++ err) $ property False
@@ -466,16 +466,16 @@ reconstructDirectives :: FileDirectives -> [String]
 reconstructDirectives (FileDirectives ownership depTypes constraints) =
   let ownershipLine = case ownership of
         Nothing -> []
-        Just (Located _ True) -> ["//! ownership: on"]
-        Just (Located _ False) -> ["//! ownership: off"]
+        Just (Located True _ _) -> ["//! ownership: on"]
+        Just (Located False _ _) -> ["//! ownership: off"]
       depTypesLine = case depTypes of
         Nothing -> []
-        Just (Located _ True) -> ["//! dependent_types: on"]
-        Just (Located _ False) -> ["//! dependent_types: off"]
+        Just (Located True _ _) -> ["//! dependent_types: on"]
+        Just (Located False _ _) -> ["//! dependent_types: off"]
       constraintsLine = case constraints of
         Nothing -> []
-        Just (Located _ True) -> ["//! constraints: on"]
-        Just (Located _ False) -> ["//! constraints: off"]
+        Just (Located True _ _) -> ["//! constraints: on"]
+        Just (Located False _ _) -> ["//! constraints: off"]
   in ownershipLine ++ depTypesLine ++ constraintsLine
 
 reconstructBlock :: CodeBlock -> String
@@ -529,10 +529,10 @@ addEscapeSequences :: String -> String
 addEscapeSequences = concatMap (\c -> if c == '\\' then "\\\\" else if c == '"' then "\\\"" else if c == '\n' then "\\n" else [c])
 
 showHex :: Int -> String
-showHex n = showIntAtBase 16 ("0123456789ABCDEF" !!) n ""
+showHex n = showIntAtBase 16 ("0123456789ABCDEF" !!) n
 
 showOct :: Int -> String
-showOct n = showIntAtBase 8 ("01234567" !!) n ""
+showOct n = showIntAtBase 8 ("01234567" !!) n
 
 showIntAtBase :: Int -> (Int -> Char) -> Int -> String
 showIntAtBase base toChar n = 
