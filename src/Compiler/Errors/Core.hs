@@ -11,6 +11,10 @@ module Compiler.Errors.Core (
     ErrorContext(..),
     emptyContext,
     ErrorRecovery(..),
+    
+    -- Helper functions for testing
+    getErrorLine,
+    getErrorColumn,
 
     -- Error collection and management
     ErrorCollector,
@@ -290,6 +294,13 @@ data ErrorLocation = ErrorLocation
 -- Default location (unknown)
 _unknownLocation :: ErrorLocation
 _unknownLocation = ErrorLocation Nothing 0 0 Nothing Nothing
+
+-- Helper functions to access ErrorLocation fields (for testing)
+getErrorLine :: ErrorLocation -> Int
+getErrorLine = line
+
+getErrorColumn :: ErrorLocation -> Int  
+getErrorColumn = column
 
 -- Format a timestamp using the default error-reporting format
 formatTimestamp :: UTCTime -> String

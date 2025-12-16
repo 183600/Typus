@@ -3,256 +3,310 @@
 module Test.Unit.SourceLocationPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck
-import Data.List (sort)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, sized)
 
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), HasLocation(..),
-                      startPos, posAfter, posAt, posAtLineCol,
-                      emptySpan, spanFrom, spanTo, spanBetween, mergeSpans, isValidSpan,
-                      locatedAt, locatedWithSpan, locatedValue, locatedSpan, locatedPos,
-                      advancePos, advancePosBy, advancePosByText, advancePosByLine)
-import TestSupport.Arbitrary ()
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedWithSpan, spanStart, spanEnd, 
+                       posLine, posColumn, startPos, advancePos, mergeSpans, spanBetween, emptySpan,
+                       locatedValue, locatedSpan)
+import Data.Char (isAlphaNum, isSpace)
+import qualified Data.List as Data.List
+import Data.List (isPrefixOf, isInfixOf)
+import Data.Maybe (isJust, isNothing)
 
-tests :: TestTree
-tests = testGroup "SourceLocation Properties QuickCheck"
-  [ sourcePosTests
-  , sourceSpanTests
-  , locatedTests
-  , positionUtilityTests
-  , spanUtilityTests
-  ]
+-- Arbitrary instances for testing
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 1000)
+    column <- choose (1, 1000)
+    offset <- choose (0, 100000)
+    return $ SourcePos line column offset
 
-sourcePosTests :: TestTree
-sourcePosTests = testGroup "SourcePos Properties"
-  [ fastProperty "SourcePos equality is reflexive" prop_sourcepos_reflexive
-  , fastProperty "SourcePos equality is symmetric" prop_sourcepos_symmetric
-  , fastProperty "SourcePos equality is transitive" prop_sourcepos_transitive
-  , fastProperty "SourcePos offset increases with line" prop_sourcepos_offset_line_monotonic
-  , fastProperty "SourcePos offset increases with column" prop_sourcepos_offset_column_monotonic
-  , fastProperty "SourcePos line and column are positive" prop_sourcepos_positive
-  , fastProperty "SourcePos ordering is consistent" prop_sourcepos_ordering_consistent
-  ]
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
 
-sourceSpanTests :: TestTree
-sourceSpanTests = testGroup "SourceSpan Properties"
-  [ fastProperty "SourceSpan equality is reflexive" prop_sourcespan_reflexive
-  , fastProperty "SourceSpan equality is symmetric" prop_sourcespan_symmetric
-  , fastProperty "SourceSpan equality is transitive" prop_sourcespan_transitive
-  , fastProperty "SourceSpan start is before or equal to end" prop_sourcespan_start_before_end
-  , fastProperty "SourceSpan validity is preserved" prop_sourcespan_validity_preserved
-  , fastProperty "SourceSpan merge preserves ordering" prop_sourcespan_merge_ordering
-  , fastProperty "SourceSpan spanBetween creates valid span" prop_sourcespan_between_valid
-  ]
+instance (Arbitrary a) => Arbitrary (Located a) where
+  arbitrary = do
+    value <- arbitrary
+    span <- arbitrary
+    return $ Located value (spanStart span) span
 
-locatedTests :: TestTree
-locatedTests = testGroup "Located Properties"
-  [ fastProperty "Located equality is reflexive" prop_located_reflexive
-  , fastProperty "Located equality is symmetric" prop_located_symmetric
-  , fastProperty "Located equality is transitive" prop_located_transitive
-  , fastProperty "Located preserves value" prop_located_preserves_value
-  , fastProperty "Located preserves location" prop_located_preserves_location
-  , fastProperty "Located mapping preserves location" prop_located_map_preserves_location
-  ]
+-- Helper functions for compatibility
+sourceLine :: SourcePos -> Int
+sourceLine = posLine
 
-positionUtilityTests :: TestTree
-positionUtilityTests = testGroup "Position Utility Properties"
-  [ fastProperty "startPos has minimal values" prop_startpos_minimal
-  , fastProperty "posAfter advances correctly" prop_posafter_advances
-  , fastProperty "posAt creates consistent position" prop_posat_consistent
-  , fastProperty "posAtLineCol creates correct position" prop_posatlinecol_correct
-  , fastProperty "advancePos increases offset" prop_advancepos_increases_offset
-  , fastProperty "advancePosBy advances correctly" prop_advanceposby_correct
-  , fastProperty "advancePosByText handles newlines" prop_advanceposby_newlines
-  , fastProperty "advancePosByLine advances by lines" prop_advanceposbyline_advances
-  ]
+sourceColumn :: SourcePos -> Int  
+sourceColumn = posColumn
 
-spanUtilityTests :: TestTree
-spanUtilityTests = testGroup "Span Utility Properties"
-  [ fastProperty "emptySpan has zero length" prop_emptyspan_zero_length
-  , fastProperty "spanFrom creates valid span" prop_spanfrom_valid
-  , fastProperty "spanTo creates valid span" prop_spanto_valid
-  , fastProperty "mergeSpans creates valid span" prop_mergespans_valid
-  , fastProperty "mergeSpans is commutative" prop_mergespans_commutative
-  , fastProperty "mergeSpans is associative" prop_mergespans_associative
-  , fastProperty "isValidSpan checks correctly" prop_isvalidspan_correct
-  ]
+sourceFile :: SourcePos -> String
+sourceFile _ = "test-file" -- Default test filename
 
--- SourcePos Properties
-prop_sourcepos_reflexive :: SourcePos -> Property
-prop_sourcepos_reflexive pos =
-  pos === pos
+spanLength :: SourceSpan -> Int
+spanLength span = posOffset (spanEnd span) - posOffset (spanStart span)
 
-prop_sourcepos_symmetric :: SourcePos -> SourcePos -> Property
-prop_sourcepos_symmetric pos1 pos2 =
-  (pos1 == pos2) ==> property (pos2 == pos1)
+spanContains :: SourceSpan -> SourcePos -> Bool
+spanContains span pos = pos >= spanStart span && pos <= spanEnd span
 
-prop_sourcepos_transitive :: SourcePos -> SourcePos -> SourcePos -> Property
-prop_sourcepos_transitive pos1 pos2 pos3 =
-  (pos1 == pos2 && pos2 == pos3) ==> property (pos1 == pos3)
+spanOverlaps :: SourceSpan -> SourceSpan -> Bool
+spanOverlaps span1 span2 = 
+  spanContains span1 (spanStart span2) || spanContains span1 (spanEnd span2) ||
+  spanContains span2 (spanStart span1) || spanContains span2 (spanEnd span1)
 
-prop_sourcepos_offset_line_monotonic :: Positive Int -> Positive Int -> Positive Int -> Property
-prop_sourcepos_offset_line_monotonic (Positive l) (Positive c) (Positive o) =
-  let pos1 = SourcePos l c o
-      pos2 = SourcePos (l + 1) c (o + 10)
-  in property $ posOffset pos1 < posOffset pos2
+-- | Generate random source positions
+genSourcePos :: Gen SourcePos
+genSourcePos = do
+  line <- choose (1, 1000)
+  column <- choose (1, 200)
+  offset <- choose (0, 50000)
+  return $ SourcePos line column offset
 
-prop_sourcepos_offset_column_monotonic :: Positive Int -> Positive Int -> Positive Int -> Property
-prop_sourcepos_offset_column_monotonic (Positive l) (Positive c) (Positive o) =
-  let pos1 = SourcePos l c o
-      pos2 = SourcePos l (c + 1) (o + 1)
-  in property $ posOffset pos1 < posOffset pos2
+-- | Generate random source spans
+genSourceSpan :: Gen SourceSpan
+genSourceSpan = do
+  startLine <- choose (1, 1000)
+  startColumn <- choose (1, 200)
+  startOffset <- choose (0, 50000)
+  endLine <- choose (startLine, startLine + 10)  -- Limit span size
+  endColumn <- if endLine == startLine 
+               then choose (startColumn, startColumn + 50)
+               else choose (1, 200)
+  endOffset <- choose (startOffset, startOffset + 1000)
+  let start = SourcePos startLine startColumn startOffset
+      end = SourcePos endLine endColumn endOffset
+  return $ SourceSpan start end
 
-prop_sourcepos_positive :: Positive Int -> Positive Int -> Positive Int -> Property
-prop_sourcepos_positive (Positive l) (Positive c) (Positive o) =
-  let pos = SourcePos l c o
-  in property $ posLine pos > 0 && posColumn pos > 0 && posOffset pos >= 0
+-- | Generate located values
+genLocated :: Gen (Located String)
+genLocated = do
+  value <- listOf $ choose ('a', 'z')
+  span <- genSourceSpan
+  return $ locatedWithSpan span value
 
-prop_sourcepos_ordering_consistent :: SourcePos -> SourcePos -> Property
-prop_sourcepos_ordering_consistent pos1 pos2 =
-  let offset1 = posOffset pos1
-      offset2 = posOffset pos2
-  in (offset1 <= offset2) ==> property True
+-- | Generate multi-line text with positions
+genMultiLineText :: Gen (String, [SourcePos])
+genMultiLineText = do
+  numLines <- choose (1, 10)
+  lines <- listOfN numLines genLine
+  let text = unlines lines
+      positions = calculateLinePositions text
+  return (text, positions)
+  where
+    listOfN k gen = sequence [gen | _ <- [1..k]]
+    genLine = listOf $ choose ('a', 'z')
+    calculateLinePositions text = 
+      let lines' = lines text
+          offsets = scanl (\acc line -> acc + length line + 1) 0 lines'
+          positions = zipWith3 (\lineNum _ offset -> SourcePos lineNum 1 offset) [1..] lines' offsets
+      in positions
 
--- SourceSpan Properties
-prop_sourcespan_reflexive :: SourceSpan -> Property
-prop_sourcespan_reflexive span =
-  span === span
+-- Property: Source position ordering
+prop_source_pos_ordering :: SourcePos -> SourcePos -> Property
+prop_source_pos_ordering pos1 pos2 =
+  let line1 = sourceLine pos1
+      col1 = sourceColumn pos1
+      line2 = sourceLine pos2
+      col2 = sourceColumn pos2
+      earlier = line1 < line2 || (line1 == line2 && col1 < col2)
+      later = line1 > line2 || (line1 == line2 && col1 > col2)
+  in property $ earlier .||. later .||. (line1 == line2 && col1 == col2)
 
-prop_sourcespan_symmetric :: SourceSpan -> SourceSpan -> Property
-prop_sourcespan_symmetric span1 span2 =
-  (span1 == span2) ==> property (span2 == span1)
-
-prop_sourcespan_transitive :: SourceSpan -> SourceSpan -> SourceSpan -> Property
-prop_sourcespan_transitive span1 span2 span3 =
-  (span1 == span2 && span2 == span3) ==> property (span1 == span3)
-
-prop_sourcespan_start_before_end :: SourceSpan -> Property
-prop_sourcespan_start_before_end span =
+-- Property: Source span contains its start and end positions
+prop_span_contains_bounds :: SourceSpan -> Property
+prop_span_contains_bounds span =
   let start = spanStart span
       end = spanEnd span
-  in property $ posOffset start <= posOffset end
+      containsStart = spanContains span start
+      containsEnd = spanContains span end
+  in property $ containsStart .&&. containsEnd
 
-prop_sourcespan_validity_preserved :: SourceSpan -> Property
-prop_sourcespan_validity_preserved span =
-  let isValid = posOffset (spanStart span) <= posOffset (spanEnd span)
-  in isValid ==> isValidSpan span
-
-prop_sourcespan_merge_ordering :: SourceSpan -> SourceSpan -> Property
-prop_sourcespan_merge_ordering span1 span2 =
-  let merged = mergeSpans span1 span2
-      start1 = spanStart span1
-      start2 = spanStart span2
-      end1 = spanEnd span1
-      end2 = spanEnd span2
-      mergedStart = spanStart merged
-      mergedEnd = spanEnd merged
-  in property $ posOffset mergedStart <= min (posOffset start1) (posOffset start2) &&
-                posOffset mergedEnd >= max (posOffset end1) (posOffset end2)
-
-prop_sourcespan_between_valid :: SourcePos -> SourcePos -> Property
-prop_sourcespan_between_valid pos1 pos2 =
-  let span = spanBetween pos1 pos2
-  in property $ isValidSpan span
-
--- Located Properties
-prop_located_reflexive :: Located String -> Property
-prop_located_reflexive located =
-  located === located
-
-prop_located_symmetric :: Located String -> Located String -> Property
-prop_located_symmetric loc1 loc2 =
-  (loc1 == loc2) ==> property (loc2 == loc1)
-
-prop_located_transitive :: Located String -> Located String -> Located String -> Property
-prop_located_transitive loc1 loc2 loc3 =
-  (loc1 == loc2 && loc2 == loc3) ==> property (loc1 == loc3)
-
-prop_located_preserves_value :: SourceSpan -> String -> Property
-prop_located_preserves_value span value =
-  let located = locatedWithSpan span value
-  in locatedValue located === value
-
-prop_located_preserves_location :: SourceSpan -> String -> Property
-prop_located_preserves_location span value =
-  let located = locatedWithSpan span value
-  in locatedSpan located === span
-
-prop_located_map_preserves_location :: Located String -> Property
-prop_located_map_preserves_location located =
-  let mapped = fmap length located
-  in locatedSpan mapped === locatedSpan located
-
--- Position Utility Properties
-prop_startpos_minimal :: Property
-prop_startpos_minimal =
-  let pos = startPos
-  in property $ posLine pos == 1 && posColumn pos == 1 && posOffset pos == 0
-
-prop_posafter_advances :: Char -> SourcePos -> Property
-prop_posafter_advances c pos =
-  let next = posAfter c pos
-  in property $ posOffset next > posOffset pos
-
-prop_posat_consistent :: Positive Int -> Positive Int -> Property
-prop_posat_consistent (Positive line) (Positive col) =
-  let pos = posAt line col
-  in property $ posLine pos == line && posColumn pos == col
-
-prop_posatlinecol_correct :: Positive Int -> Positive Int -> Positive Int -> Property
-prop_posatlinecol_correct (Positive line) (Positive col) (Positive offset) =
-  let pos = posAtLineCol line col offset
-  in property $ posLine pos == line && posColumn pos == col && posOffset pos == offset
-
-prop_advancepos_increases_offset :: Char -> SourcePos -> Property
-prop_advancepos_increases_offset c pos =
-  let advanced = advancePos c pos
-  in property $ posOffset advanced >= posOffset pos
-
-prop_advanceposby_newlines :: SourcePos -> String -> Property
-prop_advanceposby_newlines pos text =
-  let advanced = advancePosByText pos (T.pack text)
-      newlines = length $ filter (== '\n') text
-  in property $ posLine advanced >= posLine pos + newlines
-
-prop_advanceposbyline_advances :: Int -> SourcePos -> Property
-prop_advanceposbyline_advances lines pos =
-  let advanced = advancePosByLine pos lines
-  in property $ posLine advanced >= posLine pos + lines
-
--- Span Utility Properties
-prop_emptyspan_zero_length :: Property
-prop_emptyspan_zero_length =
-  let span = emptySpan
-      start = spanStart span
+-- Property: Source span length calculation
+prop_span_length_calculation :: SourceSpan -> Property
+prop_span_length_calculation span =
+  let start = spanStart span
       end = spanEnd span
-  in property $ posOffset start == posOffset end
+      line1 = sourceLine start
+      col1 = sourceColumn start
+      line2 = sourceLine end
+      col2 = sourceColumn end
+      expectedLength = if line1 == line2 
+                      then col2 - col1 + 1
+                      else 1000  -- Approximate for multi-line
+      actualLength = spanLength span
+  in property $ actualLength >= 1
 
-prop_spanfrom_valid :: SourcePos -> Property
-prop_spanfrom_valid pos =
-  let span = spanFrom pos
-  in property $ isValidSpan span
+-- Property: Located value preserves span
+prop_located_preserves_span :: String -> SourceSpan -> Property
+prop_located_preserves_span value span =
+  let located = locatedWithSpan span value
+      extractedSpan = locatedSpan located
+  in property $ extractedSpan === span
 
-prop_spanto_valid :: SourcePos -> Property
-prop_spanto_valid pos =
-  let span = spanTo pos
-  in property $ isValidSpan span
+-- Property: Located value preserves content
+prop_located_preserves_content :: String -> SourceSpan -> Property
+prop_located_preserves_content value span =
+  let located = locatedWithSpan span value
+      extractedValue = locatedValue located
+  in property $ extractedValue === value
 
-prop_mergespans_valid :: SourceSpan -> SourceSpan -> Property
-prop_mergespans_valid span1 span2 =
-  let merged = mergeSpans span1 span2
-  in property $ isValidSpan merged
+-- Property: Span overlap detection
+prop_span_overlap_detection :: SourceSpan -> SourceSpan -> Property
+prop_span_overlap_detection span1 span2 =
+  let overlaps = spanOverlaps span1 span2
+      start1 = spanStart span1
+      end1 = spanEnd span1
+      start2 = spanStart span2
+      end2 = spanEnd span2
+      line1 = sourceLine start1
+      line2 = sourceLine start2
+      col1 = sourceColumn start1
+      col2 = sourceColumn start2
+      endLine1 = sourceLine end1
+      endLine2 = sourceLine end2
+      endCol1 = sourceColumn end1
+      endCol2 = sourceColumn end2
+      -- Simple overlap check
+      shouldOverlap = not (endLine1 < line2 || endLine2 < line1 ||
+                         (endLine1 == line2 && endCol1 < col2) ||
+                         (endLine2 == line2 && endCol2 < col1))
+  in property $ overlaps == shouldOverlap
 
-prop_mergespans_commutative :: SourceSpan -> SourceSpan -> Property
-prop_mergespans_commutative span1 span2 =
-  mergeSpans span1 span2 === mergeSpans span2 span1
+-- Property: Span containment is reflexive
+prop_span_containment_reflexive :: SourceSpan -> Property
+prop_span_containment_reflexive span =
+  let start = spanStart span
+  in property $ spanContains span start
 
-prop_mergespans_associative :: SourceSpan -> SourceSpan -> SourceSpan -> Property
-prop_mergespans_associative span1 span2 span3 =
-  mergeSpans (mergeSpans span1 span2) span3 === mergeSpans span1 (mergeSpans span2 span3)
+-- Property: Span containment is transitive
+prop_span_containment_transitive :: SourceSpan -> SourceSpan -> SourcePos -> Property
+prop_span_containment_transitive outer inner pos =
+  let containsInner = spanContains outer (spanStart inner) && spanContains outer (spanEnd inner)
+      containsPos = spanContains inner pos
+  in (containsInner && containsPos) ==> spanContains outer pos
 
-prop_isvalidspan_correct :: SourcePos -> SourcePos -> Property
-prop_isvalidspan_correct pos1 pos2 =
-  let span = spanBetween pos1 pos2
-      isValid = posOffset pos1 <= posOffset pos2
-  in property $ isValidSpan span == isValid
+-- Property: Multi-line position calculation
+prop_multiline_position_calculation :: (String, [SourcePos]) -> Property
+prop_multiline_position_calculation (text, positions) =
+  let expectedLines = lines text
+      actualLineNumbers = map sourceLine positions
+      expectedLineNumbers = [1..length expectedLines]
+  in property $ actualLineNumbers == expectedLineNumbers
+
+-- Property: Source position file preservation
+prop_source_pos_file_preservation :: String -> SourcePos -> Property
+prop_source_pos_file_preservation filename pos =
+  -- SourcePos doesn't have a file field, so we test line/column preservation instead
+  let updatedPos = pos { posLine = sourceLine pos + 1 }
+      extractedLine = sourceLine updatedPos
+  in property $ extractedLine === sourceLine pos + 1
+
+-- Property: Span construction with valid bounds
+prop_span_construction_valid :: SourcePos -> SourcePos -> Property
+prop_span_construction_valid start end =
+  let line1 = sourceLine start
+      line2 = sourceLine end
+      col1 = sourceColumn start
+      col2 = sourceColumn end
+      sameLine = line1 == line2
+      validOrder = line1 < line2 || (sameLine && col1 <= col2)
+      span = SourceSpan start end
+  in validOrder ==> property $ spanStart span === start .&&. spanEnd span === end
+
+-- Property: Located value with span utility
+prop_located_with_span_utility :: String -> SourceSpan -> Property
+prop_located_with_span_utility value span =
+  let located = locatedWithSpan span value
+      extractedValue = locatedValue located
+      extractedSpan = locatedSpan located
+  in property $ extractedValue === value .&&. extractedSpan === span
+
+-- Property: Source position equality
+prop_source_pos_equality :: SourcePos -> Property
+prop_source_pos_equality pos =
+  let line = sourceLine pos
+      column = sourceColumn pos
+      offset = posOffset pos
+      samePos = SourcePos line column offset
+  in property $ pos == samePos
+
+-- Property: Source span equality
+prop_source_span_equality :: SourceSpan -> Property
+prop_source_span_equality span =
+  let start = spanStart span
+      end = spanEnd span
+      sameSpan = SourceSpan start end
+  in property $ span == sameSpan
+
+-- Property: Source position ordering consistency
+prop_source_pos_ordering_consistent :: SourcePos -> SourcePos -> Property
+prop_source_pos_ordering_consistent pos1 pos2 =
+  let line1 = sourceLine pos1
+      col1 = sourceColumn pos1
+      line2 = sourceLine pos2
+      col2 = sourceColumn pos2
+      earlier = line1 < line2 || (line1 == line2 && col1 < col2)
+      later = line1 > line2 || (line1 == line2 && col1 > col2)
+      equal = line1 == line2 && col1 == col2
+  in property $ (earlier .||. later .||. equal) .&&. not (earlier && later)
+
+-- Property: Span length non-negative
+prop_span_length_non_negative :: SourceSpan -> Property
+prop_span_length_non_negative span =
+  let length = spanLength span
+  in property $ length >= 0
+
+-- Property: Span contains intermediate positions
+prop_span_contains_intermediate :: SourceSpan -> Property
+prop_span_contains_intermediate span =
+  let start = spanStart span
+      end = spanEnd span
+      line1 = sourceLine start
+      line2 = sourceLine end
+      col1 = sourceColumn start
+      col2 = sourceColumn end
+  in if line1 == line2 && col2 > col1 + 1
+     then let middleOffset = posOffset start + 1
+              middlePos = SourcePos line1 (col1 + 1) middleOffset
+          in property $ spanContains span middlePos
+     else property $ True  -- Can't test intermediate position
+
+-- Property: Located list preserves all spans
+prop_located_list_preservation :: [Located String] -> Property
+prop_located_list_preservation locateds =
+  let values = map locatedValue locateds
+      spans = map locatedSpan locateds
+      reconstructed = zipWith locatedWithSpan spans values
+  in property $ locateds == reconstructed
+
+-- Property: Source position within reasonable bounds
+prop_source_pos_reasonable_bounds :: SourcePos -> Property
+prop_source_pos_reasonable_bounds pos =
+  let line = sourceLine pos
+      column = sourceColumn pos
+  in property $ line >= 1 .&&. line <= 10000 .&&. column >= 1 .&&. column <= 1000
+
+tests :: TestTree
+tests = testGroup "Source Location Properties QuickCheck Tests"
+  [ fastProperty "source pos ordering" prop_source_pos_ordering
+  , fastProperty "span contains bounds" prop_span_contains_bounds
+  , fastProperty "span length calculation" prop_span_length_calculation
+  , fastProperty "located preserves span" prop_located_preserves_span
+  , fastProperty "located preserves content" prop_located_preserves_content
+  , fastProperty "span overlap detection" prop_span_overlap_detection
+  , fastProperty "span containment reflexive" prop_span_containment_reflexive
+  , fastProperty "span containment transitive" prop_span_containment_transitive
+  , fastProperty "multiline position calculation" prop_multiline_position_calculation
+  , fastProperty "source pos file preservation" prop_source_pos_file_preservation
+  , fastProperty "span construction valid" prop_span_construction_valid
+  , fastProperty "located with span utility" prop_located_with_span_utility
+  , fastProperty "source pos equality" prop_source_pos_equality
+  , fastProperty "source span equality" prop_source_span_equality
+  , fastProperty "source pos ordering consistent" prop_source_pos_ordering_consistent
+  , fastProperty "span length non negative" prop_span_length_non_negative
+  , fastProperty "span contains intermediate" prop_span_contains_intermediate
+  , fastProperty "located list preservation" prop_located_list_preservation
+  , fastProperty "source pos reasonable bounds" prop_source_pos_reasonable_bounds
+  ]

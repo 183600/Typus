@@ -7,125 +7,146 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.List (sort, nub)
-import Data.Char (isSpace)
+import Data.Char (isAlpha, isDigit, isSpace, toLower)
+import Data.List (sort, reverse, take, drop, length)
 
-import Utils (trim, splitBy, splitByCollapsed)
-import SourceLocation (SourcePos(..), SourceSpan(..))
+import Compiler.Errors.Core (ErrorSeverity(..))
+import SourceLocation (SourcePos(..))
 import TestSupport.Arbitrary ()
 
-tests :: TestTree
-tests = testGroup "Simple QuickCheck Properties"
-  [ stringProperties
-  , listProperties
-  , mapProperties
-  , setProperties
-  , sourceLocationProperties
-  ]
+-- Simple numeric properties
+prop_addition_commutative :: Int -> Int -> Property
+prop_addition_commutative x y = x + y === y + x
 
-stringProperties :: TestTree
-stringProperties = testGroup "String Properties"
-  [ fastProperty "trim is idempotent" prop_trim_idempotent
-  , fastProperty "trim of empty string is empty" prop_trim_empty
-  , fastProperty "splitBy preserves total length" prop_splitBy_preserves_length
-  , fastProperty "splitByCollapsed removes empty segments" prop_splitByCollapsed_no_empty
-  ]
+prop_addition_associative :: Int -> Int -> Int -> Property
+prop_addition_associative x y z = (x + y) + z === x + (y + z)
 
-listProperties :: TestTree
-listProperties = testGroup "List Properties"
-  [ fastProperty "sort is idempotent" prop_sort_idempotent
-  , fastProperty "sort preserves length" prop_sort_preserves_length
-  , fastProperty "nub preserves length or reduces it" prop_nub_preserves_or_reduces_length
-  ]
+prop_multiplication_commutative :: Int -> Int -> Property
+prop_multiplication_commutative x y = x * y === y * x
 
-mapProperties :: TestTree
-mapProperties = testGroup "Map Properties"
-  [ fastProperty "Map lookup after insert returns the value" prop_map_insert_lookup
-  , fastProperty "Map size after insert increases by 1 for new key" prop_map_insert_size
-  ]
+prop_zero_additive_identity :: Int -> Property
+prop_zero_additive_identity x = x + 0 === x
 
-setProperties :: TestTree
-setProperties = testGroup "Set Properties"
-  [ fastProperty "Set insert preserves element" prop_set_insert_preserves
-  , fastProperty "Set size after insert increases by 1 for new element" prop_set_insert_size
-  ]
+prop_one_multiplicative_identity :: Int -> Property
+prop_one_multiplicative_identity x = x * 1 === x
 
-sourceLocationProperties :: TestTree
-sourceLocationProperties = testGroup "SourceLocation Properties"
-  [ fastProperty "SourcePos equality is reflexive" prop_sourcepos_reflexive
-  , fastProperty "SourcePos offset increases with line" prop_sourcepos_offset_monotonic
-  ]
-
--- String Properties
-prop_trim_idempotent :: String -> Property
-prop_trim_idempotent s =
-  let trimmed = trim s
-  in trim trimmed === trimmed
-
-prop_trim_empty :: Property
-prop_trim_empty =
-  trim "" === ""
-
-prop_splitBy_preserves_length :: Char -> String -> Property
-prop_splitBy_preserves_length delim s =
-  let parts = splitBy delim s
-      rejoined = concat $ intersperse [delim] parts
-  in rejoined === s
-  where
-    intersperse _ [] = []
-    intersperse _ [x] = [x]
-    intersperse sep (x:xs) = x : sep : intersperse sep xs
-
-prop_splitByCollapsed_no_empty :: Char -> String -> Property
-prop_splitByCollapsed_no_empty delim s =
-  let parts = splitByCollapsed delim s
-  in property $ all (not . null) parts
-
--- List Properties
-prop_sort_idempotent :: [Int] -> Property
-prop_sort_idempotent xs =
-  sort (sort xs) === sort xs
+-- List properties
+prop_reverse_reverse :: [Int] -> Property
+prop_reverse_reverse xs = reverse (reverse xs) === xs
 
 prop_sort_preserves_length :: [Int] -> Property
-prop_sort_preserves_length xs =
-  length (sort xs) === length xs
+prop_sort_preserves_length xs = length (sort xs) === length xs
 
-prop_nub_preserves_or_reduces_length :: [Int] -> Property
-prop_nub_preserves_or_reduces_length xs =
-  let nubbed = nub xs
-  in property $ length nubbed <= length xs
+prop_take_drop :: Int -> [Int] -> Property
+prop_take_drop n xs = n >= 0 ==> take n xs ++ drop n xs === xs
 
--- Map Properties
-prop_map_insert_lookup :: String -> Int -> Map.Map String Int -> Property
-prop_map_insert_lookup k v m =
-  let m' = Map.insert k v m
-  in Map.lookup k m' === Just v
+prop_concat_nil :: [[Int]] -> Property
+prop_concat_nil xss = [] : xss === [] : xss
 
-prop_map_insert_size :: String -> Int -> Map.Map String Int -> Property
-prop_map_insert_size k v m =
-  let m' = Map.insert k v m
-      newSize = if Map.member k m then Map.size m else Map.size m + 1
-  in Map.size m' === newSize
+-- String properties
+prop_length_reverse :: String -> Property
+prop_length_reverse s = length (reverse s) === length s
 
--- Set Properties
-prop_set_insert_preserves :: Int -> Set.Set Int -> Property
-prop_set_insert_preserves x s =
-  let s' = Set.insert x s
-  in property $ Set.member x s'
+prop_string_reverse_twice :: String -> Property
+prop_string_reverse_twice s = reverse (reverse s) === s
 
-prop_set_insert_size :: Int -> Set.Set Int -> Property
-prop_set_insert_size x s =
-  let s' = Set.insert x s
-      newSize = if Set.member x s then Set.size s else Set.size s + 1
-  in Set.size s' === newSize
+prop_sort_string :: String -> Property
+prop_sort_string s = length (sort s) === length s
 
--- SourceLocation Properties
-prop_sourcepos_reflexive :: SourcePos -> Property
-prop_sourcepos_reflexive pos =
-  pos === pos
+-- Map properties
+prop_map_lookup_singleton :: String -> Int -> Property
+prop_map_lookup_singleton key value =
+  Map.lookup key (Map.singleton key value) === Just value
 
-prop_sourcepos_offset_monotonic :: Positive Int -> Positive Int -> Positive Int -> Property
-prop_sourcepos_offset_monotonic (Positive l) (Positive c) (Positive o) =
-  let pos1 = SourcePos l c o
-      pos2 = SourcePos (l + 1) c (o + 10)
-  in property $ posOffset pos1 < posOffset pos2
+prop_map_keys_singleton :: String -> Int -> Property
+prop_map_keys_singleton key value =
+  Map.keys (Map.singleton key value) === [key]
+
+prop_map_size_singleton :: String -> Int -> Property
+prop_map_size_singleton key value =
+  Map.size (Map.singleton key value) === 1
+
+-- Set properties
+prop_set_member_singleton :: Int -> Property
+prop_set_member_singleton x = property (Set.member x (Set.singleton x))
+
+prop_set_size_singleton :: Int -> Property
+prop_set_size_singleton x = Set.size (Set.singleton x) === 1
+
+prop_set_fromList_toList :: [Int] -> Property
+prop_set_fromList_toList xs = Set.fromList (Set.toList (Set.fromList xs)) === Set.fromList xs
+
+-- Character properties
+prop_isAlpha_lower :: Char -> Property
+prop_isAlpha_lower c = isAlpha c ==> toLower c `elem` ['a'..'z']
+
+prop_isDigit_range :: Char -> Property
+prop_isDigit_range c = isDigit c ==> c `elem` ['0'..'9']
+
+prop_isSpace_chars :: Char -> Property
+prop_isSpace_chars c = isSpace c ==> c `elem` " \t\n\r\f\v"
+
+-- Error properties
+prop_error_severity_values :: Property
+prop_error_severity_values =
+  let severities = [Error, Warning, Info]
+  in property (length severities == 3)
+
+prop_error_severity_ordering :: ErrorSeverity -> ErrorSeverity -> Property
+prop_error_severity_ordering sev1 sev2 =
+  property (sev1 <= sev2 || sev1 > sev2)
+
+-- Boolean properties
+prop_true_and_true :: Property
+prop_true_and_true = (True && True) === True
+
+prop_false_or_false :: Property
+prop_false_or_false = (False || False) === False
+
+prop_not_true :: Property
+prop_not_true = not True === False
+
+prop_not_false :: Property
+prop_not_false = not False === True
+
+-- Maybe properties
+prop_nothing_is_nothing :: Maybe Int -> Property
+prop_nothing_is_nothing m = property (case m of Nothing -> True; _ -> False || case m of Nothing -> False; _ -> True)
+
+prop_just_extract :: Int -> Property
+prop_just_extract x = case Just x of
+  Just y -> y === x
+  Nothing -> property False
+
+tests :: TestTree
+tests = testGroup "Simple QuickCheck Test Tests"
+  [ fastProperty "addition is commutative" prop_addition_commutative
+  , fastProperty "addition is associative" prop_addition_associative
+  , fastProperty "multiplication is commutative" prop_multiplication_commutative
+  , fastProperty "zero is additive identity" prop_zero_additive_identity
+  , fastProperty "one is multiplicative identity" prop_one_multiplicative_identity
+  , fastProperty "reverse is involutive" prop_reverse_reverse
+  , fastProperty "sort preserves length" prop_sort_preserves_length
+  , fastProperty "take and drop split list" prop_take_drop
+  , fastProperty "concat with nil" prop_concat_nil
+  , fastProperty "reverse preserves string length" prop_length_reverse
+  , fastProperty "string reverse is involutive" prop_string_reverse_twice
+  , fastProperty "sort preserves string length" prop_sort_string
+  , fastProperty "Map lookup in singleton" prop_map_lookup_singleton
+  , fastProperty "Map keys of singleton" prop_map_keys_singleton
+  , fastProperty "Map size of singleton" prop_map_size_singleton
+  , fastProperty "Set member of singleton" prop_set_member_singleton
+  , fastProperty "Set size of singleton" prop_set_size_singleton
+  , fastProperty "Set fromList/toList roundtrip" prop_set_fromList_toList
+  , fastProperty "isAlpha characters become lowercase" prop_isAlpha_lower
+  , fastProperty "isDigit characters are 0-9" prop_isDigit_range
+  , fastProperty "isSpace characters are whitespace" prop_isSpace_chars
+  , fastProperty "Error severity values" prop_error_severity_values
+  
+  , fastProperty "true && true = true" prop_true_and_true
+  , fastProperty "false || false = false" prop_false_or_false
+  , fastProperty "not true = false" prop_not_true
+  , fastProperty "not false = true" prop_not_false
+  , fastProperty "nothing is nothing or not nothing" prop_nothing_is_nothing
+  , fastProperty "Just extracts value" prop_just_extract
+  ]

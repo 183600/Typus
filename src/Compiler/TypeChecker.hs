@@ -15,6 +15,8 @@ module Compiler.TypeChecker (
     CallExpr(..),
     TypeError(..),
     buildTypeEnv,
+    buildTypeEnvFromPairs,
+    createTypusFileFromErrors,
     isMethodDeclaration,
     checkTypeError,
     hasMalformedSyntax,
@@ -47,7 +49,7 @@ module Compiler.TypeChecker (
     satisfiesConstraints
 ) where
 
-import Parser (TypusFile(..))
+import Parser (TypusFile(..), FileDirectives(..))
 import Compiler.Errors (CompilerError)
 import Compiler.GoAst
 import Compiler.GoParsing (consumeNames, splitTopLevel, stripLineComment)
@@ -258,6 +260,71 @@ buildTypeEnv GoModule{..} =
         }
   where
     builtinFunctions = ["println", "print", "len", "cap", "append", "make", "new"]
+    
+    builtinFunctionEntry :: String -> (String, FunctionSignature)
+    builtinFunctionEntry name = (name, builtinSignature)
+    
+    builtinSignature = FunctionSignature
+        { fsParams = [FunctionParam Nothing UnknownType True] -- Variadic: accept any number of arguments
+        , fsReturns = []
+        }
+    
+    functionEntry (GoFunc decl) = do
+        info <- parseFunctionInfo decl
+        pure (fiName info, fiSignature info)
+    functionEntry _ = Nothing
+
+    varEntry (GoVar decl) = extractVarTypes decl
+    varEntry (GoConst decl) = extractConstTypes decl
+    varEntry _ = []
+
+    importFunctionEntry :: ImportDecl -> [(String, FunctionSignature)]
+    importFunctionEntry (ImportDecl _ path) =
+        -- Handle common standard library packages
+        case path of
+            "fmt" -> [ ("Println", fmtSignature)
+                     , ("Printf", fmtSignature)
+                     , ("Print", fmtSignature)
+                     , ("Sprintln", fmtSignature)
+                     , ("Sprintf", fmtSignature)
+                     , ("Sprint", fmtSignature)
+                     ]
+            "errors" -> [ ("New", errorsNewSignature) ]
+            _ -> []
+      where
+        fmtSignature = FunctionSignature
+            { fsParams = [FunctionParam Nothing UnknownType True] -- Variadic: accept any number of arguments
+            , fsReturns = []
+            }
+        errorsNewSignature = FunctionSignature
+            { fsParams = [FunctionParam Nothing (TypeName "string") False] -- New takes a string
+            , fsReturns = [TypeName "error"] -- and returns an error
+            }
+
+-- | Build the type environment from a list of variable-type pairs (for testing).
+buildTypeEnvFromPairs :: [(String, Type)] -> TypeEnv
+buildTypeEnvFromPairs pairs = TypeEnv
+    { varTypes = Map.fromList pairs
+    , functionTypes = Map.fromList builtinFunctionEntries
+    }
+  where
+    builtinFunctions = ["println", "print", "len", "cap", "append", "make", "new"]
+    builtinFunctionEntries = map (\name -> (name, builtinSignature)) builtinFunctions
+    builtinSignature = FunctionSignature
+        { fsParams = [FunctionParam Nothing UnknownType True]
+        , fsReturns = []
+        }
+
+-- | Create a minimal TypusFile for testing with type errors.
+createTypusFileFromErrors :: [TypeError] -> TypusFile
+createTypusFileFromErrors errors = TypusFile
+    { tfDirectives = defaultFileDirectives
+    , tfBuildTags = []
+    , tfBlocks = []
+    , tfSyntaxErrors = []
+    }
+  where
+    defaultFileDirectives = FileDirectives Nothing Nothing Nothing
     
     builtinFunctionEntry :: String -> (String, FunctionSignature)
     builtinFunctionEntry name = (name, builtinSignature)

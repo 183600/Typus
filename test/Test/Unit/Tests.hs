@@ -98,11 +98,26 @@ import qualified Test.Unit.CabalTestQuickCheckSpec
 import qualified Test.Unit.NewCabalQuickCheckSpec
 import qualified Test.Unit.EnhancedCabalQuickCheckSpec
 -- New QuickCheck property test modules
+import qualified Test.Unit.ComprehensiveQuickCheckSpec
 import qualified Test.Unit.CoreDataStructuresQuickCheckSpec
 import qualified Test.Unit.CompilerIRQuickCheckSpec
 import qualified Test.Unit.TypeSystemQuickCheckSpec
 import qualified Test.Unit.OwnershipAnalysisQuickCheckSpec
 import qualified Test.Unit.ErrorHandlingQuickCheckSpec
+-- Additional new QuickCheck test modules
+import qualified Test.Unit.SimpleQuickCheckTestSpec
+import qualified Test.Unit.WorkingQuickCheckSpec
+import qualified Test.Unit.NewCabalQuickCheckSpec
+-- New comprehensive QuickCheck test modules
+import qualified Test.Unit.NewCoreQuickCheckSpec
+import qualified Test.Unit.ParserPropertiesQuickCheckSpec
+import qualified Test.Unit.TypeSystemPropertiesQuickCheckSpec
+import qualified Test.Unit.CompilerPropertiesQuickCheckSpec
+import qualified Test.Unit.ErrorRecoveryQuickCheckSpec
+import qualified Test.Unit.SourceLocationPropertiesQuickCheckSpec
+import qualified Test.Unit.OwnershipAnalysisQuickCheckSpec
+import qualified Test.Unit.DependentTypePropertiesQuickCheckSpec
+import qualified Test.Unit.CircularDependencyQuickCheckSpec
 
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
@@ -192,6 +207,23 @@ tests =
             , Test.Unit.TypeSystemQuickCheckSpec.tests
             , Test.Unit.OwnershipAnalysisQuickCheckSpec.tests
             , Test.Unit.ErrorHandlingQuickCheckSpec.tests
+            ]
+        , testGroup "Additional New QuickCheck Tests"
+            [ Test.Unit.SimpleQuickCheckTestSpec.tests
+            , Test.Unit.WorkingQuickCheckSpec.tests
+            , Test.Unit.ComprehensiveQuickCheckSpec.tests
+            , Test.Unit.NewCabalQuickCheckSpec.tests
+            ]
+        , testGroup "New Comprehensive QuickCheck Tests"
+            [ Test.Unit.NewCoreQuickCheckSpec.tests
+            , Test.Unit.ParserPropertiesQuickCheckSpec.tests
+            , Test.Unit.TypeSystemPropertiesQuickCheckSpec.tests
+            , Test.Unit.CompilerPropertiesQuickCheckSpec.tests
+            , Test.Unit.ErrorRecoveryQuickCheckSpec.tests
+            , Test.Unit.SourceLocationPropertiesQuickCheckSpec.tests
+            , Test.Unit.OwnershipAnalysisQuickCheckSpec.tests
+            , Test.Unit.DependentTypePropertiesQuickCheckSpec.tests
+            , Test.Unit.CircularDependencyQuickCheckSpec.tests
             ]
             ]
         ]

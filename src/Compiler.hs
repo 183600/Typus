@@ -13,6 +13,8 @@ module Compiler
   , extractDeclarations
   , extractFunctionCalls
   , buildTypeEnv
+  , buildTypeEnvFromPairs
+  , createTypusFileFromErrors
   , isMethodDeclaration
   , checkTypeError
   , hasMalformedSyntax
@@ -39,6 +41,8 @@ import Compiler.TypeChecker
   , extractDeclarations
   , extractFunctionCalls
   , buildTypeEnv
+  , buildTypeEnvFromPairs
+  , createTypusFileFromErrors
   , isMethodDeclaration
   , checkTypeError
   , hasMalformedSyntax
