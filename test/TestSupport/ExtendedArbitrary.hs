@@ -90,6 +90,57 @@ import qualified Dependencies as Dep
 import qualified Dependencies.TypeSystem as DepT (TypeEnv(..), TypeDef(..), DependentTypeChecker(..))
 import qualified Dependencies.AST as DepAST (DependencyGraph(..), DependencyNode(..))
 import SyntaxValidator (SyntaxError(..), ErrorType(..))
+import qualified Ownership.Parser as Own
+  ( Expr(..)
+  , Stmt(..)
+  , AssignOp(..)
+  , UnaryOp(..)
+  , Directive(..)
+  )
+import qualified Ownership.Common.Lexer as OwnL (Pos(..), Token(..))
+
+
+-- Arbitrary instances for Ownership Parser types
+instance Arbitrary Own.AssignOp where
+  arbitrary = elements [Own.OpAssign, Own.OpWalrus]
+
+instance Arbitrary Own.UnaryOp where
+  arbitrary = elements [Own.UBorrow, Own.UMutBorrow]
+
+instance Arbitrary Own.Directive where
+  arbitrary = Own.Directive <$> arbitrary
+
+instance Arbitrary OwnL.Pos where
+  arbitrary = OwnL.Pos <$> choose (1, 100) <*> choose (1, 100)
+
+
+
+instance Arbitrary Own.Expr where
+  arbitrary = sized $ \n -> if n <= 0 then
+    Own.ELitNum <$> genIdentifier <*> arbitrary
+  else oneof
+    [ Own.EIdent <$> genIdentifier <*> arbitrary
+    , Own.ECall <$> genIdentifier <*> listOf (resize (n-1) arbitrary) <*> arbitrary
+    , Own.EUnary <$> arbitrary <*> resize (n-1) arbitrary <*> arbitrary
+    , Own.ELitStr <$> genIdentifier <*> arbitrary
+    , Own.ELitNum <$> genIdentifier <*> arbitrary
+    , Own.EUnknown <$> (pure []) <*> arbitrary  -- Simplified: empty token list
+    ]
+
+instance Arbitrary Own.Stmt where
+  arbitrary = sized $ \n -> if n <= 0 then
+    Own.SExpr <$> arbitrary <*> arbitrary
+  else oneof
+    [ Own.SVarDecl <$> genIdentifier <*> frequency [(1, pure Nothing), (2, Just <$> arbitrary)] <*> arbitrary
+    , Own.SLetDecl <$> genIdentifier <*> frequency [(1, pure Nothing), (2, Just <$> arbitrary)] <*> arbitrary
+    , Own.SAssignStmt <$> genIdentifier <*> arbitrary <*> resize (n-1) arbitrary <*> arbitrary
+    , Own.SExpr <$> arbitrary <*> arbitrary
+    , Own.SBlock <$> listOf (resize (n-1) arbitrary) <*> arbitrary
+    , Own.SFunc <$> listOf (resize (n-1) arbitrary) <*> arbitrary
+    , Own.SFor <$> listOf (resize (n-1) arbitrary) <*> arbitrary
+    , Own.SDirectiveLine <$> arbitrary <*> arbitrary
+    , Own.SDirectiveBlock <$> arbitrary <*> listOf (resize (n-1) arbitrary) <*> arbitrary
+    ]
 
 -- Arbitrary instances for SyntaxValidator types
 instance Arbitrary ErrorType where

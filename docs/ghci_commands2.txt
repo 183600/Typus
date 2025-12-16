@@ -1,7 +1,0 @@
-:set prompt "> "
-content <- readFile "fixtures/inputs/test_input.txt"
-putStrLn "Original content:"
-putStrLn content
-putStrLn "Cleaned content:"
-putStrLn (cleanCodeBlocks content)
-:q

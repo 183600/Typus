@@ -15,8 +15,10 @@ import qualified Data.Foldable as Foldable
 import qualified Ownership.Common.Types as OCT
 import qualified Compiler.IR as CIR
 import Compiler.GoAst
-import Analyzer.SymbolTable
+import Analyzer.Types (SymbolInfo(..))
+import qualified Data.Map as Map
 import TestSupport.Arbitrary ()
+import TestSupport.ExtendedArbitrary ()
 
 -- 测试IR数据结构的属性
 prop_ir_node_ancestry :: Property
@@ -51,16 +53,18 @@ prop_go_ast_type_preservation =
 prop_symboltable_scope_consistency :: Property
 prop_symboltable_scope_consistency =
   forAll (arbitrary :: Gen [(String, Symbol)]) $ \symbols ->
-    let table = foldr (\(name, sym) acc -> insertSymbol name sym acc) emptySymbolTable symbols
+    let table = foldr (\(name, sym) acc -> Map.insert name (SymbolInfo name Nothing Nothing 0 False False []) acc) Map.empty symbols
     in all (\(name, _) -> isJust (lookupSymbol name table)) symbols
 
 prop_symboltable_lookup_scope :: Property
 prop_symboltable_lookup_scope =
-  forAll arbitrary $ \name symbols ->
-    let table = foldr (\(n, sym) acc -> insertSymbol n sym acc) emptySymbolTable symbols
-        result = lookupSymbol name table
+  forAll arbitrary $ \(name, symbols) ->
+    let nameStr = name :: String
+        symbolsList = symbols :: [(String, SymbolInfo)]
+        table = foldr (\(n, sym) acc -> Map.insert n (SymbolInfo n Nothing Nothing 0 False False []) acc) Map.empty symbolsList
+        result = lookupSymbol nameStr table
     in case result of
-         Just _ -> name `elem` map fst symbols
+         Just _ -> nameStr `elem` map fst symbolsList
          Nothing -> True
 
 -- 测试所有权类型的属性
@@ -191,14 +195,15 @@ inferTypes = undefined
 hasValidType :: GoASTNode -> Bool
 hasValidType = undefined
 
-insertSymbol :: String -> Symbol -> SymbolTable -> SymbolTable
+-- Helper functions for the test
+insertSymbol :: String -> Symbol -> Map.Map String SymbolInfo -> Map.Map String SymbolInfo
 insertSymbol = undefined
 
-lookupSymbol :: String -> SymbolTable -> Maybe Symbol
+lookupSymbol :: String -> Map.Map String SymbolInfo -> Maybe Symbol
 lookupSymbol = undefined
 
-emptySymbolTable :: SymbolTable
-emptySymbolTable = undefined
+emptySymbolTable :: Map.Map String SymbolInfo
+emptySymbolTable = Map.empty
 
 canTransferOwnership :: TestOwnershipType -> Bool
 canTransferOwnership = undefined
@@ -221,8 +226,6 @@ data TestType = TestType
 data GoAST = GoAST
   deriving (Show, Eq)
 data GoASTNode = GoASTNode
-  deriving (Show, Eq)
-data SymbolTable = SymbolTable
   deriving (Show, Eq)
 data Symbol = Symbol
   deriving (Show, Eq)

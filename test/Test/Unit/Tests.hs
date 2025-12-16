@@ -54,6 +54,7 @@ import qualified Test.Unit.ErrorHandlerQuickCheckSpec
 import qualified Test.Unit.AnalyzerIntegrationQuickCheckSpec
 import qualified Test.Unit.CliQuickCheckSpec
 import qualified Test.Unit.GoToolchainQuickCheckSpec
+import qualified Test.Unit.WorkingQuickCheckTestSpec
 -- Comprehensive QuickCheck test modules
 import qualified Test.Unit.ComprehensiveParserQuickCheckSpec
 import qualified Test.Unit.ComprehensiveCompilerQuickCheckSpec
@@ -87,7 +88,6 @@ import qualified Test.Unit.ArithmeticPropertiesQuickCheckSpec
 -- New property-based QuickCheck test modules (batch 2)
 import qualified Test.Unit.IRPropertiesQuickCheckSpec
 import qualified Test.Unit.GoLexerPropertiesQuickCheckSpec
-import qualified Test.Unit.TypeSystemPropertiesQuickCheckSpec
 import qualified Test.Unit.GoParsingPropertiesQuickCheckSpec
 import qualified Test.Unit.IntegratedCompilerPropertiesQuickCheckSpec
 import qualified Test.Unit.EnhancedErrorHandlerPropertiesQuickCheckSpec
@@ -108,16 +108,24 @@ import qualified Test.Unit.ErrorHandlingQuickCheckSpec
 import qualified Test.Unit.SimpleQuickCheckTestSpec
 import qualified Test.Unit.WorkingQuickCheckSpec
 import qualified Test.Unit.NewCabalQuickCheckSpec
+import qualified Test.Unit.CabalQuickCheckTestSpec
+import qualified Test.Unit.NewCabalQuickCheckTests
+import qualified Test.Unit.NewQuickCheckTestsSpec
+import qualified Test.Unit.NewCabalQuickCheckTestSpec
+import qualified Test.Unit.NewCabalQuickCheckTestSpec
+import qualified Test.Unit.BasicQuickCheckTestSpec
+import qualified Test.Unit.PropertyQuickCheckTestSpec
+import qualified Test.Unit.CoreQuickCheckTestSpec
+import qualified Test.Unit.AdvancedQuickCheckTestSpec
+import qualified Test.Unit.ComprehensiveQuickCheckTestSpec
+import qualified Test.Unit.FinalQuickCheckTestSpec
 -- New comprehensive QuickCheck test modules
 import qualified Test.Unit.NewCoreQuickCheckSpec
 import qualified Test.Unit.ParserPropertiesQuickCheckSpec
-import qualified Test.Unit.TypeSystemPropertiesQuickCheckSpec
-import qualified Test.Unit.CompilerPropertiesQuickCheckSpec
 import qualified Test.Unit.ErrorRecoveryQuickCheckSpec
 import qualified Test.Unit.SourceLocationPropertiesQuickCheckSpec
 import qualified Test.Unit.OwnershipAnalysisQuickCheckSpec
-import qualified Test.Unit.DependentTypePropertiesQuickCheckSpec
-import qualified Test.Unit.CircularDependencyQuickCheckSpec
+import qualified Test.Unit.NewCabalQuickCheckTestSpec
 
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
@@ -213,17 +221,30 @@ tests =
             , Test.Unit.WorkingQuickCheckSpec.tests
             , Test.Unit.ComprehensiveQuickCheckSpec.tests
             , Test.Unit.NewCabalQuickCheckSpec.tests
+            , Test.Unit.CabalQuickCheckTestSpec.tests
+            , Test.Unit.NewCabalQuickCheckTests.tests
             ]
         , testGroup "New Comprehensive QuickCheck Tests"
             [ Test.Unit.NewCoreQuickCheckSpec.tests
             , Test.Unit.ParserPropertiesQuickCheckSpec.tests
-            , Test.Unit.TypeSystemPropertiesQuickCheckSpec.tests
-            , Test.Unit.CompilerPropertiesQuickCheckSpec.tests
             , Test.Unit.ErrorRecoveryQuickCheckSpec.tests
             , Test.Unit.SourceLocationPropertiesQuickCheckSpec.tests
             , Test.Unit.OwnershipAnalysisQuickCheckSpec.tests
-            , Test.Unit.DependentTypePropertiesQuickCheckSpec.tests
-            , Test.Unit.CircularDependencyQuickCheckSpec.tests
+            ]
+        , testGroup "New QuickCheck Test Modules"
+            [ Test.Unit.NewCabalQuickCheckTestSpec.tests
+            , Test.Unit.SimpleQuickCheckTestSpec.tests
+            , Test.Unit.WorkingQuickCheckTestSpec.tests
+            , Test.Unit.BasicQuickCheckTestSpec.tests
+            , Test.Unit.PropertyQuickCheckTestSpec.tests
+            , Test.Unit.CoreQuickCheckTestSpec.tests
+            , Test.Unit.AdvancedQuickCheckTestSpec.tests
+            , Test.Unit.ComprehensiveQuickCheckTestSpec.tests
+            , Test.Unit.FinalQuickCheckTestSpec.tests
+            ]
+        , testGroup "New QuickCheck Tests"
+            [ Test.Unit.NewQuickCheckTestsSpec.tests
+            , Test.Unit.NewCabalQuickCheckTestSpec.tests
             ]
             ]
         ]

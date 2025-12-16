@@ -8,8 +8,8 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, sized)
 
 import Compiler.Errors (CompilerError(..), ErrorSeverity(..), formatError, formatCompilerError, CompilationPhase(..))
-import Compiler.Errors.Core (TypeError(..), formatError, errorAt, getErrorLine, getErrorColumn)
-import Compiler.TypeChecker (TypeCheckDiagnostic(..), hasTypeErrors, diagnoseTypeErrors, createTypusFileFromErrors)
+import Compiler.Errors.Core (TypeError(..), formatError, errorAt, getErrorLine, getErrorColumn, ErrorLocation(..), ErrorContext(..), ErrorCategory(..), ErrorSeverity(..), ErrorRecovery(..))
+import Compiler.TypeChecker (TypeCheckDiagnostic(..), hasTypeErrors, diagnoseTypeErrors, createTypusFileFromErrors, TypeError(..))
 import Parser (parseTypus)
 import Utils (trim, removeComments)
 import Data.Char (isAlphaNum, isSpace, toLower)
@@ -19,6 +19,92 @@ import Data.Maybe (isJust, isNothing, fromMaybe)
 import SourceLocation (SourcePos(..), startPos, toErrorLocation)
 import qualified Data.Text as T
 import Data.Text (pack)
+
+-- Arbitrary instances for testing
+instance Arbitrary CompilerError where
+  arbitrary = do
+    typeError <- arbitrary
+    sourceContext <- arbitrary
+    stackTrace <- listOf $ elements ["func1", "func2", "func3"]
+    phase <- arbitrary
+    return $ CompilerError typeError sourceContext stackTrace phase
+
+instance Arbitrary Compiler.Errors.Core.TypeError where
+  arbitrary = do
+    errorId <- elements ["TYPE001", "TYPE002", "TYPE003"]
+    severity <- arbitrary
+    category <- arbitrary
+    message <- arbitrary
+    location <- arbitrary
+    context <- arbitrary
+    recovery <- arbitrary
+    suggestions <- listOf arbitrary
+    relatedErrors <- listOf arbitrary
+    errorChain <- listOf arbitrary
+    timestamp <- arbitrary
+    return $ Compiler.Errors.Core.TypeError {
+      errorId = errorId,
+      severity = severity,
+      category = category,
+      message = message,
+      location = location,
+      context = context,
+      recovery = recovery,
+      suggestions = suggestions,
+      relatedErrors = relatedErrors,
+      errorChain = errorChain,
+      timestamp = timestamp
+    }
+
+-- | Generate random error locations
+instance Arbitrary ErrorLocation where
+  arbitrary = do
+    filePath <- arbitrary
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    endLine <- arbitrary
+    endColumn <- arbitrary
+    return $ ErrorLocation filePath line column endLine endColumn
+
+-- | Generate random error contexts
+instance Arbitrary ErrorContext where
+  arbitrary = do
+    contextCode <- arbitrary
+    contextFunction <- arbitrary
+    contextVariable <- arbitrary
+    contextType <- arbitrary
+    contextAdditional <- listOf $ arbitrary
+    return $ ErrorContext contextCode contextFunction contextVariable contextType contextAdditional
+
+-- | Generate random error categories
+instance Arbitrary ErrorCategory where
+  arbitrary = elements [TypeChecking, Ownership, Parsing, Semantic, Runtime, Constraint, Inference, Integration, Unknown]
+
+-- | Generate random error severity
+instance Arbitrary ErrorSeverity where
+  arbitrary = elements [Error, Warning, Info]
+
+-- | Generate random compilation phases
+
+
+-- | Generate random Text for error messages
+instance Arbitrary T.Text where
+  arbitrary = T.pack <$> arbitrary
+
+-- | Generate random error recovery strategies
+instance Arbitrary ErrorRecovery where
+  arbitrary = do
+    canRecover <- arbitrary
+    shouldContinue <- arbitrary
+    recoveryAction <- arbitrary
+    recoveryHint <- arbitrary
+    recoveryCost <- choose (0, 100)
+    recoveryConfidence <- choose (0.0, 1.0)
+    return $ RecoveryStrategy canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
+
+-- | Generate random compilation phases
+instance Arbitrary CompilationPhase where
+  arbitrary = elements [LexingPhase, ParsingPhase, TypeCheckingPhase, OwnershipAnalysisPhase, DependentTypeCheckingPhase, CodeGenerationPhase, OptimizationPhase]
 
 -- Helper function for categorizing errors
 categorizeError :: CompilerError -> String
@@ -175,9 +261,9 @@ prop_error_message_uniqueness errors =
   in property $ length uniqueMessages <= length messages
 
 -- Property: Type error diagnosis consistency
-prop_type_error_diagnosis_consistent :: TypeError -> Property
+prop_type_error_diagnosis_consistent :: Compiler.Errors.Core.TypeError -> Property
 prop_type_error_diagnosis_consistent typeError =
-  let testFile = createTypusFileFromErrors [typeError]
+  let testFile = createTypusFileFromErrors [Compiler.TypeChecker.TypeError (Just $ T.unpack $ Compiler.Errors.Core.message typeError) (T.unpack $ Compiler.Errors.Core.message typeError)]
       diagnostics = diagnoseTypeErrors testFile
       hasErrors = hasTypeErrors testFile
   in property $ hasErrors

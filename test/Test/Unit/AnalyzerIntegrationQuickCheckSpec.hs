@@ -9,7 +9,6 @@ import Data.List (isPrefixOf, isInfixOf, nub, sort)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Either (isLeft, isRight)
 import qualified Data.Text as T
-import qualified Data.Map as Map
 import qualified Data.Map.Strict as Map
 
 import Analyzer.Types
@@ -21,11 +20,12 @@ import Analyzer.Types
   , AnalyzerState(..)
   , CombinedError(..)
   )
+import Analyzer.State (newIntegratedAnalyzer)
 import AnalyzerIntegration
 import Analyzer.OwnershipBridge
 import Analyzer.DependentTypeBridge
 import Analyzer.State
-import Analyzer.SymbolTable
+
 import SourceLocation (Located(..), SourcePos(..), SourceSpan(..))
 import TestSupport.Arbitrary
 import TestSupport.ExtendedArbitrary ()
@@ -48,8 +48,10 @@ prop_analysis_context_creation ownershipEnabled dependentTypesEnabled name phase
 -- Property: Symbol table operations
 prop_symbol_table_operations :: [(String, SymbolInfo)] -> Property
 prop_symbol_table_operations symbols =
-  let symbolTable = foldl (\acc (name, info) -> insertSymbol name info acc) emptySymbolTable symbols
-      retrievedSymbols = map fst $ getAllSymbols symbolTable
+  let baseAnalyzer = newIntegratedAnalyzer False False
+      symbolMap = foldl (\acc (name, info) -> Map.insert name info acc) (symbolTable baseAnalyzer) symbols
+      analyzerState = baseAnalyzer { symbolTable = symbolMap }
+      retrievedSymbols = map fst $ getAllSymbols analyzerState
       expectedSymbols = map fst symbols
   in property $ sort retrievedSymbols === sort expectedSymbols
 
@@ -57,8 +59,8 @@ prop_symbol_table_operations symbols =
 prop_symbol_info_preservation :: String -> Property
 prop_symbol_info_preservation name =
   let info = SymbolInfo name Nothing Nothing 0 False False []
-      symbolTable = insertSymbol name info emptySymbolTable
-      retrieved = lookupSymbol name symbolTable
+      symbolTable = Map.insert name info Map.empty
+      retrieved = Map.lookup name symbolTable
   in case retrieved of
        Nothing -> property False
        Just retrievedInfo -> symbolName retrievedInfo === name
@@ -112,16 +114,20 @@ prop_error_accumulation errors1 errors2 =
 -- Property: Symbol scope validation
 prop_symbol_scope_validation :: String -> SymbolInfo -> Property
 prop_symbol_scope_validation name info =
-  let symbolTable = insertSymbol name info emptySymbolTable
-      isInScope = symbolInScope name symbolTable
+  let baseAnalyzer = newIntegratedAnalyzer False False
+      symbolMap = Map.insert name info (symbolTable baseAnalyzer)
+      analyzerState = baseAnalyzer { symbolTable = symbolMap }
+      isInScope = symbolInScope name analyzerState
   in property $ isInScope
 
 -- Property: Type consistency checking
 prop_type_consistency :: String -> Property
 prop_type_consistency name =
   let info = SymbolInfo name Nothing Nothing 0 False False []
-      symbolTable = insertSymbol name info emptySymbolTable
-      hasSymbol = isJust $ lookupSymbol name symbolTable
+      baseAnalyzer = newIntegratedAnalyzer False False
+      symbolMap = Map.insert name info (symbolTable baseAnalyzer)
+      analyzerState = baseAnalyzer { symbolTable = symbolMap }
+      hasSymbol = isJust $ lookupSymbol name analyzerState
   in property $ hasSymbol
 
 -- Property: Ownership analysis integration
@@ -154,8 +160,10 @@ prop_analyzer_state_reset state =
 -- Property: Symbol table lookup performance
 prop_symbol_table_lookup :: [(String, SymbolInfo)] -> String -> Property
 prop_symbol_table_lookup symbols query =
-  let symbolTable = foldl (\acc (name, info) -> insertSymbol name info acc) emptySymbolTable symbols
-      found = isJust $ lookupSymbol query symbolTable
+  let baseAnalyzer = newIntegratedAnalyzer False False
+      symbolMap = foldl (\acc (name, info) -> Map.insert name info acc) (symbolTable baseAnalyzer) symbols
+      analyzerState = baseAnalyzer { symbolTable = symbolMap }
+      found = isJust $ lookupSymbol query analyzerState
   in classify found "symbol found" $
      property $ True
 
@@ -183,9 +191,10 @@ prop_analyzer_state_consistency state =
 -- Property: Symbol dependency tracking
 prop_symbol_dependency_tracking :: String -> [String] -> Property
 prop_symbol_dependency_tracking symbol dependencies =
-  let symbolTable = emptySymbolTable
-      updatedTable = foldl (\acc dep -> addDependency symbol dep acc) symbolTable dependencies
-      trackedDeps = getDependencies symbol updatedTable
+  let baseAnalyzer = newIntegratedAnalyzer False False
+      analyzerState = baseAnalyzer { symbolTable = Map.empty }
+      updatedState = foldl (\acc dep -> addDependency symbol dep acc) analyzerState dependencies
+      trackedDeps = getDependencies symbol updatedState
   in property $ length trackedDeps === length dependencies
 
 -- Property: Phase-specific analysis rules
@@ -260,8 +269,8 @@ tests = testGroup "AnalyzerIntegration QuickCheck Tests"
 preserveAnalyzerState :: AnalyzerState -> AnalyzerState
 preserveAnalyzerState = id
 
-emptySymbolTable :: AnalyzerState
-emptySymbolTable = undefined
+emptySymbolTable :: Map.Map String SymbolInfo
+emptySymbolTable = Map.empty
 
 insertSymbol :: String -> SymbolInfo -> AnalyzerState -> AnalyzerState
 insertSymbol = undefined

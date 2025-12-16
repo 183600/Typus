@@ -16,7 +16,8 @@ import Compiler.IR (SourceIR(..), SemanticIR(..), GoIR(..))
 import qualified Parser as Parser
 import qualified Compiler.GoAst as GoAst
 import qualified Compiler.TypeChecker as TypeChecker
-import qualified Analyzer.SymbolTable as SymbolTable
+import Analyzer.Types (SymbolInfo(..))
+import qualified Data.Map as Map
 import TestSupport.Arbitrary ()
 
 tests :: TestTree
@@ -191,7 +192,7 @@ prop_type_substitution_structure oldVar newValue typeName =
 prop_symbol_insertion :: String -> String -> Property
 prop_symbol_insertion symbolName symbolType =
   not (null symbolName) && not (null symbolType) ==> 
-  let emptyTable = SymbolTable.emptySymbolTable
+  let emptyTable = Map.empty :: Map.Map String SymbolInfo
       symbol = SymbolTable.Symbol{SymbolTable.symbolName=symbolName, SymbolTable.symbolType=symbolType, SymbolTable.symbolScope=SymbolTable.LocalScope}
       tableWithSymbol = SymbolTable.insertSymbol emptyTable symbol
   in case SymbolTable.lookupSymbol symbolName tableWithSymbol of

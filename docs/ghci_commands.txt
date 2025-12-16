@@ -1,5 +1,0 @@
-:set prompt "> "
-let testContent = readFile "fixtures/inputs/test_input.txt"
-testContent >>= \\content -> putStrLn ("Original content:\\n" ++ content)
-testContent >>= \\content -> let result = cleanCodeBlocks content in putStrLn ("Cleaned content:\\n" ++ result)
-:q

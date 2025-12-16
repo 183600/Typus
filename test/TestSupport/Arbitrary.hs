@@ -31,6 +31,10 @@ import Compiler.GoAst
   , ConstDecl(..)
   , PackageDecl(..)
   )
+import Compiler.GoLexer
+  ( GoToken(..)
+  , GoTokenKind(..)
+  )
 import Compiler.IR (SourceIR(..), SemanticIR(..), GoIR(..))
 import Analyzer.Types
   ( SymbolInfo(..)
@@ -158,6 +162,22 @@ instance Arbitrary GoDecl where
     , GoVar <$> arbitrary
     , GoConst <$> arbitrary
     ]
+
+instance Arbitrary GoTokenKind where
+  arbitrary = elements
+    [ TokIdentifier
+    , TokKeyword
+    , TokNumber
+    , TokString
+    , TokComment
+    , TokOperator
+    , TokSymbol
+    , TokWhitespace
+    , TokOther
+    ]
+
+instance Arbitrary GoToken where
+  arbitrary = GoToken <$> arbitrary <*> genNonEmptyString
 
 instance Arbitrary GoModule where
   arbitrary = GoModule
