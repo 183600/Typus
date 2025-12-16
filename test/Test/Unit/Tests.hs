@@ -97,6 +97,7 @@ import qualified Test.Unit.NewPropertyTestsQuickCheckSpec
 import qualified Test.Unit.CabalTestQuickCheckSpec
 import qualified Test.Unit.NewCabalQuickCheckSpec
 import qualified Test.Unit.EnhancedCabalQuickCheckSpec
+import qualified Test.Unit.EnhancedCoreQuickCheckSpec
 -- New QuickCheck property test modules
 import qualified Test.Unit.ComprehensiveQuickCheckSpec
 import qualified Test.Unit.CoreDataStructuresQuickCheckSpec
@@ -112,6 +113,7 @@ import qualified Test.Unit.CabalQuickCheckTestSpec
 import qualified Test.Unit.NewCabalQuickCheckTests
 import qualified Test.Unit.NewQuickCheckTestsSpec
 import qualified Test.Unit.NewCabalQuickCheckTestSpec
+import qualified Test.Unit.NewCabalQuickCheckTests
 import qualified Test.Unit.NewCabalQuickCheckTestSpec
 import qualified Test.Unit.BasicQuickCheckTestSpec
 import qualified Test.Unit.PropertyQuickCheckTestSpec
@@ -126,6 +128,9 @@ import qualified Test.Unit.ErrorRecoveryQuickCheckSpec
 import qualified Test.Unit.SourceLocationPropertiesQuickCheckSpec
 import qualified Test.Unit.OwnershipAnalysisQuickCheckSpec
 import qualified Test.Unit.NewCabalQuickCheckTestSpec
+import qualified Test.Unit.AdditionalCabalQuickCheckSpec
+import qualified Test.Unit.CabalQuickCheckTests
+import qualified Test.Unit.NewCabslQuickCheckTests
 
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
@@ -245,7 +250,12 @@ tests =
         , testGroup "New QuickCheck Tests"
             [ Test.Unit.NewQuickCheckTestsSpec.tests
             , Test.Unit.NewCabalQuickCheckTestSpec.tests
+            , Test.Unit.NewCabalQuickCheckTests.tests
+            , Test.Unit.AdditionalCabalQuickCheckSpec.tests
+            , Test.Unit.CabalQuickCheckTests.tests
             ]
+        , Test.Unit.EnhancedCoreQuickCheckSpec.tests
+            , Test.Unit.NewCabslQuickCheckTests.tests
             ]
         ]
     ]
