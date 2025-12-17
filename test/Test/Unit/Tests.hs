@@ -80,24 +80,9 @@ import qualified Test.Unit.BasicPropertiesQuickCheckSpec
 import qualified Test.Unit.StringUtilsQuickCheckSpec
 import qualified Test.Unit.NewCabalQuickCheckPropertiesSpec
 
-import qualified Test.Unit.ParserDirectivesQuickCheckSpec
-import qualified Test.Unit.ListPropertiesQuickCheckSpec
-import qualified Test.Unit.MapPropertiesQuickCheckSpec
-import qualified Test.Unit.SetPropertiesQuickCheckSpec
-import qualified Test.Unit.MonadPropertiesQuickCheckSpec
-import qualified Test.Unit.ArithmeticPropertiesQuickCheckSpec
 -- New property-based QuickCheck test modules (batch 2)
 import qualified Test.Unit.IRPropertiesQuickCheckSpec
-import qualified Test.Unit.GoLexerPropertiesQuickCheckSpec
-import qualified Test.Unit.GoParsingPropertiesQuickCheckSpec
-import qualified Test.Unit.IntegratedCompilerPropertiesQuickCheckSpec
-import qualified Test.Unit.EnhancedErrorHandlerPropertiesQuickCheckSpec
-import qualified Test.Unit.DebugIntegrationPropertiesQuickCheckSpec
-import qualified Test.Unit.CompilerUtilsPropertiesQuickCheckSpec
-import qualified Test.Unit.NewPropertyTestsQuickCheckSpec
-import qualified Test.Unit.CabalTestQuickCheckSpec
-import qualified Test.Unit.NewCabalQuickCheckSpec
-import qualified Test.Unit.EnhancedCabalQuickCheckSpec
+import qualified Test.Unit.EnhancedCabalTestQuickCheckSpec
 import qualified Test.Unit.CabalEnhancedQuickCheckSpec
 import qualified Test.Unit.EnhancedCoreQuickCheckSpec
 -- New QuickCheck property test modules
@@ -106,22 +91,13 @@ import qualified Test.Unit.CoreDataStructuresQuickCheckSpec
 import qualified Test.Unit.CompilerIRQuickCheckSpec
 import qualified Test.Unit.TypeSystemQuickCheckSpec
 import qualified Test.Unit.OwnershipAnalysisQuickCheckSpec
-import qualified Test.Unit.ErrorHandlingQuickCheckSpec
 -- Additional new QuickCheck test modules
 import qualified Test.Unit.SimpleQuickCheckTestSpec
-import qualified Test.Unit.WorkingQuickCheckSpec
-import qualified Test.Unit.NewCabalQuickCheckSpec
 import qualified Test.Unit.CabalQuickCheckTestSpec
 import qualified Test.Unit.NewIRQuickCheckSpec
 import qualified Test.Unit.NewSymbolTableQuickCheckSpec
 import qualified Test.Unit.NewTypeCheckerQuickCheckSpec
-import qualified Test.Unit.NewCabalQuickCheckTests
 import qualified Test.Unit.NewQuickCheckTestsSpec
-import qualified Test.Unit.NewCabalQuickCheckTestSpec
-import qualified Test.Unit.NewCabalQuickCheckTests
-import qualified Test.Unit.NewCabalQuickCheckTests
-import qualified Test.Unit.NewCabalQuickCheckTestSpec
-import qualified Test.Unit.NewCoreQuickCheckTests
 import qualified Test.Unit.BasicQuickCheckTestSpec
 import qualified Test.Unit.PropertyQuickCheckTestSpec
 import qualified Test.Unit.CoreQuickCheckTestSpec
@@ -133,21 +109,37 @@ import qualified Test.Unit.NewCoreQuickCheckSpec
 import qualified Test.Unit.ParserPropertiesQuickCheckSpec
 import qualified Test.Unit.ErrorRecoveryQuickCheckSpec
 import qualified Test.Unit.SourceLocationPropertiesQuickCheckSpec
-import qualified Test.Unit.OwnershipAnalysisQuickCheckSpec
+import qualified Test.Unit.NewCoreQuickCheckTests
+import qualified Test.Unit.SimpleCoreQuickCheckSpec
+import qualified Test.Unit.NewCabalQuickCheckSpec
+import qualified Test.Unit.NewCabalQuickCheckTests
 import qualified Test.Unit.NewCabalQuickCheckTestSpec
 import qualified Test.Unit.NewCabalTestQuickCheckSpec
 import qualified Test.Unit.AdditionalCabalQuickCheckSpec
+import qualified Test.Unit.NewSimpleCabalQuickCheckSpec
+import qualified Test.Unit.AdditionalCabalTestsSpec
 import qualified Test.Unit.CabalQuickCheckTests
 import qualified Test.Unit.NewCabslQuickCheckTests
 import qualified Test.Unit.AdditionalQuickCheckTests
 import qualified Test.Unit.NewQuickCheckTestCasesSpec
-import qualified Test.Unit.NewCoreQuickCheckTests
 import qualified Test.Unit.CoreModuleQuickCheckSpec
-import qualified Test.Unit.NewCabalQuickCheckTests
-import qualified Test.Unit.NewCabalQuickCheckSpec
 import qualified Test.Unit.AdditionalCoreQuickCheckSpec
 import qualified Test.Unit.NewQuickCheckTestSpec
 import qualified Test.Unit.NewCabalQuickCheckTestCasesSpec
+import qualified Test.Unit.NewCabalQuickCheckTestsSpec
+import qualified Test.Unit.AdditionalQuickCheckSpec
+import qualified Test.Unit.FreshCabalQuickCheckSpec
+import qualified Test.Unit.SimpleCabalQuickCheckSpec
+import qualified Test.Unit.MinimalCabalQuickCheckSpec
+import qualified Test.Unit.LightweightCabalQuickCheckSpec
+import qualified Test.Unit.FastCabalQuickCheckSpec
+import qualified Test.Unit.CompactCabalQuickCheckSpec
+import qualified Test.Unit.QuickCabalQuickCheckSpec
+import qualified Test.Unit.TinyCabalQuickCheckSpec
+import qualified Test.Unit.EfficientCabalQuickCheckSpec
+import qualified Test.Unit.ConciseCabalQuickCheckSpec
+import qualified Test.Unit.NewCabalTestSuiteQuickCheckSpec
+import qualified Test.Unit.NewCabalQuickCheckTestSuite2Spec
 
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
@@ -231,6 +223,7 @@ tests =
             , Test.Unit.StringUtilsQuickCheckSpec.tests
             , Test.Unit.NewCabalQuickCheckPropertiesSpec.tests
             , Test.Unit.WorkingQuickCheckSpec.tests
+            , Test.Unit.AdditionalQuickCheckSpec.tests
             ]
         , testGroup "New Core QuickCheck Tests"
             [ Test.Unit.CoreDataStructuresQuickCheckSpec.tests
@@ -239,6 +232,7 @@ tests =
             , Test.Unit.OwnershipAnalysisQuickCheckSpec.tests
             , Test.Unit.ErrorHandlingQuickCheckSpec.tests
             , Test.Unit.NewCoreQuickCheckTests.tests
+            , Test.Unit.SimpleCoreQuickCheckSpec.tests
             ]
         , testGroup "Additional New QuickCheck Tests"
             [ Test.Unit.SimpleQuickCheckTestSpec.tests
@@ -269,11 +263,27 @@ tests =
         , testGroup "New QuickCheck Tests"
             [ Test.Unit.NewQuickCheckTestsSpec.tests
             , Test.Unit.NewCabalQuickCheckTestSpec.tests
+            , Test.Unit.NewCabalQuickCheckTestsSpec.tests
             , Test.Unit.NewCabalTestQuickCheckSpec.tests
             , Test.Unit.NewCabalQuickCheckTests.tests
             , Test.Unit.AdditionalCabalQuickCheckSpec.tests
             , Test.Unit.CabalQuickCheckTests.tests
             , Test.Unit.CabalEnhancedQuickCheckSpec.tests
+            , Test.Unit.EnhancedCabalTestQuickCheckSpec.tests
+            , Test.Unit.FreshCabalQuickCheckSpec.tests
+            , Test.Unit.SimpleCabalQuickCheckSpec.tests
+            , Test.Unit.MinimalCabalQuickCheckSpec.tests
+            , Test.Unit.LightweightCabalQuickCheckSpec.tests
+            , Test.Unit.FastCabalQuickCheckSpec.tests
+            , Test.Unit.CompactCabalQuickCheckSpec.tests
+            , Test.Unit.QuickCabalQuickCheckSpec.tests
+            , Test.Unit.TinyCabalQuickCheckSpec.tests
+            , Test.Unit.EfficientCabalQuickCheckSpec.tests
+            , Test.Unit.ConciseCabalQuickCheckSpec.tests
+            , Test.Unit.NewSimpleCabalQuickCheckSpec.tests
+            , Test.Unit.AdditionalCabalTestsSpec.tests
+            , Test.Unit.NewCabalTestSuiteQuickCheckSpec.tests
+            , Test.Unit.NewCabalQuickCheckTestSuite2Spec.tests
             ]
         , Test.Unit.EnhancedCoreQuickCheckSpec.tests
             , Test.Unit.NewCabslQuickCheckTests.tests
