@@ -114,6 +114,7 @@ import qualified Test.Unit.NewCabalQuickCheckTests
 import qualified Test.Unit.NewQuickCheckTestsSpec
 import qualified Test.Unit.NewCabalQuickCheckTestSpec
 import qualified Test.Unit.NewCabalQuickCheckTests
+import qualified Test.Unit.NewCabalQuickCheckTests
 import qualified Test.Unit.NewCabalQuickCheckTestSpec
 import qualified Test.Unit.BasicQuickCheckTestSpec
 import qualified Test.Unit.PropertyQuickCheckTestSpec
@@ -131,6 +132,13 @@ import qualified Test.Unit.NewCabalQuickCheckTestSpec
 import qualified Test.Unit.AdditionalCabalQuickCheckSpec
 import qualified Test.Unit.CabalQuickCheckTests
 import qualified Test.Unit.NewCabslQuickCheckTests
+import qualified Test.Unit.AdditionalQuickCheckTests
+import qualified Test.Unit.NewQuickCheckTestCasesSpec
+import qualified Test.Unit.CoreModuleQuickCheckSpec
+import qualified Test.Unit.NewCabalQuickCheckTests
+import qualified Test.Unit.NewCabalQuickCheckSpec
+import qualified Test.Unit.AdditionalCoreQuickCheckSpec
+import qualified Test.Unit.NewQuickCheckTestSpec
 
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
@@ -256,6 +264,22 @@ tests =
             ]
         , Test.Unit.EnhancedCoreQuickCheckSpec.tests
             , Test.Unit.NewCabslQuickCheckTests.tests
+            , Test.Unit.AdditionalQuickCheckTests.tests
+            , Test.Unit.NewQuickCheckTestCasesSpec.tests
+            -- New QuickCheck test modules
+            , Test.Unit.ParserPropertiesQuickCheckSpec.tests
+            , Test.Unit.ErrorHandlingQuickCheckSpec.tests
+            , Test.Unit.TypeSystemQuickCheckSpec.tests
+            , Test.Unit.OwnershipAnalysisQuickCheckSpec.tests
+            , Test.Unit.SourceLocationPropertiesQuickCheckSpec.tests
+            , Test.Unit.IRPropertiesQuickCheckSpec.tests
+            , Test.Unit.SymbolTableQuickCheckSpec.tests
+            , Test.Unit.CoreModuleQuickCheckSpec.tests
+            , Test.Unit.NewCabalQuickCheckTests.tests
+            , Test.Unit.NewCabalQuickCheckSpec.tests
+            , Test.Unit.NewCabalQuickCheckTests.tests
+            , Test.Unit.AdditionalCoreQuickCheckSpec.tests
             ]
+        , Test.Unit.NewQuickCheckTestSpec.tests
         ]
     ]
