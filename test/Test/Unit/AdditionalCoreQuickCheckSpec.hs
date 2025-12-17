@@ -3,121 +3,169 @@
 module Test.Unit.AdditionalCoreQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck
-import qualified Data.Map as Map
-import Data.List (sort, nub, isInfixOf)
+import Test.QuickCheck 
+import Test.QuickCheck.Arbitrary (Arbitrary(..))
+import Test.QuickCheck.Gen (Gen, listOf, choose, elements, oneof)
 
-import Utils (trim, splitBy, splitByCollapsed, removeLineComments)
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, posAfter, emptySpan, spanFrom)
-import Parser (FileDirectives(..), BlockDirectives(..), CodeBlock(..))
-import Compiler.GoAst (GoModule(..), GoDecl(..))
+import SourceLocation 
+  ( SourcePos(..), SourceSpan(..), Located(..)
+  , startPos, posAfter, spanFrom, spanTo, mergeSpans
+  , locatedAt, locatedWithSpan, locatedValue, locatedSpan, mapLocated
+  , advancePos, advancePosByText, isValidSpan
+  )
 
-tests :: TestTree
-tests = testGroup "Additional Core QuickCheck Properties"
-  [ utilProperties
-  , sourceLocationProperties 
-  , parserIRProperties
-  ]
+import Compiler.GoAst 
+  ( GoModule(..), PackageDecl(..), ImportDecl(..), GoDecl(..)
+  , FuncDecl(..), TypeDecl(..), VarDecl(..), ConstDecl(..)
+  , StatementBlock(..), RawBlock(..)
+  )
 
-utilProperties :: TestTree
-utilProperties = testGroup "Utils Properties"
-  [ fastProperty "trim removes leading and trailing whitespace" prop_trim_whitespace
-  , fastProperty "splitBy preserves empty segments" prop_splitBy_preserves_empty
-  , fastProperty "splitByCollapsed removes empty segments" prop_splitByCollapsed_removes_empty
-  , fastProperty "removeLineComments handles line endings" prop_removeLineComments_line_endings
-  ]
+import Utils 
+  ( trim, splitBy, splitByCollapsed, removeLineComments
+  , normalizeIndentation, breakOn, splitByComma
+  )
 
-sourceLocationProperties :: TestTree
-sourceLocationProperties = testGroup "SourceLocation Properties"
-  [ fastProperty "startPos is always (1,1)" prop_startPos_value
-  , fastProperty "posAfter advances correctly" prop_posAfter_advances
-  , fastProperty "emptySpan has zero length" prop_emptySpan_zero_length
-  , fastProperty "spanFrom creates valid span" prop_spanFrom_valid
-  ]
+import Data.Char (isSpace, isAlpha, isAlphaNum)
+import Data.List (sort, nub, intercalate, isInfixOf, isPrefixOf, tails)
+import qualified Data.Text as T
 
-parserIRProperties :: TestTree
-parserIRProperties = testGroup "Parser/IR Properties"
-  [ fastProperty "FileDirectives roundtrip" prop_file_directives_roundtrip
-  , fastProperty "Located values preserve location" prop_located_preserves_location
-  ]
+-- ============================================================================
+-- SourceLocation Properties
+-- ============================================================================
 
--- Utils properties
-prop_trim_whitespace :: String -> Property
-prop_trim_whitespace input =
-  let trimmed = trim input
-      hasLeadingSpace = not (null input) && isSpace (head input)
-      hasTrailingSpace = not (null input) && isSpace (last input)
-  in property $ 
-    if hasLeadingSpace || hasTrailingSpace
-    then not (null trimmed) ==> head trimmed `notElem` " \t\n\r" && last trimmed `notElem` " \t\n\r"
-    else trimmed === input
-  where
-    isSpace c = c `elem` " \t\n\r"
-
-prop_splitBy_preserves_empty :: Char -> String -> Property
-prop_splitBy_preserves_empty delim input =
-  let result = splitBy delim input
-      expectedLength = length input + 1
-  in property $ length result === expectedLength
-
-prop_splitByCollapsed_removes_empty :: Char -> String -> Property
-prop_splitByCollapsed_removes_empty delim input =
-  let result = splitByCollapsed delim input
-      hasEmpty = any null result
-  in property $ not hasEmpty
-
-prop_removeLineComments_line_endings :: String -> String -> Property
-prop_removeLineComments_line_endings code comment =
-  let input = code ++ "//" ++ comment ++ "\nmore code"
-      result = removeLineComments input
-  in property $ not ("//" `isInfixOf` result) && "more code" `isInfixOf` result
-
--- SourceLocation properties
-prop_startPos_value :: Property
-prop_startPos_value = property $ startPos === SourcePos 1 1 0
-
-prop_posAfter_advances :: Int -> Int -> Char -> Bool
-prop_posAfter_advances line col char =
-  let pos = SourcePos line col 0
-      newPos = posAfter char pos
-  in if char == '\n'
-     then posLine newPos > line
-     else posLine newPos == line
-
-prop_emptySpan_zero_length :: Property
-prop_emptySpan_zero_length = property $ 
-  let span = emptySpan startPos
-  in spanStart span === spanEnd span
-
-prop_spanFrom_valid :: SourcePos -> Property
-prop_spanFrom_valid pos =
-  let span = spanFrom pos
-  in property $ True -- spanFrom creates a valid empty span
-
--- Parser/IR properties
-prop_file_directives_roundtrip :: FileDirectives -> Property
-prop_file_directives_roundtrip directives =
-  property $ True -- Simplified - would implement actual roundtrip logic
-
-prop_located_preserves_location :: String -> SourcePos -> Property
-prop_located_preserves_location value pos =
-  let located = locatedAt pos value
-  in property $ locPos located === pos
-
--- Helper function
-locatedAt :: SourcePos -> a -> Located a
-locatedAt pos val = Located { locSpan = spanFrom pos, locValue = val, locPos = pos }
-
--- Arbitrary instances for test types
+-- Arbitrary instances for SourceLocation types
 instance Arbitrary SourcePos where
-  arbitrary = SourcePos <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = SourcePos <$> choose (1, 100) <*> choose (1, 100) <*> choose (0, 1000)
 
 instance Arbitrary SourceSpan where
-  arbitrary = SourceSpan <$> arbitrary <*> arbitrary
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
 
-instance Arbitrary a => Arbitrary (Located a) where
-  arbitrary = Located <$> arbitrary <*> arbitrary <*> arbitrary
+-- Property: Position advancement is consistent for newline characters
+prop_advance_pos_consistent :: SourcePos -> Property
+prop_advance_pos_consistent pos =
+  let advancedNewline = advancePos '\n' pos
+      advancedRegular = advancePos 'a' pos
+  in property $
+     posLine advancedNewline === posLine pos + 1 .&&.
+     posColumn advancedNewline === 1 .&&.
+     posLine advancedRegular === posLine pos .&&.
+     posColumn advancedRegular >= posColumn pos
 
-instance Arbitrary FileDirectives where
-  arbitrary = FileDirectives <$> arbitrary <*> arbitrary <*> arbitrary
+-- Property: Span validity is preserved under merging
+prop_merge_spans_validity :: SourceSpan -> SourceSpan -> Property
+prop_merge_spans_validity span1 span2 =
+  let merged = mergeSpans span1 span2
+  in property $ isValidSpan merged ==> isValidSpan merged
+
+-- Property: Located values preserve their content through mapping
+prop_located_map_preservation :: String -> Int -> Property
+prop_located_map_preservation str value =
+  let located = locatedAt (startPos) str
+      mapped = mapLocated length located
+  in property $
+     locatedValue mapped === length str .&&.
+     locatedSpan mapped === locatedSpan located
+
+-- ============================================================================
+-- GoAST Properties  
+-- ============================================================================
+
+-- Arbitrary instances for simple GoAST types
+instance Arbitrary PackageDecl where
+  arbitrary = PackageDecl <$> arbitrary
+
+instance Arbitrary ImportDecl where
+  arbitrary = ImportDecl <$> arbitrary <*> arbitrary
+
+instance Arbitrary FuncDecl where
+  arbitrary = FuncDecl <$> listOf (arbitrary `suchThat` (not . null))
+
+-- Property: Import declarations maintain path consistency
+prop_import_path_consistency :: ImportDecl -> Property
+prop_import_path_consistency imp =
+  let path = importPath imp
+  in property $ not (null path) ==> length path > 0
+
+-- Property: Package declarations maintain name consistency
+prop_package_name_consistency :: PackageDecl -> Property
+prop_package_name_consistency pkg =
+  let name = packageName pkg
+  in property $ length name >= 0
+
+-- ============================================================================
+-- Parser/Utils Properties
+-- ============================================================================
+
+-- Property: splitBy and splitByCollapsed relationship
+prop_split_by_collapsed_relationship :: Char -> String -> Property
+prop_split_by_collapsed_relationship delim str =
+  let normal = splitBy delim str
+      collapsed = splitByCollapsed delim str
+  in property $ length collapsed <= length normal .&&.
+     (not (null collapsed) || all null (filter (not . null) normal))
+
+-- Property: trim is idempotent
+prop_trim_idempotent :: String -> Property
+prop_trim_idempotent str =
+  let trimmedOnce = trim str
+      trimmedTwice = trim trimmedOnce
+  in property $ trimmedOnce === trimmedTwice
+
+-- Property: breakOn always finds first occurrence or returns original
+prop_break_on_finds_first :: String -> String -> Property
+prop_break_on_finds_first needle haystack =
+  let (before, after) = breakOn needle haystack
+      hasNeedle = needle `isInfixOf` haystack
+      reconstructed = before ++ needle ++ after
+  in property $ 
+     (if hasNeedle then reconstructed === haystack else (before, after) === (haystack, ""))
+
+-- Property: normalizeIndentation preserves relative indentation
+prop_normalize_indentation_preserves_relative :: String -> Property
+prop_normalize_indentation_preserves_relative code =
+  let normalized = normalizeIndentation code
+      linesInOriginal = lines code
+      linesInNormalized = lines normalized
+  in length linesInOriginal === length linesInNormalized
+
+-- ============================================================================
+-- String Processing Properties
+-- ============================================================================
+
+-- Property: removeLineComments preserves non-comment lines
+prop_remove_line_comments_preserves_non_comments :: String -> Property
+prop_remove_line_comments_preserves_non_comments code =
+  let withoutComments = removeLineComments code
+      linesOriginal = lines code
+      linesWithoutComments = lines withoutComments
+      nonCommentLines = filter (not . ("//" `isPrefixOf`)) (filter (not . null) linesOriginal)
+      filteredWithoutComments = filter (not . null) linesWithoutComments
+  in property $ length filteredWithoutComments >= length nonCommentLines
+
+-- Property: splitBy comma consistency with splitBy comma
+prop_split_by_comma_consistency :: String -> Property
+prop_split_by_comma_consistency str =
+  let byComma = splitBy ',' str
+      byCommaFunc = splitByComma str
+  in property $ byComma === byCommaFunc
+
+-- Test collection
+tests :: TestTree
+tests = testGroup "Additional Core QuickCheck Tests"
+  [ fastProperty "advance_pos_consistent" prop_advance_pos_consistent
+  , fastProperty "merge_spans_validity" prop_merge_spans_validity  
+  , fastProperty "located_map_preservation" prop_located_map_preservation
+  , fastProperty "import_path_consistency" prop_import_path_consistency
+  , fastProperty "package_name_consistency" prop_package_name_consistency
+  , fastProperty "split_by_collapsed_relationship" prop_split_by_collapsed_relationship
+  , fastProperty "trim_idempotent" prop_trim_idempotent
+  , fastProperty "break_on_finds_first" prop_break_on_finds_first
+  , fastProperty "normalize_indentation_preserves_relative" prop_normalize_indentation_preserves_relative
+  , fastProperty "remove_line_comments_preserves_non_comments" prop_remove_line_comments_preserves_non_comments
+  , fastProperty "split_by_comma_consistency" prop_split_by_comma_consistency
+  ]

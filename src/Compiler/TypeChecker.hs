@@ -317,7 +317,7 @@ buildTypeEnvFromPairs pairs = TypeEnv
 
 -- | Create a minimal TypusFile for testing with type errors.
 createTypusFileFromErrors :: [TypeError] -> TypusFile
-createTypusFileFromErrors errors = TypusFile
+createTypusFileFromErrors _errors = TypusFile
     { tfDirectives = defaultFileDirectives
     , tfBuildTags = []
     , tfBlocks = []
@@ -325,46 +325,6 @@ createTypusFileFromErrors errors = TypusFile
     }
   where
     defaultFileDirectives = FileDirectives Nothing Nothing Nothing
-    
-    builtinFunctionEntry :: String -> (String, FunctionSignature)
-    builtinFunctionEntry name = (name, builtinSignature)
-    
-    builtinSignature = FunctionSignature
-        { fsParams = [FunctionParam Nothing UnknownType True] -- Variadic: accept any number of arguments
-        , fsReturns = []
-        }
-    
-    functionEntry (GoFunc decl) = do
-        info <- parseFunctionInfo decl
-        pure (fiName info, fiSignature info)
-    functionEntry _ = Nothing
-
-    varEntry (GoVar decl) = extractVarTypes decl
-    varEntry (GoConst decl) = extractConstTypes decl
-    varEntry _ = []
-
-    importFunctionEntry :: ImportDecl -> [(String, FunctionSignature)]
-    importFunctionEntry (ImportDecl _ path) =
-        -- Handle common standard library packages
-        case path of
-            "fmt" -> [ ("Println", fmtSignature)
-                     , ("Printf", fmtSignature)
-                     , ("Print", fmtSignature)
-                     , ("Sprintln", fmtSignature)
-                     , ("Sprintf", fmtSignature)
-                     , ("Sprint", fmtSignature)
-                     ]
-            "errors" -> [ ("New", errorsNewSignature) ]
-            _ -> []
-      where
-        fmtSignature = FunctionSignature
-            { fsParams = [FunctionParam Nothing UnknownType True] -- Variadic: accept any number of arguments
-            , fsReturns = []
-            }
-        errorsNewSignature = FunctionSignature
-            { fsParams = [FunctionParam Nothing (TypeName "string") False] -- New takes a string
-            , fsReturns = [TypeName "error"] -- and returns an error
-            }
 
 -- | Legacy line-based API maintained for compatibility.
 checkTypeError :: TypeEnv -> String -> Bool
@@ -545,7 +505,7 @@ checkCall TypeEnv{..} context CallExpr{..} =
                 typeErrors = checkArgumentTypes signature
             in arityErrors ++ typeErrors
         Nothing ->
-            case lookupVariable callName of
+            case Map.lookup callName varTypes <|> Map.lookup (lastSegment callName) varTypes of
                 Just _ -> []  -- Variable exists, no error
                 Nothing -> [TypeError context ("Undefined function or variable: " ++ callName ++ 
                                    (if hasNestedIfs then " in nested block" else ""))]
@@ -565,9 +525,6 @@ checkCall TypeEnv{..} context CallExpr{..} =
   where
     lookupFunctionSignature name =
         Map.lookup name functionTypes <|> Map.lookup (lastSegment name) functionTypes
-    
-    lookupVariable name =
-        Map.lookup name varTypes <|> Map.lookup (lastSegment name) varTypes
 
     lastSegment n =
         case break (== '.') (reverse n) of
@@ -1264,7 +1221,7 @@ unifyTypes t1 t2
 
 -- | Substitute types in a type expression
 substituteType :: Type -> [(String, Type)] -> Type
-substituteType typ substitutions = typ  -- Simplified implementation
+substituteType typ _substitutions = typ  -- Simplified implementation
 
 -- | Instantiate a generic type with type arguments
 instantiateGeneric :: String -> [Type] -> Either String Type
