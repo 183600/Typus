@@ -1,12 +1,11 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-missing-export-lists #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
--- | QuickCheck Arbitrary instances for Typus data types
 module TestSupport.Arbitrary where
 
-import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, sized, frequency, choose)
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf)
-import Data.Char (isAlphaNum, isSpace)
+import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, frequency, choose)
 
 import Parser
   ( FileDirectives(..)
@@ -18,7 +17,6 @@ import SourceLocation
   ( Located(..)
   , SourcePos(..)
   , SourceSpan(..)
-  , locatedWithSpan
   )
 
 import Compiler.GoAst
@@ -37,14 +35,13 @@ import Compiler.GoLexer
   )
 import Compiler.IR (SourceIR(..), SemanticIR(..), GoIR(..))
 import Analyzer.Types
-  ( SymbolInfo(..)
-  , SymbolKind(..)
-  , AnalysisResult(..)
+  ( SymbolKind(..)
   , AnalysisPhase(..)
   , AnalysisContext(..)
   , AnalyzerState(..)
-  , CombinedError(..)
   )
+import qualified Ownership.Common.Types as Own
+import qualified Dependencies.TypeSystem as Dep
 import qualified Compiler.TypeChecker as TC
   ( Type(..)
   , TypeEnv(..)
@@ -55,13 +52,9 @@ import qualified Compiler.TypeChecker as TC
   , TypeCheckDiagnostic(..)
   )
 import Compiler.ValueAnalysis (ValueInfo(..), ValueKind(..))
-import Ownership (OwnershipType(..), OwnershipError(..))
-import Compiler.Errors.Core (ErrorSeverity(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..), emptyContext, TypeError(..))
-import Compiler.Errors (CompilerError(..), CompilationPhase(..))
-import qualified Compiler.Errors.Core as Core
 import qualified Compiler.ValueAnalysis as ValueAnalysis
-import qualified Dependencies as Dep
-import qualified Dependencies.TypeSystem as DepT (TypeConstraint(..), DependentTypeError(..))
+import Compiler.Errors.Core (ErrorSeverity(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..), emptyContext, TypeError(..))
+import Compiler.Errors (CompilationPhase(..))
 
 -- Helper generators
 genAlphaNum :: Gen Char
@@ -96,12 +89,12 @@ instance Arbitrary SourceSpan where
     startOffset <- choose (0, 10000)
     let startPos = SourcePos startLine startCol startOffset
     
-    endLine <- choose (startLine, startLine + 10)  -- End line >= start line
-    endCol <- if endLine == startLine 
+    endLine' <- choose (startLine, startLine + 10)  -- End line >= start line
+    endCol <- if endLine' == startLine 
               then choose (startCol, startCol + 50)  -- Same line: end column >= start column
               else choose (1, 100)  -- Different line: any column
     endOffset <- choose (startOffset, startOffset + 1000)
-    let endPos = SourcePos endLine endCol endOffset
+    let endPos = SourcePos endLine' endCol endOffset
     
     return $ SourceSpan startPos endPos
 
@@ -244,8 +237,8 @@ instance Arbitrary AnalysisContext where
 
 instance Arbitrary AnalyzerState where
   arbitrary = AnalyzerState
-    <$> pure undefined -- OwnershipAnalyzer
-    <*> pure undefined -- DependentTypeChecker
+    <$> pure Own.newOwnershipAnalyzer -- OwnershipAnalyzer
+    <*> pure Dep.newDependentTypeChecker -- DependentTypeChecker
     <*> genInt
     <*> pure mempty -- SymbolTable
     <*> arbitrary -- AnalysisContext
@@ -329,7 +322,7 @@ genValidDirective = oneof
 
 genValidGoCode :: Gen String
 genValidGoCode = do
-  lines <- listOf $ oneof
+  codeLines <- listOf $ oneof
     [ pure "package main"
     , pure "import \"fmt\""
     , pure "func main() {"
@@ -338,7 +331,7 @@ genValidGoCode = do
     , genIdentifier >>= \ident -> return $ "var " ++ ident ++ " int"
     , genIdentifier >>= \ident -> return $ "func " ++ ident ++ "() {}"
     ]
-  return $ unlines lines
+  return $ unlines codeLines
 
 -- Property test helpers
 class WellFormed a where
@@ -351,7 +344,7 @@ instance WellFormed GoDecl where
   isWellFormed _ = True  -- Simplified implementation
 
 instance WellFormed GoModule where
-  isWellFormed (GoModule _ pkg imports decls) = 
+  isWellFormed (GoModule _ _pkg imports decls) = 
     all isWellFormed imports && all isWellFormed decls
   -- Simplified implementation
 

@@ -5,9 +5,7 @@ module Test.Unit.NewCabalQuickCheckTests (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 import Test.QuickCheck
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf)
-import Data.Char (isSpace)
+import Data.List (isPrefixOf)
 
 import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..))
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), spanStart, spanEnd)
@@ -102,9 +100,9 @@ prop_parse_block_directives ownership dependentTypes =
 
 -- | Parse should preserve the order of content
 prop_parse_preserves_order :: [String] -> Property
-prop_parse_preserves_order lines =
+prop_parse_preserves_order inputLines =
   property $ 
-    let input = unlines lines
+    let input = unlines inputLines
     in case parseTypus input of
          Left _ -> property False
          Right file -> property $
@@ -115,19 +113,19 @@ prop_parse_preserves_order lines =
 
 -- | SourceSpan should have valid start and end positions
 prop_source_span_valid_positions :: SourceSpan -> Property
-prop_source_span_valid_positions span =
+prop_source_span_valid_positions srcSpan =
   property $
-    let start = spanStart span
-        end = spanEnd span
+    let start = spanStart srcSpan
+        end = spanEnd srcSpan
     in posLine start >= 1 && posColumn start >= 1 && posOffset start >= 0 &&
         posLine end >= 1 && posColumn end >= 1 && posOffset end >= 0
 
 -- | For valid spans, start should come before or at end
 prop_span_start_before_end :: SourceSpan -> Property
-prop_span_start_before_end span =
+prop_span_start_before_end srcSpan =
   property $
-    let start = spanStart span
-        end = spanEnd span
+    let start = spanStart srcSpan
+        end = spanEnd srcSpan
     in (posLine start < posLine end) ||
        (posLine start == posLine end && posColumn start <= posColumn end)
 
@@ -135,10 +133,10 @@ prop_span_start_before_end span =
 
 -- | TypusFile block count should match input structure
 prop_typus_file_block_count :: [String] -> Property
-prop_typus_file_block_count lines =
+prop_typus_file_block_count inputLines =
   property $
-    let input = unlines lines
-        expectedBlocks = length $ filter (not . null . trim) lines
+    let input = unlines inputLines
+        expectedBlocks = length $ filter (not . null . trim) inputLines
     in case parseTypus input of
          Left _ -> property False
          Right file -> property $ 
@@ -146,5 +144,5 @@ prop_typus_file_block_count lines =
 
 -- | Directives should be correctly applied to blocks
 prop_directives_applied_correctly :: Bool -> [String] -> Property
-prop_directives_applied_correctly ownership lines =
+prop_directives_applied_correctly _ownership _lines =
   property $ True

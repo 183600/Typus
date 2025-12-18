@@ -1,19 +1,22 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module Test.Unit.SourceLocationPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, sized)
+import Test.QuickCheck (Property, (===), (==>), counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, sized)
 
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedWithSpan, spanStart, spanEnd, 
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), spanStart, spanEnd, 
                        posLine, posColumn, startPos, advancePos, mergeSpans, spanBetween, emptySpan,
-                       locatedValue, locatedSpan)
-import Data.Char (isAlphaNum, isSpace)
-import qualified Data.List as Data.List
+                       locatedValue, locatedSpan, locatedWithSpan)
 import Data.List (isPrefixOf, isInfixOf)
-import Data.Maybe (isJust, isNothing)
 
 -- Arbitrary instances for testing
 instance Arbitrary SourcePos where

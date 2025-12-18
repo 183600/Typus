@@ -13,7 +13,12 @@ data OwnershipType
     = Owned String          -- ^ Value is uniquely owned by the binding
     | Borrowed String       -- ^ Immutable borrow referencing the owner name
     | MutBorrowed String    -- ^ Mutable borrow referencing the owner name
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show OwnershipType where
+    show (Owned name) = "Owned " ++ name
+    show (Borrowed name) = "Borrowed " ++ name
+    show (MutBorrowed name) = "MutBorrowed " ++ name
 
 -- | Exhaustive ownership error taxonomy shared by all analyzers.
 -- Individual analyzers may only emit a subset of these constructors but they
@@ -34,7 +39,24 @@ data OwnershipError
     | ControlFlowError String
     | PathSensitiveError String
     | LoopOwnershipError String
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show OwnershipError where
+    show (UseAfterMove var) = "UseAfterMove " ++ var
+    show (DoubleMove var1 var2) = "DoubleMove " ++ var1 ++ " " ++ var2
+    show (BorrowWhileMoved var) = "BorrowWhileMoved " ++ var
+    show (MutBorrowWhileBorrowed var) = "MutBorrowWhileBorrowed " ++ var
+    show (BorrowWhileMutBorrowed var) = "BorrowWhileMutBorrowed " ++ var
+    show (MultipleMutBorrows var) = "MultipleMutBorrows " ++ var
+    show (UseWhileMutBorrowed var) = "UseWhileMutBorrowed " ++ var
+    show (OutOfScope var) = "OutOfScope " ++ var
+    show (BorrowError msg) = "BorrowError " ++ msg
+    show (ParseError msg) = "ParseError " ++ msg
+    show (CrossFunctionMove var1 var2) = "CrossFunctionMove " ++ var1 ++ " " ++ var2
+    show (ParameterMoveMismatch var) = "ParameterMoveMismatch " ++ var
+    show (ControlFlowError msg) = "ControlFlowError " ++ msg
+    show (PathSensitiveError msg) = "PathSensitiveError " ++ msg
+    show (LoopOwnershipError msg) = "LoopOwnershipError " ++ msg
 
 -- | Lightweight handle that keeps the public API stable while allowing the
 -- implementation to evolve behind the scenes.

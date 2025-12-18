@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module TestSupport.ExtendedArbitrary
   ( genUniqueIdentifier
@@ -33,42 +34,25 @@ module TestSupport.ExtendedArbitrary
   , prop_commutative
   ) where
 
-import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, sized, frequency, choose, suchThat, Property, resize, listOf1, vectorOf, property, (===))
-import qualified Data.Text as T
-import Data.List (nub, sort, intersperse, isPrefixOf)
+import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, sized, frequency, choose, Property, resize, listOf1, vectorOf, property, (===), suchThat)
+import Data.List (nub, sort, intersperse, isPrefixOf, partition)
 import Data.Char (toLower, toUpper)
+import qualified Data.Text as T
 import TestSupport.Arbitrary ()
 
-import Parser
-  ( FileDirectives(..)
-  , BlockDirectives(..)
-  , CodeBlock(..)
-  , TypusFile(..)
-  )
 import SourceLocation
   ( Located(..)
-  , SourcePos(..)
-  , SourceSpan(..)
   )
 
 import Compiler.GoAst
   ( GoModule(..)
   , GoDecl(..)
   , ImportDecl(..)
-  , FuncDecl(..)
-  , TypeDecl(..)
-  , VarDecl(..)
-  , ConstDecl(..)
   , PackageDecl(..)
   )
-import Compiler.IR (SourceIR(..))
 import Analyzer.Types
   ( SymbolInfo(..)
-  , SymbolKind(..)
   , AnalysisResult(..)
-  , AnalysisPhase(..)
-  , AnalysisContext(..)
-  , AnalyzerState(..)
   , CombinedError(..)
   )
 import qualified Compiler.TypeChecker as TC
@@ -84,7 +68,7 @@ import qualified Compiler.TypeChecker as TC
 import Ownership (OwnershipType(..), OwnershipError(..))
 import qualified Ownership.Common.Types as Own (OwnershipAnalyzer(..))
 import Compiler.Errors.Core (ErrorSeverity(..))
-import Compiler.Errors (CompilerError(..), CompilationPhase(..))
+import Compiler.Errors (CompilerError(..))
 import qualified Compiler.Errors.Core as Core
 import qualified Dependencies as Dep
 import qualified Dependencies.TypeSystem as DepT (TypeEnv(..), TypeDef(..), DependentTypeChecker(..))
@@ -97,7 +81,7 @@ import qualified Ownership.Parser as Own
   , UnaryOp(..)
   , Directive(..)
   )
-import qualified Ownership.Common.Lexer as OwnL (Pos(..), Token(..))
+import qualified Ownership.Common.Lexer as OwnL (Pos(..))
 
 
 -- Arbitrary instances for Ownership Parser types
@@ -311,21 +295,68 @@ genGoCodeSnippet = do
 
 -- Extended Type instances
 instance Arbitrary TC.Type where
-  arbitrary = sized $ \n -> if n <= 0 then
-    pure TC.UnknownType
-  else oneof
-    [ TC.TypeName <$> genGoTypeName
-    , TC.TypeFunction <$> listOf (resize (n-1) arbitrary) <*> resize (n-1) arbitrary
-    , TC.TypeRecord <$> listOf ((,) <$> genGoVarName <*> resize (n-1) arbitrary)
-    , TC.TypeUnion <$> listOf (resize (n-1) arbitrary)
-    , pure TC.UnknownType
-    ]
+  arbitrary = sized $ \n -> 
+    let isValidType TC.UnknownType = True
+        isValidType (TC.TypeName name) = not (null name)
+        isValidType (TC.TypeFunction params ret) = all isValidType (ret : params)
+        isValidType (TC.TypeRecord fields) = all (\(fname, ftyp) -> not (null fname) && isValidType ftyp) fields
+        isValidType (TC.TypeUnion types) = all isValidType types
+        isValidType _ = True
+    in if n <= 0 then
+      frequency [(3, pure TC.UnknownType), (1, TC.TypeName <$> genGoTypeName)]
+    else if n == 1 then
+      oneof [pure TC.UnknownType, TC.TypeName <$> genGoTypeName]
+    else frequency
+      [ (3, TC.TypeName <$> genGoTypeName)
+      , (2, pure TC.UnknownType)
+      , (1, do len <- choose (0, 2)
+               params <- vectorOf len (resize (n `div` 2) arbitrary)
+               ret <- resize (n `div` 2) arbitrary
+               if all isValidType (ret : params) then return (TC.TypeFunction params ret) else arbitrary)
+      , (1, do len <- choose (0, 2)
+               fields <- vectorOf len ((,) <$> genGoVarName <*> resize (n `div` 2) arbitrary)
+               if all (\(fname, ftyp) -> not (null fname) && isValidType ftyp) fields 
+                 then return (TC.TypeRecord fields) 
+                 else arbitrary)
+      , (1, do len <- choose (0, 2)
+               types <- vectorOf len (resize (n `div` 2) arbitrary)
+               if all isValidType types then return (TC.TypeUnion types) else arbitrary)
+      ]
 
 instance Arbitrary TC.FunctionParam where
-  arbitrary = TC.FunctionParam <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = sized $ \n ->
+    let isValidParamType TC.UnknownType = True
+        isValidParamType (TC.TypeName pname) = not (null pname)
+        isValidParamType (TC.TypeFunction params ret) = isValidParamType ret && all isValidParamType params
+        isValidParamType (TC.TypeRecord fields) = all (\(fname, ftyp) -> not (null fname) && isValidParamType ftyp) fields
+        isValidParamType (TC.TypeUnion types) = all isValidParamType types
+        isValidParamType _ = True
+    in do
+      name <- arbitrary
+      typ <- resize (max 0 (n `div` 3)) arbitrary `suchThat` isValidParamType
+      variadic <- arbitrary
+      return $ TC.FunctionParam name typ variadic
 
 instance Arbitrary TC.FunctionSignature where
-  arbitrary = TC.FunctionSignature <$> arbitrary <*> arbitrary
+  arbitrary = sized $ \n ->
+    let isValidReturnType TC.UnknownType = True
+        isValidReturnType (TC.TypeName rname) = not (null rname)
+        isValidReturnType (TC.TypeFunction params ret) = isValidReturnType ret && all isValidReturnType params
+        isValidReturnType (TC.TypeRecord fields) = all (\(fname, ftyp) -> not (null fname) && isValidReturnType ftyp) fields
+        isValidReturnType (TC.TypeUnion types) = all isValidReturnType types
+        isValidReturnType _ = True
+        
+        ensureAtMostOneVariadic [] = []
+        ensureAtMostOneVariadic params =
+          let (nonVariadic, variadic) = partition (not . TC.fpVariadic) params
+          in nonVariadic ++ take 1 variadic
+    in do
+      lenParams <- choose (0, 2)
+      lenReturns <- choose (0, 2)
+      params <- vectorOf lenParams (resize (max 0 (n `div` 3)) arbitrary)
+      returns <- vectorOf lenReturns (resize (max 0 (n `div` 3)) arbitrary) `suchThat` all isValidReturnType
+      let validParams = ensureAtMostOneVariadic params
+      return $ TC.FunctionSignature validParams returns
 
 instance Arbitrary TC.CallExpr where
   arbitrary = TC.CallExpr <$> genIdentifier <*> arbitrary
@@ -340,7 +371,10 @@ instance Arbitrary TC.TypeEnv where
   arbitrary = TC.TypeEnv <$> arbitrary <*> arbitrary
 
 instance Arbitrary DepT.TypeDef where
-  arbitrary = DepT.TypeDefDecl <$> listOf genIdentifier <*> listOf arbitrary
+  arbitrary = do
+    len1 <- choose (0, 3)
+    len2 <- choose (0, 3)
+    DepT.TypeDefDecl <$> vectorOf len1 genIdentifier <*> vectorOf len2 arbitrary
 
 instance Arbitrary DepT.TypeEnv where
   arbitrary = DepT.TypeEnv <$> arbitrary <*> arbitrary
@@ -456,7 +490,8 @@ instance Arbitrary Dep.TypeConstraint where
   arbitrary = oneof
     [ Dep.Equal <$> arbitrary <*> arbitrary
     , Dep.Subtype <$> arbitrary <*> arbitrary
-    , Dep.Predicate <$> genIdentifier <*> listOf arbitrary
+    , do len <- choose (0, 3)
+         Dep.Predicate <$> genIdentifier <*> vectorOf len arbitrary
     , Dep.TypeSizeGE <$> arbitrary <*> choose (0, 100)
     , Dep.TypeSizeGT <$> arbitrary <*> choose (0, 100)
     , Dep.TypeRange <$> arbitrary <*> choose (0, 100) <*> choose (0, 100)
@@ -467,14 +502,16 @@ instance Arbitrary Dep.Constraint where
     [ Dep.SizeGT <$> (T.pack <$> genIdentifier) <*> choose (0, 100)
     , Dep.SizeGE <$> (T.pack <$> genIdentifier) <*> choose (0, 100)
     , Dep.RangeC <$> (T.pack <$> genIdentifier) <*> choose (0, 100) <*> choose (0, 100)
-    , Dep.PredC <$> (T.pack <$> genIdentifier) <*> listOf arbitrary
+    , do len <- choose (0, 3)
+         Dep.PredC <$> (T.pack <$> genIdentifier) <*> vectorOf len arbitrary
     ]
 
 instance Arbitrary TC.TypeConstraint where
   arbitrary = oneof
     [ TC.Equal <$> arbitrary <*> arbitrary
     , TC.Subtype <$> arbitrary <*> arbitrary
-    , TC.Predicate <$> genIdentifier <*> listOf arbitrary
+    , do len <- choose (0, 3)
+         TC.Predicate <$> genIdentifier <*> vectorOf len arbitrary
     , TC.TypeSizeGE <$> arbitrary <*> choose (0, 100)
     , TC.TypeSizeGT <$> arbitrary <*> choose (0, 100)
     , TC.TypeRange <$> arbitrary <*> choose (0, 100) <*> choose (0, 100)
@@ -485,26 +522,36 @@ instance Arbitrary Own.OwnershipAnalyzer where
   arbitrary = pure $ Own.OwnershipAnalyzer ()
 
 instance Arbitrary DepT.DependentTypeChecker where
-  arbitrary = DepT.DependentTypeChecker
-    <$> arbitrary
-    <*> listOf arbitrary
+  arbitrary = do
+    len <- choose (0, 3)
+    DepT.DependentTypeChecker
+      <$> arbitrary
+      <*> vectorOf len arbitrary
 
 instance Arbitrary DepAST.DependencyNode where
-  arbitrary = DepAST.DependencyNode
-    <$> genUniqueIdentifier
-    <*> listOf genUniqueIdentifier
+  arbitrary = do
+    len <- choose (0, 3)
+    DepAST.DependencyNode
+      <$> genUniqueIdentifier
+      <*> vectorOf len genUniqueIdentifier
 
 instance Arbitrary DepAST.DependencyGraph where
   arbitrary = DepAST.DependencyGraph
     <$> arbitrary
 
 instance Arbitrary AnalysisResult where
-  arbitrary = AnalysisResult
-    <$> listOf ((,) <$> arbitrary <*> arbitrary)
-    <*> listOf ((,) <$> arbitrary <*> arbitrary)
-    <*> listOf (Core.OwnershipErrorCombined <$> arbitrary <*> arbitrary)
-    <*> listOf genUniqueIdentifier
-    <*> listOf genUniqueIdentifier
+  arbitrary = do
+    len1 <- choose (0, 3)
+    len2 <- choose (0, 3)
+    len3 <- choose (0, 3)
+    len4 <- choose (0, 3)
+    len5 <- choose (0, 3)
+    AnalysisResult
+      <$> vectorOf len1 ((,) <$> arbitrary <*> arbitrary)
+      <*> vectorOf len2 ((,) <$> arbitrary <*> arbitrary)
+      <*> vectorOf len3 (Core.OwnershipErrorCombined <$> arbitrary <*> arbitrary)
+      <*> vectorOf len4 genUniqueIdentifier
+      <*> vectorOf len5 genUniqueIdentifier
     <*> pure mempty
 
 instance Arbitrary CombinedError where
@@ -512,7 +559,8 @@ instance Arbitrary CombinedError where
     [ Core.OwnershipErrorCombined <$> arbitrary <*> arbitrary
     , Core.DependentTypeErrorCombined <$> arbitrary <*> arbitrary
     , Core.IntegrationError <$> genIdentifier <*> arbitrary
-    , Core.CrossAnalyzerError <$> genIdentifier <*> arbitrary <*> listOf arbitrary
+    , do len <- choose (0, 3)
+         Core.CrossAnalyzerError <$> genIdentifier <*> arbitrary <*> vectorOf len arbitrary
     ]
 
 instance Arbitrary CompilerError where

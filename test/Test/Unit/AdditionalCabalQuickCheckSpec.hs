@@ -3,68 +3,29 @@
 module Test.Unit.AdditionalCabalQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, counterexample, property, listOf, elements, (.&&.), choose)
-import Test.Tasty.HUnit (testCase, assertBool)
+import Test.Tasty.QuickCheck (testProperty, Property, (===), counterexample, property, (.&&.))
+import TestSupport.Arbitrary ()
 
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
-import Data.Char (isSpace, isAlphaNum, isAlpha)
+import Data.List (isInfixOf)
+import Data.Char (isSpace)
 
 import Utils
   ( trim
   , splitBy
   , splitByCollapsed
   , splitByComma
-  , splitByCommaCollapsed
   , removeLineComments
-  , removeComments
   , normalizeIndentation
   , breakOn
   )
 import SourceLocation
   ( SourcePos(..)
   , SourceSpan(..)
-  , startPos
   , posAfter
-  , posAt
   , spanBetween
   , mergeSpans
   , isValidSpan
-  , locatedAt
-  , locatedWithSpan
-  , advancePos
-  , advancePosBy
   )
-
--- Arbitrary instances for SourceLocation types
-instance Arbitrary SourcePos where
-  arbitrary = SourcePos <$> choose (1, 100) <*> choose (1, 100) <*> choose (0, 10000)
-
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    startLine <- choose (1, 100)
-    startCol <- choose (1, 100)
-    startOffset <- choose (0, 10000)
-    let startPos = SourcePos startLine startCol startOffset
-    
-    endLine <- choose (startLine, startLine + 10)  -- End line >= start line
-    endCol <- if endLine == startLine 
-              then choose (startCol, startCol + 50)  -- Same line: end column >= start column
-              else choose (1, 100)  -- Different line: any column
-    endOffset <- choose (startOffset, startOffset + 1000)
-    let endPos = SourcePos endLine endCol endOffset
-    
-    return $ SourceSpan startPos endPos
-
--- Helper generators
-genNonEmptyString :: Gen String
-genNonEmptyString = listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ [' ', '\t', '\n']
-
-genStringWithSpaces :: Gen String
-genStringWithSpaces = listOf $ elements $ ['a'..'z'] ++ [' '] ++ ['\n']
-
-genDelimChar :: Gen Char
-genDelimChar = elements [',', ';', ':', '|', '#']
 
 -- Test properties for Utils module
 
@@ -72,8 +33,12 @@ genDelimChar = elements [',', ';', ':', '|', '#']
 prop_trim_roundtrip :: String -> Property
 prop_trim_roundtrip s = 
   let trimmed = trim s
-      hasLeadingOrTrailingSpace = not (null s) && 
-                                 (isSpace (head s) || isSpace (last s))
+      hasLeadingOrTrailingSpace = case s of
+        [] -> False
+        (c:_) | isSpace c -> True
+        _ -> case reverse s of
+          [] -> False
+          (c:_) -> isSpace c
   in if hasLeadingOrTrailingSpace
      then counterexample ("Original: " ++ show s ++ ", Trimmed: " ++ show trimmed) $
           length trimmed < length s
@@ -153,9 +118,9 @@ prop_posAfter_consistency c pos =
 -- Property 9: spanBetween should create valid spans
 prop_spanBetween_valid :: SourcePos -> SourcePos -> Property
 prop_spanBetween_valid pos1 pos2 = 
-  let span = spanBetween pos1 pos2
-      valid = isValidSpan span
-  in counterexample ("spanBetween " ++ show pos1 ++ " " ++ show pos2 ++ " = " ++ show span) $
+  let sp = spanBetween pos1 pos2
+      valid = isValidSpan sp
+  in counterexample ("spanBetween " ++ show pos1 ++ " " ++ show pos2 ++ " = " ++ show sp) $
      valid
 
 -- Property 10: mergeSpans should contain both original spans

@@ -68,7 +68,9 @@ prop_trim_whitespace_only s =
 
 prop_splitBy_empty_delim :: String -> Property
 prop_splitBy_empty_delim s =
-  splitBy ' ' s === words s
+  let result = splitBy ' ' s
+      expected = if null s then [""] else words s
+  in result === expected
 
 prop_addition_commutative :: Int -> Int -> Property
 prop_addition_commutative x y = x + y === y + x

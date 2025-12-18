@@ -1,25 +1,22 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Unit.AdditionalCoreQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck 
-import Test.QuickCheck.Arbitrary (Arbitrary(..))
-import Test.QuickCheck.Gen (Gen, listOf, choose, elements, oneof)
+import Test.QuickCheck
 
 import SourceLocation 
-  ( SourcePos(..), SourceSpan(..), Located(..)
-  , startPos, posAfter, spanFrom, spanTo, mergeSpans
-  , locatedAt, locatedWithSpan, locatedValue, locatedSpan, mapLocated
-  , advancePos, advancePosByText, isValidSpan
+  ( SourcePos(..), SourceSpan(..)
+  , startPos, mergeSpans
+  , locatedAt, locatedValue, locatedSpan, mapLocated
+  , advancePos, isValidSpan
   )
 
 import Compiler.GoAst 
-  ( GoModule(..), PackageDecl(..), ImportDecl(..), GoDecl(..)
-  , FuncDecl(..), TypeDecl(..), VarDecl(..), ConstDecl(..)
-  , StatementBlock(..), RawBlock(..)
+  ( PackageDecl(..), ImportDecl(..)
+  , FuncDecl(..)
   )
 
 import Utils 
@@ -27,9 +24,7 @@ import Utils
   , normalizeIndentation, breakOn, splitByComma
   )
 
-import Data.Char (isSpace, isAlpha, isAlphaNum)
-import Data.List (sort, nub, intercalate, isInfixOf, isPrefixOf, tails)
-import qualified Data.Text as T
+import Data.List (isInfixOf, isPrefixOf)
 
 -- ============================================================================
 -- SourceLocation Properties
@@ -64,7 +59,7 @@ prop_merge_spans_validity span1 span2 =
 
 -- Property: Located values preserve their content through mapping
 prop_located_map_preservation :: String -> Int -> Property
-prop_located_map_preservation str value =
+prop_located_map_preservation str _value =
   let located = locatedAt (startPos) str
       mapped = mapLocated length located
   in property $

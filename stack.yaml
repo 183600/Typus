@@ -52,7 +52,6 @@ flags:
     fast: false
     full: false
     production: true
-    coverage: false
     werror: true
 
 

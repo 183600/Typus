@@ -544,6 +544,7 @@ prop_ownershiptype_unicode =
 -- Property: Ownership lifecycle consistency
 prop_ownership_lifecycle_consistency :: String -> [OwnershipType] -> Property
 prop_ownership_lifecycle_consistency varName ownershipTransitions =
+  not (null varName) && not (null ownershipTransitions) ==>
   let lifecycle = traceOwnershipLifecycle varName ownershipTransitions
   in property $ isValidOwnershipLifecycle lifecycle varName
 

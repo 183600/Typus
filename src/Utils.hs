@@ -72,11 +72,13 @@ removeLineComments = unlines . map removeFromLine . lines
         goNormal (c:cs)      = c : goNormal cs
 
         goInString []           = [] -- 非严格：未闭合字符串直接结束
+        goInString ('\n':xs)    = '\n' : goNormal xs  -- 换行时结束字符串字面量
         goInString ('\\':x:xs)  = '\\' : x : goInString xs
         goInString ('"':xs)     = '"' : goNormal xs
         goInString (c:cs)       = c : goInString cs
 
         goInChar []             = []
+        goInChar ('\n':xs)      = '\n' : goNormal xs  -- 换行时结束字符字面量
         goInChar ('\\':x:xs)    = '\\' : x : goInChar xs
         goInChar ('\'':xs)      = '\'' : goNormal xs
         goInChar (c:cs)         = c : goInChar cs
@@ -110,6 +112,7 @@ removeComments = goNormal
 
     -- 字符串字面量（保留内容与转义）
     goInString []           = []  -- 非严格：未闭合字符串
+    goInString ('\n':xs)    = '\n' : goNormal xs  -- 换行时结束字符串字面量
     goInString ('\\':x:xs)  = '\\' : x : goInString xs
     goInString ('"':xs)     = '"' : goNormal xs
     goInString (c:cs)       = c : goInString cs

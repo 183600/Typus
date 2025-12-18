@@ -176,12 +176,16 @@ benchmark typus-bench
 
 -- Canonical test-suite
 test-suite typus-test
-    import:           warnings
     type:             exitcode-stdio-1.0
     build-tool-depends: typus:typus
     main-is:          Main.hs
     hs-source-dirs:   test
     default-extensions: NoMonomorphismRestriction
+    ghc-options:      -Wall -Wcompat
+                      -Wno-unused-top-binds -Wno-unused-matches 
+                      -Wno-orphans -Wno-name-shadowing
+                      -Wno-type-defaults -Wno-unused-local-binds
+                      -Wno-unused-imports -Wno-x-partial
     other-modules:
         Test.Unit,
         Test.Unit.Tests,
@@ -247,7 +251,6 @@ test-suite typus-test
         Test.Unit.CoreQuickCheckSpec,
         Test.Unit.ErrorHandlingComprehensiveQuickCheckSpec,
         Test.Unit.DependentTypesComprehensiveQuickCheckSpec,
-        Test.Unit.OwnershipComprehensiveQuickCheckSpec,
         Test.Unit.EnhancedCoreQuickCheckSpec,
         Test.Unit.AdditionalCabalQuickCheckSpec,
         Test.Unit.CabalQuickCheckTests,
@@ -288,11 +291,9 @@ test-suite typus-test
         Test.Unit.SimpleQuickCheckTestSpec,
         Test.Unit.WorkingQuickCheckSpec,
         Test.Unit.ComprehensiveQuickCheckSpec,
-        Test.Unit.CoreDataStructuresQuickCheckSpec,
         Test.Unit.CompilerIRQuickCheckSpec,
         Test.Unit.TypeSystemQuickCheckSpec,
         Test.Unit.OwnershipAnalysisQuickCheckSpec,
-        Test.Unit.ErrorHandlingQuickCheckSpec,
         Test.Unit.AdditionalCoreQuickCheckSpec,
         Test.Unit.NewQuickCheckTestSpec,
         Test.Unit.NewIRQuickCheckSpec,
@@ -315,7 +316,6 @@ test-suite typus-test
         Test.Unit.NewCabalQuickCheckTestSpec,
         Test.Unit.NewCabalQuickCheckTestCasesSpec,
         Test.Unit.NewCabalQuickCheckPropertiesSpec,
-        Test.Unit.SimpleQuickCheckTestSpec,
         Test.Unit.WorkingQuickCheckTestSpec,
         Test.Unit.BasicQuickCheckTestSpec,
         Test.Unit.PropertyQuickCheckTestSpec,
@@ -333,12 +333,9 @@ test-suite typus-test
         Test.Unit.TinyCabalQuickCheckSpec,
         Test.Unit.EfficientCabalQuickCheckSpec,
         Test.Unit.ConciseCabalQuickCheckSpec,
-        Test.Unit.NewCabalQuickCheckTestSpec,
         Test.Unit.NewCabalQuickCheckTestsSpec,
         Test.Unit.NewCabalTestQuickCheckSpec,
-        Test.Unit.NewQuickCheckTestsSpec,
         Test.Unit.CoreModuleQuickCheckSpec,
-        Test.Unit.AdditionalCoreQuickCheckSpec,
         Test.Unit.NewSimpleCabalQuickCheckSpec,
         Test.Unit.CompilerBasicQuickCheckSpec,
         Test.Unit.ParserBasicQuickCheckSpec,

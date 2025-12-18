@@ -1,4 +1,6 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
 
 module Test.Unit.CabalQuickCheckTestSpec (tests) where
 

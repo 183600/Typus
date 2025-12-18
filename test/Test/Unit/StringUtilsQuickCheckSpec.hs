@@ -6,6 +6,7 @@ import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Utils (trim, splitBy, splitByCollapsed, removeLineComments)
+import Data.Maybe (listToMaybe)
 
 prop_trim_idempotent :: String -> Property
 prop_trim_idempotent s =
@@ -15,7 +16,9 @@ prop_trim_idempotent s =
 prop_trim_removes_whitespace :: String -> Property
 prop_trim_removes_whitespace s =
   let result = trim s
-  in not (null result) ==> head result /= ' ' && last result /= ' '
+      firstChar = listToMaybe result
+      lastChar = listToMaybe (reverse result)
+  in not (null result) ==> maybe True (/= ' ') firstChar && maybe True (/= ' ') lastChar
 
 prop_splitBy_preserves_content :: Char -> NonEmptyList Char -> Property
 prop_splitBy_preserves_content delim (NonEmpty s) =

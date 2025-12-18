@@ -12,18 +12,14 @@ import Test.QuickCheck
   , Arbitrary(..), Gen, oneof, choose, listOf, listOf1, vectorOf, elements, (.&&.)
   , sized, frequency, suchThat, resize
   )
-import Data.Char (isAlphaNum, isUpper, isLower)
 import qualified Data.List as Data.List
 import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
-import Data.Either (isLeft, isRight, fromRight)
+import Data.Either (isRight)
 import qualified Data.Text as T
 
 import Dependencies.AST
 import qualified Dependencies.TypeSystem as DT
 import Dependencies.Inference
-import Dependencies.Parser
 import Analyzer.Types
 import Compiler.GoAst
 
@@ -287,13 +283,17 @@ prop_generic_type_instantiation genericType typeArgs =
 prop_type_constraint_solving :: [DT.TypeConstraint] -> Property
 prop_type_constraint_solving constraints =
   let solution = solveConstraints constraints
-  in property $ isRight solution ==> satisfiesAllConstraints (fromRight undefined solution) constraints
+  in property $ case solution of
+       Right sol -> satisfiesAllConstraints sol constraints
+       Left _ -> True
 
 -- Property: Type unification respects generic constraints
 prop_type_unification_with_constraints :: TypeExpr -> TypeExpr -> [DT.TypeConstraint] -> Property
 prop_type_unification_with_constraints t1 t2 constraints =
   let result = unifyTypesWithConstraints t1 t2 constraints
-  in property $ isRight result ==> respectsConstraints (fromRight undefined result) constraints
+  in property $ case result of
+       Right res -> respectsConstraints res constraints
+       Left _ -> True
 
 -- Property: Module dependency ordering is correct
 prop_module_dependency_ordering :: [AST] -> Property
@@ -345,7 +345,9 @@ prop_dependent_type_checking_sound dependentType typeEnv =
 prop_type_level_computation :: TypeExpr -> DT.TypeEnv -> Property
 prop_type_level_computation typeExpr typeEnv =
   let result = evaluateTypeLevelExpression typeExpr typeEnv
-  in property $ isRight result ==> isWellTypedTypeExpr (fromRight undefined result)
+  in property $ case result of
+       Right res -> isWellTypedTypeExpr res
+       Left _ -> True
 
 -- Property: Type family reduction is correct
 prop_type_family_reduction :: String -> [TypeExpr] -> DT.TypeEnv -> Property
@@ -381,7 +383,9 @@ prop_quantified_type_handling baseType quantifiers =
 prop_type_function_application :: TypeExpr -> [TypeExpr] -> DT.TypeEnv -> Property
 prop_type_function_application typeFunc args typeEnv =
   let result = applyTypeFunction typeFunc args typeEnv
-  in property $ isRight result ==> isValidTypeApplication (fromRight undefined result) typeFunc args
+  in property $ case result of
+       Right res -> isValidTypeApplication res typeFunc args
+       Left _ -> True
 
 -- Property: Type-level pattern matching works correctly
 prop_type_pattern_matching :: TypeExpr -> TypeExpr -> Property
@@ -418,7 +422,9 @@ prop_module_interface_extraction moduleAST =
 prop_cross_module_type_checking :: [AST] -> TypeExpr -> Property
 prop_cross_module_type_checking modules typeExpr =
   let result = checkTypeAcrossModules modules typeExpr
-  in property $ isRight result ==> isValidCrossModuleType (fromRight undefined result) modules
+  in property $ case result of
+       Right res -> isValidCrossModuleType res modules
+       Left _ -> True
 
 -- Property: Incremental dependency analysis works correctly
 prop_incremental_dependency_analysis :: [AST] -> AST -> Property
@@ -491,6 +497,11 @@ instantiateGenericType genericType _ = genericType -- Simplified
 
 isValidInstantiation :: TypeExpr -> TypeExpr -> [TypeExpr] -> Bool
 isValidInstantiation _ _ _ = True -- Simplified
+
+-- Safe helper to extract Right values
+safeFromRight :: Either a b -> Maybe b
+safeFromRight (Right x) = Just x
+safeFromRight (Left _) = Nothing
 
 solveConstraints :: [DT.TypeConstraint] -> Either DT.DependentTypeError [DT.TypeConstraint]
 solveConstraints constraints = Right constraints -- Simplified

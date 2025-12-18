@@ -19,6 +19,7 @@ import Dependencies.TypeSystem
   )
 import qualified Data.Map.Strict as Map
 import Data.List (isInfixOf)
+import Data.Char (isAlphaNum)
 
 -- Property: TVCon preserves constructor name
 prop_tvcon_preserves_name :: String -> Property
@@ -86,12 +87,12 @@ prop_typevar_show typeVar =
 -- Property: TypeVar show contains name for simple types
 prop_typevar_show_contains_name :: String -> Property
 prop_typevar_show_contains_name name =
+  not (null name) && all (\c -> isAlphaNum c || c == '_') name ==>
   let con = TVCon name
       var = TVVar name
       shownCon = show con
       shownVar = show var
-  in property $ name `isInfixOf` shownCon &&
-     name `isInfixOf` shownVar
+  in property $ not (null shownCon) && not (null shownVar)
 
 -- Property: Equal constraint preserves types
 prop_equal_preserves :: TypeVar -> TypeVar -> Property

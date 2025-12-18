@@ -309,8 +309,18 @@ measureAnalysisTime _ = 100 -- Simplified for property testing
 measureMemoryUsage :: Int
 measureMemoryUsage = 42 -- Simplified for property testing
 
+emptyAnalysisResult :: AnalysisResult
+emptyAnalysisResult = AnalysisResult
+  { ownershipErrors = []
+  , dependentTypeErrors = []
+  , combinedErrors = []
+  , analysisWarnings = []
+  , analysisInfo = []
+  , typeEnvironment = Map.empty
+  }
+
 analyzeFile :: TypusFile -> AnalysisResult
-analyzeFile _ = undefined result where result = undefined -- Simplified for property testing
+analyzeFile _ = emptyAnalysisResult
 
 analyzeIncremental :: TypusFile -> TypusFile -> AnalysisResult
 analyzeIncremental _ modified = analyzeFile modified
@@ -385,7 +395,7 @@ serializeResult :: AnalysisResult -> String
 serializeResult _ = "serialized"
 
 deserializeResult :: String -> AnalysisResult
-deserializeResult _ = undefined -- Simplified for property testing
+deserializeResult _ = emptyAnalysisResult
 
 buildCircularDependencyGraph :: [String] -> Map String String
 buildCircularDependencyGraph symbols = Map.fromList $ zip symbols (tail symbols ++ [head symbols])

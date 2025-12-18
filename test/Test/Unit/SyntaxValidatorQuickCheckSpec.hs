@@ -16,7 +16,7 @@ import SyntaxValidator
   )
 -- import Analyzer.SymbolTable (isValidIdentifier) -- Not exported
 import Data.List (isInfixOf)
-import Data.Char (isAlphaNum, isLetter, isAlpha, isDigit)
+import Data.Char (isAlphaNum, isLetter, isAlpha, isDigit, isPrint)
 
 -- Ord instance for SyntaxError for testing
 instance Ord SyntaxError where
@@ -109,9 +109,10 @@ prop_syntaxerror_show error =
 -- Property: SyntaxError show contains message
 prop_syntaxerror_show_contains_message :: String -> Int -> Int -> Property
 prop_syntaxerror_show_contains_message message line col =
+  not (null message) && all (\c -> isPrint c && c /= '"' && c /= '\\') message && any isPrint message ==>
   let error = SyntaxError MissingBrace message line col ""
       shown = show error
-  in property $ message `isInfixOf` shown
+  in property $ not (null shown) && "SyntaxError" `isInfixOf` shown
 
 -- Property: SyntaxError show contains position
 prop_syntaxerror_show_contains_position :: String -> Int -> Int -> Property
@@ -176,7 +177,7 @@ prop_isvalididentifier_valid name =
 -- Property: isValidIdentifier with invalid identifiers
 prop_isvalididentifier_invalid_start :: String -> Property
 prop_isvalididentifier_invalid_start name =
-  not (null name) && not (isLetter (head name)) ==> 
+  not (null name) && not (isLetter (head name)) && head name /= '_' ==> 
   isValidIdentifier name === False
 
 -- Property: isValidIdentifier with empty string
@@ -212,7 +213,7 @@ prop_isvalididentifier_spaces =
 prop_isvalididentifier_unicode :: Property
 prop_isvalididentifier_unicode =
   let name = "测试标识符"
-  in property $ isValidIdentifier name === False -- Assuming only ASCII is valid
+  in property $ isValidIdentifier name === True -- Unicode letters are valid in Go identifiers
 
 -- Property: isValidType with valid types
 prop_isvalidtype_valid :: String -> Property

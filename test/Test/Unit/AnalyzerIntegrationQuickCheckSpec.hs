@@ -273,13 +273,13 @@ emptySymbolTable :: Map.Map String SymbolInfo
 emptySymbolTable = Map.empty
 
 insertSymbol :: String -> SymbolInfo -> AnalyzerState -> AnalyzerState
-insertSymbol = undefined
+insertSymbol name info state = state { symbolTable = Map.insert name info (symbolTable state) }
 
 getAllSymbols :: AnalyzerState -> [(String, SymbolInfo)]
-getAllSymbols = undefined
+getAllSymbols state = Map.toList (symbolTable state)
 
 lookupSymbol :: String -> AnalyzerState -> Maybe SymbolInfo
-lookupSymbol = undefined
+lookupSymbol name state = Map.lookup name (symbolTable state)
 
 combineAnalysisResults :: AnalysisResult -> AnalysisResult -> AnalysisResult
 combineAnalysisResults r1 r2 = AnalysisResult
@@ -295,16 +295,16 @@ validateCrossAnalysis :: AnalysisResult -> AnalysisResult -> Bool
 validateCrossAnalysis _ _ = True
 
 updateSymbolTable :: String -> SymbolInfo -> AnalyzerState -> AnalyzerState
-updateSymbolTable = undefined
+updateSymbolTable = insertSymbol
 
 getSymbolTableSymbols :: AnalyzerState -> [(String, SymbolInfo)]
-getSymbolTableSymbols = undefined
+getSymbolTableSymbols = getAllSymbols
 
 runIntegrationPhase :: AnalysisResult -> AnalysisResult -> AnalysisResult
 runIntegrationPhase r1 r2 = combineAnalysisResults r1 r2
 
 resetAnalyzer :: AnalyzerState -> AnalyzerState
-resetAnalyzer = undefined
+resetAnalyzer _ = newIntegratedAnalyzer False False
 
 isAnalyzerEmpty :: AnalyzerState -> Bool
 isAnalyzerEmpty = const True

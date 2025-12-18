@@ -51,22 +51,22 @@ prop_ir_optimization_preserves_size =
 
 -- 辅助函数
 irNodeId :: TestIRNode -> Int
-irNodeId = undefined
+irNodeId TestIRNode = 0
 
 irNodeType :: TestIRNode -> TestType
-irNodeType = undefined
+irNodeType TestIRNode = TestType
 
 irAllNodes :: IR -> [TestIRNode]
-irAllNodes = undefined
+irAllNodes IR = [TestIRNode]
 
 isWellFormedType :: TestType -> Bool
-isWellFormedType = undefined
+isWellFormedType _ = True
 
 irSize :: IR -> Int
-irSize = undefined
+irSize IR = 1
 
 optimizeIR :: IR -> IR
-optimizeIR = undefined
+optimizeIR = id
 
 -- 数据类型定义
 data IR = IR

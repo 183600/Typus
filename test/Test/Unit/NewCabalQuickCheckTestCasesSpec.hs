@@ -2,45 +2,11 @@
 module Test.Unit.NewCabalQuickCheckTestCasesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, choose, listOf, listOf1, elements, suchThat, (.&&.))
-import Utils (trim, splitBy, splitByCollapsed, removeLineComments, removeComments, normalizeIndentation, breakOn)
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAfter, posAt, spanFrom, spanBetween, mergeSpans, isValidSpan, locatedAt, locatedValue, Located(..))
+import Test.Tasty.QuickCheck (testProperty, Property, (===), (.&&.))
+import TestSupport.Arbitrary ()
+import Utils (trim, splitBy, splitByCollapsed, removeLineComments, normalizeIndentation, breakOn)
+import SourceLocation (SourcePos(..), SourceSpan(..), spanFrom, mergeSpans, isValidSpan, locatedAt, locatedValue, Located(..))
 import Data.Char (isSpace)
-
--- | Arbitrary instance for SourcePos
-instance Arbitrary SourcePos where
-  arbitrary = genSourcePos
-
--- | Arbitrary instance for SourceSpan  
-instance Arbitrary SourceSpan where
-  arbitrary = genSourceSpan
-
--- | Generate arbitrary non-empty strings
-genNonEmptyString :: Gen String
-genNonEmptyString = listOf1 $ choose ('\32', '\126')
-
--- | Generate arbitrary strings that may include whitespace and newlines
-genStringWithNewlines :: Gen String
-genStringWithNewlines = listOf $ elements $ ['\32'..'\126'] ++ ['\n', '\t']
-
--- | Generate arbitrary characters for split tests
-genSplitChar :: Gen Char
-genSplitChar = elements [' ',',',';','|',':']
-
--- | Generate arbitrary positions
-genSourcePos :: Gen SourcePos
-genSourcePos = do
-  line <- choose (1, 100)
-  col <- choose (1, 100)
-  offset <- choose (0, 10000)
-  return $ SourcePos line col offset
-
--- | Generate arbitrary spans
-genSourceSpan :: Gen SourceSpan
-genSourceSpan = do
-  start <- genSourcePos
-  end <- genSourcePos `suchThat` (\pos -> posOffset pos >= posOffset start)
-  return $ SourceSpan start end
 
 -- | Test 1: trim function property
 prop_trim_roundtrip :: String -> Property
@@ -52,7 +18,6 @@ prop_trim_roundtrip s =
 prop_splitBy_preserves_empty :: Char -> String -> Property
 prop_splitBy_preserves_empty delim str =
   let parts = splitBy delim str
-      rejoined = concat $ map (\p -> if null p then "" else p ++ [delim]) (init parts) ++ [last parts]
   in (length (filter (== delim) str) + 1) === length parts
 
 -- | Test 3: splitByCollapsed removes empty segments
@@ -81,8 +46,8 @@ prop_sourcePos_ordering pos1 pos2 =
 -- | Test 6: spanFrom creates valid spans
 prop_spanFrom_valid :: SourcePos -> Property
 prop_spanFrom_valid pos =
-  let span = spanFrom pos
-  in isValidSpan span === True
+  let sp = spanFrom pos
+  in isValidSpan sp === True
 
 -- | Test 7: mergeSpans contains both original spans
 prop_mergeSpans_contains_both :: SourceSpan -> SourceSpan -> Property

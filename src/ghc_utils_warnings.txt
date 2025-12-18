@@ -1,2 +1,0 @@
-/bin/bash: warning: setlocale: LC_ALL: cannot change locale (zh_CN.UTF-8)
-[1 of 1] Compiling Utils            ( Utils.hs, nothing )

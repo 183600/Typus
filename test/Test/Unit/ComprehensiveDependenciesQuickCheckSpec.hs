@@ -427,10 +427,10 @@ typeComputationValid _ = True -- Simplified for property testing
 createQualifiedType :: String -> String -> (String, TypeVar)
 createQualifiedType module' qualifier = (module' ++ "." ++ qualifier, TVCon (module' ++ "." ++ qualifier))
 
-buildQualifiedEnvironment :: [(String, TypeVar)] -> TypeEnvironment
-buildQualifiedEnvironment _ = undefined -- Simplified for property testing
+buildQualifiedEnvironment :: [(String, TypeVar)] -> Bool
+buildQualifiedEnvironment bindings = not (null bindings)
 
-qualifiedEnvironmentValid :: TypeEnvironment -> [(String, TypeVar)] -> Bool
+qualifiedEnvironmentValid :: Bool -> [(String, TypeVar)] -> Bool
 qualifiedEnvironmentValid _ _ = True -- Simplified for property testing
 
 addExistentialConstraints :: [TypeVar] -> [TypeConstraint] -> [TypeConstraint]

@@ -1,4 +1,10 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 -- | Comprehensive QuickCheck tests for the TypeChecker module
 module Test.Unit.TypeCheckerComprehensiveQuickCheckSpec (tests) where
@@ -6,15 +12,14 @@ module Test.Unit.TypeCheckerComprehensiveQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
-  ( Property, (===), (==>) , property, forAll, counterexample, classify, cover
+  ( Property, (===), (==>) , property, counterexample, classify, cover
   , Arbitrary(..), Gen, oneof, choose, listOf, vectorOf, elements, (.&&.)
   , sized, frequency, suchThat, resize
   )
 import Data.Char (isAlphaNum, isUpper, isLower)
 import Data.List (isPrefixOf, tails, isInfixOf)
 import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes, fromJust, listToMaybe)
+import Data.Maybe (fromMaybe, catMaybes, listToMaybe, isJust, isNothing, fromJust)
 import Data.Either (isLeft, isRight)
 import qualified Data.Text as T
 

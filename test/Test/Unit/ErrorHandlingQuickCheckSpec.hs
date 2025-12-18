@@ -69,31 +69,28 @@ prop_error_report_contains_severity =
 
 -- 辅助函数
 getErrorId :: TestError -> Int
-getErrorId = undefined
+getErrorId TestError = 1
 
 getErrorMessage :: TestError -> String
-getErrorMessage = undefined
+getErrorMessage TestError = "test error"
 
 getErrorSeverity :: TestError -> TestErrorSeverity
-getErrorSeverity = undefined
+getErrorSeverity TestError = TestErrorSeverity
 
 isValidSeverity :: TestErrorSeverity -> Bool
-isValidSeverity = undefined
+isValidSeverity TestErrorSeverity = True
 
 getErrorCategory :: TestError -> TestErrorCategory
-getErrorCategory = undefined
+getErrorCategory TestError = TestErrorCategory
 
 isValidCategory :: TestErrorCategory -> Bool
-isValidCategory = undefined
+isValidCategory TestErrorCategory = True
 
 recoverFromError :: AST -> TestError -> AST
-recoverFromError = undefined
+recoverFromError ast _ = ast
 
 astStructure :: AST -> ASTStructure
-astStructure = undefined
-
-isInfixOf :: String -> String -> Bool
-isInfixOf = undefined
+astStructure AST = ASTStructure
 
 collectTestErrors :: [TestError] -> [TestError]
 collectTestErrors = id

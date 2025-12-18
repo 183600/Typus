@@ -17,6 +17,7 @@ import Analyzer.Types
 import qualified Dependencies as Dep
 import qualified Ownership as Own
 import qualified Data.Map.Strict as Map
+import qualified Data.List
 
 -- Property: empty symbol table has no symbols
 prop_empty_symboltable :: Property
@@ -42,14 +43,10 @@ prop_symboltable_multiple_entries pairs =
 -- Property: symbol table lookup
 prop_symboltable_lookup :: [(String, SymbolInfo)] -> String -> Property
 prop_symboltable_lookup pairs key =
-  let symbolTable = Map.fromList pairs
+  let uniquePairs = reverse $ Data.List.nubBy (\(k1,_) (k2,_) -> k1 == k2) (reverse pairs)
+      symbolTable = Map.fromList uniquePairs
       result = Map.lookup key symbolTable
-  in result === lookup key pairs
-  where
-    lookup _ [] = Nothing
-    lookup k ((k', v):rest)
-      | k == k' = Just v
-      | otherwise = lookup k rest
+  in result === Data.List.lookup key uniquePairs
 
 -- Property: symbol table insert
 prop_symboltable_insert :: [(String, SymbolInfo)] -> String -> SymbolInfo -> Property
@@ -256,9 +253,10 @@ prop_symboltable_complete name typeVar ownershipType scope moved borrowed constr
 -- Property: symbol table fold
 prop_symboltable_fold :: [(String, SymbolInfo)] -> Property
 prop_symboltable_fold pairs =
-  let symbolTable = Map.fromList pairs
+  let uniquePairs = reverse $ Data.List.nubBy (\(k1,_) (k2,_) -> k1 == k2) (reverse pairs)
+      symbolTable = Map.fromList uniquePairs
       sumScopes = Map.foldl' (\acc si -> acc + symbolScope si) 0 symbolTable
-      expectedSum = sum (map (symbolScope . snd) pairs)
+      expectedSum = sum (map (symbolScope . snd) uniquePairs)
   in sumScopes === expectedSum
 
 -- Property: symbol table size with empty list

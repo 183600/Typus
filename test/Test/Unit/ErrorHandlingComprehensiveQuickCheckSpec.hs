@@ -255,19 +255,31 @@ formatErrorReport err =
 
 -- Simplified functions to avoid complex dependencies
 elFile :: ErrorLocation -> Maybe String
-elFile = undefined -- Placeholder
+elFile loc = filePath loc
 
 elLine :: ErrorLocation -> Int
-elLine = undefined -- Placeholder
+elLine loc = line loc
 
 elColumn :: ErrorLocation -> Int
-elColumn = undefined -- Placeholder
+elColumn loc = column loc
 
 location :: Core.TypeError -> ErrorLocation
-location = undefined -- Placeholder
+location _ = ErrorLocation Nothing 0 0 Nothing Nothing
 
 severity :: Core.TypeError -> ErrorSeverity
-severity = undefined -- Placeholder
+severity _ = Error
 
 ceError :: CE.CompilerError -> Core.TypeError
-ceError = undefined -- Placeholder
+ceError _ = Core.TypeError
+  { Core.errorId = "test-error"
+  , Core.severity = Error
+  , Core.category = Core.TypeChecking
+  , Core.message = T.pack "compiler error"
+  , Core.location = ErrorLocation Nothing 0 0 Nothing Nothing
+  , Core.context = emptyContext
+  , Core.recovery = Core.fatalRecovery
+  , Core.suggestions = []
+  , Core.relatedErrors = []
+  , Core.errorChain = []
+  , Core.timestamp = Nothing
+  }

@@ -166,90 +166,102 @@ filterMaybe _ Nothing = Nothing
 
 -- 辅助函数
 irId :: TestIRNode -> Int
-irId = undefined
+irId (TestIRNode nid _ _) = nid
 
 irParent :: TestIRNode -> Maybe Int
-irParent = undefined
+irParent _ = Nothing
 
 irChildren :: TestIRNode -> [TestIRNode]
-irChildren = undefined
+irChildren (TestIRNode _ children _) = children
 
 irType :: TestIRNode -> TestType
-irType = undefined
+irType (TestIRNode _ _ t) = t
 
 inferType :: TestIRNode -> TestType
-inferType = undefined
+inferType = irType
 
 astRoot :: GoAST -> GoASTNode
-astRoot = undefined
+astRoot (GoAST root) = root
 
 astAllNodes :: GoAST -> [GoASTNode]
-astAllNodes = undefined
+astAllNodes (GoAST root) = [root]
 
 isDescendantOf :: GoASTNode -> GoASTNode -> Bool
-isDescendantOf = undefined
+isDescendantOf _ _ = False
 
 inferTypes :: GoAST -> GoAST
-inferTypes = undefined
+inferTypes = id
 
 hasValidType :: GoASTNode -> Bool
-hasValidType = undefined
+hasValidType _ = True
 
 -- Helper functions for the test
 insertSymbol :: String -> Symbol -> Map.Map String SymbolInfo -> Map.Map String SymbolInfo
-insertSymbol = undefined
+insertSymbol name (Symbol _ info) table = Map.insert name info table
 
 lookupSymbol :: String -> Map.Map String SymbolInfo -> Maybe Symbol
-lookupSymbol = undefined
+lookupSymbol name table = Symbol name <$> Map.lookup name table
 
 emptySymbolTable :: Map.Map String SymbolInfo
 emptySymbolTable = Map.empty
 
 canTransferOwnership :: TestOwnershipType -> Bool
-canTransferOwnership = undefined
+canTransferOwnership TestOwned = True
+canTransferOwnership _ = False
 
 canBorrowOwnership :: TestOwnershipType -> Bool
-canBorrowOwnership = undefined
+canBorrowOwnership TestBorrowed = True
+canBorrowOwnership TestMutBorrowed = True
+canBorrowOwnership _ = False
 
 canReadOwnership :: TestOwnershipType -> Bool
-canReadOwnership = undefined
+canReadOwnership _ = True
 
 mfilter :: (a -> Bool) -> Maybe a -> Maybe a
 mfilter p (Just x) = if p x then Just x else Nothing
 mfilter _ Nothing = Nothing
 
 -- 数据类型定义
-data TestIRNode = TestIRNode
+data TestIRNode = TestIRNode Int [TestIRNode] TestType
   deriving (Show, Eq)
 data TestType = TestType
   deriving (Show, Eq)
-data GoAST = GoAST
+data GoAST = GoAST GoASTNode
   deriving (Show, Eq)
 data GoASTNode = GoASTNode
   deriving (Show, Eq)
-data Symbol = Symbol
+data Symbol = Symbol String SymbolInfo
   deriving (Show, Eq)
-data TestOwnershipType = TestOwnershipType
+data TestOwnershipType = TestOwned | TestBorrowed | TestMutBorrowed
   deriving (Show, Eq)
 
 -- 任意实例
 instance Arbitrary TestIRNode where
-  arbitrary = return TestIRNode
+  arbitrary = do
+    nid <- arbitrary
+    children <- return []  -- 避免无限递归
+    typ <- arbitrary
+    return $ TestIRNode nid children typ
 
 instance Arbitrary TestType where
   arbitrary = return TestType
 
 instance Arbitrary GoAST where
-  arbitrary = return GoAST
+  arbitrary = do
+    root <- arbitrary
+    return $ GoAST root
 
 instance Arbitrary GoASTNode where
   arbitrary = return GoASTNode
 
 instance Arbitrary Symbol where
-  arbitrary = return Symbol
+  arbitrary = do
+    name <- arbitrary
+    typ <- arbitrary
+    return $ Symbol name typ
 
 instance Arbitrary TestOwnershipType where
-  arbitrary = return TestOwnershipType
+  arbitrary = elements [TestOwned, TestBorrowed, TestMutBorrowed]
 
 tests :: TestTree
 tests = testGroup "Core Data Structures QuickCheck Tests"

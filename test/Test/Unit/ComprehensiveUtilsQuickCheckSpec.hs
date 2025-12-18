@@ -4,9 +4,9 @@
 module Test.Unit.ComprehensiveUtilsQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
+import Test.Tasty.HUnit ()
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property)
+import Test.QuickCheck (Property, (==>), classify, property)
 
 import Utils
   ( trim
@@ -18,19 +18,19 @@ import Utils
   )
 
 import qualified Data.List as Data.List
-import Data.Char (isSpace, isAlphaNum, isLetter)
-import qualified Data.Text as T
+import Data.Char (isSpace)
 
 -- Property: trim removes leading and trailing whitespace
 prop_trim_whitespace :: String -> Property
 prop_trim_whitespace s =
   let trimmed = trim s
-      hasLeadingWS = not (null s) && isSpace (head s)
-      hasTrailingWS = not (null s) && isSpace (last s)
+      hasLeadingWS = case s of (c:_) -> isSpace c; [] -> False
+      hasTrailingWS = case reverse s of (c:_) -> isSpace c; [] -> False
   in classify hasLeadingWS "has leading whitespace" $
      classify hasTrailingWS "has trailing whitespace" $
-     property $ not (null trimmed) ==> 
-                (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+     property $ case (trimmed, reverse trimmed) of
+                  (c1:_, c2:_) -> not (isSpace c1) && not (isSpace c2)
+                  _ -> True
 
 -- Property: trim preserves internal whitespace
 prop_trim_preserve_internal :: String -> String -> String -> Property
@@ -76,7 +76,7 @@ prop_remove_line_comments code comment =
 
 -- Property: removeLineComments preserves string literals
 prop_remove_line_comments_preserve_strings :: String -> Property
-prop_remove_line_comments_preserve_strings content =
+prop_remove_line_comments_preserve_strings _content =
   let stringWithComment = "var s string = \"// not a comment\"\n// this is a comment\n"
       withoutComments = removeLineComments stringWithComment
   in property $ "// not a comment" `isInfixOf` withoutComments
@@ -91,7 +91,7 @@ prop_remove_both_comments code lineComment blockComment =
 
 -- Property: removeComments preserves nested string literals
 prop_remove_comments_preserve_nested_strings :: String -> Property
-prop_remove_comments_preserve_nested_strings content =
+prop_remove_comments_preserve_nested_strings _content =
   let complexString = "\"string with // fake comment and /* fake block */\""
       codeWithComments = "// real comment\nvar s = " ++ complexString ++ "\n/* real block */"
       withoutComments = removeComments codeWithComments
@@ -99,18 +99,19 @@ prop_remove_comments_preserve_nested_strings content =
 
 -- Property: normalizeIndentation preserves relative indentation
 prop_normalize_indentation_relative :: [String] -> Property
-prop_normalize_indentation_relative lines =
-  not (null lines) && length lines <= 10 ==>
-  let indentedLines = zipWith (\i line -> replicate i ' ' ++ line) [0,2,4,1,3] lines
-      normalized = normalizeIndentation (unlines indentedLines)
-      normalizedLines = splitLines normalized
-  in property $ relativeIndentationPreserved indentedLines normalizedLines
+prop_normalize_indentation_relative inputLines =
+  let validLines = filter (\l -> not (all isSpace l) && not ('\n' `elem` l)) inputLines
+  in not (null validLines) && length validLines <= 10 ==>
+     let indentedLines = zipWith (\i line -> replicate i ' ' ++ line) [0,2,4,1,3] validLines
+         normalized = normalizeIndentation (unlines indentedLines)
+         normalizedLines = splitLines normalized
+     in property $ relativeIndentationPreserved indentedLines normalizedLines
 
 -- Property: forceSingleTabIndentation converts spaces to tabs
 prop_force_tab_indentation :: [String] -> Property
-prop_force_tab_indentation lines =
-  not (null lines) && length lines <= 5 ==>
-  let spacedLines = zipWith (\i line -> replicate (i*2) ' ' ++ line) [0..] lines
+prop_force_tab_indentation inputLines =
+  not (null inputLines) && length inputLines <= 5 ==>
+  let spacedLines = zipWith (\i line -> replicate (i*2) ' ' ++ line) [0..] inputLines
       tabbed = forceSingleTabIndentation (unlines spacedLines)
   in property $ all hasTabIndentation (splitLines tabbed)
 
@@ -206,8 +207,9 @@ prop_trim_unicode s =
   let unicodeWS = "\160\8239\12288" -- Non-breaking spaces and other Unicode whitespace
       sWithUnicodeWS = unicodeWS ++ s ++ unicodeWS
       trimmed = trim sWithUnicodeWS
-  in property $ not (null trimmed) ==> 
-                (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+  in property $ case (trimmed, reverse trimmed) of
+                  (c1:_, c2:_) -> not (isSpace c1) && not (isSpace c2)
+                  _ -> True
 
 -- Property: removeLineComments with nested comments
 prop_remove_line_comments_nested :: String -> String -> Property
@@ -219,7 +221,7 @@ prop_remove_line_comments_nested code innerComment =
 
 -- Property: removeComments with complex string literals
 prop_remove_comments_complex_strings :: String -> Property
-prop_remove_comments_complex_strings content =
+prop_remove_comments_complex_strings _content =
   let complexStrings = 
         [ "\"string with // comment\""
         , "'char with // comment'"
@@ -232,19 +234,19 @@ prop_remove_comments_complex_strings content =
 
 -- Property: normalizeIndentation with mixed tabs and spaces
 prop_normalize_mixed_indentation :: [String] -> Property
-prop_normalize_mixed_indentation lines =
-  not (null lines) && length lines <= 5 ==>
+prop_normalize_mixed_indentation inputLines =
+  not (null inputLines) && length inputLines <= 5 ==>
   let mixedLines = zipWith (\i line -> 
         if even i then replicate i ' ' ++ line
-        else replicate i '\t' ++ line) [0..] lines
+        else replicate i '\t' ++ line) [0..] inputLines
       normalized = normalizeIndentation (unlines mixedLines)
   in property $ not (any ('\t' `elem`) (splitLines normalized))
 
 -- Property: forceSingleTabIndentation with existing tabs
 prop_force_tab_existing_tabs :: [String] -> Property
-prop_force_tab_existing_tabs lines =
-  not (null lines) && length lines <= 5 ==>
-  let tabbedLines = zipWith (\i line -> replicate i '\t' ++ line) [0..] lines
+prop_force_tab_existing_tabs inputLines =
+  not (null inputLines) && length inputLines <= 5 ==>
+  let tabbedLines = zipWith (\i line -> replicate i '\t' ++ line) [0..] inputLines
       result = forceSingleTabIndentation (unlines tabbedLines)
   in property $ all startsWithTab (splitLines result)
 
@@ -301,9 +303,6 @@ isPrefixOf needle haystack = needle `Data.List.isPrefixOf` haystack
 
 relativeIndentationPreserved :: [String] -> [String] -> Bool
 relativeIndentationPreserved original normalized = length original == length normalized
-
-lines :: String -> [String]
-lines = splitLines
 
 hasTabIndentation :: String -> Bool
 hasTabIndentation = ('\t' `elem`)

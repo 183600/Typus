@@ -8,7 +8,8 @@ module Analyzer.Types (
     AnalysisPhase(..),
     AnalysisContext(..),
     AnalyzerState(..),
-    IntegratedAnalyzer
+    IntegratedAnalyzer,
+    emptyAnalysisResult
 ) where
 
 import Control.Monad.Except
@@ -57,10 +58,6 @@ data AnalysisContext = AnalysisContext
     , analysisPhase :: AnalysisPhase
     } deriving (Show, Eq)
 
--- Accessor for ownership enabled flag
-acOwnershipEnabled :: AnalysisContext -> Bool
-acOwnershipEnabled = enableOwnership
-
 data AnalyzerState = AnalyzerState
     { ownershipAnalyzer :: Own.OwnershipAnalyzer
     , dependentTypeChecker :: Dep.DependentTypeChecker
@@ -73,3 +70,13 @@ data AnalyzerState = AnalyzerState
     } deriving (Show, Eq)
 
 type IntegratedAnalyzer = StateT AnalyzerState (ExceptT String IO)
+
+emptyAnalysisResult :: AnalysisResult
+emptyAnalysisResult = AnalysisResult
+    { ownershipErrors = []
+    , dependentTypeErrors = []
+    , combinedErrors = []
+    , analysisWarnings = []
+    , analysisInfo = []
+    , typeEnvironment = Map.empty
+    }

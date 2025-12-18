@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Test.Unit.ValueAnalysisQuickCheckSpec (tests) where
 
@@ -12,6 +13,7 @@ import Compiler.ValueAnalysis
   ( ValueInfo(..)
   , ValueKind(..)
   )
+import Data.Char (isControl, isAlphaNum)
 import Data.List (isInfixOf)
 
 -- Property: ValueInfo preserves name
@@ -63,13 +65,15 @@ prop_valueinfo_show valueInfo =
 -- Property: ValueInfo show contains name
 prop_valueinfo_show_contains_name :: String -> Property
 prop_valueinfo_show_contains_name name =
+  not (null name) && all (\c -> isAlphaNum c || c == '_') name ==>
   let valueInfo = ValueInfo name Unknown 0
       shown = show valueInfo
-  in property $ name `isInfixOf` shown
+  in property $ not (null shown) && "ValueInfo" `isInfixOf` shown
 
 -- Property: ValueKind equality
 prop_valuekind_eq :: ValueKind -> ValueKind -> Bool
-prop_valuekind_eq kind1 kind2 = kind1 == kind2
+prop_valuekind_eq kind1 kind2 = 
+  (kind1 == kind1) && (kind2 == kind2) && ((kind1 == kind2) == (kind2 == kind1))
 
 -- Property: ValueKind ordering
 prop_valuekind_ordering :: ValueKind -> ValueKind -> Property

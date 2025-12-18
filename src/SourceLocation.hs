@@ -152,7 +152,7 @@ locatedAt pos value = locatedWithSpan (emptySpan pos) value
 
 -- Create located value with span
 locatedWithSpan :: SourceSpan -> a -> Located a
-locatedWithSpan span value = Located value (spanStart span) span
+locatedWithSpan sp value = Located value (spanStart sp) sp
 
 -- Extract value from located
 locatedValue :: Located a -> a

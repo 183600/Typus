@@ -21,7 +21,7 @@ import qualified Data.List as Data.List
 import Data.Char (toLower)
 import qualified Data.Text as T
 import Data.Char (toLower, isAlphaNum)
-import Data.Maybe (isJust, isNothing)
+import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Map.Strict as Map
 
 -- ============================================================================
@@ -227,7 +227,7 @@ ceMessage :: CompilerError -> T.Text
 ceMessage = T.pack . show -- Simplified
 
 idPath :: ImportDecl -> String
-idPath = undefined -- Placeholder - would need actual implementation
+idPath (ImportDecl path _) = fromMaybe "" path
 
 isValidGoImportPath :: String -> Bool
 isValidGoImportPath path = 

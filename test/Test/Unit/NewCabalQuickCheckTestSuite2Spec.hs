@@ -8,12 +8,10 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.List (sort, nub, group)
-import Data.Maybe (isJust, isNothing, fromMaybe)
+import Data.List (nub)
 
 import Utils (trim, splitBy)
-import SourceLocation (SourcePos(..), SourceSpan(..), mergeSpans, isValidSpan)
-import Parser (FileDirectives(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives)
+import SourceLocation (SourcePos(..), SourceSpan(..), mergeSpans)
 import TestSupport.Arbitrary ()
 
 tests :: TestTree
@@ -81,9 +79,9 @@ setOperationsProperties = testGroup "Set Operations Properties"
 -- Test 9-10: 函数组合属性
 compositionProperties :: TestTree
 compositionProperties = testGroup "Composition Properties"
-  [ fastProperty "map composition distributes" $ \(f :: Int -> Int) (g :: Int -> Int) (xs :: [Int]) ->
+  [ fastProperty "map composition distributes" $ \(Fun _ f :: Fun Int Int) (Fun _ g :: Fun Int Int) (xs :: [Int]) ->
       map (f . g) xs === map f (map g xs)
   
-  , fastProperty "filter composition is conjunction" $ \(p :: Int -> Bool) (q :: Int -> Bool) (xs :: [Int]) ->
+  , fastProperty "filter composition is conjunction" $ \(Fun _ p :: Fun Int Bool) (Fun _ q :: Fun Int Bool) (xs :: [Int]) ->
       filter (\x -> p x && q x) xs === filter p (filter q xs)
   ]

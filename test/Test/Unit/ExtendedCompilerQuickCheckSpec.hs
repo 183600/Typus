@@ -10,11 +10,11 @@ import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify
 import Compiler (compile, CompilerError(..), CompilationPhase(..), generateGoCode, 
                  extractDeclarations, extractFunctionCalls, buildTypeEnv, 
                  checkDependentTypes, checkOwnership, hasTypeErrors)
-import Parser (TypusFile(..), FileDirectives(..))
+import Parser (TypusFile(..), FileDirectives(..), CodeBlock(..), defaultBlockDirectives)
 import qualified Compiler.GoAst as GoAst
 import Compiler.IR (SourceIR(..), SemanticIR(..), GoIR(..))
 import qualified Compiler.TypeChecker as TC
-import SourceLocation (Located(..), locatedValue)
+import SourceLocation (Located(..), locatedValue, startPos, emptySpan)
 import qualified Data.Map as Map
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust, isNothing)
@@ -53,7 +53,7 @@ prop_compile_directives_only directives =
 -- Property: Ownership directive affects compilation output
 prop_compile_ownership_directive_effect :: Bool -> Property
 prop_compile_ownership_directive_effect ownershipEnabled =
-  let directives = FileDirectives (Just $ Located ownershipEnabled undefined undefined) Nothing Nothing
+  let directives = FileDirectives (Just $ Located ownershipEnabled startPos (emptySpan startPos)) Nothing Nothing
       file = createSimpleTypusFileWithDirectives directives
       result = compile file
   in case result of
@@ -65,7 +65,7 @@ prop_compile_ownership_directive_effect ownershipEnabled =
 -- Property: Dependent types directive affects compilation output
 prop_compile_dependent_types_directive_effect :: Bool -> Property
 prop_compile_dependent_types_directive_effect dtEnabled =
-  let directives = FileDirectives Nothing (Just $ Located dtEnabled undefined undefined) Nothing
+  let directives = FileDirectives Nothing (Just $ Located dtEnabled startPos (emptySpan startPos)) Nothing
       file = createSimpleTypusFileWithDirectives directives
       result = compile file
   in case result of
@@ -77,7 +77,7 @@ prop_compile_dependent_types_directive_effect dtEnabled =
 -- Property: Constraints directive affects compilation output
 prop_compile_constraints_directive_effect :: Bool -> Property
 prop_compile_constraints_directive_effect constraintsEnabled =
-  let directives = FileDirectives Nothing Nothing (Just $ Located constraintsEnabled undefined undefined)
+  let directives = FileDirectives Nothing Nothing (Just $ Located constraintsEnabled startPos (emptySpan startPos))
       file = createSimpleTypusFileWithDirectives directives
       result = compile file
   in case result of
@@ -90,9 +90,9 @@ prop_compile_constraints_directive_effect constraintsEnabled =
 prop_compile_multiple_directives_interaction :: Bool -> Bool -> Bool -> Property
 prop_compile_multiple_directives_interaction ownership dt constraints =
   let directives = FileDirectives 
-        (Just $ Located ownership undefined undefined)
-        (Just $ Located dt undefined undefined)
-        (Just $ Located constraints undefined undefined)
+        (Just $ Located ownership startPos (emptySpan startPos))
+        (Just $ Located dt startPos (emptySpan startPos))
+        (Just $ Located constraints startPos (emptySpan startPos))
       file = createSimpleTypusFileWithDirectives directives
       result = compile file
   in case result of
@@ -318,81 +318,81 @@ createSimpleTypusFile :: String -> TypusFile
 createSimpleTypusFile content = 
   TypusFile (FileDirectives Nothing Nothing Nothing) 
             []
-            [undefined]  -- Would be implemented with actual CodeBlock constructor
+            [CodeBlock defaultBlockDirectives content (emptySpan startPos)]
             []  -- Syntax errors
 
 createSimpleTypusFileWithDirectives :: FileDirectives -> TypusFile
 createSimpleTypusFileWithDirectives directives = 
-  TypusFile directives [] [undefined] []
+  TypusFile directives [] [CodeBlock defaultBlockDirectives "package main\nfunc main() {}" (emptySpan startPos)] []
 
 createSimpleTypusFileWithBlocks :: Int -> TypusFile
 createSimpleTypusFileWithBlocks numBlocks = 
   TypusFile (FileDirectives Nothing Nothing Nothing) 
             []
-            [undefined | _ <- [1..numBlocks]]
+            [CodeBlock defaultBlockDirectives ("block" ++ show i) (emptySpan startPos) | i <- [1..numBlocks]]
             []
 
 createNestedTypusFile :: Int -> TypusFile
 createNestedTypusFile depth = 
   TypusFile (FileDirectives Nothing Nothing Nothing) 
             []
-            [undefined]
+            [CodeBlock defaultBlockDirectives (concat (replicate depth "{")) (emptySpan startPos)]
             []
 
 createSimpleTypusFileWithMultipleBlocks :: [String] -> TypusFile
 createSimpleTypusFileWithMultipleBlocks contents = 
   TypusFile (FileDirectives Nothing Nothing Nothing) 
             []
-            [undefined | _ <- contents]
+            [CodeBlock defaultBlockDirectives c (emptySpan startPos) | c <- contents]
             []
 
 createSimpleTypusFileWithImports :: [String] -> TypusFile
 createSimpleTypusFileWithImports importPaths = 
   TypusFile (FileDirectives Nothing Nothing Nothing) 
             []
-            [undefined | _ <- importPaths]
+            [CodeBlock defaultBlockDirectives ("import \"" ++ imp ++ "\"") (emptySpan startPos) | imp <- importPaths]
             []
 
 createSimpleTypusFileWithFunctions :: [String] -> [String] -> [String] -> TypusFile
 createSimpleTypusFileWithFunctions funcNames paramTypes returnTypes = 
   TypusFile (FileDirectives Nothing Nothing Nothing) 
             []
-            [undefined]
+            [CodeBlock defaultBlockDirectives "func test() {}" (emptySpan startPos)]
             []
 
 createSimpleTypusFileWithStructs :: [String] -> [String] -> TypusFile
 createSimpleTypusFileWithStructs structNames fieldTypes = 
   TypusFile (FileDirectives Nothing Nothing Nothing) 
             []
-            [undefined]
+            [CodeBlock defaultBlockDirectives "type TestStruct struct {}" (emptySpan startPos)]
             []
 
 createSimpleTypusFileWithInterfaces :: [String] -> [String] -> TypusFile
 createSimpleTypusFileWithInterfaces interfaceNames methodNames = 
   TypusFile (FileDirectives Nothing Nothing Nothing) 
             []
-            [undefined]
+            [CodeBlock defaultBlockDirectives "type TestInterface interface {}" (emptySpan startPos)]
             []
 
 createSimpleTypusFileWithGenerics :: [String] -> [String] -> [String] -> TypusFile
 createSimpleTypusFileWithGenerics typeNames typeParams constraints = 
   TypusFile (FileDirectives Nothing Nothing Nothing) 
             []
-            [undefined]
+            [CodeBlock defaultBlockDirectives "type TestGeneric[T any] struct {}" (emptySpan startPos)]
             []
 
 createSimpleTypusFileWithErrorHandling :: [String] -> TypusFile
 createSimpleTypusFileWithErrorHandling functionNames = 
   TypusFile (FileDirectives Nothing Nothing Nothing) 
             []
-            [undefined | _ <- functionNames]
+            [CodeBlock defaultBlockDirectives ("func " ++ fn ++ "() error { return nil }") (emptySpan startPos) | fn <- functionNames]
             []
 
 createSimpleTypusFileWithConcurrency :: [String] -> TypusFile
 createSimpleTypusFileWithConcurrency channelNames = 
   TypusFile (FileDirectives Nothing Nothing Nothing) 
             []
-            [undefined | _ <- channelNames]
+            [CodeBlock defaultBlockDirectives ("ch := make(chan " ++ cn ++ ")") (emptySpan startPos) | cn <- channelNames]
             []
 
 buildSimpleTypeEnv :: TypusFile -> Maybe (Map.Map String String)
