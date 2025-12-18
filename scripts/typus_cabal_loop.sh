@@ -71,7 +71,7 @@ run_with_heartbeat() {
 # ==================== 主循环 ====================
 trap 'echo; echo "已终止."; exit 0' INT TERM
 
-run_with_heartbeat iflow "给这个项目增加一些cabal test测试用例，不要超过10个，要使用QuickCheck think:high" --yolo || true
+#run_with_heartbeat iflow "给这个项目增加一些cabal test测试用例，不要超过10个，要使用QuickCheck think:high" --yolo || true
 
 while true; do
   touch "$HEARTBEAT_FILE"
