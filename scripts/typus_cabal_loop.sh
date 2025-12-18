@@ -130,8 +130,8 @@ while true; do
     fi
   else
     echo "⚠️ 发现问题或 warning（退出码=$CABAL_STATUS），调用 iflow 修复..."
-    run_with_heartbeat iflow '解决cabal test --flags="-fast production" --test-show-details=direct显示的所有问题（包括warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点 think:high' --yolo || true
-    run_with_heartbeat iflow '删除项目根目录多余的.md文件或者.txt文件（像TEST_ENHANCEMENT_SUMMARY.md和test_wall_production.txt这样的） think:high' --yolo || true
+    run_with_heartbeat iflow '解决cabal test --flags="-fast production" --test-show-details=direct显示的所有问题（包括warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点，尽量不要消耗大量CPU/内存资源 think:high' --yolo || true
+    run_with_heartbeat iflow '删除项目根目录多余的.md文件或者.txt文件（像TEST_ENHANCEMENT_SUMMARY.md和test_wall_production.txt这样的），并整理根目录下的文件，把文件放到应该放的目录 think:high' --yolo || true
   fi
 
   echo "🔁 回到第 1 步..."
