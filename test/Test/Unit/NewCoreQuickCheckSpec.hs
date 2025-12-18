@@ -155,7 +155,7 @@ prop_unicode_handling content =
 -- Property: Performance with repeated operations
 prop_repeated_operations_consistency :: String -> Int -> Property
 prop_repeated_operations_consistency input iterations =
-  iterations <= 20 ==> 
+  iterations >= 0 && iterations <= 20 ==> 
   let trimmedOnce = trim input
       trimmedMultiple = iterate trim input !! iterations
   in property $ trimmedOnce === trimmedMultiple

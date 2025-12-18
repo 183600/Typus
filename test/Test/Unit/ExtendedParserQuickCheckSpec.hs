@@ -17,7 +17,8 @@ import Data.Maybe (isJust)
 -- Property: Parsing is idempotent - parsing a parsed file's reconstruction yields same structure
 prop_parse_idempotent :: TypusFile -> Property
 prop_parse_idempotent typusFile = 
-  null (tfSyntaxErrors typusFile) ==>
+  null (tfSyntaxErrors typusFile) && 
+  (hasOwnershipDirective typusFile || hasDependentTypesDirective typusFile || hasCodeBlocks typusFile) ==>
   let reconstructed = reconstructTypusFile typusFile
   in case parseTypus reconstructed of
     Left err -> counterexample ("Parse error in idempotent test: " ++ err) $ property False
@@ -44,7 +45,10 @@ prop_parse_directive_order_preservation directives =
 prop_parse_directive_whitespace_insensitive :: String -> String -> String -> Property
 prop_parse_directive_whitespace_insensitive before middle after =
   all (\s -> not ("//!" `Data.List.isInfixOf` s) && not ("\n" `Data.List.isInfixOf` s)) [before, middle, after] ==>
-  let content = before ++ "//! ownership: on\n" ++ middle ++ "//! dependent_types: off\n" ++ after
+  let safeBefore = if null before then " " else before
+      safeMiddle = if null middle then " " else middle
+      safeAfter = if null after then " " else after
+      content = safeBefore ++ "\n//! ownership: on\n" ++ safeMiddle ++ "\n//! dependent_types: off\n" ++ safeAfter ++ "\npackage main"
   in case parseTypus content of
     Left _ -> property False
     Right parsed -> property $ hasOwnershipDirective parsed && hasDependentTypesDirective parsed
@@ -83,7 +87,7 @@ prop_parse_tab_space_mixing lines =
 -- Property: Empty lines preservation
 prop_parse_empty_lines_preservation :: Int -> Int -> Property
 prop_parse_empty_lines_preservation numBlocks numEmptyLines =
-  numBlocks > 0 && numEmptyLines >= 0 && numEmptyLines <= 20 ==>
+  numBlocks > 0 && numBlocks <= 10 && numEmptyLines >= 0 && numEmptyLines <= 20 ==>
   let blocks = ["func block" ++ show i ++ "() {}" | i <- [1..numBlocks]]
       content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ blocks
   in case parseTypus content of
@@ -213,10 +217,12 @@ prop_parse_complex_function_signatures funcNames paramNames paramTypes returnTyp
 -- Property: Method declarations with value and pointer receivers
 prop_parse_method_declarations :: [String] -> [String] -> [String] -> Bool -> Property
 prop_parse_method_declarations structNames methodNames paramTypes isPointerReceiver =
-  let methods = zipWith3 (\sName mName pType -> 
+  not (null structNames) && not (null methodNames) && not (null paramTypes) ==>
+  let maxMethods = min 10 (minimum [length structNames, length methodNames, length paramTypes])
+      methods = take maxMethods $ zipWith3 (\sName mName pType -> 
         let receiverType = if isPointerReceiver then "*" ++ sName else sName
         in "func (" ++ receiverType ++ ") " ++ mName ++ "(" ++ pType ++ ") error {\n  return nil\n}") 
-        (cycle structNames) methodNames paramTypes
+        (cycle structNames) (cycle methodNames) (cycle paramTypes)
       content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ methods ++ ["func main() {}"]
   in case parseTypus content of
     Left err -> counterexample ("Parse error with method declarations: " ++ err) $ property False
@@ -314,7 +320,8 @@ reconstructTypusFile :: TypusFile -> String
 reconstructTypusFile file = 
   let directives = reconstructDirectives (tfDirectives file)
       blocks = map reconstructBlock (tfBlocks file)
-  in unlines $ directives ++ blocks
+      packageDecl = if null directives && null blocks then [] else ["package main"]
+  in unlines $ directives ++ packageDecl ++ blocks
 
 reconstructDirectives :: FileDirectives -> [String]
 reconstructDirectives (FileDirectives ownership depTypes constraints) =

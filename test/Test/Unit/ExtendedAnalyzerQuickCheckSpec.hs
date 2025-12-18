@@ -13,8 +13,10 @@ import Analyzer.SymbolTable (collectSymbolsAndTypes)
 import Analyzer.State (newIntegratedAnalyzer, addOwnershipError, addDependentTypeError)
 import qualified AnalyzerIntegration
 import AnalyzerIntegration (runIntegratedAnalysis, analyzeCodeWithBothAnalyzers, mkAnalysisInput)
-import Parser (TypusFile(..), FileDirectives(..))
+import Parser (TypusFile(..), FileDirectives(..), BlockDirectives(..), CodeBlock(..))
+import qualified Parser
 import SourceLocation (Located(..))
+import qualified SourceLocation
 import qualified Data.Map as Map
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust, isNothing)
@@ -279,10 +281,14 @@ prop_analyzer_control_flow_analysis conditionVar =
 -- Helper functions
 createSimpleTypusFile :: String -> TypusFile
 createSimpleTypusFile content = 
-  TypusFile (FileDirectives Nothing Nothing Nothing) 
-            []
-            [undefined]  -- Would be implemented with actual CodeBlock constructor
-            []  -- Syntax errors
+  let block = Parser.CodeBlock 
+                (Parser.BlockDirectives Nothing Nothing Nothing)
+                content
+                (SourceLocation.emptySpan SourceLocation.startPos)
+  in TypusFile (FileDirectives Nothing Nothing Nothing) 
+               []
+               [block]
+               []
 
 reconstructSimpleContent :: TypusFile -> String
 reconstructSimpleContent file = "package main\nfunc main() {}"

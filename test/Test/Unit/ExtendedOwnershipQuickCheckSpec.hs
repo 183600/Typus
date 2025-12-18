@@ -8,8 +8,10 @@ import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify
 
 import Ownership (OwnershipType(..), OwnershipError(..), OwnershipAnalyzer, OwnershipTransfer(..), 
                  newOwnershipAnalyzer, analyzeOwnership, formatOwnershipErrors)
-import Parser (TypusFile(..), FileDirectives(..))
+import Parser (TypusFile(..), FileDirectives(..), BlockDirectives(..), CodeBlock(..))
+import qualified Parser
 import SourceLocation (Located(..), locatedAt, startPos)
+import qualified SourceLocation
 import qualified Data.Map as Map
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust, isNothing)
@@ -273,10 +275,14 @@ prop_ownership_closures capturedVars =
 -- Helper functions
 createTypusFileWithOwnership :: String -> TypusFile
 createTypusFileWithOwnership content = 
-  TypusFile (FileDirectives (Just $ SourceLocation.locatedAt (SourceLocation.startPos) True) Nothing Nothing) 
-            []
-            [undefined]  -- Would be implemented with actual CodeBlock constructor
-            []  -- Syntax errors
+  let block = Parser.CodeBlock 
+                (Parser.BlockDirectives Nothing Nothing Nothing)
+                content
+                (SourceLocation.emptySpan SourceLocation.startPos)
+  in TypusFile (FileDirectives (Just $ SourceLocation.locatedAt SourceLocation.startPos True) Nothing Nothing) 
+               []
+               [block]
+               []
 
 generateNestedScopeCode :: Int -> String
 generateNestedScopeCode 0 = "var x int = 42"

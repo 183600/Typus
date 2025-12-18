@@ -460,7 +460,8 @@ reconstructTypusFile :: TypusFile -> String
 reconstructTypusFile file = 
   let directives = reconstructDirectives (tfDirectives file)
       blocks = map reconstructBlock (tfBlocks file)
-  in unlines $ directives ++ blocks
+      packageDecl = if null directives && null blocks then [] else ["package main"]
+  in unlines $ directives ++ packageDecl ++ blocks
 
 reconstructDirectives :: FileDirectives -> [String]
 reconstructDirectives (FileDirectives ownership depTypes constraints) =
@@ -529,10 +530,10 @@ addEscapeSequences :: String -> String
 addEscapeSequences = concatMap (\c -> if c == '\\' then "\\\\" else if c == '"' then "\\\"" else if c == '\n' then "\\n" else [c])
 
 showHex :: Int -> String
-showHex n = showIntAtBase 16 ("0123456789ABCDEF" !!) n
+showHex n = showIntAtBase 16 ("0123456789ABCDEF" !!) (abs n)
 
 showOct :: Int -> String
-showOct n = showIntAtBase 8 ("01234567" !!) n
+showOct n = showIntAtBase 8 ("01234567" !!) (abs n)
 
 showIntAtBase :: Int -> (Int -> Char) -> Int -> String
 showIntAtBase base toChar n = 

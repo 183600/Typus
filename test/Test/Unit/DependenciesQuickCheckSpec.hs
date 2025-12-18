@@ -67,7 +67,7 @@ prop_typevar_occurrence tv1 tv2 =
 prop_substitution_composition :: TypeVar -> TypeVar -> TypeVar -> Property
 prop_substitution_composition tv1 tv2 tv3 =
   -- Test transitivity of equality
-  property $ (tv1 == tv2 && tv2 == tv3) ==> (tv1 == tv3)
+  property $ if (tv1 == tv2 && tv2 == tv3) then (tv1 == tv3) else True
 
 -- Property: Type constraint simplification
 prop_constraint_simplification :: TypeConstraint -> Property

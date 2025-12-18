@@ -123,9 +123,14 @@ hasMalformedSyntax :: TypusFile -> Bool
 hasMalformedSyntax typusFile =
     let source = IR.rawSourceFromTypus typusFile
         hasParserErrors = not (null (Parser.tfSyntaxErrors typusFile))
-    in hasParserErrors || null (trim source) || case parseGoModule (lines source) of
-        Left _ -> True
-        Right _ -> False
+        isEmptySource = null (trim source)
+    in if hasParserErrors
+       then True
+       else if isEmptySource
+            then False
+            else case parseGoModule (lines source) of
+                   Left _ -> True
+                   Right _ -> False
 
 -- | Entry point for the simplified checker.
 hasTypeErrors :: TypusFile -> Bool

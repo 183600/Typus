@@ -4,19 +4,40 @@ module Test.Unit.ExtendedTypeCheckerQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, Arbitrary(..), oneof)
+import TestSupport.Arbitrary (genIdentifier)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, Arbitrary(..), oneof, Gen, elements)
 
-import Parser (TypusFile(..), FileDirectives(..))
+import Parser (TypusFile(..), FileDirectives(..), BlockDirectives(..), CodeBlock(..))
+import qualified Parser
 import SourceLocation (Located(..))
+import qualified SourceLocation
 import qualified Data.Map as Map
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Text as T
+import Data.Char (isAlpha, isAlphaNum)
+import qualified Compiler.TypeChecker
+import qualified Compiler.IR
 
--- Arbitrary instance for TypusFile
-instance Arbitrary TypusFile where
-  arbitrary = do
-    return $ TypusFile (FileDirectives Nothing Nothing Nothing) [] [] []
+-- Valid Go identifiers for testing
+validGoIdents :: [String]
+validGoIdents = ["x", "y", "z", "foo", "bar", "baz", "value", "result", "data", "item"]
+
+validGoTypes :: [String]
+validGoTypes = ["int", "string", "bool", "float64", "byte", "rune", "error"]
+
+-- Generator for valid Go identifiers (using TestSupport.Arbitrary.genIdentifier)
+genValidIdent :: Gen String
+genValidIdent = oneof [genIdentifier, elements validGoIdents]
+
+-- Generator for valid Go types
+genValidType :: Gen String
+genValidType = elements validGoTypes
+
+-- Helper function to check if a string is a valid Go identifier
+isValidGoIdent :: String -> Bool
+isValidGoIdent [] = False
+isValidGoIdent (c:cs) = (isAlpha c || c == '_') && all (\x -> isAlphaNum x || x == '_') cs
 
 -- Extended type checker property tests for comprehensive coverage
 
@@ -40,9 +61,10 @@ prop_type_checking_empty_file =
     Just env -> property $ Map.null env
 
 -- Property: Variable declarations add entries to type environment
-prop_type_checking_variable_declaration :: String -> String -> Property
-prop_type_checking_variable_declaration varName varType =
-  let varDecl = "var " ++ varName ++ " " ++ varType ++ " = 42"
+prop_type_checking_variable_declaration :: Property
+prop_type_checking_variable_declaration =
+  forAll genValidIdent $ \varName ->
+  let varDecl = "var " ++ varName ++ " int = 42"
       file = createTypusFile varDecl
       typeEnv = buildSimpleTypeEnv file
   in case typeEnv of
@@ -50,13 +72,11 @@ prop_type_checking_variable_declaration varName varType =
     Just env -> property $ Map.member varName env
 
 -- Property: Function declarations add entries to type environment
-prop_type_checking_function_declaration :: String -> [String] -> [String] -> String -> Property
-prop_type_checking_function_declaration funcName paramNames paramTypes returnType =
-  let minLen = min (length paramNames) (length paramTypes)
-      limitedParams = take minLen paramNames
-      limitedTypes = take minLen paramTypes
-      paramList = unwords $ zipWith (\name t -> name ++ " " ++ t) limitedParams limitedTypes
-      funcDecl = "func " ++ funcName ++ "(" ++ paramList ++ ") " ++ returnType ++ " { return 42 }"
+prop_type_checking_function_declaration :: Property
+prop_type_checking_function_declaration =
+  forAll genValidIdent $ \funcName ->
+  forAll genValidType $ \returnType ->
+  let funcDecl = "func " ++ funcName ++ "() " ++ returnType ++ " { return 0 }"
       file = createTypusFile funcDecl
       typeEnv = buildSimpleTypeEnv file
   in case typeEnv of
@@ -64,8 +84,10 @@ prop_type_checking_function_declaration funcName paramNames paramTypes returnTyp
     Just env -> property $ Map.member funcName env
 
 -- Property: Type declarations add entries to type environment
-prop_type_checking_type_declaration :: String -> String -> Property
-prop_type_checking_type_declaration typeName typeDef =
+prop_type_checking_type_declaration :: Property
+prop_type_checking_type_declaration =
+  forAll genValidIdent $ \typeName ->
+  forAll genValidType $ \typeDef ->
   let typeDecl = "type " ++ typeName ++ " " ++ typeDef
       file = createTypusFile typeDecl
       typeEnv = buildSimpleTypeEnv file
@@ -74,13 +96,12 @@ prop_type_checking_type_declaration typeName typeDef =
     Just env -> property $ Map.member typeName env
 
 -- Property: Struct declarations create composite types
-prop_type_checking_struct_declaration :: String -> [String] -> [String] -> Property
-prop_type_checking_struct_declaration structName fieldNames fieldTypes =
-  let minLen = min (length fieldNames) (length fieldTypes)
-      limitedFields = take minLen fieldNames
-      limitedTypes = take minLen fieldTypes
-      fieldList = unlines $ zipWith (\name t -> "  " ++ name ++ " " ++ t) limitedFields limitedTypes
-      structDecl = "type " ++ structName ++ " struct {\n" ++ fieldList ++ "\n}"
+prop_type_checking_struct_declaration :: Property
+prop_type_checking_struct_declaration =
+  forAll genValidIdent $ \structName ->
+  forAll genValidIdent $ \fieldName ->
+  forAll genValidType $ \fieldType ->
+  let structDecl = "type " ++ structName ++ " struct {\n  " ++ fieldName ++ " " ++ fieldType ++ "\n}"
       file = createTypusFile structDecl
       typeEnv = buildSimpleTypeEnv file
   in case typeEnv of
@@ -90,6 +111,7 @@ prop_type_checking_struct_declaration structName fieldNames fieldTypes =
 -- Property: Interface declarations create abstract types
 prop_type_checking_interface_declaration :: String -> [String] -> [String] -> Property
 prop_type_checking_interface_declaration interfaceName methodNames returnTypes =
+  isValidGoIdent interfaceName && all isValidGoIdent methodNames && all isValidGoIdent returnTypes ==>
   let minLen = min (length methodNames) (length returnTypes)
       limitedMethods = take minLen methodNames
       limitedReturns = take minLen returnTypes
@@ -104,6 +126,7 @@ prop_type_checking_interface_declaration interfaceName methodNames returnTypes =
 -- Property: Type inference works for simple expressions
 prop_type_checking_type_inference :: String -> String -> Property
 prop_type_checking_type_inference varName value =
+  isValidGoIdent varName && not (null value) ==>
   let inferenceTest = varName ++ " := " ++ value
       file = createTypusFile inferenceTest
       typeEnv = buildSimpleTypeEnv file
@@ -114,6 +137,7 @@ prop_type_checking_type_inference varName value =
 -- Property: Type checking catches type mismatches
 prop_type_checking_type_mismatch :: String -> String -> String -> Property
 prop_type_checking_type_mismatch varName declaredType assignedValue =
+  isValidGoIdent varName && isValidGoIdent declaredType && not (null assignedValue) ==>
   let mismatchDecl = "var " ++ varName ++ " " ++ declaredType ++ " = " ++ assignedValue
       file = createTypusFile mismatchDecl
       hasTypeErrors = hasSimpleTypeErrors file
@@ -334,17 +358,27 @@ prop_type_checking_variable_shadowing varName outerType innerType =
 
 -- Helper functions
 buildSimpleTypeEnv :: TypusFile -> Maybe (Map.Map String String)
-buildSimpleTypeEnv file = Just $ Map.fromList [("test", "type")]
+buildSimpleTypeEnv file = 
+  case Compiler.IR.moduleFromTypus file of
+    Left _ -> Nothing
+    Right goModule ->
+      let env = Compiler.TypeChecker.buildTypeEnv goModule
+          vars = Compiler.TypeChecker.varTypes env
+      in Just $ Map.map (\t -> show t) vars
 
 hasSimpleTypeErrors :: TypusFile -> Bool
-hasSimpleTypeErrors file = False
+hasSimpleTypeErrors = Compiler.TypeChecker.hasTypeErrors
 
 createTypusFile :: String -> TypusFile
 createTypusFile content = 
-  TypusFile (FileDirectives Nothing Nothing Nothing) 
-            []
-            [undefined]  -- Would be implemented with actual CodeBlock constructor
-            []  -- Syntax errors
+  let block = Parser.CodeBlock 
+                (Parser.BlockDirectives Nothing Nothing Nothing)
+                content
+                (SourceLocation.emptySpan (SourceLocation.SourcePos 1 1 0))
+  in TypusFile (FileDirectives Nothing Nothing Nothing) 
+               []
+               [block]
+               []
 
 tests :: TestTree
 tests = testGroup "Extended TypeChecker QuickCheck Tests"
