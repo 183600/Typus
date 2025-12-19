@@ -41,6 +41,23 @@ jobs:
           git config user.name "iflow-bot"
           git config user.email "iflow-bot@users.noreply.github.com"
 
+      - name: Push code to Gitee (pre-run, non-blocking)
+        shell: bash
+        env:
+          GITEE_USERNAME: ${{ secrets.GITEE_USERNAME }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          set -e
+          if [[ -z "${GITEE_USERNAME:-}" || -z "${GITEE_TOKEN:-}" ]]; then
+            echo "Gitee 凭据未配置（GITEE_USERNAME/GITEE_TOKEN），跳过推送，不影响后续步骤。"
+            exit 0
+          fi
+          echo "➡️ 正在将当前分支推送到 Gitee: https://gitee.com/qwe12345678/typus.git"
+          # 使用一次性带凭据的 URL 推送，避免把凭据写入 remote 配置
+          git push --follow-tags "https://${GITEE_USERNAME}:${GITEE_TOKEN}@gitee.com/qwe12345678/typus.git" HEAD:master || {
+            echo "⚠️ 推送到 Gitee 失败（已忽略，不影响后续流程）"
+          }
+
       - name: Setup Node (for iFlow CLI)
         uses: actions/setup-node@v4
         with:
