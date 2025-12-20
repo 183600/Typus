@@ -50,6 +50,7 @@ module Compiler.TypeChecker (
 ) where
 
 import Parser (TypusFile(..), FileDirectives(..))
+import SyntaxValidator (SyntaxError(..), ErrorType(..))
 import Compiler.Errors (CompilerError)
 import Compiler.GoAst
 import Compiler.GoParsing (consumeNames, splitTopLevel, stripLineComment)
@@ -122,9 +123,11 @@ data TypeCheckDiagnostic = TypeCheckDiagnostic
 hasMalformedSyntax :: TypusFile -> Bool
 hasMalformedSyntax typusFile =
     let source = IR.rawSourceFromTypus typusFile
-        hasParserErrors = not (null (Parser.tfSyntaxErrors typusFile))
+        -- Only check for critical syntax errors (like MissingBrace)
+        hasCriticalErrors = any (\e -> errorType e == MissingBrace) 
+                               (Parser.tfSyntaxErrors typusFile)
         isEmptySource = null (trim source)
-    in if hasParserErrors
+    in if hasCriticalErrors
        then True
        else if isEmptySource
             then False

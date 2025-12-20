@@ -288,7 +288,10 @@ isValidIdentifier name =
             [] -> False
             (c : _) -> not (isDigit c) && all isAllowed name
   where
-    isAllowed char = isAlphaNum char || char == '_'
+    isAllowed char = isAsciiAlphaNum char || char == '_'
+    isAsciiAlphaNum char = (char >= 'a' && char <= 'z') || 
+                          (char >= 'A' && char <= 'Z') || 
+                          (char >= '0' && char <= '9')
 
 createSymbolInfo :: String -> Maybe Dep.TypeVar -> Int -> SymbolCollector SymbolInfo
 createSymbolInfo name mType _lineNum = do

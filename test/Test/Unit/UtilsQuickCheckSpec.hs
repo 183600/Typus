@@ -193,11 +193,11 @@ prop_removeComments_removes_both :: String -> String -> String -> Property
 prop_removeComments_removes_both before comment after =
   let content = before ++ "/* block comment */" ++ comment ++ "// line comment\n" ++ after
       result = removeComments content
-  in ('\'' `notElem` before && '"' `notElem` before && '\'' `notElem` comment && '"' `notElem` comment) ==>
+  in ('\'' `notElem` before && '"' `notElem` before && '\'' `notElem` comment && '"' `notElem` comment && not ("*/" `isInfixOf` after)) ==>
      property $ not ("/*" `Data.List.isInfixOf` result) .&&.
      not ("*/" `Data.List.isInfixOf` result) .&&.
      not ("// line comment" `Data.List.isInfixOf` result) .&&.
-     after `Data.List.isInfixOf` result
+     after `isInfixOf` result
 
 -- Property: removeComments preserves comments in strings
 prop_removeComments_preserves_string_comments :: String -> String -> Property
@@ -678,7 +678,10 @@ prop_string_processing_very_long_lines lineLen content =
       longLine = replicate lineLen ' ' ++ safeContent ++ replicate lineLen ' '
       trimmed = trim longLine
       processed = removeLineComments longLine
-  in property $ (trimmed == safeContent) .&&.
+      -- trim should remove the leading and trailing spaces we added
+      -- but preserve the original content structure
+      expectedTrimmed = trim safeContent
+  in property $ (trimmed == expectedTrimmed) .&&.
      length processed <= length longLine + 1
 
 -- Property: Comment removal with nested structures

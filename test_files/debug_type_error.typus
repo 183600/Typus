@@ -1,5 +1,0 @@
-package main
-func expectInt(x int) int { return x }
-func main() {
-    expectInt("string")
-}

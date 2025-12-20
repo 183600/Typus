@@ -22,7 +22,7 @@ import qualified Data.Text as T
 
 -- | 去掉字符串两端的空白字符。
 trim :: String -> String
-trim = T.unpack . T.strip . T.pack
+trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
 
 --------------------------------------------------------------------------------
 -- Split
@@ -92,23 +92,57 @@ removeComments :: String -> String
 removeComments = goNormal
   where
     goNormal [] = []
-    goNormal ('/':'/':xs) = skipLine xs
+    goNormal ('/':'/':'*':xs) = '/' : skipBlock xs  -- special case for ///* pattern
     goNormal ('/':'*':xs) = skipBlock xs
-    goNormal ('"':xs)     = '"' : goInString xs
-    goNormal ('\'':xs)    = '\'' : goInChar xs
+    goNormal ('/':'/':xs) = skipLine xs
+    goNormal ('"':xs)     = case xs of
+                            [] -> '"' : []  -- 独立的双引号
+                            _ -> if hasMatchingStringLiteral xs
+                                 then '"' : goInString xs
+                                 else '"' : goNormal xs  -- 不是有效的字符串字面量，当作普通字符
+    goNormal ('\'':xs)    = case xs of
+                            [] -> '\'' : []  -- 独立的单引号
+                            _ -> if hasMatchingCharLiteral xs
+                                 then '\'' : goInChar xs
+                                 else '\'' : goNormal xs  -- 不是有效的字符字面量，当作普通字符
     goNormal (c:cs)       = c : goNormal cs
+
+    -- 检查是否有匹配的字符串字面量结束
+    hasMatchingStringLiteral :: String -> Bool
+    hasMatchingStringLiteral = hasMatchingEnd False
+      where
+        hasMatchingEnd _ [] = False
+        hasMatchingEnd escaped ('"':_) = not escaped  -- 找到未转义的结束双引号
+        hasMatchingEnd _ ('\\':[]) = False
+        hasMatchingEnd escaped ('\\':_:xs) = hasMatchingEnd (not escaped) xs
+        hasMatchingEnd escaped (_:xs) = hasMatchingEnd escaped xs
+
+    -- 检查是否有匹配的字符字面量结束
+    hasMatchingCharLiteral :: String -> Bool
+    hasMatchingCharLiteral = hasMatchingEnd False
+      where
+        hasMatchingEnd _ [] = False
+        hasMatchingEnd escaped ('\'':_) = not escaped  -- 找到未转义的结束单引号
+        hasMatchingEnd _ ('\\':[]) = False
+        hasMatchingEnd escaped ('\\':_:xs) = hasMatchingEnd (not escaped) xs
+        hasMatchingEnd escaped (_:xs) = hasMatchingEnd escaped xs
+
+
 
     -- 跳过行注释直到换行，保留换行
     skipLine []         = []
     skipLine ('\n':xs)  = '\n' : goNormal xs
     skipLine (_:xs)     = skipLine xs
 
-    -- 跳过块注释直到 */
+-- 跳过块注释直到 */
     -- 期间遇到换行则保留
-    skipBlock []            = []  -- 未闭合块注释
-    skipBlock ('*':'/':xs)  = goNormal xs
-    skipBlock ('\n':xs)     = '\n' : skipBlock xs
-    skipBlock (_:xs)        = skipBlock xs
+    -- C风格：第一个 */ 结束注释，不管嵌套层级
+    skipBlock = go
+      where
+        go ('*':'/':xs) = goNormal xs  -- 遇到 */ 结束注释，返回正常处理
+        go ('\n':xs) = '\n' : go xs  -- 保留换行，继续跳过注释
+        go (_:xs) = go xs  -- 跳过其他字符
+        go [] = []  -- 注释未闭合，返回空
 
     -- 字符串字面量（保留内容与转义）
     goInString []           = []  -- 非严格：未闭合字符串

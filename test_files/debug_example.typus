@@ -1,9 +1,0 @@
-package main
-
-//! ownership: on
-//! dependent_types: on
-
-func main() {
-    x := 42
-    println(x)
-}

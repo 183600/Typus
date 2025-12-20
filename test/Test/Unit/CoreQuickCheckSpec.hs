@@ -211,7 +211,11 @@ extractOwnershipId (Borrowed id) = id
 extractOwnershipId (MutBorrowed id) = id
 
 isValidIdentifier :: String -> Bool
-isValidIdentifier name = not (null name) && all isAlphaNum name
+isValidIdentifier name = not (null name) && all isAsciiAlphaNum name
+  where
+    isAsciiAlphaNum char = (char >= 'a' && char <= 'z') || 
+                          (char >= 'A' && char <= 'Z') || 
+                          (char >= '0' && char <= '9')
 
 
 

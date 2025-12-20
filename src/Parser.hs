@@ -117,15 +117,11 @@ blockDirectiveParser = do
       pure (key, value)
 
 parseTypus :: String -> Either String TypusFile
-parseTypus input = 
-    -- Check for syntax errors before parsing
-    if "if true" `isInfixOf` input && "if true {" `isInfixOf` input == False
-    then Left "syntax error at line 3: missing opening brace after if statement"
-    else do
-        parsedLines <- case MP.runParser parseDocument "<input>" input of
-          Left bundle -> Left (errorBundlePretty bundle)
-          Right ls    -> Right ls
-        buildTypusFile parsedLines
+parseTypus input = do
+    parsedLines <- case MP.runParser parseDocument "<input>" input of
+      Left bundle -> Left (errorBundlePretty bundle)
+      Right ls    -> Right ls
+    buildTypusFile parsedLines
 
 -- ============================================================================
 -- Megaparsec-backed line capture
@@ -175,11 +171,11 @@ buildTypusFile :: [ParsedLine] -> Either String TypusFile
 buildTypusFile lines0 = do
     -- Check for multiple package declarations
     checkMultiplePackageDeclarations lines0
+    -- Check for if statements without opening brace
+    checkIfStatementsWithBraces lines0
     -- Check for syntax errors
     let content = unlines (map plText lines0)
         syntaxErrors = SyntaxValidator.validateSyntax content
-        -- Only report critical syntax errors (like unclosed braces)
-        criticalErrors = filter (\e -> SyntaxValidator.errorType e == SyntaxValidator.MissingBrace) syntaxErrors
     -- Always try to parse, even with syntax errors
     (fileDirs, buildTags, rest) <- parseFileDirectivesFromParsedLines lines0
     blocks <- parseBlocksFromParsedLines rest
@@ -187,8 +183,23 @@ buildTypusFile lines0 = do
       { tfDirectives = fileDirs
       , tfBuildTags = buildTags
       , tfBlocks = blocks
-      , tfSyntaxErrors = criticalErrors
+      , tfSyntaxErrors = syntaxErrors
       }
+
+-- Check for if statements without opening brace
+checkIfStatementsWithBraces :: [ParsedLine] -> Either String ()
+checkIfStatementsWithBraces lines' = 
+    case findIfWithoutBrace lines' of
+      Just (lineNum, _) -> Left $ "syntax error at line " ++ show lineNum ++ ": missing opening brace after if statement"
+      Nothing -> Right ()
+  where
+    findIfWithoutBrace [] = Nothing
+    findIfWithoutBrace (line:rest) =
+      let text = plText line
+          trimmed = trim text
+      in if "if " `isPrefixOf` trimmed && not ("{" `isInfixOf` text)
+         then Just (plSpan line, text)
+         else findIfWithoutBrace rest
 
 -- Check for multiple package declarations
 checkMultiplePackageDeclarations :: [ParsedLine] -> Either String ()
