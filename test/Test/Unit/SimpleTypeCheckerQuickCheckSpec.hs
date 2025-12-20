@@ -4,12 +4,9 @@
 module Test.Unit.SimpleTypeCheckerQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck 
-import qualified Data.List as Data.List
+import Test.QuickCheck (Property, (==>), property)
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 
 -- ============================================================================
 -- Core TypeChecker Properties
@@ -90,11 +87,11 @@ prop_type_inference_respects_constraints env expressions expectedTypes =
 
 -- Property: Type checking catches type mismatches
 prop_typechecking_catches_mismatches :: Map.Map String Int -> Int -> Int -> Property
-prop_typechecking_catches_mismatches env expectedType actualType =
-  let isCompatible = areTypesCompatible expectedType actualType
+prop_typechecking_catches_mismatches _ expectedType actualType =
+  let typesAreCompatible = areTypesCompatible expectedType actualType
   in property $ if expectedType == actualType 
-                then isCompatible 
-                else not isCompatible
+                then typesAreCompatible 
+                else not typesAreCompatible
 
 -- Property: Function parameter checking is strict
 prop_function_parameter_checking_strict :: [Int] -> [Int] -> Property
@@ -112,7 +109,7 @@ prop_return_type_checking_enforced :: Map.Map String Int -> Int -> String -> Pro
 prop_return_type_checking_enforced env expectedReturnType functionBody =
   let actualReturnType = inferFunctionReturnType env functionBody
   in case actualReturnType of
-    Just actual -> property $ areTypesCompatible expectedReturnType actual
+    Just actualType -> property $ areTypesCompatible expectedReturnType actualType
     Nothing -> property $ True  -- May fail to infer
 
 -- Property: Type variable binding respects scope
@@ -188,7 +185,8 @@ hasValidTypeStructure :: Int -> Bool
 hasValidTypeStructure _ = True  -- Simplified for testing
 
 instantiateGeneric :: String -> [Int] -> Maybe Int
-instantiateGeneric _ args = if null args then Nothing else Just (head args)
+instantiateGeneric _ [] = Nothing
+instantiateGeneric _ (x:_) = Just x
 
 isValidInstantiation :: Int -> [Int] -> Bool
 isValidInstantiation _ _ = True  -- Simplified for testing

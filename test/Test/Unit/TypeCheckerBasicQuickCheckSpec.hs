@@ -7,7 +7,6 @@ import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
-import Data.List (nub)
 
 import TestSupport.Arbitrary ()
 
@@ -32,7 +31,7 @@ typeUnificationProperties = testGroup "Type Unification Properties"
 
 typeInferenceProperties :: TestTree
 typeInferenceProperties = testGroup "Type Inference Properties"
-  [ fastProperty "inferring type of literal is deterministic" $ \(n :: Int) ->
+  [ fastProperty "inferring type of literal is deterministic" $ \(_n :: Int) ->
       let t1 = "Int"
           t2 = "Int"
       in t1 === t2

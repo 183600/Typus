@@ -6,12 +6,7 @@ import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
-import qualified Data.Set as Set
-import Data.List (sort, nub, find)
-import Data.Maybe (isJust, isNothing, fromMaybe)
 
-import qualified Compiler.TypeChecker as TC
-import Analyzer.Types
 import TestSupport.Arbitrary ()
 
 -- 测试类型的基本属性
@@ -61,8 +56,8 @@ prop_type_function_preserves_validity =
 -- 测试类型错误
 prop_type_error_has_message :: Property
 prop_type_error_has_message =
-  forAll arbitrary $ \error ->
-    let message = getErrorMessage error
+  forAll arbitrary $ \errorType ->
+    let message = getErrorMessage errorType
     in not (null message)
 
 -- 辅助函数

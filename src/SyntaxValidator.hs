@@ -54,6 +54,16 @@ data SyntaxError = SyntaxError
     , lineContent :: String
     } deriving (Show, Eq)
 
+instance Ord SyntaxError where
+  compare err1 err2 = 
+    case compare (errorMessage err1) (errorMessage err2) of
+      LT -> LT
+      GT -> GT
+      EQ -> case compare (lineNumber err1) (lineNumber err2) of
+        LT -> LT
+        GT -> GT
+        EQ -> compare (columnNumber err1) (columnNumber err2)
+
 -- Token types for better parsing
 data Token
     = TString String Int Int       -- content, line, column

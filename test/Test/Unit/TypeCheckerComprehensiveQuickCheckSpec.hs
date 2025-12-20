@@ -12,23 +12,19 @@ module Test.Unit.TypeCheckerComprehensiveQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
-  ( Property, (===), (==>) , property, counterexample, classify, cover
-  , Arbitrary(..), Gen, oneof, choose, listOf, vectorOf, elements, (.&&.)
-  , sized, frequency, suchThat, resize
+  ( Property, (==>), property, classify
+  , Arbitrary, arbitrary, Gen, oneof, choose, listOf, elements
+  , sized
   )
-import Data.Char (isAlphaNum, isUpper, isLower)
-import Data.List (isPrefixOf, tails, isInfixOf)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe, catMaybes, listToMaybe, isJust, isNothing, fromJust)
+import Data.Maybe (listToMaybe, isJust, isNothing, fromJust)
 import Data.Either (isLeft, isRight)
+import Data.List (isInfixOf)
 import qualified Data.Text as T
 
 import qualified Compiler.TypeChecker as TC
-import Compiler.GoAst
 import qualified Compiler.Errors as CE
 import Compiler.Errors.Core (ErrorLocation(..))
-import Ownership
-import Analyzer.Types
 import qualified Dependencies.TypeSystem as DT
 
 -- Enhanced Arbitrary instances for comprehensive type checking

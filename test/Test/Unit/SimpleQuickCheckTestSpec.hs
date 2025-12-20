@@ -4,15 +4,12 @@ module Test.Unit.SimpleQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck
+import Test.QuickCheck (Property)
 import qualified Data.Map as Map
-import Data.List (sort, nub, reverse, concat)
+import qualified Data.List as Data.List
 
-import Utils (trim, splitBy, normalizeIndentation)
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAfter)
-import Compiler.GoLexer (GoToken(..), GoTokenKind(..), tokenizeGo)
+import Utils (trim, splitBy)
 import Ownership.Parser (Expr(..), Stmt(..))
-import Compiler.TypeChecker (Type(..))
 import TestSupport.Arbitrary ()
 import TestSupport.ExtendedArbitrary ()
 
@@ -85,7 +82,7 @@ prop_reverse_reverse :: [Int] -> Property
 prop_reverse_reverse xs = reverse (reverse xs) === xs
 
 prop_sort_preserves_length :: [Int] -> Property
-prop_sort_preserves_length xs = length (sort xs) === length xs
+prop_sort_preserves_length xs = length (Data.List.sort xs) === length xs
 
 prop_concat_empty :: [Int] -> Property
 prop_concat_empty xs = [] ++ xs === xs
@@ -100,4 +97,4 @@ prop_expr_type_preserved :: Expr -> Property
 prop_expr_type_preserved expr = property True
 
 prop_stmt_nesting_depth :: Stmt -> Property
-prop_stmt_nesting_depth stmt = property True
+prop_stmt_nesting_depth = const (property True)

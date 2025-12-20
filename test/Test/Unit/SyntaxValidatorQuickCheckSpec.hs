@@ -3,38 +3,25 @@
 module Test.Unit.SyntaxValidatorQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import TestSupport.Arbitrary
 import TestSupport.ExtendedArbitrary ()
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.))
+import Test.QuickCheck (Property, (===), (==>), property, (.&&.), forAll)
+import Test.QuickCheck.Gen (Gen, listOf, elements)
 
 import SyntaxValidator
   ( SyntaxError(..)
   , ErrorType(..)
   , validateSyntax
   )
--- import Analyzer.SymbolTable (isValidIdentifier) -- Not exported
 import Data.List (isInfixOf)
 import Data.Char (isAlphaNum, isLetter, isAlpha, isDigit, isPrint)
-
--- Ord instance for SyntaxError for testing
-instance Ord SyntaxError where
-  compare err1 err2 = 
-    case compare (errorMessage err1) (errorMessage err2) of
-      LT -> LT
-      GT -> GT
-      EQ -> case compare (lineNumber err1) (lineNumber err2) of
-        LT -> LT
-        GT -> GT
-        EQ -> compare (columnNumber err1) (columnNumber err2)
 
 -- Local implementation of isValidType since it's not exported from SyntaxValidator
 isValidType :: String -> Bool
 isValidType "" = False
-isValidType s = all isValidTypeChar s && isAlpha (head s)
+isValidType (c:cs) = isAlpha c && all isValidTypeChar cs
   where
-    isValidTypeChar c = isAlphaNum c || c == '_'
+    isValidTypeChar ch = isAlphaNum ch || ch == '_'
 
 -- Local implementation of isValidIdentifier since it's not exported from Analyzer.SymbolTable
 isValidIdentifier :: String -> Bool
@@ -49,8 +36,8 @@ isValidIdentifier name =
     isAsciiAlphaNum char = (char >= 'a' && char <= 'z') || 
                           (char >= 'A' && char <= 'Z') || 
                           (char >= '0' && char <= '9')
-    isReservedName name =
-        name
+    isReservedName identifier =
+        identifier
             `elem` [ "fmt"
                    , "func"
                    , "var"
@@ -77,10 +64,9 @@ isValidIdentifier name =
 -- Property: SyntaxError with message and position
 prop_syntaxerror_preserves :: String -> Int -> Int -> Property
 prop_syntaxerror_preserves message line col =
-  let error = SyntaxError MissingBrace message line col ""
-  in case error of
+  let err = SyntaxError MissingBrace message line col ""
+  in case err of
     SyntaxError _ m _ _ _ -> m === message
-    _ -> property False
 
 -- Helper functions for accessing SyntaxError fields  
 errorLine :: SyntaxError -> Int
@@ -105,87 +91,89 @@ prop_syntaxerror_ordering err1 err2 =
 
 -- Property: SyntaxError show
 prop_syntaxerror_show :: SyntaxError -> Property
-prop_syntaxerror_show error =
-  let shown = show error
+prop_syntaxerror_show err =
+  let shown = show err
   in property $ not (null shown)
 
 -- Property: SyntaxError show contains message
 prop_syntaxerror_show_contains_message :: String -> Int -> Int -> Property
 prop_syntaxerror_show_contains_message message line col =
   not (null message) && all (\c -> isPrint c && c /= '"' && c /= '\\') message && any isPrint message ==>
-  let error = SyntaxError MissingBrace message line col ""
-      shown = show error
+  let err = SyntaxError MissingBrace message line col ""
+      shown = show err
   in property $ not (null shown) && "SyntaxError" `isInfixOf` shown
 
 -- Property: SyntaxError show contains position
 prop_syntaxerror_show_contains_position :: String -> Int -> Int -> Property
 prop_syntaxerror_show_contains_position message line col =
-  let error = SyntaxError MissingParenthesis message line col ""
-      shown = show error
+  let err = SyntaxError MissingParenthesis message line col ""
+      shown = show err
   in property $ show line `isInfixOf` shown &&
      show col `isInfixOf` shown
 
 -- Property: SyntaxError with empty message
 prop_syntaxerror_empty_message :: Int -> Int -> Property
 prop_syntaxerror_empty_message line col =
-  let error = SyntaxError MissingBracket "" line col ""
-  in property $ (errorMessage error === "") .&&.
-                (lineNumber error === line) .&&.
-                (columnNumber error === col)
+  let err = SyntaxError MissingBracket "" line col ""
+  in property $ (errorMessage err === "") .&&.
+                (lineNumber err === line) .&&.
+                (columnNumber err === col)
 
 -- Property: SyntaxError with negative position
 prop_syntaxerror_negative_position :: String -> Property
 prop_syntaxerror_negative_position message =
-  let error = SyntaxError MissingBrace message (-1) (-5) ""
-  in property $ (lineNumber error === -1) .&&. (columnNumber error === -5)
+  let err = SyntaxError MissingBrace message (-1) (-5) ""
+  in property $ (lineNumber err === -1) .&&. (columnNumber err === -5)
 
 -- Property: SyntaxError with zero position
 prop_syntaxerror_zero_position :: String -> Property
 prop_syntaxerror_zero_position message =
-  let error = SyntaxError MissingBrace message 0 0 ""
-  in property $ (lineNumber error === 0) .&&. (columnNumber error === 0)
+  let err = SyntaxError MissingBrace message 0 0 ""
+  in property $ (lineNumber err === 0) .&&. (columnNumber err === 0)
 
 -- Property: SyntaxError with zero values
-prop_syntaxerror_zero :: Property
-prop_syntaxerror_zero =
-  let error = SyntaxError MissingSemicolon "error" 0 0 ""
-  in property $ (lineNumber error === 0) .&&. (columnNumber error === 0)
-
 -- Property: SyntaxError with large position
 prop_syntaxerror_large_position :: String -> Property
 prop_syntaxerror_large_position message =
-  let error = SyntaxError MissingBracket message 999999 999999 ""
-  in property $ (lineNumber error === 999999) .&&. (columnNumber error === 999999)
+  let err = SyntaxError MissingBracket message 999999 999999 ""
+  in property $ (lineNumber err === 999999) .&&. (columnNumber err === 999999)
 
 -- Property: SyntaxError with special characters
 prop_syntaxerror_special_chars :: Int -> Int -> Property
 prop_syntaxerror_special_chars line col =
   let specialChars = "!@#$%^&*()_+-=[]{}|;':\",./<>?"
-      error = SyntaxError MissingBrace specialChars line col ""
-  in errorMessage error === specialChars
+      err = SyntaxError MissingBrace specialChars line col ""
+  in errorMessage err === specialChars
 
 -- Property: SyntaxError with Unicode characters
 prop_syntaxerror_unicode :: Int -> Int -> Property
 prop_syntaxerror_unicode line col =
   let unicode = "测试错误信息🚀"
-      error = SyntaxError MissingParenthesis unicode line col ""
-  in errorMessage error === unicode
+      err = SyntaxError MissingParenthesis unicode line col ""
+  in errorMessage err === unicode
 
 -- Property: isValidIdentifier with valid identifiers
 prop_isvalididentifier_valid :: String -> Property
 prop_isvalididentifier_valid name =
-  not (null name) && isLetter (head name) && all isAlphaNum (tail name) ==> 
+  not (null name) && isLetter (unsafeHead name) && all isAlphaNum (unsafeTail name) ==> 
   if all isAscii name 
   then isValidIdentifier name === True
   else isValidIdentifier name === False
   where
     isAscii char = char <= '\127'
+    unsafeHead (x:_) = x
+    unsafeHead [] = error "impossible: checked null above"
+    unsafeTail (_:xs) = xs
+    unsafeTail [] = error "impossible: checked null above"
 
 -- Property: isValidIdentifier with invalid identifiers
 prop_isvalididentifier_invalid_start :: String -> Property
 prop_isvalididentifier_invalid_start name =
-  not (null name) && not (isLetter (head name)) && head name /= '_' ==> 
+  not (null name) && not (isLetter (unsafeHead name)) && unsafeHead name /= '_' ==> 
   isValidIdentifier name === False
+  where
+    unsafeHead (x:_) = x
+    unsafeHead [] = error "impossible: checked null above"
 
 -- Property: isValidIdentifier with empty string
 prop_isvalididentifier_empty :: Property
@@ -223,16 +211,24 @@ prop_isvalididentifier_unicode =
   in property $ isValidIdentifier name === False -- Current implementation only supports ASCII characters
 
 -- Property: isValidType with valid types
-prop_isvalidtype_valid :: String -> Property
-prop_isvalidtype_valid typeName =
-  not (null typeName) && isLetter (head typeName) && all (\c -> isAlphaNum c || c == '_') (tail typeName) ==> 
+prop_isvalidtype_valid :: Property
+prop_isvalidtype_valid = forAll genValidType $ \typeName ->
   isValidType typeName === True
+  where
+    genValidType :: Gen String
+    genValidType = do
+      first <- elements (['a'..'z'] ++ ['A'..'Z'])
+      rest <- listOf $ elements (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_'])
+      return (first:rest)
 
 -- Property: isValidType with invalid types
 prop_isvalidtype_invalid_start :: String -> Property
 prop_isvalidtype_invalid_start typeName =
-  not (null typeName) && not (isLetter (head typeName)) ==> 
+  not (null typeName) && not (isLetter (unsafeHead typeName)) ==> 
   isValidType typeName === False
+  where
+    unsafeHead (x:_) = x
+    unsafeHead [] = error "impossible: checked null above"
 
 -- Property: isValidType with underscores
 prop_isvalidtype_underscores :: Property

@@ -1,6 +1,8 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 module SourceLocation (
     -- Source location tracking
     SourcePos(..),
@@ -54,6 +56,8 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Control.Monad.State (State, get, put, runState, evalState)
 import Compiler.Errors.Core (ErrorLocation(..))
+import Control.DeepSeq (NFData)
+import GHC.Generics (Generic)
 
 -- ============================================================================
 -- Source Position
@@ -63,7 +67,8 @@ data SourcePos = SourcePos
     { posLine :: Int
     , posColumn :: Int
     , posOffset :: Int
-    } deriving stock (Show, Eq, Ord)
+    } deriving stock (Show, Eq, Ord, Generic)
+    deriving anyclass NFData
 
 -- Start position (1-based)
 startPos :: SourcePos
@@ -100,7 +105,8 @@ posAtLineCol = SourcePos
 data SourceSpan = SourceSpan
     { spanStart :: SourcePos
     , spanEnd :: SourcePos
-    } deriving stock (Show, Eq, Ord)
+    } deriving stock (Show, Eq, Ord, Generic)
+    deriving anyclass NFData
 
 -- Empty span at a position
 emptySpan :: SourcePos -> SourceSpan
@@ -137,7 +143,8 @@ data Located a = Located
     { locValue :: a
     , locPos :: SourcePos  
     , locSpan :: SourceSpan
-    } deriving (Show, Eq, Functor)
+    } deriving (Show, Eq, Functor, Generic)
+    deriving anyclass NFData
 
 -- Class for things that have locations
 class HasLocation a where

@@ -1,2 +1,0 @@
-Coverage data is currently unavailable.
-Run `stack test --coverage` followed by `scripts/coverage-report.sh` to refresh this report.

@@ -1,2 +1,0 @@
-覆盖率模块明细尚未生成。
-请运行 `stack test --coverage` 并执行 `scripts/coverage-report.sh` 获取最新的模块级覆盖率信息。

@@ -3,16 +3,14 @@
 module Test.Unit.SymbolTableQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import TestSupport.Arbitrary
+import TestSupport.Arbitrary ()
 import TestSupport.ExtendedArbitrary ()
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.))
+import Test.QuickCheck (Property, (===), property, (.&&.))
 
 import Analyzer.SymbolTable
 import Analyzer.Types
   ( SymbolInfo(..)
-  , SymbolKind(..)
   )
 import qualified Dependencies as Dep
 import qualified Ownership as Own

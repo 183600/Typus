@@ -301,7 +301,6 @@ instance Arbitrary TC.Type where
         isValidType (TC.TypeFunction params ret) = all isValidType (ret : params)
         isValidType (TC.TypeRecord fields) = all (\(fname, ftyp) -> not (null fname) && isValidType ftyp) fields
         isValidType (TC.TypeUnion types) = all isValidType types
-        isValidType _ = True
     in if n <= 0 then
       frequency [(3, pure TC.UnknownType), (1, TC.TypeName <$> genGoTypeName)]
     else if n == 1 then
@@ -330,7 +329,6 @@ instance Arbitrary TC.FunctionParam where
         isValidParamType (TC.TypeFunction params ret) = isValidParamType ret && all isValidParamType params
         isValidParamType (TC.TypeRecord fields) = all (\(fname, ftyp) -> not (null fname) && isValidParamType ftyp) fields
         isValidParamType (TC.TypeUnion types) = all isValidParamType types
-        isValidParamType _ = True
     in do
       name <- arbitrary
       typ <- resize (max 0 (n `div` 3)) arbitrary `suchThat` isValidParamType
@@ -344,7 +342,6 @@ instance Arbitrary TC.FunctionSignature where
         isValidReturnType (TC.TypeFunction params ret) = isValidReturnType ret && all isValidReturnType params
         isValidReturnType (TC.TypeRecord fields) = all (\(fname, ftyp) -> not (null fname) && isValidReturnType ftyp) fields
         isValidReturnType (TC.TypeUnion types) = all isValidReturnType types
-        isValidReturnType _ = True
         
         ensureAtMostOneVariadic [] = []
         ensureAtMostOneVariadic params =

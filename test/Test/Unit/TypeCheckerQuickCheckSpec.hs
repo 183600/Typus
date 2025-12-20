@@ -7,7 +7,7 @@ module Test.Unit.TypeCheckerQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.ExtendedArbitrary ()
-import Test.QuickCheck (Property, (===), (==>), property, (.&&.), (.||.), forAll, resize, arbitrary)
+import Test.QuickCheck (Property, (===), (==>), property, (.&&.), forAll, resize, arbitrary)
 
 import Compiler.TypeChecker
   ( Type(..)

@@ -6,7 +6,6 @@ module Test.Unit.SimpleParserQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck 
 import qualified Data.List as Data.List
 import Data.Char (toLower)
 import Data.Maybe (isJust)

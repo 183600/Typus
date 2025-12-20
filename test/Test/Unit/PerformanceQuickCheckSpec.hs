@@ -164,12 +164,7 @@ prop_optimization_performance =
       optimizationTime = measureOptimizationTime code
   in property $ optimizationTime >= 0
 
--- NFData instances for performance testing
-instance NFData SourcePos where
-  rnf (SourcePos line column offset) = line `deepseq` column `deepseq` offset `deepseq` ()
-
-instance NFData SourceSpan where
-  rnf (SourceSpan start end) = rnf start `seq` rnf end `seq` ()
+-- NFData instances are now defined in SourceLocation module
 
 instance NFData BlockDirectives where
   rnf (BlockDirectives ownership dependentTypes typeConstraints) = 
@@ -196,8 +191,7 @@ instance NFData ErrorType where
     InvalidBlockStructure -> ()
     UndeclaredVariable -> ()
 
-instance NFData a => NFData (Located a) where
-  rnf (Located value pos span) = value `deepseq` pos `deepseq` span `deepseq` ()
+-- NFData instance for Located a is now defined in SourceLocation module
 
 instance NFData FileDirectives where
   rnf (FileDirectives ownership dependentTypes constraints) = 

@@ -168,6 +168,7 @@ test_*
 # Haskell HPC coverage artifacts
 typus-test.tix
 .hpc/
+coverage-report/
 
 # Haskell build artifacts
 dist-newstyle/

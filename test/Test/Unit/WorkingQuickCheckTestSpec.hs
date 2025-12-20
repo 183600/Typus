@@ -6,21 +6,16 @@ import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
-import qualified Data.Set as Set
-import Data.List (sort, nub, length, sum, product)
 
-import Utils (trim, splitBy, removeLineComments, normalizeIndentation)
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAfter, mergeSpans)
+
+import SourceLocation (SourcePos(..), SourceSpan(..), posAfter, mergeSpans)
 import Compiler.GoLexer (GoToken(..), GoTokenKind(..), tokenizeGo)
 import Ownership.Parser (Expr(..), Stmt(..))
 import Ownership.Common.Lexer (Pos(..))
 import Compiler.TypeChecker (Type(..))
-import qualified Data.Map as Map
 import Analyzer.Types (SymbolInfo(..))
-import Analyzer.State (newIntegratedAnalyzer)
 import TestSupport.Arbitrary ()
 import TestSupport.ExtendedArbitrary ()
-import TestSupport.Arbitrary ()
 
 tests :: TestTree
 tests = testGroup "Working QuickCheck Test Properties"
@@ -79,28 +74,28 @@ prop_lexer_whitespace s =
 
 prop_binary_precedence :: Expr -> Expr -> Expr -> Property
 prop_binary_precedence left right middle =
-  let expr1 = ECall "add" [left, ECall "mul" [right, middle] (Pos 0 0)] (Pos 0 0)
-      expr2 = ECall "mul" [ECall "add" [left, right] (Pos 0 0), middle] (Pos 0 0)
+  let _expr1 = ECall "add" [left, ECall "mul" [right, middle] (Pos 0 0)] (Pos 0 0)
+      _expr2 = ECall "mul" [ECall "add" [left, right] (Pos 0 0), middle] (Pos 0 0)
   in property True
 
 prop_stmt_order :: [Stmt] -> Property
 prop_stmt_order stmts = length stmts >= 0 ==> property True
 
 prop_type_inference_deterministic :: Expr -> Property
-prop_type_inference_deterministic expr = property True
+prop_type_inference_deterministic _expr = property True
 
 prop_type_substitution_preserves :: Type -> Map.Map String Type -> Property
-prop_type_substitution_preserves t substitutions = property True
+prop_type_substitution_preserves _t _substitutions = property True
 
 prop_symbol_lookup_scope :: [(String, Int)] -> Property
 prop_symbol_lookup_scope pairs = 
-  let symbolTable = Map.fromList [(name, SymbolInfo name Nothing Nothing scope False False []) | (name, scope) <- pairs]
+  let _symbolTable = Map.fromList [(name, SymbolInfo name Nothing Nothing scope False False []) | (name, scope) <- pairs]
   in property True
 
 prop_symbol_shadowing :: String -> Int -> Int -> Property
 prop_symbol_shadowing key value1 value2 = 
-  let symbol1 = SymbolInfo key Nothing Nothing value1 False False []
-      symbol2 = SymbolInfo key Nothing Nothing value2 False False []
+  let _symbol1 = SymbolInfo key Nothing Nothing value1 False False []
+      _symbol2 = SymbolInfo key Nothing Nothing value2 False False []
   in property True
 
 prop_span_merge_containment :: SourceSpan -> SourceSpan -> Property
