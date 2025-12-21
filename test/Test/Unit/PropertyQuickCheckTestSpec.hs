@@ -9,16 +9,12 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import TestSupport.Arbitrary ()
 import TestSupport.ExtendedArbitrary ()
-import Data.List (sort, nub, length, sum, product, reverse, concat, (++))
+import Data.List (length)
 
-import Utils (trim, splitBy, splitByComma, removeLineComments, normalizeIndentation)
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAfter, emptySpan, mergeSpans)
-import Compiler.GoLexer (GoToken(..), GoTokenKind(..), tokenizeGo)
-import Ownership.Parser (Expr(..), Stmt(..))
-import Compiler.TypeChecker (Type(..))
+import SourceLocation (SourceSpan(..), posOffset)
+import Compiler.GoLexer (GoToken(..), tokenizeGo)
+import Ownership.Parser (Expr(..))
 import Analyzer.Types (SymbolInfo(..))
-import qualified Data.Map as Map
-import TestSupport.Arbitrary ()
 
 tests :: TestTree
 tests = testGroup "Property QuickCheck Test Properties"
@@ -79,7 +75,7 @@ prop_set_union_commutative xs ys =
   in Set.union set1 set2 === Set.union set2 set1
 
 prop_parser_preserves_structure :: String -> Property
-prop_parser_preserves_structure s = property True
+prop_parser_preserves_structure _ = property True
 
 prop_lexer_preserves_count :: String -> Property
 prop_lexer_preserves_count s =
@@ -87,7 +83,7 @@ prop_lexer_preserves_count s =
   in property $ length tokens >= 0
 
 prop_ast_preserves_semantics :: Expr -> Property
-prop_ast_preserves_semantics expr = property True
+prop_ast_preserves_semantics _ = property True
 
 prop_symboltable_functional :: [(String, Int)] -> String -> Property
 prop_symboltable_functional pairs key =
@@ -97,22 +93,21 @@ prop_symboltable_functional pairs key =
   in result1 === result2
 
 prop_typechecking_deterministic :: Expr -> Property
-prop_typechecking_deterministic expr = property True
+prop_typechecking_deterministic _ = property True
 
 prop_error_consistent :: String -> Property
-prop_error_consistent input = property True
+prop_error_consistent _ = property True
 
 prop_span_invariants :: SourceSpan -> Property
-prop_span_invariants span =
-  let start = spanStart span
-      end = spanEnd span
+prop_span_invariants span' =
+  let start = spanStart span'
+      end = spanEnd span'
   in property $ posOffset start <= posOffset end
 
 prop_token_invariants :: GoToken -> Property
 prop_token_invariants token =
-  let kind = tokenKind token
-      text = tokenText token
+  let text = tokenText token
   in property $ not (null text)
 
 prop_symboltable_invariants :: Map.Map String SymbolInfo -> Property
-prop_symboltable_invariants st = property True
+prop_symboltable_invariants _ = property True

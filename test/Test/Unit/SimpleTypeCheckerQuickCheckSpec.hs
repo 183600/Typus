@@ -99,9 +99,9 @@ prop_function_parameter_checking_strict signature argTypes =
   let paramCount = length signature
       argCount = length argTypes
       isValid = checkFunctionParameters signature argTypes
-      isCompatible = areParameterTypesCompatible signature argTypes
+      paramsCompatible = areParameterTypesCompatible signature argTypes
   in property $ if paramCount == argCount 
-                then isValid == isCompatible
+                then isValid == paramsCompatible
                 else not isValid
 
 -- Property: Return type checking is enforced

@@ -32,20 +32,7 @@ data GenericType = GenericType String Type deriving (Eq, Show)
 
 data GenericOwnership = GenericOwnership Bool deriving (Eq, Show)
 
--- Ord instances for OwnershipType and OwnershipError
-instance Ord OwnershipType where
-  compare (Owned a) (Owned b) = compare a b
-  compare (Owned _) (Borrowed _) = LT
-  compare (Owned _) (MutBorrowed _) = LT
-  compare (Borrowed a) (Borrowed b) = compare a b
-  compare (Borrowed _) (MutBorrowed _) = LT
-  compare (Borrowed _) (Owned _) = GT
-  compare (MutBorrowed a) (MutBorrowed b) = compare a b
-  compare (MutBorrowed _) (Owned _) = GT
-  compare (MutBorrowed _) (Borrowed _) = GT
-
-instance Ord OwnershipError where
-  compare err1 err2 = compare (show err1) (show err2)
+-- Ord instances for OwnershipType and OwnershipError are now defined in Ownership.Common.Types
 
 -- Property: OwnershipType with owner name
 prop_owned_preserves_name :: String -> Property

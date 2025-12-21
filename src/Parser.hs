@@ -11,6 +11,7 @@ module Parser
   ) where
 
 import Control.Applicative (empty)
+import Control.DeepSeq (NFData(..), deepseq)
 import Control.Monad (foldM)
 import Data.Char (isAlphaNum, isSpace)
 import Data.List (isPrefixOf, isInfixOf)
@@ -448,3 +449,8 @@ leadingIndentation :: String -> Int
 leadingIndentation = length . takeWhile isIndentChar
   where
     isIndentChar c = c == ' ' || c == '\t'
+
+-- NFData instance for BlockDirectives
+instance NFData BlockDirectives where
+  rnf (BlockDirectives ownership dependentTypes typeConstraints) = 
+    ownership `deepseq` dependentTypes `deepseq` typeConstraints `deepseq` ()

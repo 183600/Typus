@@ -92,7 +92,7 @@ removeComments :: String -> String
 removeComments = goNormal
   where
     goNormal [] = []
-    goNormal ('/':'/':'*':xs) = '/' : skipBlock xs  -- special case for ///* pattern
+    goNormal ('/':'/':'*':xs) = skipBlock xs  -- ///* pattern should be treated as block comment
     goNormal ('/':'*':xs) = skipBlock xs
     goNormal ('/':'/':xs) = skipLine xs
     goNormal ('"':xs)     = case xs of

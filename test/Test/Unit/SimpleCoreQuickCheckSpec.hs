@@ -28,7 +28,9 @@ stringUtilsTests = testGroup "String Utils Properties"
   
   , fastProperty "trim removes leading and trailing spaces" $ \s ->
       let trimmed = trim s
-      in not (null trimmed) ==> head trimmed /= ' ' && last trimmed /= ' '
+      in not (null trimmed) ==> case trimmed of
+                                    (c:_) -> c /= ' ' && last trimmed /= ' '
+                                    [] -> True
   
   , fastProperty "splitBy preserves content" $ \(c :: Char) (s :: String) ->
       concat (splitBy c s) == filter (/= c) s
@@ -50,8 +52,8 @@ sourceLocationTests = testGroup "SourceLocation Properties"
   , fastProperty "isValidSpan checks order" $ \l1 c1 o1 l2 c2 o2 ->
       let pos1 = SourcePos l1 c1 o1
           pos2 = SourcePos l2 c2 o2
-          span = SourceSpan pos1 pos2
-      in isValidSpan span == (o1 <= o2)
+          testSpan = SourceSpan pos1 pos2
+      in isValidSpan testSpan == (o1 <= o2)
   ]
 
 dataStructureTests :: TestTree
@@ -70,6 +72,10 @@ dataStructureTests = testGroup "Data Structure Properties"
   
   , fastProperty "nub preserves order" $ \(xs :: [Int]) ->
       let unique = nub xs
-          indices = map (\x -> head [i | (i, y) <- zip [0..] xs, y == x]) unique
+          findFirstIndex :: Int -> Int
+          findFirstIndex x = case [i | (i, y) <- zip [0..] xs, y == x] of
+                               (i:_) -> i
+                               [] -> -1
+          indices = map findFirstIndex unique
       in indices == sort indices
   ]

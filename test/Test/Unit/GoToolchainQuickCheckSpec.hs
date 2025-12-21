@@ -4,21 +4,15 @@ module Test.Unit.GoToolchainQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), property, forAll, counterexample, classify, Arbitrary(..), Gen, oneof, choose, listOf, elements, vectorOf)
-import Data.List (isPrefixOf, isInfixOf, nub, sort, intercalate)
-import Data.Maybe (isJust, isNothing, fromMaybe)
-import Data.Either (isLeft, isRight)
-import qualified Data.Text as T
-import System.FilePath (takeExtension, takeFileName)
+import Test.QuickCheck (Property, (==>), property, classify)
+import Data.Maybe (isJust)
 
 import GoToolchain
-import Compiler.GoAst
-import TestSupport.Arbitrary
 
 -- Property: Go module creation
 prop_go_module_creation :: String -> [String] -> Property
 prop_go_module_creation moduleName imports =
-  let moduleCreated = createGoModule moduleName imports
+  let _ = createGoModule moduleName imports
       hasModuleName = not (null moduleName)
       hasImports = not (null imports)
   in classify (hasModuleName && hasImports) "complete module" $
@@ -27,10 +21,10 @@ prop_go_module_creation moduleName imports =
 -- Property: Go package validation
 prop_go_package_validation :: String -> Property
 prop_go_package_validation packageName =
-  let validPackage = validateGoPackage packageName
+  let valid = validateGoPackage packageName
       hasValidName = not (null packageName) && all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") packageName
   in classify hasValidName "valid package name" $
-     property $ validPackage
+     property $ valid
 
 -- Property: Go import path resolution
 prop_import_path_resolution :: String -> Property
@@ -282,8 +276,8 @@ tests = testGroup "GoToolchain QuickCheck Tests"
   ]
 
 -- Helper function stubs (would be implemented in the actual modules)
-createGoModule :: String -> [String] -> Either String GoModule
-createGoModule _ _ = Right undefined
+createGoModule :: String -> [String] -> Either String ()
+createGoModule _ _ = Right ()
 
 validateGoPackage :: String -> Bool
 validateGoPackage = const True

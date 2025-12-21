@@ -4,14 +4,13 @@
 module Test.Unit.SimpleParserQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck (Property, (==>), property, classify, counterexample)
 import qualified Data.List as Data.List
 import Data.Char (toLower)
-import Data.Maybe (isJust)
 
-import Parser (parseTypus, TypusFile(..), FileDirectives(..), BlockDirectives(..), CodeBlock(..))
-import SourceLocation (Located(..), posLine, spanStart)
+import Parser (parseTypus, TypusFile(..), FileDirectives(..), CodeBlock(..))
+import SourceLocation (Located(..), posLine)
 
 -- ============================================================================
 -- Core Property Tests
@@ -34,7 +33,7 @@ prop_parse_error_locations :: String -> Property
 prop_parse_error_locations malformed =
   length malformed > 10 ==> 
   case parseTypus malformed of
-    Left err -> property $ "error" `isInfixOf` map toLower err
+    Left err -> property $ "error" `isInfixOfCustom` map toLower err
     Right _ -> property True
 
 -- Property: Empty file parsing
@@ -78,7 +77,7 @@ prop_parse_nested_blocks depth =
   let nestedContent = Data.List.unlines $ replicate depth "  // nested comment"
   in case parseTypus nestedContent of
     Left _ -> property False
-    Right parsed -> property $ True
+    Right _ -> property $ True
 
 -- Property: Special characters in content
 prop_parse_special_characters :: String -> Property
@@ -87,7 +86,7 @@ prop_parse_special_characters content =
       contentWithSpecial = content ++ specialChars ++ content
   in case parseTypus contentWithSpecial of
     Left _ -> property False
-    Right parsed -> property $ True
+    Right _ -> property $ True
 
 -- Property: Unicode content parsing
 prop_parse_unicode :: String -> Property
@@ -95,16 +94,16 @@ prop_parse_unicode content =
   let unicodeContent = content ++ "测试内容🚀αβγ" ++ content
   in case parseTypus unicodeContent of
     Left _ -> property False
-    Right parsed -> property $ True
+    Right _ -> property $ True
 
 -- Property: Very long lines handling
 prop_parse_long_lines :: Int -> Property
-prop_parse_long_lines length =
-  length >= 0 && length <= 1000 ==>
-  let longLine = replicate length 'a' ++ "content"
+prop_parse_long_lines lineLength =
+  lineLength >= 0 && lineLength <= 1000 ==>
+  let longLine = replicate lineLength 'a' ++ "content"
   in case parseTypus longLine of
     Left _ -> property False
-    Right parsed -> property $ True
+    Right _ -> property $ True
 
 -- Property: Multiple file directives
 prop_parse_multiple_file_directives :: [String] -> Property
@@ -114,17 +113,17 @@ prop_parse_multiple_file_directives directives =
       content = Data.List.unlines fileDirectives
   in case parseTypus content of
     Left _ -> property False
-    Right parsed -> property $ True
+    Right _ -> property $ True
 
 -- Property: Inconsistent indentation handling
 prop_parse_inconsistent_indentation :: [String] -> Property
-prop_parse_inconsistent_indentation lines =
-  not (null lines) ==>
-  let indentedLines = zipWith (\i line -> replicate i ' ' ++ line) [0,2,4,1,3] lines
+prop_parse_inconsistent_indentation linesList =
+  not (null linesList) ==>
+  let indentedLines = zipWith (\i l -> replicate i ' ' ++ l) [0,2,4,1,3] linesList
       content = Data.List.unlines indentedLines
   in case parseTypus content of
     Left _ -> property False
-    Right parsed -> property $ True
+    Right _ -> property $ True
 
 -- Property: Invalid directives are handled gracefully
 prop_parse_invalid_directives :: String -> Property
@@ -181,7 +180,7 @@ prop_parse_code_blocks codeContent =
     Right file -> 
       case tfBlocks file of
         [] -> property False
-        (block:_) -> property $ codeContent `isInfixOf` cbContent block
+        (block:_) -> property $ codeContent `isInfixOfCustom` cbContent block
 
 -- Property: Directive positions are tracked correctly
 prop_parse_directive_positions :: Property
@@ -213,16 +212,8 @@ countDirectives :: FileDirectives -> Int
 countDirectives (FileDirectives ownership depTypes constraints) =
   length [() | Just _ <- [ownership, depTypes, constraints]]
 
-hasDirectives :: TypusFile -> Bool
-hasDirectives file = 
-  let directives = tfDirectives file
-  in any isJust [fdOwnership directives, fdDependentTypes directives, fdConstraints directives]
-  where
-    isJust Nothing = False
-    isJust (Just _) = True
-
-isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+isInfixOfCustom :: String -> String -> Bool
+isInfixOfCustom needle haystack = needle `Data.List.isInfixOf` haystack
 
 -- ============================================================================
 -- Test Suite

@@ -17,16 +17,7 @@ import Ownership (OwnershipType(..))
 import Analyzer.Types (SymbolInfo(..), SymbolKind(..))
 import TestSupport.Arbitrary ()
 
--- Arbitrary instance for OwnershipType
-instance Arbitrary OwnershipType where
-  arbitrary = oneof
-    [ do name <- arbitrary
-         return (Owned name)
-    , do name <- arbitrary
-         return (Borrowed name)
-    , do name <- arbitrary
-         return (MutBorrowed name)
-    ]
+-- Arbitrary instance for OwnershipType is defined in TestSupport.Arbitrary
 
 -- Property 1: trim is idempotent
 prop_trim_idempotent :: String -> Property

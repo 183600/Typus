@@ -40,7 +40,7 @@ import Analyzer.Types
   , AnalysisContext(..)
   , AnalyzerState(..)
   )
-import qualified Ownership.Common.Types as Own
+import qualified Ownership.Common.Types as Own (OwnershipType(..), OwnershipError(..), OwnershipAnalyzer(..), newOwnershipAnalyzer)
 import qualified Dependencies.TypeSystem as Dep
 import qualified Compiler.TypeChecker as TC
   ( Type(..)
@@ -230,6 +230,16 @@ instance Arbitrary AnalysisPhase where
 
 instance Arbitrary AnalysisContext where
   arbitrary = AnalysisContext <$> genBool <*> genBool <*> genIdentifier <*> arbitrary
+
+-- Ownership instances
+instance Arbitrary Own.OwnershipType where
+  arbitrary = oneof
+    [ Own.Owned <$> genIdentifier
+    , Own.Borrowed <$> genIdentifier  
+    , Own.MutBorrowed <$> genIdentifier
+    ]
+
+
 
 
 

@@ -13,7 +13,7 @@ import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
   ( Property, (==>), property, classify
-  , Arbitrary, arbitrary, Gen, oneof, choose, listOf, elements
+  , Arbitrary, arbitrary, Gen, oneof, listOf, elements
   , sized
   )
 import qualified Data.Map.Strict as Map

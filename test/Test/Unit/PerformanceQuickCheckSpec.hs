@@ -6,15 +6,12 @@ import Control.DeepSeq (NFData(..), deepseq)
 
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, vectorOf, listOf)
+import Test.QuickCheck (Property, forAll, classify, property, Arbitrary(..), choose, vectorOf)
 import qualified Data.List as List
-import Data.Char (isSpace)
-import Control.DeepSeq (NFData, force)
 
-import Parser (parseTypus, TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
+import Parser (parseTypus, TypusFile(..), CodeBlock(..), FileDirectives(..))
 import SyntaxValidator (SyntaxError(..), ErrorType(..))
 import Compiler.TypeChecker (Type(..), TypeEnv(..))
-import SourceLocation (Located(..), SourcePos(..), SourceSpan(..))
 import Analyzer.Types (SymbolInfo(..), AnalyzerState(..))
 import Utils (trim, splitBy, normalizeIndentation)
 
@@ -166,12 +163,10 @@ prop_optimization_performance =
 
 -- NFData instances are now defined in SourceLocation module
 
-instance NFData BlockDirectives where
-  rnf (BlockDirectives ownership dependentTypes typeConstraints) = 
-    ownership `deepseq` dependentTypes `deepseq` typeConstraints `deepseq` ()
-
-instance NFData ErrorType where
-  rnf err = case err of
+-- Newtype wrappers to avoid orphan instances
+newtype NFErrorType = NFErrorType ErrorType
+instance NFData NFErrorType where
+  rnf (NFErrorType err) = case err of
     MissingBrace -> ()
     MissingParenthesis -> ()
     MissingBracket -> ()
@@ -190,24 +185,29 @@ instance NFData ErrorType where
     DuplicateDeclaration -> ()
     InvalidBlockStructure -> ()
     UndeclaredVariable -> ()
+    SyntaxWarning -> ()
 
 -- NFData instance for Located a is now defined in SourceLocation module
 
-instance NFData FileDirectives where
-  rnf (FileDirectives ownership dependentTypes constraints) = 
-    ownership `deepseq` dependentTypes `deepseq` constraints `deepseq` ()
+newtype NFFileDirectives = NFFileDirectives FileDirectives
+instance NFData NFFileDirectives where
+  rnf (NFFileDirectives (FileDirectives ownership dependentTypes constraints)) = 
+    rnf ownership `seq` rnf dependentTypes `seq` rnf constraints `seq` ()
 
-instance NFData CodeBlock where
-  rnf (CodeBlock directives content span) = 
-    directives `deepseq` content `deepseq` span `deepseq` ()
+newtype NFCodeBlock = NFCodeBlock CodeBlock
+instance NFData NFCodeBlock where
+  rnf (NFCodeBlock (CodeBlock directives content span)) = 
+    rnf directives `seq` rnf content `seq` rnf span `seq` ()
 
-instance NFData SyntaxError where
-  rnf (SyntaxError errorType message line column source) = 
-    errorType `deepseq` message `deepseq` line `deepseq` column `deepseq` source `deepseq` ()
+newtype NFSyntaxError = NFSyntaxError SyntaxError
+instance NFData NFSyntaxError where
+  rnf (NFSyntaxError (SyntaxError errorType message line column source)) = 
+    errorType `seq` message `seq` line `seq` column `seq` source `seq` ()
 
-instance NFData TypusFile where
-  rnf (TypusFile directives buildTags blocks syntaxErrors) = 
-    directives `deepseq` buildTags `deepseq` blocks `deepseq` syntaxErrors `deepseq` ()
+newtype NFTypusFile = NFTypusFile TypusFile
+instance NFData NFTypusFile where
+  rnf (NFTypusFile (TypusFile directives buildTags blocks syntaxErrors)) = 
+    directives `seq` buildTags `seq` blocks `seq` syntaxErrors `seq` ()
 
 -- Helper functions for performance measurement
 measureParseTime :: String -> Int

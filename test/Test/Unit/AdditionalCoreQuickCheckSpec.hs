@@ -26,19 +26,12 @@ import Utils
 
 import Data.List (isInfixOf, isPrefixOf)
 
+-- Import Arbitrary instances from TestSupport.Arbitrary to avoid orphan instances
+import TestSupport.Arbitrary ()
+
 -- ============================================================================
 -- SourceLocation Properties
 -- ============================================================================
-
--- Arbitrary instances for SourceLocation types
-instance Arbitrary SourcePos where
-  arbitrary = SourcePos <$> choose (1, 100) <*> choose (1, 100) <*> choose (0, 1000)
-
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
 
 -- Property: Position advancement is consistent for newline characters
 prop_advance_pos_consistent :: SourcePos -> Property
@@ -70,15 +63,7 @@ prop_located_map_preservation str _value =
 -- GoAST Properties  
 -- ============================================================================
 
--- Arbitrary instances for simple GoAST types
-instance Arbitrary PackageDecl where
-  arbitrary = PackageDecl <$> arbitrary
 
-instance Arbitrary ImportDecl where
-  arbitrary = ImportDecl <$> arbitrary <*> arbitrary
-
-instance Arbitrary FuncDecl where
-  arbitrary = FuncDecl <$> listOf (arbitrary `suchThat` (not . null))
 
 -- Property: Import declarations maintain path consistency
 prop_import_path_consistency :: ImportDecl -> Property

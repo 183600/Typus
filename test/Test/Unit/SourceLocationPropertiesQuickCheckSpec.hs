@@ -18,19 +18,8 @@ import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), spanStart, sp
                        locatedValue, locatedSpan, locatedWithSpan)
 import Data.List (isPrefixOf, isInfixOf)
 
--- Arbitrary instances for testing
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- choose (1, 1000)
-    column <- choose (1, 1000)
-    offset <- choose (0, 100000)
-    return $ SourcePos line column offset
-
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
+-- Import Arbitrary instances from TestSupport.Arbitrary to avoid orphan instances
+import TestSupport.Arbitrary ()
 
 instance (Arbitrary a) => Arbitrary (Located a) where
   arbitrary = do
@@ -78,9 +67,9 @@ genSourceSpan = do
                then choose (startColumn, startColumn + 50)
                else choose (1, 200)
   endOffset <- choose (startOffset, startOffset + 1000)
-  let start = SourcePos startLine startColumn startOffset
-      end = SourcePos endLine endColumn endOffset
-  return $ SourceSpan start end
+  let startPos = SourcePos startLine startColumn startOffset
+      endPos = SourcePos endLine endColumn endOffset
+  return $ SourceSpan { spanStart = startPos, spanEnd = endPos }
 
 -- | Generate located values
 genLocated :: Gen (Located String)
@@ -92,7 +81,7 @@ genLocated = do
 -- | Generate multi-line text with positions
 genMultiLineText :: Gen (String, [SourcePos])
 genMultiLineText = do
-  numLines <- choose (1, 10)
+  numLines <- choose (1, 10) :: Gen Int
   lines <- listOfN numLines genLine
   let text = unlines lines
       positions = calculateLinePositions text
@@ -215,7 +204,7 @@ prop_span_construction_valid start end =
       col2 = sourceColumn end
       sameLine = line1 == line2
       validOrder = line1 < line2 || (sameLine && col1 <= col2)
-      span = SourceSpan start end
+      span = SourceSpan { spanStart = start, spanEnd = end }
   in validOrder ==> property $ spanStart span === start .&&. spanEnd span === end
 
 -- Property: Located value with span utility
@@ -240,7 +229,7 @@ prop_source_span_equality :: SourceSpan -> Property
 prop_source_span_equality span =
   let start = spanStart span
       end = spanEnd span
-      sameSpan = SourceSpan start end
+      sameSpan = SourceSpan { spanStart = start, spanEnd = end }
   in property $ span == sameSpan
 
 -- Property: Source position ordering consistency

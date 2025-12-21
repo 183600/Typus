@@ -4,9 +4,9 @@ module Test.Unit.SimpleQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property)
+import Test.QuickCheck (Property, (===), (==>), property)
 import qualified Data.Map as Map
-import qualified Data.List as Data.List
+import Data.List (sort)
 
 import Utils (trim, splitBy)
 import Ownership.Parser (Expr(..), Stmt(..))
@@ -82,7 +82,7 @@ prop_reverse_reverse :: [Int] -> Property
 prop_reverse_reverse xs = reverse (reverse xs) === xs
 
 prop_sort_preserves_length :: [Int] -> Property
-prop_sort_preserves_length xs = length (Data.List.sort xs) === length xs
+prop_sort_preserves_length xs = length (sort xs) === length xs
 
 prop_concat_empty :: [Int] -> Property
 prop_concat_empty xs = [] ++ xs === xs
@@ -94,7 +94,7 @@ prop_map_insert_size :: String -> Int -> Property
 prop_map_insert_size key value = Map.size (Map.insert key value Map.empty) === 1
 
 prop_expr_type_preserved :: Expr -> Property
-prop_expr_type_preserved expr = property True
+prop_expr_type_preserved _ = property True
 
 prop_stmt_nesting_depth :: Stmt -> Property
-prop_stmt_nesting_depth = const (property True)
+prop_stmt_nesting_depth _ = property True

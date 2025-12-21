@@ -5,12 +5,9 @@ module Test.Unit.OwnershipAnalysisQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
+import TestSupport.Arbitrary ()
 
 import Ownership (OwnershipType(..))
-
--- Arbitrary instance for OwnershipType
-instance Arbitrary OwnershipType where
-  arbitrary = elements [Owned "test", Borrowed "test", MutBorrowed "test"]
 
 tests :: TestTree
 tests = testGroup "Ownership Analysis QuickCheck"

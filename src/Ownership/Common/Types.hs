@@ -20,6 +20,17 @@ instance Show OwnershipType where
     show (Borrowed name) = "Borrowed " ++ name
     show (MutBorrowed name) = "MutBorrowed " ++ name
 
+instance Ord OwnershipType where
+    compare (Owned a) (Owned b) = compare a b
+    compare (Owned _) (Borrowed _) = LT
+    compare (Owned _) (MutBorrowed _) = LT
+    compare (Borrowed a) (Borrowed b) = compare a b
+    compare (Borrowed _) (MutBorrowed _) = LT
+    compare (Borrowed _) (Owned _) = GT
+    compare (MutBorrowed a) (MutBorrowed b) = compare a b
+    compare (MutBorrowed _) (Owned _) = GT
+    compare (MutBorrowed _) (Borrowed _) = GT
+
 -- | Exhaustive ownership error taxonomy shared by all analyzers.
 -- Individual analyzers may only emit a subset of these constructors but they
 -- reuse the same definition to simplify error aggregation and reporting.
@@ -57,6 +68,9 @@ instance Show OwnershipError where
     show (ControlFlowError msg) = "ControlFlowError " ++ msg
     show (PathSensitiveError msg) = "PathSensitiveError " ++ msg
     show (LoopOwnershipError msg) = "LoopOwnershipError " ++ msg
+
+instance Ord OwnershipError where
+    compare err1 err2 = compare (show err1) (show err2)
 
 -- | Lightweight handle that keeps the public API stable while allowing the
 -- implementation to evolve behind the scenes.

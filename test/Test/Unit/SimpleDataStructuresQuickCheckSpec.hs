@@ -4,7 +4,6 @@
 module Test.Unit.SimpleDataStructuresQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
 import qualified Data.List as Data.List
@@ -21,7 +20,6 @@ prop_map_operations_invariants :: Map.Map String Int -> String -> Int -> Propert
 prop_map_operations_invariants originalMap key value =
   let inserted = Map.insert key value originalMap
       deleted = Map.delete key originalMap
-      lookedUp = Map.lookup key originalMap
   in property $ Map.size inserted == Map.size originalMap + (if Map.member key originalMap then 0 else 1) &&
                 Map.size deleted == Map.size originalMap - (if Map.member key originalMap then 1 else 0) &&
                 (Map.lookup key inserted == Just value) &&
@@ -46,10 +44,13 @@ prop_list_operations_expected originalList value =
       lengthOriginal = length originalList
       lengthAppended = length appended
       lengthPrefixed = length prefixed
+      firstElement = case prefixed of
+                      [] -> error "Impossible: prefixed list cannot be empty"
+                      (x:_) -> x
   in property $ lengthAppended == lengthOriginal + 1 &&
                 lengthPrefixed == lengthOriginal + 1 &&
                 last appended == value &&
-                head prefixed == value
+                firstElement == value
 
 -- ============================================================================
 -- Data Structure Transformation Properties
@@ -111,7 +112,6 @@ prop_large_structures_performance size =
 prop_nested_structures_invariants :: Map.Map String [Set.Set Int] -> Property
 prop_nested_structures_invariants nestedMap =
   let allSets = concat $ Map.elems nestedMap
-      allElements = concat $ map Set.toList allSets
   in property $ all (not . Set.null) allSets || Map.null nestedMap
 
 -- ============================================================================

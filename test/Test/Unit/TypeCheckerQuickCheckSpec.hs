@@ -797,8 +797,8 @@ signatureCompatibilityHolds sig1 sig2 = areSignaturesCompatible sig1 sig2
 
 mergeTypeEnvs :: TypeEnv -> TypeEnv -> TypeEnv
 mergeTypeEnvs env1 env2 = TypeEnv
-  (Map.union (varTypes env1) (varTypes env2))
-  (Map.union (functionTypes env1) (functionTypes env2))
+  (Map.union (varTypes env2) (varTypes env1))
+  (Map.union (functionTypes env2) (functionTypes env1))
 
 buildRecursiveType :: String -> [Type] -> Type
 buildRecursiveType name _ = TypeName name

@@ -65,7 +65,7 @@ import qualified Compiler.TypeChecker as TC
   , TypeCheckDiagnostic(..)
   , TypeConstraint(..)
   )
-import Ownership (OwnershipType(..), OwnershipError(..))
+import Ownership (OwnershipError(..))
 import qualified Ownership.Common.Types as Own (OwnershipAnalyzer(..))
 import Compiler.Errors.Core (ErrorSeverity(..))
 import Compiler.Errors (CompilerError(..))
@@ -389,12 +389,7 @@ instance Arbitrary SymbolInfo where
     <*> listOf (Dep.SizeGT <$> (T.pack <$> genIdentifier) <*> choose (0, 100))
 
 -- Arbitrary instances for Ownership module
-instance Arbitrary OwnershipType where
-  arbitrary = oneof
-    [ Owned <$> genIdentifier
-    , Borrowed <$> genIdentifier
-    , MutBorrowed <$> genIdentifier
-    ]
+-- OwnershipType Arbitrary instance is defined in TestSupport.Arbitrary
 
 -- Arbitrary instances for Compiler.Errors.Core
 instance Arbitrary ErrorSeverity where

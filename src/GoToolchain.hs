@@ -22,9 +22,7 @@ import System.Environment (lookupEnv)
 import System.Exit (ExitCode(..))
 import System.FilePath ((</>), takeBaseName)
 import System.IO (hClose)
--- -- import System.IO.Temp (withSystemTempDirectory, openTempFile)
-import System.Random (randomIO)
-import System.IO (Handle, openFile, IOMode(WriteMode))
+import System.IO.Temp (withSystemTempDirectory, openTempFile)
 import System.Info (os)
 import System.Process (CreateProcess(cwd), proc, readCreateProcessWithExitCode)
 import Tooling.Error (ToolingError(..), goCommandFailed)
@@ -86,26 +84,6 @@ runGoCommand executor args = goRunCommandInDir executor args "."
 
 goModContents :: String
 goModContents = "module temp\n\ngo 1.21\n"
-
--- | Simple implementation of withSystemTempDirectory
-withSystemTempDirectory :: String -> (FilePath -> IO a) -> IO a
-withSystemTempDirectory prefix action = do
-    rand <- randomIO :: IO Int
-    let tempDir = "/tmp/" ++ prefix ++ "-" ++ show (abs rand)
-    createDirectoryIfMissing True tempDir
-    result <- action tempDir
-    -- Note: In a real implementation, we would clean up the directory
-    -- For now, we'll leave it for debugging purposes
-    return result
-
--- | Simple implementation of openTempFile
-openTempFile :: FilePath -> String -> IO (FilePath, Handle)
-openTempFile dir template = do
-    rand <- randomIO :: IO Int
-    let (base, ext) = break (== '.') template
-        tempPath = dir ++ "/" ++ base ++ "-" ++ show (abs rand) ++ (if null ext then "" else '.' : drop 1 ext)
-    handle <- openFile tempPath WriteMode
-    return (tempPath, handle)
 
 writeGoModule :: FilePath -> IOResult ()
 writeGoModule dir = do

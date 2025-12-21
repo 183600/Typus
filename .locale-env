@@ -1,0 +1,12 @@
+# Locale settings for Typus project
+# This file should be sourced to avoid locale warnings
+
+# Chinese UTF-8 locale (now properly installed)
+export LC_ALL=zh_CN.UTF-8
+export LANG=zh_CN.UTF-8
+export LANGUAGE=zh_CN:zh
+
+# Alternative: Use universally available UTF-8 locale if Chinese locale causes issues
+# export LC_ALL=C.utf8
+# export LANG=C.utf8
+# export LANGUAGE=C.utf8

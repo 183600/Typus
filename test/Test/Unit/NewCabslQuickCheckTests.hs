@@ -14,25 +14,8 @@ import SourceLocation (SourcePos(..), SourceSpan(..), startPos, spanBetween)
 import Parser (FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..))
 -- IR imports removed as they don't exist in the current module structure
 
--- Arbitrary instances for testing
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- choose (1, 100)
-    col <- choose (0, 100)
-    offset <- choose (0, 1000)
-    return $ SourcePos line col offset
-
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    startLine <- choose (1, 50)
-    startCol <- choose (0, 50)
-    startOffset <- choose (0, 500)
-    let start = SourcePos startLine startCol startOffset
-    endLine <- choose (startLine, startLine + 50)
-    endCol <- choose (if endLine == startLine then startCol else 0, 100)
-    endOffset <- choose (startOffset, startOffset + 500)
-    let end = SourcePos endLine endCol endOffset
-    return $ SourceSpan start end
+-- Import Arbitrary instances from TestSupport.Arbitrary to avoid orphan instances
+import TestSupport.Arbitrary ()
 
 tests :: TestTree
 tests = testGroup "New Cabal QuickCheck Tests"

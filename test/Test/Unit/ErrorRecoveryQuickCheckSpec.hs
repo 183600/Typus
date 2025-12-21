@@ -177,7 +177,7 @@ genMixedMalformed = do
 genWellFormedCode :: Gen String
 genWellFormedCode = do
   varName <- elements ["x", "y", "z", "result"]
-  value <- choose (0, 100)
+  value <- choose (0, 100) :: Gen Int
   return $ "func test() {\n  " ++ varName ++ " := " ++ show value ++ "\n}"
 
 -- | Generate error recovery scenarios

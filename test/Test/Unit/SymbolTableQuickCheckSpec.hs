@@ -8,7 +8,6 @@ import TestSupport.Arbitrary ()
 import TestSupport.ExtendedArbitrary ()
 import Test.QuickCheck (Property, (===), property, (.&&.))
 
-import Analyzer.SymbolTable
 import Analyzer.Types
   ( SymbolInfo(..)
   )
