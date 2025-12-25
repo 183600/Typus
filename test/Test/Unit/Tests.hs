@@ -316,6 +316,10 @@ import qualified Test.Unit.NewSourceLocationQuickCheckSpec
 import qualified Test.Unit.NewErrorHandlerQuickCheckSpec
 import qualified Test.Unit.NewParserQuickCheckSpec
 
+-- New core functionality test modules
+import qualified Test.Unit.NewCoreFunctionalitySpec
+import qualified Test.Unit.NewCoreQuickCheckSpec
+
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
 --
@@ -452,6 +456,8 @@ tests =
         ]
     , testGroup "Core Functionality Tests"
         [ Test.Unit.SimpleCoreTestSpec.tests
+        , Test.Unit.NewCoreFunctionalitySpec.tests
+        , Test.Unit.NewCoreQuickCheckSpec.tests
         ]
     , testGroup "New Comprehensive QuickCheck Test Modules"
         [ Test.Unit.CompilerErrorRecoveryQuickCheckSpec.tests
