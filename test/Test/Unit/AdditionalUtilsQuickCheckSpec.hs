@@ -15,6 +15,8 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose)
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlphaNum)
+import qualified Data.List as Data.List (isInfixOf)
+import Data.List (intersperse)
 
 import Utils
   ( trim
@@ -40,7 +42,7 @@ prop_breakOn_consistent_with_text s pat =
 -- Property: breakOn with pattern not in string returns original string
 prop_breakOn_pattern_not_found :: String -> String -> Property
 prop_breakOn_pattern_not_found s pat =
-  not (pat `isInfixOf` s) ==> 
+  not (pat `Data.List.isInfixOf` s) ==> 
   breakOn pat s === (s, "")
 
 -- Property: breakOn with empty pattern returns empty prefix
@@ -100,7 +102,7 @@ prop_removeComments_preserves_strings prefix suffix =
   let strContent = "test"
       fullString = prefix ++ "\"" ++ strContent ++ "\"" ++ suffix
       result = removeComments fullString
-      hasString = ("\"" ++ strContent ++ "\"") `isInfixOf` result
+      hasString = ("\"" ++ strContent ++ "\"") `Data.List.isInfixOf` result
   in classify (not (null prefix)) "has prefix" $
      classify (not (null suffix)) "has suffix" $
      property hasString
@@ -111,7 +113,7 @@ prop_removeComments_preserves_chars prefix suffix =
   let charContent = 'x'
       fullString = prefix ++ "'" ++ [charContent] ++ "'" ++ suffix
       result = removeComments fullString
-      hasChar = ("'" ++ [charContent] ++ "'") `isInfixOf` result
+      hasChar = ("'" ++ [charContent] ++ "'") `Data.List.isInfixOf` result
   in classify (not (null prefix)) "has prefix" $
      classify (not (null suffix)) "has suffix" $
      property hasChar
