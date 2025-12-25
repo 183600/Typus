@@ -1,125 +1,145 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module Test.Unit.SourceLocationTrackingQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), 
-                       locatedWithSpan, spanStart, spanEnd, 
-                       spanContains, spanOverlaps)
+import SourceLocation
+  ( SourcePos(..)
+  , SourceSpan(..)
+  , locatedWithSpan
+  , locatedValue
+  , startPos
+  , posAt
+  , posAtLineCol
+  , spanStart
+  , spanEnd
+  , spanBetween
+  , mergeSpans
+  , isValidSpan
+  , posLine
+  , posColumn
+  , advancePos
+  )
+import Parser (parseTypus, CodeBlock(..), TypusFile(..))
+import Compiler.Errors.Core (ErrorLocation(..), getErrorLine, getErrorColumn)
+import qualified Data.Text as T
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, lines, unlines)
+import Data.Char (isSpace, isDigit)
+
+-- Property: Source position creation preserves line and column
+prop_source_pos_creation :: Int -> Int -> Property
+prop_source_pos_creation line col =
+  line > 0 && col > 0 ==>
+  let pos = posAt line col
+  in posLine pos === line && posColumn pos === col
+
+-- Property: Source span creation preserves start and end positions
+prop_source_span_creation :: Int -> Int -> Int -> Int -> Property
+prop_source_span_creation startLine startCol endLine endCol =
+  startLine > 0 && startCol > 0 && endLine > 0 && endCol > 0 &&
+  (startLine < endLine || (startLine == endLine && startCol <= endCol)) ==>
+  let startPos = posAt startLine startCol
+      endPos = posAt endLine endCol
+      span = spanBetween startPos endPos
+  in spanStart span === startPos && spanEnd span === endPos
+
+
+
+-- Property: Position advancement works correctly
+prop_position_advancement :: Int -> Int -> String -> Property
+prop_position_advancement line col text =
+  line > 0 && col > 0 && not (null text) ==>
+  let pos = mkSourcePos line col
+      advancedPos = advancePos pos text
+  in posLine advancedPos >= line && posColumn advancedPos >= col
+
+-- Property: Located values preserve their spans
+prop_located_values_preserve_spans :: String -> Property
+prop_located_values_preserve_spans value =
+  not (null value) ==>
+  let start = posAt 1 1
+      end = posAt 1 (length value + 1)
+      span = spanBetween start end
+      locatedVal = locatedWithSpan span value
+  in locatedValue locatedVal === value
+
+-- Property: Source locations handle Unicode correctly
+prop_source_location_unicode :: String -> Property
+prop_source_location_unicode unicodeText =
+  not (null unicodeText) ==>
+  let pos = posAt 1 1
+      advancedPos = advancePos pos unicodeText
+  in posLine advancedPos >= 1 && posColumn advancedPos >= 1
+
+-- Property: Source position handles tabs correctly
+prop_source_position_tabs :: Int -> Int -> Property
+prop_source_position_tabs tabCount =
+  tabCount >= 0 && tabCount <= 10 ==>
+  let tabText = replicate tabCount '\t'
+      pos = mkSourcePos 1 1
+      advancedPos = advancePos pos tabText
+  in posLine advancedPos === 1 && posColumn advancedPos >= 1
+
+-- Property: Source position handles newlines correctly
+prop_source_position_newlines :: Int -> Property
+prop_source_position_newlines newlineCount =
+  newlineCount >= 0 && newlineCount <= 5 ==>
+  let newlineText = replicate newlineCount '\n'
+      pos = mkSourcePos 1 1
+      advancedPos = advancePos pos newlineText
+  in posLine advancedPos === 1 + newlineCount
+
+-- Property: Source span contains entire text
+prop_span_contains_text :: String -> Property
+prop_span_contains_text text =
+  not (null text) && all (`notElem` text) "\r\n" ==>
+  let span = mkSourceSpan (mkSourcePos 1 1) (mkSourcePos 1 (length text + 1))
+  in spanLength span >= length text
+
+-- Property: Source locations are consistent with file structure
+prop_source_location_file_structure :: [String] -> Property
+prop_source_location_file_structure fileLines =
+  not (null fileLines) && length fileLines <= 10 && all (not . null) fileLines ==>
+  let fileContent = unlines fileLines
+      result = parseTypus fileContent
+  in case result of
+    Left _ -> property True
+    Right typusFile ->
+      let blocks = tfBlocks typusFile
+          spans = map cbSpan blocks
+      in all (\span -> let start = spanStart span in posLine start >= 1 && posLine start <= length fileLines) spans
+
+-- Property: Source location tracking preserves ordering
+prop_source_location_ordering :: [String] -> Property
+prop_source_location_ordering codeSegments =
+  not (null codeSegments) && length codeSegments <= 5 && all (not . null) codeSegments ==>
+  let fullCode = unlines codeSegments
+      result = parseTypus fullCode
+  in case result of
+    Left _ -> property True
+    Right typusFile ->
+      let blocks = tfBlocks typusFile
+          spans = map cbSpan blocks
+          positions = map spanStart spans
+      in positions == sort positions
 
 tests :: TestTree
-tests = testGroup "Source Location Tracking QuickCheck"
-  [ sourcePositionTests
-  , sourceSpanTests
-  , locatedValueTests
-  , spanOperationsTests
-  , locationConsistencyTests
+tests = testGroup "Source Location Tracking QuickCheck tests"
+  [ fastProperty "Source position creation preserves line and column" prop_source_pos_creation
+  , fastProperty "Source span creation preserves start and end positions" prop_source_span_creation
+  , fastProperty "Position advancement works correctly" prop_position_advancement
+  , fastProperty "Located values preserve their spans" prop_located_values_preserve_spans
+  , fastProperty "Source position handles tabs correctly" prop_source_position_tabs
+  , fastProperty "Source position handles newlines correctly" prop_source_position_newlines
   ]
-
-sourcePositionTests :: TestTree
-sourcePositionTests = testGroup "Source Position Properties"
-  [ fastProperty "source positions are ordered correctly" prop_source_positions_ordered
-  , fastProperty "source position comparison is transitive" prop_position_comparison_transitive
-  , fastProperty "source positions handle line/column bounds" prop_position_handles_bounds
-  ]
-
-sourceSpanTests :: TestTree
-sourceSpanTests = testGroup "Source Span Properties"
-  [ fastProperty "spans have valid start and end positions" prop_spans_valid_start_end
-  , fastProperty "span length is non-negative" prop_span_length_nonnegative
-  , fastProperty "span merging preserves boundaries" prop_span_merging_preserves_boundaries
-  ]
-
-locatedValueTests :: TestTree
-locatedValueTests = testGroup "Located Value Properties"
-  [ fastProperty "located values preserve span information" prop_located_preserves_span
-  , fastProperty "located values maintain value identity" prop_located_maintains_identity
-  , fastProperty "located values handle nested locations" prop_located_handles_nesting
-  ]
-
-spanOperationsTests :: TestTree
-spanOperationsTests = testGroup "Span Operations Properties"
-  [ fastProperty "span containment is reflexive" prop_span_containment_reflexive
-  , fastProperty "span containment is transitive" prop_span_containment_transitive
-  , fastProperty "span overlap is symmetric" prop_span_overlap_symmetric
-  ]
-
-locationConsistencyTests :: TestTree
-locationConsistencyTests = testGroup "Location Consistency Properties"
-  [ fastProperty "location updates maintain consistency" prop_location_updates_consistent
-  , fastProperty "location transformations preserve invariants" prop_location_transformations_preserve
-  , fastProperty "location merging is associative" prop_location_merging_associative
-  ]
-
--- Source position properties
-prop_source_positions_ordered :: Int -> Int -> Property
-prop_source_positions_ordered line col =
-  property $ line >= 1 && line <= 100 && col >= 1 && col <= 100 ==> True
-  -- Positions should be ordered by line then column
-
-prop_position_comparison_transitive :: Int -> Int -> Int -> Property
-prop_position_comparison_transitive line1 line2 line3 =
-  property $ all (>=1) [line1, line2, line3] && all (<=50) [line1, line2, line3] ==> True
-  -- Position comparison should be transitive
-
-prop_position_handles_bounds :: Int -> Int -> Property
-prop_position_handles_bounds line col =
-  property $ abs line <= 1000 && abs col <= 1000 ==> True
-  -- Should handle edge cases for line/column bounds
-
--- Source span properties
-prop_spans_valid_start_end :: SourcePos -> SourcePos -> Property
-prop_spans_valid_start_end start end =
-  property $ True -- Spans should have valid start and end positions
-
-prop_span_length_nonnegative :: SourceSpan -> Property
-prop_span_length_nonnegative span =
-  property $ True -- Span length should always be non-negative
-
-prop_span_merging_preserves_boundaries :: SourceSpan -> SourceSpan -> Property
-prop_span_merging_preserves_boundaries span1 span2 =
-  property $ True -- Span merging should preserve original boundaries
-
--- Located value properties
-prop_located_preserves_span :: SourceSpan -> String -> Property
-prop_located_preserves_span span value =
-  property $ length value <= 30 ==> True -- Located values should preserve span info
-
-prop_located_maintains_identity :: String -> Property
-prop_located_maintains_identity value =
-  property $ length value <= 20 ==> True -- Located values should maintain identity
-
-prop_located_handles_nesting :: SourceSpan -> SourceSpan -> Property
-prop_located_handles_nesting outer inner =
-  property $ True -- Located values should handle nested locations
-
--- Span operations properties
-prop_span_containment_reflexive :: SourceSpan -> Property
-prop_span_containment_reflexive span =
-  property $ True -- Span should contain itself
-
-prop_span_containment_transitive :: SourceSpan -> SourceSpan -> SourceSpan -> Property
-prop_span_containment_transitive span1 span2 span3 =
-  property $ True -- Containment should be transitive
-
-prop_span_overlap_symmetric :: SourceSpan -> SourceSpan -> Property
-prop_span_overlap_symmetric span1 span2 =
-  property $ True -- Overlap should be symmetric
-
--- Location consistency properties
-prop_location_updates_consistent :: SourceSpan -> Property
-prop_location_updates_consistent span =
-  property $ True -- Location updates should maintain consistency
-
-prop_location_transformations_preserve :: SourceSpan -> Property
-prop_location_transformations_preserve span =
-  property $ True -- Transformations should preserve invariants
-
-prop_location_merging_associative :: SourceSpan -> SourceSpan -> SourceSpan -> Property
-prop_location_merging_associative span1 span2 span3 =
-  property $ True -- Location merging should be associative

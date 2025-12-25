@@ -1,357 +1,167 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module Test.Unit.ErrorRecoveryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, sized)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 
-import Compiler.Errors (CompilerError(..), ErrorSeverity(..), formatError, formatCompilerError, CompilationPhase(..))
-import Compiler.Errors.Core (TypeError(..), formatError, errorAt, getErrorLine, getErrorColumn, ErrorLocation(..), ErrorContext(..), ErrorCategory(..), ErrorSeverity(..), ErrorRecovery(..))
-import Compiler.TypeChecker (TypeCheckDiagnostic(..), hasTypeErrors, diagnoseTypeErrors, createTypusFileFromErrors, TypeError(..))
-import Parser (parseTypus)
-import Utils (trim, removeComments)
-import Data.Char (isAlphaNum, isSpace, toLower)
-import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf)
-import Data.Maybe (isJust, isNothing, fromMaybe)
-import SourceLocation (SourcePos(..), startPos, toErrorLocation)
+import Compiler.Errors.Core
+  ( TypeError(..)
+  , ErrorSeverity(..)
+  , ErrorCategory(..)
+  , ErrorLocation(..)
+  , ErrorContext(..)
+  , ErrorRecovery(..)
+  , emptyContext
+  , canRecoverFrom
+  , shouldContinueAfter
+  , errorAt
+  , warningAt
+  , infoAt
+  , errorWithSuggestions
+  , withLocation
+  , withContext
+  , withSuggestions
+  , withRelatedErrors
+  , formatError
+  , formatErrorWithLocation
+  , hasCategory
+  , filterBySeverity
+  , filterByCategory
+  , getErrorStatistics
+  , generateErrorReport
+  , createRecoveryStrategy
+  , fatalRecovery
+  , errorRecovery
+  , warningRecovery
+  , infoRecovery
+  , customRecovery
+  )
 import qualified Data.Text as T
-import Data.Text (pack)
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort)
+import Data.Char (isSpace, isDigit)
 
--- Arbitrary instances for testing
-instance Arbitrary CompilerError where
-  arbitrary = do
-    typeError <- arbitrary
-    sourceContext <- arbitrary
-    stackTrace <- listOf $ elements ["func1", "func2", "func3"]
-    phase <- arbitrary
-    return $ CompilerError typeError sourceContext stackTrace phase
+-- Property: Error recovery strategies are consistent
+prop_recovery_strategy_consistency :: Bool -> Bool -> Property
+prop_recovery_strategy_consistency canRec shouldCont =
+  let strategy = createRecoveryStrategy canRec shouldCont Nothing Nothing
+      error = errorAt "TEST" (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing) { recovery = strategy }
+  in property (canRecoverFrom error === canRec && shouldContinueAfter error === shouldCont)
 
-instance Arbitrary Compiler.Errors.Core.TypeError where
-  arbitrary = do
-    errorId <- elements ["TYPE001", "TYPE002", "TYPE003"]
-    severity <- arbitrary
-    category <- arbitrary
-    message <- arbitrary
-    location <- arbitrary
-    context <- arbitrary
-    recovery <- arbitrary
-    suggestions <- listOf arbitrary
-    relatedErrors <- listOf arbitrary
-    errorChain <- listOf arbitrary
-    timestamp <- arbitrary
-    return $ Compiler.Errors.Core.TypeError {
-      errorId = errorId,
-      severity = severity,
-      category = category,
-      message = message,
-      location = location,
-      context = context,
-      recovery = recovery,
-      suggestions = suggestions,
-      relatedErrors = relatedErrors,
-      errorChain = errorChain,
-      timestamp = timestamp
-    }
+-- Property: Fatal errors cannot be recovered from
+prop_fatal_error_no_recovery :: String -> Property
+prop_fatal_error_no_recovery errorMsg =
+  not (null errorMsg) ==>
+  let location = ErrorLocation Nothing 1 1 Nothing Nothing
+      fatalError = errorAt "FATAL" (T.pack errorMsg) location { severity = Fatal }
+  in property (not (canRecoverFrom fatalError) && not (shouldContinueAfter fatalError))
 
--- | Generate random error locations
-instance Arbitrary ErrorLocation where
-  arbitrary = do
-    filePath <- arbitrary
-    line <- choose (1, 100)
-    column <- choose (1, 100)
-    endLine <- arbitrary
-    endColumn <- arbitrary
-    return $ ErrorLocation filePath line column endLine endColumn
+-- Property: Warning errors can be recovered from
+prop_warning_error_can_recover :: String -> Property
+prop_warning_error_can_recover warningMsg =
+  not (null warningMsg) ==>
+  let location = ErrorLocation Nothing 1 1 Nothing Nothing
+      warningError = warningAt "WARN" (T.pack warningMsg) location
+  in property (canRecoverFrom warningError && shouldContinueAfter warningError)
 
--- | Generate random error contexts
-instance Arbitrary ErrorContext where
-  arbitrary = do
-    contextCode <- arbitrary
-    contextFunction <- arbitrary
-    contextVariable <- arbitrary
-    contextType <- arbitrary
-    contextAdditional <- listOf $ arbitrary
-    return $ ErrorContext contextCode contextFunction contextVariable contextType contextAdditional
+-- Property: Info errors can be recovered from
+prop_info_error_can_recover :: String -> Property
+prop_info_error_can_recover infoMsg =
+  not (null infoMsg) ==>
+  let location = ErrorLocation Nothing 1 1 Nothing Nothing
+      infoError = infoAt "INFO" (T.pack infoMsg) location
+  in property (canRecoverFrom infoError && shouldContinueAfter infoError)
 
--- | Generate random error categories
-instance Arbitrary ErrorCategory where
-  arbitrary = elements [TypeChecking, Ownership, Parsing, Semantic, Runtime, Constraint, Inference, Integration, Unknown]
+-- Property: Error filtering by severity works correctly
+prop_filter_by_severity :: [ErrorSeverity] -> ErrorSeverity -> Property
+prop_filter_by_severity severities targetSeverity =
+  not (null severities) ==>
+  let errors = map (\sev -> errorAt "TEST" (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing) { severity = sev }) severities
+      filtered = filterBySeverity targetSeverity errors
+  in property (length filtered === length (filter (\e -> severity e == targetSeverity) errors))
 
--- | Generate random error severity
-instance Arbitrary ErrorSeverity where
-  arbitrary = elements [Error, Warning, Info]
+-- Property: Error filtering by category works correctly
+prop_filter_by_category :: [ErrorCategory] -> ErrorCategory -> Property
+prop_filter_by_category categories targetCategory =
+  not (null categories) ==>
+  let errors = map (\cat -> errorWithCategory "TEST" cat (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing)) categories
+      filtered = filterByCategory targetCategory errors
+  in property (length filtered === length (filter (\e -> category e == targetCategory) errors))
 
--- | Generate random compilation phases
+-- Property: Error statistics are accurate
+prop_error_statistics_accuracy :: [ErrorSeverity] -> [ErrorCategory] -> Property
+prop_error_statistics_accuracy severities categories =
+  not (null severities) && not (null categories) && length severities == length categories ==>
+  let errors = zipWith (\sev cat -> errorAt "TEST" (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing) { severity = sev, category = cat }) severities categories
+      stats = getErrorStatistics errors
+  in property (stats "total" === length errors)
 
+-- Property: Error formatting includes essential information
+prop_error_formatting_essentials :: String -> ErrorSeverity -> ErrorCategory -> Property
+prop_error_formatting_essentials errorMsg sev cat =
+  not (null errorMsg) ==>
+  let error = errorAt "TEST" (T.pack errorMsg) (ErrorLocation Nothing 1 1 Nothing Nothing) { severity = sev, category = cat }
+      formatted = formatError error
+  in property (errorMsg `isInfixOf` formatted && show sev `isInfixOf` formatted && show cat `isInfixOf` formatted)
 
--- | Generate random Text for error messages
-instance Arbitrary T.Text where
-  arbitrary = T.pack <$> arbitrary
+-- Property: Error formatting with location includes location info
+prop_error_formatting_with_location :: String -> Int -> Int -> Property
+prop_error_formatting_with_location errorMsg line col =
+  not (null errorMsg) && line > 0 && col > 0 ==>
+  let location = ErrorLocation Nothing line col Nothing Nothing
+      error = errorAt "TEST" (T.pack errorMsg) location
+      formatted = formatErrorWithLocation error
+  in property (show line `isInfixOf` formatted && show col `isInfixOf` formatted && errorMsg `isInfixOf` formatted)
 
--- | Generate random error recovery strategies
-instance Arbitrary ErrorRecovery where
-  arbitrary = do
-    canRecover <- arbitrary
-    shouldContinue <- arbitrary
-    recoveryAction <- arbitrary
-    recoveryHint <- arbitrary
-    recoveryCost <- choose (0, 100)
-    recoveryConfidence <- choose (0.0, 1.0)
-    return $ RecoveryStrategy canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
+-- Property: Error suggestions are preserved in formatting
+prop_error_suggestions_preserved :: String -> [String] -> Property
+prop_error_suggestions_preserved errorMsg suggestions =
+  not (null errorMsg) && not (null suggestions) && all (not . null) suggestions ==>
+  let error = errorWithSuggestions "TEST" (T.pack errorMsg) (map T.pack suggestions) (ErrorLocation Nothing 1 1 Nothing Nothing)
+      formatted = formatError error
+  in property (all (`isInfixOf` formatted) suggestions)
 
--- | Generate random compilation phases
-instance Arbitrary CompilationPhase where
-  arbitrary = elements [LexingPhase, ParsingPhase, TypeCheckingPhase, OwnershipAnalysisPhase, DependentTypeCheckingPhase, CodeGenerationPhase, OptimizationPhase]
+-- Property: Custom recovery strategies work as expected
+prop_custom_recovery_strategy :: Bool -> Bool -> String -> String -> Int -> Float -> Property
+prop_custom_recovery_strategy canRec shouldCont action hint cost confidence =
+  cost >= 0 && cost <= 100 && confidence >= 0.0 && confidence <= 1.0 ==>
+  let strategy = customRecovery canRec shouldCont (Just action) (Just hint) cost confidence
+      error = errorAt "TEST" (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing) { recovery = strategy }
+  in property (canRecoverFrom error === canRec && shouldContinueAfter error === shouldCont)
 
--- Helper function for categorizing errors
-categorizeError :: CompilerError -> String
-categorizeError err = case err of
-  _ -> "general" -- Default category
-
--- | Generate random error messages
-genErrorMessage :: Gen String
-genErrorMessage = listOf $ oneof
-  [ choose ('a', 'z')
-  , choose ('A', 'Z')
-  , choose ('0', '9')
-  , elements " \t\n\r"
-  , elements "!@#$%^&*()_+-=[]{}|;':\",./<>?"
-  ]
-
--- | Generate random compiler errors
-genCompilerError :: Gen CompilerError
-genCompilerError = do
-  message <- genErrorMessage
-  severity <- elements [Warning, Error, Fatal]
-  line <- choose (1, 100)
-  column <- choose (1, 80)
-  let pos = startPos { posLine = line, posColumn = column }
-      typeError = errorAt "test" (pack message) (toErrorLocation pos)
-      typeErrorWithSeverity = typeError { severity = severity }
-  return $ CompilerError typeErrorWithSeverity Nothing [] TypeCheckingPhase
-
--- | Generate malformed code snippets
-genMalformedCode :: Gen String
-genMalformedCode = oneof
-  [ genUnclosedBrackets
-  , genUnclosedBraces
-  , genUnclosedParentheses
-  , genInvalidSyntax
-  , genMixedMalformed
-  ]
-
--- | Generate code with unclosed brackets
-genUnclosedBrackets :: Gen String
-genUnclosedBrackets = do
-  content <- genErrorMessage
-  return $ "func test() {\n  x := [" ++ content ++ "\n}"
-
--- | Generate code with unclosed braces
-genUnclosedBraces :: Gen String
-genUnclosedBraces = do
-  content <- genErrorMessage
-  return $ "func test() {\n  if true {\n    " ++ content
-
--- | Generate code with unclosed parentheses
-genUnclosedParentheses :: Gen String
-genUnclosedParentheses = do
-  content <- genErrorMessage
-  return $ "func test() {\n  x := (1 + 2 * " ++ content ++ "\n}"
-
--- | Generate code with invalid syntax
-genInvalidSyntax :: Gen String
-genInvalidSyntax = do
-  content <- genErrorMessage
-  return $ "func test() {\n  x := @#$" ++ content ++ "\n}"
-
--- | Generate code with multiple malformed elements
-genMixedMalformed :: Gen String
-genMixedMalformed = do
-  content <- genErrorMessage
-  return $ "func test() {\n  x := [1, 2\n  y := (a + b\n  if true {\n    " ++ content
-
--- | Generate well-formed code snippets
-genWellFormedCode :: Gen String
-genWellFormedCode = do
-  varName <- elements ["x", "y", "z", "result"]
-  value <- choose (0, 100) :: Gen Int
-  return $ "func test() {\n  " ++ varName ++ " := " ++ show value ++ "\n}"
-
--- | Generate error recovery scenarios
-genErrorRecoveryScenario :: Gen (String, String)
-genErrorRecoveryScenario = do
-  malformed <- genMalformedCode
-  corrected <- genWellFormedCode
-  return (malformed, corrected)
-
--- Property: Error formatting preserves essential information
-prop_error_formatting_preserves_info :: CompilerError -> Property
-prop_error_formatting_preserves_info error =
-  let formatted = formatCompilerError error
-      typeErr = ceError error
-      hasMessage = T.unpack (message typeErr) `isInfixOf` formatted
-      hasLine = show (getErrorLine (location typeErr)) `isInfixOf` formatted
-      hasColumn = show (getErrorColumn (location typeErr)) `isInfixOf` formatted
-  in property $ hasMessage .&&. hasLine .&&. hasColumn
-
--- Property: Error categorization is consistent with severity
-prop_error_categorization_consistent :: CompilerError -> Property
-prop_error_categorization_consistent error =
-  let category = categorizeError error
-      errorSeverity = severity (ceError error)
-  in case errorSeverity of
-    Warning -> property $ category == "Warning"
-    Error -> property $ category == "Error"
-    Fatal -> property $ category == "Fatal"
-    Info -> property $ category == "Info"
-
--- Property: Malformed code detection
-prop_malformed_code_detection :: String -> Property
-prop_malformed_code_detection code =
-  let hasUnclosedBrackets = '[' `elem` code && ']' `notElem` code
-      hasUnclosedBraces = '{' `elem` code && '}' `notElem` code
-      hasUnclosedParens = '(' `elem` code && ')' `notElem` code
-      hasInvalidChars = any (`elem` "@#$%^&*") code
-      shouldBeMalformed = hasUnclosedBrackets || hasUnclosedBraces || 
-                         hasUnclosedParens || hasInvalidChars
-  in shouldBeMalformed ==> property $ True  -- Would check actual detection
-
--- Property: Error recovery preserves structure
-prop_error_recovery_preserves_structure :: String -> String -> Property
-prop_error_recovery_preserves_structure malformed corrected =
-  let cleanedMalformed = removeComments malformed
-      cleanedCorrected = removeComments corrected
-      malfunctions = parseTypus cleanedMalformed
-      corrections = parseTypus cleanedCorrected
-  in case (malfunctions, corrections) of
-    (Left _, Right _) -> property $ True  -- Recovery successful
-    (Left _, Left _) -> property $ True  -- Both fail, but structure preserved
-    (Right _, Right _) -> property $ True  -- Both succeed
-    (Right _, Left _) -> property $ False  -- Unexpected case
-
--- Property: Multiple error handling
-prop_multiple_error_handling :: [CompilerError] -> Property
-prop_multiple_error_handling errors =
-  not (null errors) ==> 
-  let formatted = map formatCompilerError errors
-      categorized = map categorizeError errors
-      hasWarnings = any (\e -> severity (ceError e) == Warning) errors
-      hasErrors = any (\e -> severity (ceError e) == Error) errors
-      hasFatal = any (\e -> severity (ceError e) == Fatal) errors
-  in property $ length formatted == length errors .&&.
-             length categorized == length errors
-
--- Property: Error position tracking
-prop_error_position_tracking :: CompilerError -> Property
-prop_error_position_tracking error =
-  let typeErr = ceError error
-      loc = location typeErr
-      lineNum = getErrorLine loc
-      columnNum = getErrorColumn loc
-  in property $ lineNum >= 1 .&&. columnNum >= 1 .&&. lineNum <= 1000 .&&. columnNum <= 200
-
--- Property: Error message uniqueness
-prop_error_message_uniqueness :: [CompilerError] -> Property
-prop_error_message_uniqueness errors =
-  let messages = map (T.unpack . message . ceError) errors
-      uniqueMessages = Data.List.nub messages
-  in property $ length uniqueMessages <= length messages
-
--- Property: Type error diagnosis consistency
-prop_type_error_diagnosis_consistent :: Compiler.Errors.Core.TypeError -> Property
-prop_type_error_diagnosis_consistent typeError =
-  let testFile = createTypusFileFromErrors [Compiler.TypeChecker.TypeError (Just $ T.unpack $ Compiler.Errors.Core.message typeError) (T.unpack $ Compiler.Errors.Core.message typeError)]
-      diagnostics = diagnoseTypeErrors testFile
-      hasErrors = hasTypeErrors testFile
-  in property $ hasErrors
-
--- Property: Error recovery incremental improvement
-prop_error_recovery_incremental :: String -> [String] -> Property
-prop_error_recovery_incremental original corrections =
-  not (null corrections) ==> 
-  let originalResult = parseTypus original
-      correctedResults = map parseTypus corrections
-      originalFailed = case originalResult of
-        Left _ -> True
-        Right _ -> False
-      successes = length [() | Right _ <- correctedResults]
-  in originalFailed ==> property $ successes >= 0
-
--- Property: Error context preservation
-prop_error_context_preservation :: String -> String -> Property
-prop_error_context_preservation code context =
-  let fullCode = context ++ "\n" ++ code
-      result = parseTypus fullCode
-  in case result of
-    Left error -> property $ True  -- Error should include context
-    Right _ -> property $ True
-
--- Property: Error severity classification
-prop_error_severity_classification :: CompilerError -> Property
-prop_error_severity_classification error =
-  let typeErr = ceError error
-      errorSeverity = severity typeErr
-      errorMessage = T.unpack (message typeErr)
-      hasKeyword = any (`isInfixOf` map toLower errorMessage) ["error", "warning", "fatal"]
-  in property $ hasKeyword ==> True
-
--- Property: Error recovery performance
-prop_error_recovery_performance :: String -> Int -> Property
-prop_error_recovery_performance code iterations =
-  iterations <= 100 ==> 
-  let results = replicate iterations (parseTypus code)
-      failures = length [() | Left _ <- results]
-  in property $ failures >= 0
-
--- Property: Error message informativeness
-prop_error_message_informativeness :: CompilerError -> Property
-prop_error_message_informativeness error =
-  let errorMessage = T.unpack (message (ceError error))
-      hasContent = length (trim errorMessage) > 0
-      hasReasonableLength = length errorMessage <= 500
-  in property $ hasContent .&&. hasReasonableLength
-
--- Property: Error localization consistency
-prop_error_localization_consistent :: CompilerError -> Property
-prop_error_localization_consistent error =
-  let typeErr = ceError error
-      loc = location typeErr
-      lineNum = getErrorLine loc
-      columnNum = getErrorColumn loc
-      formatted = formatCompilerError error
-      hasLineInfo = show lineNum `isInfixOf` formatted
-      hasColumnInfo = show columnNum `isInfixOf` formatted
-  in property $ hasLineInfo .&&. hasColumnInfo
-
--- Property: Error recovery state preservation
-prop_error_recovery_state_preservation :: String -> String -> Property
-prop_error_recovery_state_preservation before after =
-  let beforeResult = parseTypus before
-      afterResult = parseTypus after
-  in case (beforeResult, afterResult) of
-    (Left _, Right _) -> property $ True  -- Recovery successful
-    (Left _, Left _) -> property $ True  -- Consistent failure
-    (Right _, Right _) -> property $ True  -- Both succeed
-    (Right _, Left _) -> property $ False  -- Regression
+-- Property: Recovery strategy selection based on severity
+prop_recovery_by_severity :: ErrorSeverity -> Property
+prop_recovery_by_severity sev =
+  let error = errorAt "TEST" (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing) { severity = sev }
+      canRec = canRecoverFrom error
+      shouldCont = shouldContinueAfter error
+  in case sev of
+    Fatal -> property (not canRec && not shouldCont)
+    Error -> property (canRec && shouldCont)
+    Warning -> property (canRec && shouldCont)
+    Info -> property (canRec && shouldCont)
 
 tests :: TestTree
-tests = testGroup "Error Recovery QuickCheck Tests"
-  [ fastProperty "error formatting preserves info" prop_error_formatting_preserves_info
-  , fastProperty "error categorization consistent" prop_error_categorization_consistent
-  , fastProperty "malformed code detection" prop_malformed_code_detection
-  , fastProperty "error recovery preserves structure" prop_error_recovery_preserves_structure
-  , fastProperty "multiple error handling" prop_multiple_error_handling
-  , fastProperty "error position tracking" prop_error_position_tracking
-  , fastProperty "error message uniqueness" prop_error_message_uniqueness
-  , fastProperty "type error diagnosis consistent" prop_type_error_diagnosis_consistent
-  , fastProperty "error recovery incremental" prop_error_recovery_incremental
-  , fastProperty "error context preservation" prop_error_context_preservation
-  , fastProperty "error severity classification" prop_error_severity_classification
-  , fastProperty "error recovery performance" prop_error_recovery_performance
-  , fastProperty "error message informativeness" prop_error_message_informativeness
-  , fastProperty "error localization consistent" prop_error_localization_consistent
-  , fastProperty "error recovery state preservation" prop_error_recovery_state_preservation
+tests = testGroup "Error Recovery QuickCheck tests"
+  [ fastProperty "Error recovery strategies are consistent" prop_recovery_strategy_consistency
+  , fastProperty "Fatal errors cannot be recovered from" prop_fatal_error_no_recovery
+  , fastProperty "Warning errors can be recovered from" prop_warning_error_can_recover
+  , fastProperty "Info errors can be recovered from" prop_info_error_can_recover
+  , fastProperty "Error filtering by severity works correctly" prop_filter_by_severity
+  , fastProperty "Error filtering by category works correctly" prop_filter_by_category
+  , fastProperty "Error statistics are accurate" prop_error_statistics_accuracy
+  , fastProperty "Error formatting includes essential information" prop_error_formatting_essentials
+  , fastProperty "Error formatting with location includes location info" prop_error_formatting_with_location
+  , fastProperty "Error suggestions are preserved in formatting" prop_error_suggestions_preserved
+  , fastProperty "Custom recovery strategies work as expected" prop_custom_recovery_strategy
+  , fastProperty "Recovery strategy selection based on severity" prop_recovery_by_severity
   ]
