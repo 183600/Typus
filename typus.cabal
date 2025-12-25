@@ -405,7 +405,6 @@ test-suite typus-test
         Test.Unit.NewDependenciesAnalysisSpec,
         Test.Unit.NewAnalyzerIntegrationSpec,
         Test.Unit.NewCliIntegrationSpec,
-        Test.Unit.EnhancedErrorHandlingQuickCheckSpec,
         Test.Unit.CompilerIntegrationQuickCheckSpec,
         Test.Unit.TypeSystemBoundaryQuickCheckSpec,
         Test.Unit.ParserErrorRecoveryQuickCheckSpec,
@@ -458,7 +457,14 @@ test-suite typus-test
         Test.Unit.CustomErrorHandlingQuickCheckSpec,
         Test.Unit.CustomCompilerQuickCheckSpec,
         Test.Unit.CustomSyntaxValidatorQuickCheckSpec,
-        Test.Unit.CustomSymbolTableQuickCheckSpec
+        Test.Unit.CustomSymbolTableQuickCheckSpec,
+        Test.Unit.EnhancedParserQuickCheckSpec,
+        Test.Unit.EnhancedCompilerQuickCheckSpec,
+        Test.Unit.EnhancedOwnershipQuickCheckSpec,
+        Test.Unit.EnhancedDependentTypesQuickCheckSpec,
+        Test.Unit.EnhancedErrorHandlingQuickCheckSpec,
+        Test.Unit.EnhancedSourceLocationQuickCheckSpec,
+        Test.Unit.EnhancedUtilsQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

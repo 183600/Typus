@@ -268,6 +268,15 @@ import qualified Test.Unit.CustomCompilerQuickCheckSpec
 import qualified Test.Unit.CustomSyntaxValidatorQuickCheckSpec
 import qualified Test.Unit.CustomSymbolTableQuickCheckSpec
 
+-- Enhanced QuickCheck test modules
+import qualified Test.Unit.EnhancedParserQuickCheckSpec
+import qualified Test.Unit.EnhancedCompilerQuickCheckSpec
+import qualified Test.Unit.EnhancedOwnershipQuickCheckSpec
+import qualified Test.Unit.EnhancedDependentTypesQuickCheckSpec
+import qualified Test.Unit.EnhancedErrorHandlingQuickCheckSpec
+import qualified Test.Unit.EnhancedSourceLocationQuickCheckSpec
+import qualified Test.Unit.EnhancedUtilsQuickCheckSpec
+
 -- New cabal test modules (8 new comprehensive tests)
 import qualified Test.Unit.CompilerErrorRecoverySpec
 import qualified Test.Unit.DependentTypeBoundarySpec
@@ -496,5 +505,14 @@ tests =
         , Test.Unit.CustomCompilerQuickCheckSpec.tests
         , Test.Unit.CustomSyntaxValidatorQuickCheckSpec.tests
         , Test.Unit.CustomSymbolTableQuickCheckSpec.tests
+        ]
+    , testGroup "Enhanced QuickCheck Test Modules"
+        [ Test.Unit.EnhancedParserQuickCheckSpec.tests
+        , Test.Unit.EnhancedCompilerQuickCheckSpec.tests
+        , Test.Unit.EnhancedOwnershipQuickCheckSpec.tests
+        , Test.Unit.EnhancedDependentTypesQuickCheckSpec.tests
+        , Test.Unit.EnhancedErrorHandlingQuickCheckSpec.tests
+        , Test.Unit.EnhancedSourceLocationQuickCheckSpec.tests
+        , Test.Unit.EnhancedUtilsQuickCheckSpec.tests
         ]
     ]
