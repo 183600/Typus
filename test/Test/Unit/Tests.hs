@@ -40,6 +40,12 @@ import qualified Test.Unit.IntegrationFeaturesQuickCheckSpec
 -- New Cabal QuickCheck test modules
 import qualified Test.Unit.NewCabalQuickCheckTestSpec
 
+-- New core test modules
+import qualified Test.Unit.SourceLocationCoreTestSpec
+import qualified Test.Unit.ParserCoreTestSpec
+import qualified Test.Unit.ErrorHandlerCoreTestSpec
+import qualified Test.Unit.DependenciesCoreTestSpec
+
 -- New comprehensive QuickCheck test modules
 import qualified Test.Unit.CompilerOptimizationQuickCheckSpec
 import qualified Test.Unit.OwnershipTransferQuickCheckSpec
@@ -208,6 +214,12 @@ tests =
     , Test.Unit.EdgeCaseSpec.tests
     , Test.Unit.EnhancedQuickCheckSpec.tests
     , Test.Unit.AdditionalCabalTestsSpec.tests
+    , testGroup "New Core Tests"
+        [ Test.Unit.SourceLocationCoreTestSpec.tests
+        , Test.Unit.ParserCoreTestSpec.tests
+        , Test.Unit.ErrorHandlerCoreTestSpec.tests
+        , Test.Unit.DependenciesCoreTestSpec.tests
+        ]
     , Test.Unit.UtilsAdditionalQuickCheckSpec.tests
     , Test.Unit.SourceLocationAdditionalQuickCheckSpec.tests
     , Test.Unit.ParserAdditionalQuickCheckSpec.tests
