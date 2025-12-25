@@ -40,6 +40,9 @@ import qualified Test.Unit.DependentTypesQuickCheckSpec
 import qualified Test.Unit.DependenciesQuickCheckSpec
 import qualified Test.Unit.AdvancedQuickCheckSpec
 import qualified Test.Unit.PerformanceQuickCheckSpec
+-- New QuickCheck test modules
+import qualified Test.Unit.SimpleSyntaxValidatorQuickCheckSpec
+import qualified Test.Unit.DebugQuickCheckSpec
 -- Extended QuickCheck test modules
 import qualified Test.Unit.ExtendedParserQuickCheckSpec
 import qualified Test.Unit.ExtendedCompilerQuickCheckSpec
@@ -190,5 +193,7 @@ tests =
         , Test.Unit.DependenciesQuickCheckSpec.tests
         , Test.Unit.AdvancedQuickCheckSpec.tests
         , Test.Unit.PerformanceQuickCheckSpec.tests
+        , Test.Unit.SimpleSyntaxValidatorQuickCheckSpec.tests
+        , Test.Unit.DebugQuickCheckSpec.tests
         ]
     ]

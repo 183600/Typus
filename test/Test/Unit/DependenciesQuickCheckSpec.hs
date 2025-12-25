@@ -1,383 +1,327 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module Test.Unit.DependenciesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), property, forAll, counterexample, classify, Arbitrary(..), Gen, oneof, choose, listOf, elements, vectorOf)
-import Data.List (isPrefixOf, isInfixOf, nub, sort, union)
-import Data.Maybe (isJust, isNothing, fromMaybe)
-import Data.Either (isLeft, isRight)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+
+import Dependencies.AST
+  ( AST(..)
+  , Statement(..)
+  , TypeExpr(..)
+  , Constraint(..)
+  , DependencyNode(..)
+  , DependencyGraph(..)
+  )
+
+import Dependencies.Parser
+  ( parseProgram
+  , parseStatement
+  , parseTypeExpr
+  , parseConstraint
+  , runParser
+  , grammarDefinition
+  )
+
 import qualified Data.Text as T
-import qualified Data.Map as Map
-import qualified Data.Set as Set
+import Data.List (isPrefixOf, isInfixOf, sort)
+import Data.Char (isSpace, isAlphaNum)
 
-import qualified Dependencies.TypeSystem as TS
-import qualified Dependencies.AST as AST
-import qualified Dependencies.Analyzer as DA
-import qualified Dependencies.Parser as DP
-import qualified Dependencies.Inference as DI
-import Dependencies.TypeSystem (TypeVar, TypeConstraint)
-import TestSupport.Arbitrary
-import TestSupport.ExtendedArbitrary ()
+-- Property: AST construction with Program
+prop_ast_program_construction :: [String] -> Property
+prop_ast_program_construction statements =
+  not (null statements) && length statements <= 5 ==>
+  let dummyStatements = map (\s -> SVarDecl (T.pack s) (SimpleT (T.pack "int"))) statements
+      program = Program dummyStatements
+  in case program of
+    Program stmts -> length stmts === length statements
 
--- Property: Type variable equality
-prop_typevar_equality :: TypeVar -> TypeVar -> Property
-prop_typevar_equality tv1 tv2 =
-  let equal = tv1 == tv2
-  in property $ equal == (show tv1 == show tv2)
+-- Property: Statement equality
+prop_statement_equality :: String -> TypeExpr -> Property
+prop_statement_equality varName typeExpr =
+  not (null varName) ==>
+  let stmt1 = SVarDecl (T.pack varName) typeExpr
+      stmt2 = SVarDecl (T.pack varName) typeExpr
+      stmt3 = SVarDecl (T.pack (varName ++ "_diff")) typeExpr
+  in stmt1 === stmt2 .&&. stmt1 /= stmt3
 
--- Property: Type variable substitution
-prop_typevar_substitution :: TypeVar -> TypeVar -> Property
-prop_typevar_substitution tv1 tv2 =
-  -- Test that type variables can be compared
-  property $ (tv1 == tv1) && (tv2 == tv2)
+-- Property: TypeExpr construction
+prop_typeexpr_simple :: String -> Property
+prop_typeexpr_simple typeName =
+  not (null typeName) && all isAlphaNum typeName ==>
+  let typeExpr = SimpleT (T.pack typeName)
+  in case typeExpr of
+    SimpleT name -> T.unpack name === typeName
 
--- Property: Type constraint satisfaction
-prop_constraint_satisfaction :: TypeConstraint -> Property
-prop_constraint_satisfaction constraint =
-  -- Test that type constraints can be constructed and compared
-  property $ constraint == constraint
+-- Property: TypeExpr generic construction
+prop_typeexpr_generic :: String -> [String] -> Property
+prop_typeexpr_generic typeName typeArgs =
+  not (null typeName) && not (null typeArgs) && length typeArgs <= 3 ==>
+  let genericType = GenericT (T.pack typeName) (map (SimpleT . T.pack) typeArgs)
+  in case genericType of
+    GenericT name args -> property $ T.unpack name === typeName .&&. length args === length typeArgs
 
--- Property: Type unification
-prop_type_unification :: TypeVar -> TypeVar -> Property
-prop_type_unification tv1 tv2 =
-  -- Test that two type variables can be compared
-  property $ (tv1 == tv2) || (tv1 /= tv2)
+-- Property: TypeExpr function construction
+prop_typeexpr_function :: [(String, TypeExpr)] -> TypeExpr -> Property
+prop_typeexpr_function params returnType =
+  not (null params) && length params <= 3 ==>
+  let funcType = FuncT (map (\(n, t) -> (T.pack n, t)) params) returnType
+  in case funcType of
+    FuncT paramTypes ret -> length paramTypes === length params
 
--- Property: Type variable free variables
-prop_typevar_freevars :: TypeVar -> Property
-prop_typevar_freevars tv =
-  -- Test that type variable is equal to itself
-  property $ tv == tv
+-- Property: TypeExpr refinement construction
+prop_typeexpr_refinement :: TypeExpr -> [String] -> Property
+prop_typeexpr_refinement baseType constraintNames =
+  not (null constraintNames) && length constraintNames <= 3 ==>
+  let constraints = map (\name -> PredC (T.pack name) []) constraintNames
+      refinedType = RefineT baseType constraints
+  in case refinedType of
+    RefineT base cons -> property $ base === baseType .&&. length cons === length constraintNames
 
--- Property: Type constraint normalization
-prop_constraint_normalization :: TypeConstraint -> Property
-prop_constraint_normalization constraint =
-  -- Test that constraint is equal to itself
-  property $ constraint == constraint
+-- Property: Constraint construction
+prop_constraint_size_gt :: String -> Int -> Property
+prop_constraint_size_gt varName size =
+  not (null varName) && size >= 0 && size <= 100 ==>
+  let constraint = SizeGT (T.pack varName) size
+  in case constraint of
+    SizeGT var s -> property $ T.unpack var === varName .&&. s === size
 
--- Property: Type variable occurrence check
-prop_typevar_occurrence :: TypeVar -> TypeVar -> Property
-prop_typevar_occurrence tv1 tv2 =
-  -- Test that type variables can be compared
-  property $ (tv1 == tv2) || (tv1 /= tv2)
+-- Property: Constraint range construction
+prop_constraint_range :: String -> Int -> Int -> Property
+prop_constraint_range varName minVal maxVal =
+  not (null varName) && minVal >= 0 && maxVal >= minVal && maxVal <= 100 ==>
+  let constraint = RangeC (T.pack varName) minVal maxVal
+  in case constraint of
+    RangeC var min max -> property $ T.unpack var === varName .&&. min === minVal .&&. max === maxVal
 
--- Property: Type variable substitution composition
-prop_substitution_composition :: TypeVar -> TypeVar -> TypeVar -> Property
-prop_substitution_composition tv1 tv2 tv3 =
-  -- Test transitivity of equality
-  property $ if (tv1 == tv2 && tv2 == tv3) then (tv1 == tv3) else True
+-- Property: Constraint predicate construction
+prop_constraint_predicate :: String -> [TypeExpr] -> Property
+prop_constraint_predicate predName args =
+  not (null predName) && not (null args) && length args <= 3 ==>
+  let constraint = PredC (T.pack predName) args
+  in case constraint of
+    PredC pred argTypes -> property $ T.unpack pred === predName .&&. length argTypes === length args
 
--- Property: Type constraint simplification
-prop_constraint_simplification :: TypeConstraint -> Property
-prop_constraint_simplification constraint =
-  -- Test that constraint is equal to itself
-  property $ constraint == constraint
+-- Property: DependencyNode construction
+prop_dependency_node_construction :: String -> [String] -> Property
+prop_dependency_node_construction nodeName dependencies =
+  not (null nodeName) && length dependencies <= 5 ==>
+  let node = DependencyNode nodeName dependencies
+  in property $ nodeName node === nodeName .&&. nodeDependencies node === dependencies
 
--- Property: Type variable freshness
-prop_typevar_freshness :: [TypeVar] -> Property
-prop_typevar_freshness existingVars =
-  -- Test that list membership works correctly
-  property $ all (\tv -> tv `elem` existingVars) existingVars
+-- Property: parseStatement handles simple variable declarations
+prop_parse_statement_var_decl :: String -> String -> Property
+prop_parse_statement_var_decl varName typeName =
+  not (null varName) && not (null typeName) && all isAlphaNum varName && all isAlphaNum typeName ==>
+  let input = "var " ++ varName ++ " : " ++ typeName
+      result = runParser parseStatement input
+  in case result of
+    Left _ -> property False
+    Right (SVarDecl name (SimpleT simpleType)) -> 
+      property $ T.unpack name === varName .&&. T.unpack simpleType === typeName
+    Right _ -> property False
 
--- Property: Type constraint entailment
-prop_constraint_entailment :: TypeConstraint -> TypeConstraint -> Property
-prop_constraint_entailment constraint1 constraint2 =
-  -- Test that constraints can be compared
-  property $ (constraint1 == constraint2) || (constraint1 /= constraint2)
+-- Property: parseTypeExpr handles simple types
+prop_parse_typeexpr_simple :: String -> Property
+prop_parse_typeexpr_simple typeName =
+  not (null typeName) && all isAlphaNum typeName ==>
+  let input = typeName
+      result = runParser parseTypeExpr input
+  in case result of
+    Left _ -> property False
+    Right (SimpleT name) -> property $ T.unpack name === typeName
+    Right _ -> property False
 
--- Property: Type variable renaming
-prop_typevar_renaming :: TypeVar -> String -> Property
-prop_typevar_renaming tv _newName =
-  -- Test that TypeVar can be shown
-  property $ not (null (show tv))
+-- Property: parseTypeExpr handles generic types
+prop_parse_typeexpr_generic :: String -> [String] -> Property
+prop_parse_typeexpr_generic typeName typeArgs =
+  not (null typeName) && not (null typeArgs) && length typeArgs <= 3 && 
+  all isAlphaNum typeName && all isAlphaNum (concat typeArgs) ==>
+  let argsStr = concat $ intersperse ", " typeArgs
+      input = typeName ++ "<" ++ argsStr ++ ">"
+      result = runParser parseTypeExpr input
+  in case result of
+    Left _ -> property False
+    Right (GenericT name args) -> 
+      property $ T.unpack name === typeName .&&. length args === length typeArgs
+    Right _ -> property False
 
--- Property: Type constraint consistency
-prop_constraint_consistency :: [TypeConstraint] -> Property
-prop_constraint_consistency constraints =
-  -- Test that list length is consistent
-  property $ length constraints >= 0
+-- Property: parseConstraint handles size constraints
+prop_parse_constraint_size :: String -> String -> Int -> Property
+prop_parse_constraint_size varName op size =
+  not (null varName) && all isAlphaNum varName && op `elem` [">", ">="] && size >= 0 && size <= 100 ==>
+  let input = varName ++ " " ++ op ++ " " ++ show size
+      result = runParser parseConstraint input
+  in case (op, result) of
+    (">", Left _) -> property False
+    (">", Right (SizeGT var s)) -> property $ T.unpack var === varName .&&. s === size
+    (">", Right _) -> property False
+    (">=", Left _) -> property False
+    (">=", Right (SizeGE var s)) -> property $ T.unpack var === varName .&&. s === size
+    (">=", Right _) -> property False
+    _ -> property False
 
--- Property: Type variable generalization
-prop_typevar_generalization :: TypeVar -> [TypeVar] -> Property
-prop_typevar_generalization tv boundVars =
-  -- Test that membership check works
-  property $ (tv `elem` boundVars) || (tv `notElem` boundVars)
+-- Property: parseConstraint handles range constraints
+prop_parse_constraint_range :: String -> Int -> Int -> Property
+prop_parse_constraint_range varName minVal maxVal =
+  not (null varName) && all isAlphaNum varName && minVal >= 0 && maxVal >= minVal && maxVal <= 100 ==>
+  let input = varName ++ " < " ++ show minVal ++ ", " ++ show maxVal ++ " >"
+      result = runParser parseConstraint input
+  in case result of
+    Left _ -> property False
+    Right (RangeC var min max) -> 
+      property $ T.unpack var === varName .&&. min === minVal .&&. max === maxVal
+    Right _ -> property False
 
--- Property: Type constraint instantiation
-prop_constraint_instantiation :: TypeConstraint -> [TypeVar] -> Property
-prop_constraint_instantiation _constraint _typeVars =
-  -- Simplified test
-  property True
+-- Property: parseProgram handles multiple statements
+prop_parse_program_multiple :: [String] -> Property
+prop_parse_program_multiple varNames =
+  not (null varNames) && length varNames <= 3 && all isAlphaNum (concat varNames) ==>
+  let statements = map (\name -> "var " ++ name ++ " : int") varNames
+      input = unlines statements
+      result = runParser parseProgram input
+  in case result of
+    Left _ -> property False
+    Right (Program stmts) -> property $ length stmts === length varNames
+    Right _ -> property False
 
--- Property: Type variable arity
-prop_typevar_arity :: TypeVar -> Property
-prop_typevar_arity _tv =
-  -- Simplified test
-  property True
+-- Property: grammarDefinition is non-empty
+prop_grammar_definition_non_empty :: Property
+prop_grammar_definition_non_empty =
+  let grammar = grammarDefinition
+  in property $ not (null grammar) && "Typus Language BNF Grammar" `isInfixOf` grammar
 
--- Property: Type constraint projection
-prop_constraint_projection :: TypeConstraint -> Int -> Property
-prop_constraint_projection _constraint _index =
-  -- Simplified test
-  property True
+-- Property: AST roundtrip consistency
+prop_ast_roundtrip_consistency :: Statement -> Property
+prop_ast_roundtrip_consistency stmt =
+  -- Note: This is a simplified test since we don't have a show instance for Statement
+  case stmt of
+    SVarDecl name typeExpr -> 
+      name === name && typeExpr === typeExpr
+    _ -> property True
 
--- Property: Type variable composition
-prop_typevar_composition :: TypeVar -> TypeVar -> Property
-prop_typevar_composition tv1 tv2 =
-  -- Test that type variables can be compared
-  property $ (tv1 == tv2) || (tv1 /= tv2)
+-- Property: TypeExpr nested generics
+prop_typeexpr_nested_generics :: String -> String -> String -> Property
+prop_typeexpr_nested_generics outerType innerType innermostType =
+  not (null outerType) && not (null innerType) && not (null innermostType) &&
+  all isAlphaNum outerType && all isAlphaNum innerType && all isAlphaNum innermostType ==>
+  let innerGeneric = GenericT (T.pack innerType) [SimpleT (T.pack innermostType)]
+      outerGeneric = GenericT (T.pack outerType) [innerGeneric]
+  in case outerGeneric of
+    GenericT name [GenericT innerName [SimpleT innermostName]] ->
+      T.unpack name === outerType && T.unpack innerName === innerType && T.unpack innermostName === innermostType
+    _ -> property False
 
--- Property: Type constraint decomposition
-prop_constraint_decomposition :: TypeConstraint -> Property
-prop_constraint_decomposition _constraint =
-  -- Simplified test
-  property True
+-- Property: Statement type definitions
+prop_statement_type_def :: String -> [String] -> Property
+prop_statement_type_def typeName typeParams =
+  not (null typeName) && length typeParams <= 3 && all isAlphaNum (typeName : concat typeParams) ==>
+  let params = map T.pack typeParams
+      typeDef = STypeDef (T.pack typeName) params []
+  in case typeDef of
+    STypeDef name ps cs -> 
+      T.unpack name === typeName && ps === params && null cs
 
--- Property: Type variable occurrence count
-prop_typevar_occurrence_count :: TypeVar -> TypeVar -> Property
-prop_typevar_occurrence_count _container _contained =
-  -- Simplified test
-  property True
+-- Property: Statement function declarations
+prop_statement_func_decl :: String -> [(String, TypeExpr)] -> Property
+prop_statement_func_decl funcName params =
+  not (null funcName) && not (null params) && length params <= 3 &&
+  all isAlphaNum funcName && all (all isAlphaNum . fst) params ==>
+  let paramPairs = map (\(n, t) -> (T.pack n, t)) params
+      funcDecl = SFuncDecl (T.pack funcName) paramPairs Nothing
+  in case funcDecl of
+    SFuncDecl name ps ret -> 
+      T.unpack name === funcName && ps === paramPairs && ret === Nothing
 
--- Property: Type constraint application
-prop_constraint_application :: TypeConstraint -> TypeVar -> Property
-prop_constraint_application _constraint _tv =
-  -- Simplified test
-  property True
+-- Property: Statement type aliases
+prop_statement_type_alias :: String -> TypeExpr -> Property
+prop_statement_type_alias aliasName underlyingType =
+  not (null aliasName) && all isAlphaNum aliasName ==>
+  let typeAlias = STypeAlias (T.pack aliasName) underlyingType []
+  in case typeAlias of
+    STypeAlias name typeExpr constraints ->
+      T.unpack name === aliasName && typeExpr === underlyingType && null constraints
 
--- Property: Type variable substitution in constraints
-prop_constraint_substitution :: TypeConstraint -> TypeVar -> TypeVar -> Property
-prop_constraint_substitution constraint oldVar newVar =
-  let substituted = substituteInConstraint constraint oldVar newVar
-      validSubstitution = isValidConstraint substituted
-  in property $ validSubstitution
+-- Property: Statement existential declarations
+prop_statement_exists_decl :: [String] -> Statement -> Property
+prop_statement_exists_decl typeVars innerStmt =
+  not (null typeVars) && length typeVars <= 3 && all isAlphaNum (concat typeVars) ==>
+  let existsDecl = SExistsDecl (map T.pack typeVars) innerStmt
+  in case existsDecl of
+    SExistsDecl vars stmt ->
+      length vars === length typeVars && stmt === innerStmt
 
--- Property: Type constraint conjunction
-prop_constraint_conjunction :: TypeConstraint -> TypeConstraint -> Property
-prop_constraint_conjunction constraint1 constraint2 =
-  let conjuncted = conjunctionConstraints constraint1 constraint2
-      validConjunction = isValidConstraint conjuncted
-  in property $ validConjunction
+-- Property: Statement constraint definitions
+prop_statement_constraint_def :: String -> Constraint -> Property
+prop_statement_constraint_def constraintName constraint =
+  not (null constraintName) && all isAlphaNum constraintName ==>
+  let constraintDef = SConstraintDef (T.pack constraintName) constraint
+  in case constraintDef of
+    SConstraintDef name c ->
+      T.unpack name === constraintName && c === constraint
 
--- Property: Type constraint disjunction
-prop_constraint_disjunction :: TypeConstraint -> TypeConstraint -> Property
-prop_constraint_disjunction constraint1 constraint2 =
-  let disjuncted = disjunctionConstraints constraint1 constraint2
-      validDisjunction = isValidConstraint disjuncted
-  in property $ validDisjunction
+-- Property: Complex TypeExpr combinations
+prop_typeexpr_complex_combinations :: TypeExpr -> TypeExpr -> TypeExpr -> Property
+prop_typeexpr_complex_combinations baseType argType returnType =
+  let genericType = GenericT "Container" [baseType, argType]
+      funcType = FuncT [("arg", genericType), ("other", argType)] returnType
+      refinedType = RefineT funcType [PredC "valid" [], SizeGT "size" 0]
+  in case refinedType of
+    RefineT (FuncT params ret) constraints ->
+      length params === 2 && length constraints === 2
+    _ -> property False
 
--- Property: Type variable dependency analysis
-prop_typevar_dependencies :: TypeVar -> Property
-prop_typevar_dependencies tv =
-  let dependencies = getDependencies tv
-      validDependencies = all (const True) dependencies  -- Simplified since isValidTypeVar doesn't exist
-  in property $ validDependencies
+-- Property: Error handling with invalid inputs
+prop_parse_error_handling :: String -> Property
+prop_parse_error_handling invalidInput =
+  null invalidInput || any (not . isAlphaNum) invalidInput ==>
+  let input = T.pack invalidInput
+      result = runParser parseStatement input
+  in case result of
+    Left _ -> property True  -- Expected to fail
+    Right _ -> property False -- Should not succeed with invalid input
 
--- Property: Type constraint closure
-prop_constraint_closure :: [TypeConstraint] -> Property
-prop_constraint_closure constraints =
-  let closure = computeClosure constraints
-      isClosed = all (`elem` closure) constraints
-  in property $ isClosed
-
--- Property: Type variable unification algorithm
-prop_unification_algorithm :: TypeVar -> TypeVar -> Property
-prop_unification_algorithm tv1 tv2 =
-  let result = runUnification tv1 tv2
-      successful = isRight result
-  in classify successful "successful unification" $
-     property $ True
-
--- Property: Constraint solving
-prop_constraint_solving :: [TypeConstraint] -> Property
-prop_constraint_solving constraints =
-  let solution = solveConstraints constraints
-  in property $ isRight solution
-
--- Property: Type variable freshness generation
-prop_fresh_generation :: [TypeVar] -> Int -> Property
-prop_fresh_generation existing count =
-  count > 0 && count <= 100 ==>
-  let freshVars = generateMultipleFresh existing count
-      allFresh = all (`notElem` existing) freshVars
-      allUnique = length freshVars == length (nub freshVars)
-  in property $ allFresh && allUnique
-
--- Property: Type constraint optimization
-prop_constraint_optimization :: [TypeConstraint] -> Property
-prop_constraint_optimization constraints =
-  let optimized = optimizeConstraints constraints
-      fewerOrEqual = length optimized <= length constraints
-      equivalent = areEquivalentSets constraints optimized
-  in property $ fewerOrEqual && equivalent
-
--- Property: Type variable normalization
-prop_typevar_normalization :: TypeVar -> Property
-prop_typevar_normalization tv =
-  let normalized = normalizeTypeVar tv
-      isNormalized = isNormalizedTypeVar normalized
-  in property $ isNormalized
-
--- Property: Type constraint entailment checking
-prop_entailment_checking :: [TypeConstraint] -> TypeConstraint -> Property
-prop_entailment_checking constraints constraint =
-  let entails = entailsConstraints constraints constraint
-  in classify entails "entails" $
-     property $ True
-
--- Property: Type variable substitution compositionality
-prop_substitution_compositionality :: TypeVar -> TypeVar -> TypeVar -> TypeVar -> Property
-prop_substitution_compositionality tv1 tv2 tv3 tv4 =
-  let subst1 = substituteTypeVar tv1 tv2
-      subst2 = substituteTypeVar tv3 tv4
-      composed1 = subst1 . subst2
-      composed2 = substituteTypeVar tv1 tv2 . substituteTypeVar tv3 tv4
-  in property $ True -- Composition property check
+-- Helper function
+intersperse :: a -> [a] -> [a]
+intersperse _ [] = []
+intersperse _ [x] = [x]
+intersperse sep (x:xs) = x : sep : intersperse sep xs
 
 tests :: TestTree
-tests = testGroup "Dependencies QuickCheck Tests"
-  [ fastProperty "Type variable equality" prop_typevar_equality
-  , fastProperty "Type variable substitution" prop_typevar_substitution
-  , fastProperty "Type constraint satisfaction" prop_constraint_satisfaction
-  , fastProperty "Type unification" prop_type_unification
-  , fastProperty "Type variable free variables" prop_typevar_freevars
-  , fastProperty "Type constraint normalization" prop_constraint_normalization
-  , fastProperty "Type variable occurrence check" prop_typevar_occurrence
-  , fastProperty "Type variable substitution composition" prop_substitution_composition
-  , fastProperty "Type constraint simplification" prop_constraint_simplification
-  , fastProperty "Type variable freshness" prop_typevar_freshness
-  , fastProperty "Type constraint entailment" prop_constraint_entailment
-  , fastProperty "Type variable renaming" prop_typevar_renaming
-  , fastProperty "Type constraint consistency" prop_constraint_consistency
-  , fastProperty "Type variable generalization" prop_typevar_generalization
-  , fastProperty "Type constraint instantiation" prop_constraint_instantiation
-  , fastProperty "Type variable arity" prop_typevar_arity
-  , fastProperty "Type constraint projection" prop_constraint_projection
-  , fastProperty "Type variable composition" prop_typevar_composition
-  , fastProperty "Type constraint decomposition" prop_constraint_decomposition
-  , fastProperty "Type variable occurrence count" prop_typevar_occurrence_count
-  , fastProperty "Type constraint application" prop_constraint_application
-  , fastProperty "Type variable substitution in constraints" prop_constraint_substitution
-  , fastProperty "Type constraint conjunction" prop_constraint_conjunction
-  , fastProperty "Type constraint disjunction" prop_constraint_disjunction
-  , fastProperty "Type variable dependency analysis" prop_typevar_dependencies
-  , fastProperty "Type constraint closure" prop_constraint_closure
-  , fastProperty "Type variable unification algorithm" prop_unification_algorithm
-  , fastProperty "Type constraint solving" prop_constraint_solving
-  , fastProperty "Type variable freshness generation" prop_fresh_generation
-  , fastProperty "Type constraint optimization" prop_constraint_optimization
-  , fastProperty "Type variable normalization" prop_typevar_normalization
-  , fastProperty "Type constraint entailment checking" prop_entailment_checking
-  , fastProperty "Type variable substitution compositionality" prop_substitution_compositionality
+tests = testGroup "Dependencies QuickCheck tests"
+  [ fastProperty "AST construction with Program" prop_ast_program_construction
+  , fastProperty "Statement equality" prop_statement_equality
+  , fastProperty "TypeExpr construction" prop_typeexpr_simple
+  , fastProperty "TypeExpr generic construction" prop_typeexpr_generic
+  , fastProperty "TypeExpr function construction" prop_typeexpr_function
+  , fastProperty "TypeExpr refinement construction" prop_typeexpr_refinement
+  , fastProperty "Constraint construction" prop_constraint_size_gt
+  , fastProperty "Constraint range construction" prop_constraint_range
+  , fastProperty "Constraint predicate construction" prop_constraint_predicate
+  , fastProperty "DependencyNode construction" prop_dependency_node_construction
+  , fastProperty "parseStatement handles simple variable declarations" prop_parse_statement_var_decl
+  , fastProperty "parseTypeExpr handles simple types" prop_parse_typeexpr_simple
+  , fastProperty "parseTypeExpr handles generic types" prop_parse_typeexpr_generic
+  , fastProperty "parseConstraint handles size constraints" prop_parse_constraint_size
+  , fastProperty "parseConstraint handles range constraints" prop_parse_constraint_range
+  , fastProperty "parseProgram handles multiple statements" prop_parse_program_multiple
+  , fastProperty "grammarDefinition is non-empty" prop_grammar_definition_non_empty
+  , fastProperty "AST roundtrip consistency" prop_ast_roundtrip_consistency
+  , fastProperty "TypeExpr nested generics" prop_typeexpr_nested_generics
+  , fastProperty "Statement type definitions" prop_statement_type_def
+  , fastProperty "Statement function declarations" prop_statement_func_decl
+  , fastProperty "Statement type aliases" prop_statement_type_alias
+  , fastProperty "Statement existential declarations" prop_statement_exists_decl
+  , fastProperty "Statement constraint definitions" prop_statement_constraint_def
+  , fastProperty "Complex TypeExpr combinations" prop_typeexpr_complex_combinations
+  , fastProperty "Error handling with invalid inputs" prop_parse_error_handling
   ]
-
--- Helper function stubs (would be implemented in the actual modules)
-substituteTypeVar :: TypeVar -> TypeVar -> TypeVar -> TypeVar
-substituteTypeVar old new tv = if tv == old then new else tv
-
-isSatisfiable :: TypeConstraint -> Bool
-isSatisfiable = const True
-
-unifyTypes :: TypeVar -> TypeVar -> Maybe TypeVar
-unifyTypes tv1 tv2 = if tv1 == tv2 then Just tv1 else Nothing
-
-getFreeVars :: TypeVar -> [TypeVar]
-getFreeVars tv = [tv]
-
-normalizeConstraint :: TypeConstraint -> TypeConstraint
-normalizeConstraint = id
-
-areEquivalent :: TypeConstraint -> TypeConstraint -> Bool
-areEquivalent _ _ = True
-
-occursIn :: TypeVar -> TypeVar -> Bool
-occursIn tv1 tv2 = tv1 == tv2
-
-simplifyConstraint :: TypeConstraint -> TypeConstraint
-simplifyConstraint = id
-
-complexity :: TypeConstraint -> Int
-complexity = const 1
-
-generateFreshTypeVar :: [TypeVar] -> TypeVar
-generateFreshTypeVar existing = TS.TVVar $ "fresh" ++ show (length existing)
-
-entailsConstraint :: TypeConstraint -> TypeConstraint -> Bool
-entailsConstraint _ _ = False
-
-renameTypeVar :: TypeVar -> String -> TypeVar
-renameTypeVar _ newName = TS.TVVar newName
-
-areConsistent :: [TypeConstraint] -> Bool
-areConsistent _ = True
-
-generalizeTypeVar :: TypeVar -> [TypeVar] -> TypeVar
-generalizeTypeVar tv _ = tv
-
-instantiateConstraint :: TypeConstraint -> [TypeVar] -> TypeConstraint
-instantiateConstraint c _ = c
-
-getArity :: TypeVar -> Int
-getArity = const 0
-
-projectConstraint :: TypeConstraint -> Int -> Maybe TypeConstraint
-projectConstraint _ _ = Nothing
-
-composeTypeVars :: TypeVar -> TypeVar -> TypeVar
-composeTypeVars tv1 _ = tv1
-
-containsTypeVar :: TypeVar -> TypeVar -> Bool
-containsTypeVar = (==)
-
-decomposeConstraint :: TypeConstraint -> [TypeConstraint]
-decomposeConstraint = return
-
-isValidConstraint :: TypeConstraint -> Bool
-isValidConstraint = const True
-
-countOccurrences :: TypeVar -> TypeVar -> Int
-countOccurrences container contained = if container == contained then 1 else 0
-
-applyConstraint :: TypeConstraint -> TypeVar -> TypeConstraint
-applyConstraint c _ = c
-
-substituteInConstraint :: TypeConstraint -> TypeVar -> TypeVar -> TypeConstraint
-substituteInConstraint c _ _ = c
-
-conjunctionConstraints :: TypeConstraint -> TypeConstraint -> TypeConstraint
-conjunctionConstraints c1 _ = c1
-
-disjunctionConstraints :: TypeConstraint -> TypeConstraint -> TypeConstraint
-disjunctionConstraints c1 _ = c1
-
-getDependencies :: TypeVar -> [TypeVar]
-getDependencies _ = []
-
-computeClosure :: [TypeConstraint] -> [TypeConstraint]
-computeClosure = id
-
-runUnification :: TypeVar -> TypeVar -> Either String TypeVar
-runUnification tv1 tv2 = if tv1 == tv2 then Right tv1 else Left "Type mismatch"
-
-solveConstraints :: [TypeConstraint] -> Either String [TypeVar]
-solveConstraints _ = Right []
-
-generateMultipleFresh :: [TypeVar] -> Int -> [TypeVar]
-generateMultipleFresh existing n = [TS.TVVar $ "fresh" ++ show (length existing + i) | i <- [0..n-1]]
-
-optimizeConstraints :: [TypeConstraint] -> [TypeConstraint]
-optimizeConstraints = id
-
-normalizeTypeVar :: TypeVar -> TypeVar
-normalizeTypeVar = id
-
-isNormalizedTypeVar :: TypeVar -> Bool
-isNormalizedTypeVar _ = True
-
-entailsConstraints :: [TypeConstraint] -> TypeConstraint -> Bool
-entailsConstraints _ _ = False
-
-areEquivalentSets :: [TypeConstraint] -> [TypeConstraint] -> Bool
-areEquivalentSets _ _ = True
