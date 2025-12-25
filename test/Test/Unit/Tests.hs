@@ -180,6 +180,11 @@ import qualified Test.Unit.ConciseCabalQuickCheckSpec
 import qualified Test.Unit.NewCabalTestSuiteQuickCheckSpec
 import qualified Test.Unit.NewCabalQuickCheckTestSuite2Spec
 import qualified Test.Unit.AdditionalCabalTestsSpec
+import qualified Test.Unit.AdditionalUtilsSpec
+import qualified Test.Unit.AdditionalUtilsQuickCheckSpec
+import qualified Test.Unit.SourceLocationAdditionalSpec
+import qualified Test.Unit.SourceLocationAdditionalQuickCheckSpec
+import qualified Test.Unit.ParserAdditionalSpec
 
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
@@ -214,6 +219,11 @@ tests =
     , Test.Unit.EdgeCaseSpec.tests
     , Test.Unit.EnhancedQuickCheckSpec.tests
     , Test.Unit.AdditionalCabalTestsSpec.tests
+    , Test.Unit.AdditionalUtilsSpec.tests
+    , Test.Unit.AdditionalUtilsQuickCheckSpec.tests
+    , Test.Unit.SourceLocationAdditionalSpec.tests
+    , Test.Unit.SourceLocationAdditionalQuickCheckSpec.tests
+    , Test.Unit.ParserAdditionalSpec.tests
     , testGroup "New Core Tests"
         [ Test.Unit.SourceLocationCoreTestSpec.tests
         , Test.Unit.ParserCoreTestSpec.tests
