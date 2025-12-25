@@ -235,6 +235,9 @@ import qualified Test.Unit.NewGoToolchainQuickCheckSpec
 import qualified Test.Unit.NewIRQuickCheckSpec
 import qualified Test.Unit.NewSymbolTableQuickCheckSpec
 
+-- New core functionality test modules
+import qualified Test.Unit.SimpleCoreTestSpec
+
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
 --
@@ -370,5 +373,8 @@ tests =
         , Test.Unit.NewGoToolchainQuickCheckSpec.tests
         , Test.Unit.NewIRQuickCheckSpec.tests
         , Test.Unit.NewSymbolTableQuickCheckSpec.tests
+        ]
+    , testGroup "Core Functionality Tests"
+        [ Test.Unit.SimpleCoreTestSpec.tests
         ]
     ]
