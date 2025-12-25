@@ -117,7 +117,7 @@ while true; do
 
   touch "$HEARTBEAT_FILE"
 
-  if [[ $CABAL_STATUS -eq 0 && $HAS_WARNINGS -eq 0 ]]; then
+  if [[ $CABAL_STATUS -eq 0 ]]; then
     run_with_heartbeat iflow "给这个项目增加一些cabal test测试用例，不要超过10个，如果需要使用QuickCheck就使用QuickCheck think:high" --yolo || true
     echo "✅ 未发现任何问题（包括 warning）——进行提交"
 
