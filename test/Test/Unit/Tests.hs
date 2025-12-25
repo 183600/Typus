@@ -37,6 +37,8 @@ import qualified Test.Unit.DependentTypesSystemQuickCheckSpec
 import qualified Test.Unit.OwnershipAnalysisComprehensiveQuickCheckSpec
 import qualified Test.Unit.ParserBoundaryConditionsQuickCheckSpec
 import qualified Test.Unit.IntegrationFeaturesQuickCheckSpec
+-- New Cabal QuickCheck test modules
+import qualified Test.Unit.NewCabalQuickCheckTestSpec
 
 -- QuickCheck test modules
 import qualified Test.Unit.ParserQuickCheckSpec
@@ -219,5 +221,8 @@ tests =
         , Test.Unit.OwnershipAnalysisComprehensiveQuickCheckSpec.tests
         , Test.Unit.ParserBoundaryConditionsQuickCheckSpec.tests
         , Test.Unit.IntegrationFeaturesQuickCheckSpec.tests
+        ]
+    , testGroup "New Cabal QuickCheck Tests"
+        [ Test.Unit.NewCabalQuickCheckTestSpec.tests
         ]
     ]
