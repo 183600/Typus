@@ -413,7 +413,7 @@ test-suite typus-test
         Test.Unit.ParserErrorRecoveryQuickCheckSpec,
         Test.Unit.SemanticAnalysisQuickCheckSpec,
         -- Test.Unit.CodeGenerationQuickCheckSpec, -- Temporarily disabled due to compilation errors
-        Test.Unit.DependentTypeSystemQuickCheckSpec,
+        
         Test.Unit.ToolchainIntegrationQuickCheckSpec,
         Test.Unit.NewDependentTypesQuickCheckSpec,
         Test.Unit.NewOwnershipQuickCheckSpec,
@@ -425,7 +425,7 @@ test-suite typus-test
         Test.Unit.CompilerErrorRecoveryQuickCheckSpec,
         Test.Unit.DependentTypeSystemBoundaryQuickCheckSpec,
         Test.Unit.OwnershipTransitivityQuickCheckSpec,
-        Test.Unit.ParserErrorHandlingQuickCheckSpec,
+        
         Test.Unit.SourceLocationAccuracyQuickCheckSpec,
         Test.Unit.IRGenerationConsistencyQuickCheckSpec,
         Test.Unit.TypeEnvironmentBuildingQuickCheckSpec,
@@ -467,7 +467,13 @@ test-suite typus-test
         Test.Unit.EnhancedDependentTypesQuickCheckSpec,
         Test.Unit.EnhancedErrorHandlingQuickCheckSpec,
         Test.Unit.EnhancedSourceLocationQuickCheckSpec,
-        Test.Unit.EnhancedUtilsQuickCheckSpec
+        Test.Unit.EnhancedUtilsQuickCheckSpec,
+        Test.Unit.EnhancedUtilsBoundaryQuickCheckSpec,
+        Test.Unit.EnhancedSourceLocationAdvancedQuickCheckSpec,
+        Test.Unit.EnhancedParserErrorHandlingQuickCheckSpec,
+        Test.Unit.EnhancedCompilerIRPropertiesQuickCheckSpec,
+        Test.Unit.EnhancedOwnershipBoundaryQuickCheckSpec,
+        Test.Unit.EnhancedDependentTypeSystemBoundaryQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

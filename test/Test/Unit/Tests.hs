@@ -234,7 +234,7 @@ import qualified Test.Unit.TypeSystemBoundaryQuickCheckSpec
 import qualified Test.Unit.ParserErrorRecoveryQuickCheckSpec
 import qualified Test.Unit.SemanticAnalysisQuickCheckSpec
 -- import qualified Test.Unit.CodeGenerationQuickCheckSpec -- Temporarily disabled due to compilation errors
-import qualified Test.Unit.DependentTypeSystemQuickCheckSpec
+
 import qualified Test.Unit.ToolchainIntegrationQuickCheckSpec
 
 -- New comprehensive QuickCheck test modules
@@ -252,7 +252,7 @@ import qualified Test.Unit.SimpleCoreTestSpec
 import qualified Test.Unit.CompilerErrorRecoveryQuickCheckSpec
 import qualified Test.Unit.DependentTypeSystemBoundaryQuickCheckSpec
 import qualified Test.Unit.OwnershipTransitivityQuickCheckSpec
-import qualified Test.Unit.ParserErrorHandlingQuickCheckSpec
+
 import qualified Test.Unit.SourceLocationAccuracyQuickCheckSpec
 import qualified Test.Unit.IRGenerationConsistencyQuickCheckSpec
 import qualified Test.Unit.TypeEnvironmentBuildingQuickCheckSpec
@@ -276,6 +276,14 @@ import qualified Test.Unit.EnhancedDependentTypesQuickCheckSpec
 import qualified Test.Unit.EnhancedErrorHandlingQuickCheckSpec
 import qualified Test.Unit.EnhancedSourceLocationQuickCheckSpec
 import qualified Test.Unit.EnhancedUtilsQuickCheckSpec
+
+-- New boundary and property test modules
+import qualified Test.Unit.EnhancedUtilsBoundaryQuickCheckSpec
+import qualified Test.Unit.EnhancedSourceLocationAdvancedQuickCheckSpec
+import qualified Test.Unit.EnhancedParserErrorHandlingQuickCheckSpec
+import qualified Test.Unit.EnhancedCompilerIRPropertiesQuickCheckSpec
+import qualified Test.Unit.EnhancedOwnershipBoundaryQuickCheckSpec
+import qualified Test.Unit.EnhancedDependentTypeSystemBoundaryQuickCheckSpec
 
 -- New comprehensive test modules
 import qualified Test.Unit.CoreDataStructuresQuickCheckSpec
@@ -460,7 +468,7 @@ tests =
         , Test.Unit.ParserErrorRecoveryQuickCheckSpec.tests
         , Test.Unit.SemanticAnalysisQuickCheckSpec.tests
         -- , Test.Unit.CodeGenerationQuickCheckSpec.tests -- Temporarily disabled due to compilation errors
-        , Test.Unit.DependentTypeSystemQuickCheckSpec.tests
+        
         , Test.Unit.ToolchainIntegrationQuickCheckSpec.tests
         ]
     , testGroup "New Comprehensive QuickCheck Test Modules"
@@ -480,7 +488,7 @@ tests =
         [ Test.Unit.CompilerErrorRecoveryQuickCheckSpec.tests
         , Test.Unit.DependentTypeSystemBoundaryQuickCheckSpec.tests
         , Test.Unit.OwnershipTransitivityQuickCheckSpec.tests
-        , Test.Unit.ParserErrorHandlingQuickCheckSpec.tests
+        
         , Test.Unit.SourceLocationAccuracyQuickCheckSpec.tests
         , Test.Unit.IRGenerationConsistencyQuickCheckSpec.tests
         , Test.Unit.TypeEnvironmentBuildingQuickCheckSpec.tests
@@ -545,6 +553,14 @@ tests =
         , Test.Unit.EnhancedErrorHandlingQuickCheckSpec.tests
         , Test.Unit.EnhancedSourceLocationQuickCheckSpec.tests
         , Test.Unit.EnhancedUtilsQuickCheckSpec.tests
+        ]
+    , testGroup "New Boundary and Property Test Modules"
+        [ Test.Unit.EnhancedUtilsBoundaryQuickCheckSpec.tests
+        , Test.Unit.EnhancedSourceLocationAdvancedQuickCheckSpec.tests
+        , Test.Unit.EnhancedParserErrorHandlingQuickCheckSpec.tests
+        , Test.Unit.EnhancedCompilerIRPropertiesQuickCheckSpec.tests
+        , Test.Unit.EnhancedOwnershipBoundaryQuickCheckSpec.tests
+        , Test.Unit.EnhancedDependentTypeSystemBoundaryQuickCheckSpec.tests
         ]
     , testGroup "New Core QuickCheck Test Modules"
         [ Test.Unit.SourceLocationCoreQuickCheckSpec.tests
