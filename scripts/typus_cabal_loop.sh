@@ -71,8 +71,6 @@ run_with_heartbeat() {
 # ==================== 主循环 ====================
 trap 'echo; echo "已终止."; exit 0' INT TERM
 
-# run_with_heartbeat iflow "给这个项目增加一些cabal test测试用例，不要超过10个，要使用QuickCheck think:high" --yolo || true
-
 while true; do
   touch "$HEARTBEAT_FILE"
 
@@ -120,6 +118,7 @@ while true; do
   touch "$HEARTBEAT_FILE"
 
   if [[ $CABAL_STATUS -eq 0 && $HAS_WARNINGS -eq 0 ]]; then
+    run_with_heartbeat iflow "给这个项目增加一些cabal test测试用例，不要超过10个，如果需要使用QuickCheck就使用QuickCheck think:high" --yolo || true
     echo "✅ 未发现任何问题（包括 warning）——进行提交"
 
     git add .
@@ -130,7 +129,7 @@ while true; do
     fi
   else
     echo "⚠️ 发现问题或 warning（退出码=$CABAL_STATUS），调用 iflow 修复..."
-​    run_with_heartbeat iflow ​'​解决cabal test --flags="-fast production" --test-show-details=direct显示的所有问题（包括warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点​，尽量不要消耗大量CPU/内存资源，如果cabal test --flags="-fast production" --test-show-details=direct没有显示任何问题（包括warning）就给这个项目增加一些cabal test测试用例，不要超过10个，如果需要使用QuickCheck就使用QuickCheck​ think:high​'​ --yolo ​||​ ​true
+​    run_with_heartbeat iflow ​'​解决cabal test --flags="-fast production" --test-show-details=direct显示的所有问题（包括warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点​，尽量不要消耗大量CPU/内存资源 think:high​'​ --yolo ​||​ ​true
   fi
 
   echo "🔁 回到第 1 步..."
