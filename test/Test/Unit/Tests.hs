@@ -31,6 +31,13 @@ import qualified Test.Unit.SourceLocationAdditionalQuickCheckSpec
 import qualified Test.Unit.ParserAdditionalQuickCheckSpec
 import qualified Test.Unit.IntegrationAdditionalQuickCheckSpec
 
+-- New comprehensive QuickCheck test modules
+import qualified Test.Unit.CompilerErrorHandlingQuickCheckSpec
+import qualified Test.Unit.DependentTypesSystemQuickCheckSpec
+import qualified Test.Unit.OwnershipAnalysisComprehensiveQuickCheckSpec
+import qualified Test.Unit.ParserBoundaryConditionsQuickCheckSpec
+import qualified Test.Unit.IntegrationFeaturesQuickCheckSpec
+
 -- QuickCheck test modules
 import qualified Test.Unit.ParserQuickCheckSpec
 import qualified Test.Unit.CompilerQuickCheckSpec
@@ -205,5 +212,12 @@ tests =
         , Test.Unit.PerformanceQuickCheckSpec.tests
         , Test.Unit.SimpleSyntaxValidatorQuickCheckSpec.tests
         , Test.Unit.DebugQuickCheckSpec.tests
+        ]
+    , testGroup "New Comprehensive QuickCheck Tests"
+        [ Test.Unit.CompilerErrorHandlingQuickCheckSpec.tests
+        , Test.Unit.DependentTypesSystemQuickCheckSpec.tests
+        , Test.Unit.OwnershipAnalysisComprehensiveQuickCheckSpec.tests
+        , Test.Unit.ParserBoundaryConditionsQuickCheckSpec.tests
+        , Test.Unit.IntegrationFeaturesQuickCheckSpec.tests
         ]
     ]
