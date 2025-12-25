@@ -413,10 +413,8 @@ test-suite typus-test
         -- Test.Unit.CodeGenerationQuickCheckSpec, -- Temporarily disabled due to compilation errors
         Test.Unit.DependentTypeSystemQuickCheckSpec,
         Test.Unit.ToolchainIntegrationQuickCheckSpec,
-        Test.Unit.NewErrorHandlerQuickCheckSpec,
         Test.Unit.NewDependentTypesQuickCheckSpec,
         Test.Unit.NewOwnershipQuickCheckSpec,
-        Test.Unit.NewSourceLocationQuickCheckSpec,
         Test.Unit.NewSyntaxValidatorQuickCheckSpec,
         Test.Unit.NewGoToolchainQuickCheckSpec,
         Test.Unit.SimpleCoreTestSpec,
@@ -447,7 +445,11 @@ test-suite typus-test
         Test.Unit.SymbolTableOperationsQuickCheckSpec,
         Test.Unit.CodeGenerationQuickCheckSpec,
         Test.Unit.DependencyAnalysisQuickCheckSpec,
-        Test.Unit.PerformanceOptimizationQuickCheckSpec
+        Test.Unit.PerformanceOptimizationQuickCheckSpec,
+        Test.Unit.NewUtilsQuickCheckSpec,
+        Test.Unit.NewSourceLocationQuickCheckSpec,
+        Test.Unit.NewErrorHandlerQuickCheckSpec,
+        Test.Unit.NewParserQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

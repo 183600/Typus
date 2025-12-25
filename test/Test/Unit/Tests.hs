@@ -238,10 +238,8 @@ import qualified Test.Unit.DependentTypeSystemQuickCheckSpec
 import qualified Test.Unit.ToolchainIntegrationQuickCheckSpec
 
 -- New comprehensive QuickCheck test modules
-import qualified Test.Unit.NewErrorHandlerQuickCheckSpec
 import qualified Test.Unit.NewDependentTypesQuickCheckSpec
 import qualified Test.Unit.NewOwnershipQuickCheckSpec
-import qualified Test.Unit.NewSourceLocationQuickCheckSpec
 import qualified Test.Unit.NewSyntaxValidatorQuickCheckSpec
 import qualified Test.Unit.NewGoToolchainQuickCheckSpec
 import qualified Test.Unit.NewIRQuickCheckSpec
@@ -283,6 +281,12 @@ import qualified Test.Unit.SymbolTableOperationsQuickCheckSpec
 import qualified Test.Unit.CodeGenerationQuickCheckSpec
 import qualified Test.Unit.DependencyAnalysisQuickCheckSpec
 import qualified Test.Unit.PerformanceOptimizationQuickCheckSpec
+
+-- New comprehensive QuickCheck test modules for core functionality
+import qualified Test.Unit.NewUtilsQuickCheckSpec
+import qualified Test.Unit.NewSourceLocationQuickCheckSpec
+import qualified Test.Unit.NewErrorHandlerQuickCheckSpec
+import qualified Test.Unit.NewParserQuickCheckSpec
 
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
@@ -411,10 +415,8 @@ tests =
         , Test.Unit.ToolchainIntegrationQuickCheckSpec.tests
         ]
     , testGroup "New Comprehensive QuickCheck Test Modules"
-        [ Test.Unit.NewErrorHandlerQuickCheckSpec.tests
-        , Test.Unit.NewDependentTypesQuickCheckSpec.tests
+        [ Test.Unit.NewDependentTypesQuickCheckSpec.tests
         , Test.Unit.NewOwnershipQuickCheckSpec.tests
-        , Test.Unit.NewSourceLocationQuickCheckSpec.tests
         , Test.Unit.NewSyntaxValidatorQuickCheckSpec.tests
         , Test.Unit.NewGoToolchainQuickCheckSpec.tests
         , Test.Unit.NewIRQuickCheckSpec.tests
@@ -466,5 +468,11 @@ tests =
         , Test.Unit.CodeGenerationQuickCheckTestSpec.tests
         , Test.Unit.ParserBoundaryConditionsQuickCheckTestSpec.tests
         , Test.Unit.IntegrationQuickCheckTestSpec.tests
+        ]
+    , testGroup "New Core Functionality QuickCheck Tests"
+        [ Test.Unit.NewUtilsQuickCheckSpec.tests
+        , Test.Unit.NewSourceLocationQuickCheckSpec.tests
+        , Test.Unit.NewErrorHandlerQuickCheckSpec.tests
+        , Test.Unit.NewParserQuickCheckSpec.tests
         ]
     ]
