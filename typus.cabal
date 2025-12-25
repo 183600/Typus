@@ -357,6 +357,7 @@ test-suite typus-test
         Test.Unit.UtilsBasicQuickCheckSpec,
         Test.Unit.NewCabalTestSuiteQuickCheckSpec,
         Test.Unit.NewCabalQuickCheckTestSuite2Spec,
+        Test.Unit.NewCabalTestsSpec,
         Test.Unit.AdditionalCabalTestsSpec,
         Test.Unit.CompilerErrorHandlingQuickCheckSpec,
         Test.Unit.DependentTypesSystemQuickCheckSpec,

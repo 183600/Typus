@@ -39,6 +39,7 @@ import qualified Test.Unit.ParserBoundaryConditionsQuickCheckSpec
 import qualified Test.Unit.IntegrationFeaturesQuickCheckSpec
 -- New Cabal QuickCheck test modules
 import qualified Test.Unit.NewCabalQuickCheckTestSpec
+import qualified Test.Unit.NewCabalTestsSpec
 
 -- New core test modules
 import qualified Test.Unit.SourceLocationCoreTestSpec
@@ -279,6 +280,7 @@ tests =
         ]
     , testGroup "New Cabal QuickCheck Tests"
         [ Test.Unit.NewCabalQuickCheckTestSpec.tests
+        , Test.Unit.NewCabalTestsSpec.tests
         ]
     , testGroup "New Comprehensive QuickCheck Tests"
         [ Test.Unit.CompilerOptimizationQuickCheckSpec.tests
