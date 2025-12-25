@@ -285,6 +285,15 @@ import qualified Test.Unit.OwnershipAnalysisQuickCheckSpec
 import qualified Test.Unit.DependentTypeSystemSpec
 import qualified Test.Unit.SourceLocationTrackingSpec
 
+-- New Advanced Test Modules
+import qualified Test.Unit.SourceLocationAdvancedSpec
+import qualified Test.Unit.ParserErrorRecoverySpec
+import qualified Test.Unit.OwnershipTransitivitySpec
+import qualified Test.Unit.DependentTypeBoundarySpec
+import qualified Test.Unit.IRConsistencySpec
+import qualified Test.Unit.ErrorHandlingAdvancedSpec
+import qualified Test.Unit.TypeEnvironmentBuildingSpec
+
 -- New Core QuickCheck test modules
 import qualified Test.Unit.SourceLocationCoreQuickCheckSpec
 import qualified Test.Unit.UtilsCoreQuickCheckSpec
@@ -552,5 +561,14 @@ tests =
         , Test.Unit.OwnershipAnalysisQuickCheckSpec.tests
         , Test.Unit.DependentTypeSystemSpec.tests
         , Test.Unit.SourceLocationTrackingSpec.tests
+        ]
+    , testGroup "New Advanced Test Modules"
+        [ Test.Unit.SourceLocationAdvancedSpec.tests
+        , Test.Unit.ParserErrorRecoverySpec.tests
+        , Test.Unit.OwnershipTransitivitySpec.tests
+        , Test.Unit.DependentTypeBoundarySpec.tests
+        , Test.Unit.IRConsistencySpec.tests
+        , Test.Unit.ErrorHandlingAdvancedSpec.tests
+        , Test.Unit.TypeEnvironmentBuildingSpec.tests
         ]
     ]
