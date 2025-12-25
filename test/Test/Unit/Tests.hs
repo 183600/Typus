@@ -238,7 +238,7 @@ import qualified Test.Unit.NewSymbolTableQuickCheckSpec
 -- New core functionality test modules
 import qualified Test.Unit.SimpleCoreTestSpec
 
--- New comprehensive QuickCheck test modules added for enhanced coverage
+-- Additional comprehensive QuickCheck test modules
 import qualified Test.Unit.CompilerErrorRecoveryQuickCheckSpec
 import qualified Test.Unit.DependentTypeSystemBoundaryQuickCheckSpec
 import qualified Test.Unit.OwnershipTransitivityQuickCheckSpec
@@ -259,6 +259,18 @@ import qualified Test.Unit.SymbolTableManagementSpec
 
 -- Additional comprehensive QuickCheck test modules
 import qualified Test.Unit.AdditionalCabalQuickCheckTestSpec
+
+-- New QuickCheck test modules (10 new comprehensive tests)
+import qualified Test.Unit.BasicParsingQuickCheckSpec
+import qualified Test.Unit.CompilerOptimizationsQuickCheckSpec
+import qualified Test.Unit.TypeInferenceQuickCheckSpec
+import qualified Test.Unit.MemorySafetyQuickCheckSpec
+import qualified Test.Unit.ErrorRecoveryAdvancedQuickCheckSpec
+import qualified Test.Unit.ConcurrentParsingQuickCheckSpec
+import qualified Test.Unit.SymbolTableOperationsQuickCheckSpec
+import qualified Test.Unit.CodeGenerationQuickCheckSpec
+import qualified Test.Unit.DependencyAnalysisQuickCheckSpec
+import qualified Test.Unit.PerformanceOptimizationQuickCheckSpec
 
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
@@ -419,4 +431,16 @@ tests =
         , Test.Unit.SymbolTableManagementSpec.tests
         ]
     , Test.Unit.AdditionalCabalQuickCheckTestSpec.tests
+    , testGroup "New QuickCheck Test Modules"
+        [ Test.Unit.BasicParsingQuickCheckSpec.tests
+        , Test.Unit.CompilerOptimizationsQuickCheckSpec.tests
+        , Test.Unit.TypeInferenceQuickCheckSpec.tests
+        , Test.Unit.MemorySafetyQuickCheckSpec.tests
+        , Test.Unit.ErrorRecoveryAdvancedQuickCheckSpec.tests
+        , Test.Unit.ConcurrentParsingQuickCheckSpec.tests
+        , Test.Unit.SymbolTableOperationsQuickCheckSpec.tests
+        , Test.Unit.CodeGenerationQuickCheckSpec.tests
+        , Test.Unit.DependencyAnalysisQuickCheckSpec.tests
+        , Test.Unit.PerformanceOptimizationQuickCheckSpec.tests
+        ]
     ]

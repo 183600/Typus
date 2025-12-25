@@ -427,7 +427,17 @@ test-suite typus-test
         Test.Unit.ToolchainIntegrationSpec,
         Test.Unit.IRGenerationConsistencySpec,
         Test.Unit.SymbolTableManagementSpec,
-        Test.Unit.AdditionalCabalQuickCheckTestSpec
+        Test.Unit.AdditionalCabalQuickCheckTestSpec,
+        Test.Unit.BasicParsingQuickCheckSpec,
+        Test.Unit.CompilerOptimizationsQuickCheckSpec,
+        Test.Unit.TypeInferenceQuickCheckSpec,
+        Test.Unit.MemorySafetyQuickCheckSpec,
+        Test.Unit.ErrorRecoveryAdvancedQuickCheckSpec,
+        Test.Unit.ConcurrentParsingQuickCheckSpec,
+        Test.Unit.SymbolTableOperationsQuickCheckSpec,
+        Test.Unit.CodeGenerationQuickCheckSpec,
+        Test.Unit.DependencyAnalysisQuickCheckSpec,
+        Test.Unit.PerformanceOptimizationQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
