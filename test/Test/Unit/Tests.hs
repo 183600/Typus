@@ -203,6 +203,18 @@ import qualified Test.Unit.CompilerIRSpec
 import qualified Test.Unit.IntegrationBasicSpec
 import qualified Test.Unit.AdditionalTypusSpec
 
+-- Additional new test modules (10 new ones)
+import qualified Test.Unit.NewParserValidationSpec
+import qualified Test.Unit.NewCompilerOptimizationSpec
+import qualified Test.Unit.NewOwnershipTransferSpec
+import qualified Test.Unit.NewSourceLocationTrackingSpec
+import qualified Test.Unit.NewTypeSystemValidationSpec
+import qualified Test.Unit.NewErrorRecoverySpec
+import qualified Test.Unit.NewUtilsAdditionalSpec
+import qualified Test.Unit.NewDependenciesAnalysisSpec
+import qualified Test.Unit.NewAnalyzerIntegrationSpec
+import qualified Test.Unit.NewCliIntegrationSpec
+
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
 --
@@ -251,6 +263,18 @@ tests =
         , Test.Unit.CompilerIRSpec.tests
         , Test.Unit.IntegrationBasicSpec.tests
         , Test.Unit.AdditionalTypusSpec.tests
+        ]
+    , testGroup "Additional New Test Modules"
+        [ Test.Unit.NewParserValidationSpec.tests
+        , Test.Unit.NewCompilerOptimizationSpec.tests
+        , Test.Unit.NewOwnershipTransferSpec.tests
+        , Test.Unit.NewSourceLocationTrackingSpec.tests
+        , Test.Unit.NewTypeSystemValidationSpec.tests
+        , Test.Unit.NewErrorRecoverySpec.tests
+        , Test.Unit.NewUtilsAdditionalSpec.tests
+        , Test.Unit.NewDependenciesAnalysisSpec.tests
+        , Test.Unit.NewAnalyzerIntegrationSpec.tests
+        , Test.Unit.NewCliIntegrationSpec.tests
         ]
     , testGroup "New Core Tests"
         [ Test.Unit.SourceLocationCoreTestSpec.tests

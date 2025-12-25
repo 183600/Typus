@@ -384,7 +384,17 @@ test-suite typus-test
         Test.Integration.OwnershipSpec,
         Test.Integration.IntegratedCompilerSpec,
         Test.Integration.FullProjectSpec,
-        Test.Integration.CLISpec
+        Test.Integration.CLISpec,
+        Test.Unit.NewParserValidationSpec,
+        Test.Unit.NewCompilerOptimizationSpec,
+        Test.Unit.NewOwnershipTransferSpec,
+        Test.Unit.NewSourceLocationTrackingSpec,
+        Test.Unit.NewTypeSystemValidationSpec,
+        Test.Unit.NewErrorRecoverySpec,
+        Test.Unit.NewUtilsAdditionalSpec,
+        Test.Unit.NewDependenciesAnalysisSpec,
+        Test.Unit.NewAnalyzerIntegrationSpec,
+        Test.Unit.NewCliIntegrationSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
