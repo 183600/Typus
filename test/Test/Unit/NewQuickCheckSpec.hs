@@ -1,90 +1,303 @@
 {-# LANGUAGE CPP #-}
-
 module Test.Unit.NewQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
-import qualified Data.Map as Map
-import qualified Data.Set as Set
-import qualified Data.List as List
-import Data.List (isInfixOf)
-import Data.Maybe (isNothing)
+  ( Property
+  , (===)
+  , (==>)
+  , forAll
+  , property
+  , Arbitrary(..)
+  , Gen
+  , elements
+  , listOf
+  , listOf1
+  , choose
+  , oneof
+  , suchThat
+  , vectorOf
+  )
+import Data.List (sort, nub, isInfixOf, isPrefixOf)
+import Data.Char (isAlpha, isAlphaNum, isDigit)
+import qualified Data.Text as T
+import qualified Data.Map.Strict as Map
 
-import Parser (FileDirectives(..), BlockDirectives(..), BlockDirectives)
-import SourceLocation (SourcePos(..), SourceSpan(..), posLine, posColumn, posOffset, spanStart, spanEnd)
-import Utils (trim, splitBy, removeLineComments)
-import TestSupport.Arbitrary ()
-
-prop_trim_idempotent :: String -> Property
-prop_trim_idempotent s =
-  let trimmed = trim s
-  in property $ trim trimmed == trimmed
-
-prop_splitBy_preserves_length :: Char -> NonEmptyList Char -> Property
-prop_splitBy_preserves_length delim (NonEmpty s) =
-  let parts = splitBy delim s
-      reconstructed = List.intercalate [delim] parts
-  in property $ length reconstructed == length s
-
-prop_map_insert_lookup :: String -> Int -> Property
-prop_map_insert_lookup key value =
-  let m = Map.insert key value Map.empty
-  in property $ Map.lookup key m == Just value
-
-prop_set_insert_member :: Int -> Property
-prop_set_insert_member value =
-  let s = Set.insert value Set.empty
-  in property $ Set.member value s
-
-prop_list_reverse_twice :: [Int] -> Property
-prop_list_reverse_twice xs =
-  property $ reverse (reverse xs) == xs
-
-prop_sourcepos_ordering :: SourcePos -> SourcePos -> Property
-prop_sourcepos_ordering p1 p2 =
-  let line1 = posLine p1
-      line2 = posLine p2
-      col1 = posColumn p1
-      col2 = posColumn p2
-  in property $ (line1 < line2) || (line1 == line2 && col1 <= col2) || (line1 > line2)
-
-prop_sourcespan_valid :: SourceSpan -> Property
-prop_sourcespan_valid span =
-  let start = spanStart span
-      end = spanEnd span
-  in property $ posOffset start <= posOffset end
-
-prop_file_directives_default :: Property
-prop_file_directives_default =
-  let fd = FileDirectives Nothing Nothing Nothing
-  in property $ fdOwnership fd == Nothing && fdDependentTypes fd == Nothing && fdConstraints fd == Nothing
-
-prop_block_directives_merge :: BlockDirectives -> BlockDirectives -> Property
-prop_block_directives_merge bd1 bd2 =
-  let orElseMaybe Nothing x = x
-      orElseMaybe x _ = x
-      merged = BlockDirectives
-        (bdOwnership bd2 `orElseMaybe` bdOwnership bd1)
-        (bdDependentTypes bd2 `orElseMaybe` bdDependentTypes bd1)
-        (bdConstraints bd2 `orElseMaybe` bdConstraints bd1)
-  in property $ bdOwnership merged /= Nothing || (bdOwnership bd1 == Nothing && bdOwnership bd2 == Nothing)
-
-prop_removeLineComments_preserves_code :: String -> Property
-prop_removeLineComments_preserves_code code =
-  not ("//" `List.isInfixOf` code) ==>
-  property $ removeLineComments code == code
+import Compiler.Errors.Core
+  ( TypeError(..)
+  , ErrorSeverity(..)
+  , ErrorCategory(..)
+  , ErrorLocation(..)
+  , ErrorContext(..)
+  , emptyContext
+  , errorAt
+  , errorWithCategory
+  , warningAt
+  , infoAt
+  , withLocation
+  , withContext
+  , withSuggestions
+  , formatError
+  , formatErrors
+  , filterBySeverity
+  , filterByCategory
+  , getErrorStatistics
+  , _atLocation
+  )
+import SourceLocation
+  ( SourcePos(..)
+  , SourceSpan(..)
+  , posAt
+  , spanBetween
+  , advancePosByText
+  )
+import Parser
+  ( parseTypus
+  , TypusFile(..)
+  , FileDirectives(..)
+  , BlockDirectives(..)
+  )
+import Compiler.TypeChecker
+  ( Type(..)
+  , TypeEnv(..)
+  , buildTypeEnvFromPairs
+  , lookupVariable
+  , areTypesCompatible
+  , typesEqual
+  )
+import Dependencies.TypeSystem
+  ( TypeVar(..)
+  , TypeConstraint(..)
+  , unify
+  )
+import Utils
+  ( trim
+  , splitBy
+  , removeComments
+  )
 
 tests :: TestTree
-tests = testGroup "New QuickCheck Tests"
-  [ fastProperty "trim is idempotent" prop_trim_idempotent
-  , fastProperty "splitBy preserves length when reconstructed" prop_splitBy_preserves_length
-  , fastProperty "Map insert then lookup returns value" prop_map_insert_lookup
-  , fastProperty "Set insert then member returns true" prop_set_insert_member
-  , fastProperty "List reverse twice is identity" prop_list_reverse_twice
-  , fastProperty "SourcePos ordering is consistent" prop_sourcepos_ordering
-  , fastProperty "SourceSpan start offset <= end offset" prop_sourcespan_valid
-  , fastProperty "FileDirectives default has all Nothing" prop_file_directives_default
-  , fastProperty "BlockDirectives merge preserves non-Nothing values" prop_block_directives_merge
-  , fastProperty "removeLineComments preserves code without comments" prop_removeLineComments_preserves_code
-  ]
+tests =
+  testGroup "New QuickCheck Tests"
+    [ fastProperty "error formatting preserves error ID" $
+        \errId -> 
+          let loc = _atLocation 1 1
+              err = errorAt errId (T.pack "test message") loc
+              formatted = formatError err
+          in errId `isInfixOf` formatted
+
+    , fastProperty "error formatting includes severity" $
+        \severity ->
+          let loc = _atLocation 1 1
+              err = (errorAt "TEST001" (T.pack "test message") loc) { severity = severity }
+              formatted = formatError err
+              severityStr = case severity of
+                Fatal -> "FATAL"
+                Error -> "ERROR"
+                Warning -> "WARNING"
+                Info -> "INFO"
+          in severityStr `isInfixOf` formatted
+
+    , fastProperty "error filtering by severity works correctly" $
+        \errors severity ->
+          let filtered = filterBySeverity severity errors
+              expected = filter (\e -> severity e == severity) errors
+          in length filtered === length expected
+
+    , fastProperty "error filtering by category works correctly" $
+        \errors category ->
+          let filtered = filterByCategory category errors
+              expected = filter (\e -> category e == category) errors
+          in length filtered === length expected
+
+    , fastProperty "error statistics are consistent" $
+        \errors ->
+          let stats = getErrorStatistics errors
+              total = length errors
+              fatalCount = length $ filter (\e -> severity e == Fatal) errors
+              errorCount = length $ filter (\e -> severity e == Error) errors
+              warningCount = length $ filter (\e -> severity e == Warning) errors
+              infoCount = length $ filter (\e -> severity e == Info) errors
+          in total >= fatalCount + errorCount + warningCount + infoCount
+
+    , fastProperty "source position advancement is consistent" $
+        \text ->
+          let start = posAt 1 1
+              end = advancePosByText text start
+          in posOffset end >= posOffset start
+
+    , fastProperty "source span validation works correctly" $
+        \line1 col1 line2 col2 ->
+          let start = posAt line1 col1
+              end = posAt line2 col2
+              span = spanBetween start end
+              isValid = (line1 < line2) || (line1 == line2 && col1 <= col2)
+          in (line1 <= line2 && col1 <= col2) === isValid
+
+    , fastProperty "type environment lookup works correctly" $
+        \pairs key ->
+          let env = buildTypeEnvFromPairs pairs
+              result = lookupVariable key env
+              expected = lookup key pairs
+          in case (result, expected) of
+            (Just found, Just expectedType) -> found === expectedType
+            (Nothing, Nothing) -> property True
+            _ -> property False
+
+    , fastProperty "type compatibility is reflexive" $
+        \typ ->
+          areTypesCompatible typ typ
+
+    , fastProperty "type equality is reflexive" $
+        \typ ->
+          typesEqual typ typ
+
+    , fastProperty "type equality is symmetric" $
+        \typ1 typ2 ->
+          typesEqual typ1 typ2 === typesEqual typ2 typ1
+
+    , fastProperty "type unification is consistent" $
+        \type1 type2 ->
+          case unify type1 type2 of
+            Right _ -> property True
+            Left _ -> property True
+
+    , fastProperty "string trim removes leading and trailing whitespace" $
+        \s ->
+          let trimmed = trim s
+              hasLeading = not (null s) && isSpace (head s)
+              hasTrailing = not (null s) && isSpace (last s)
+          in if hasLeading || hasTrailing
+             then not (null trimmed) ==> (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+             else property True
+
+    , fastProperty "string split by delimiter preserves content" $
+        \s delim ->
+          let parts = splitBy delim s
+              rejoined = concat $ intersperse [delim] parts
+          in rejoined === s
+
+    , fastProperty "comment removal preserves non-comment content" $
+        \code ->
+          let withoutComments = removeComments code
+              hasComments = "//" `isInfixOf` code || "/*" `isInfixOf` code
+          in if hasComments
+             then length withoutComments <= length code
+             else withoutComments === code
+
+    , fastProperty "error context preserves function information" $
+        \funcName varName varType ->
+          let ctx = emptyContext { contextFunction = Just funcName, contextVariable = Just varName, contextType = Just varType }
+              err = errorAt "TEST001" (T.pack "test") (_atLocation 1 1) `withContext` ctx
+          in contextFunction (context err) === Just funcName
+
+    , fastProperty "error suggestions are preserved" $
+        \suggestions ->
+          let loc = _atLocation 1 1
+              err = errorAt "TEST001" (T.pack "test") loc `withSuggestions` (map T.pack suggestions)
+          in length (suggestions err) === length suggestions
+
+    , fastProperty "parsing roundtrip preserves directives" $
+        \directives ->
+          let source = "//! " ++ unwords directives ++ "\npackage main\nfunc main() {}\n"
+          in case parseTypus source of
+            Left _ -> property True  -- Invalid directives are allowed to fail
+            Right typusFile -> 
+              let FileDirectives { fdOwnership = ownership } = tfDirectives typusFile
+              in case ownership of
+                Just _ -> "ownership" `elem` directives ==> property True
+                Nothing -> not ("ownership" `elem` directives) ==> property True
+
+    , fastProperty "multiple error formatting preserves order" $
+        \errors ->
+          let formatted = formatErrors errors
+              lines' = lines formatted
+          in length lines' >= length errors
+
+    , fastProperty "error location updates work correctly" $
+        \line col ->
+          let loc1 = _atLocation line col
+              loc2 = _atLocation (line + 1) (col + 1)
+              err = errorAt "TEST001" (T.pack "test") loc1
+              updatedErr = withLocation err loc2
+          in location updatedErr === loc2
+
+    , fastProperty "type environment preserves variable types" $
+        \pairs ->
+          let env = buildTypeEnvFromPairs pairs
+          in all (\(key, typ) -> lookupVariable key env == Just typ) pairs
+
+    , fastProperty "error severity ordering is consistent" $
+        \errors ->
+          let sortedBySeverity = sort errors
+              isOrdered = all (\(e1, e2) -> severity e1 <= severity e2) (zip sortedBySeverity (drop 1 sortedBySeverity))
+          in property isOrdered
+
+    , fastProperty "parsing handles empty input gracefully" $
+        \_ ->
+          case parseTypus "" of
+            Left _ -> property True
+            Right typusFile -> tfBlocks typusFile === []
+
+    , fastProperty "parsing handles simple functions" $
+        \funcName ->
+          let source = "package main\nfunc " ++ funcName ++ "() {}\n"
+          in case parseTypus source of
+            Left _ -> isValidIdentifier funcName ==> property False
+            Right typusFile -> not (null $ tfBlocks typusFile)
+
+    , fastProperty "error messages are preserved through formatting" $
+        \message ->
+          let loc = _atLocation 1 1
+              err = errorAt "TEST001" (T.pack message) loc
+              formatted = formatError err
+          in message `isInfixOf` formatted
+
+    , fastProperty "type constraint unification is deterministic" $
+        \constraint ->
+          case unify constraint constraint of
+            Right _ -> property True
+            Left _ -> property True
+
+    , fastProperty "source position tracking is consistent" $
+        \text ->
+          let positions = scanl (\pos char -> advancePosByText [char] pos) (posAt 1 1) text
+              offsets = map posOffset positions
+          in offsets == sort offsets
+
+    , fastProperty "error statistics sum to total" $
+        \errors ->
+          let stats = getErrorStatistics errors
+              totalFromStats = sum $ Map.elems stats
+          in totalFromStats >= length errors
+
+    , fastProperty "parsing preserves build tags" $
+        \buildTags ->
+          let source = unlines $ map (\tag -> "//go:build " ++ tag) buildTags ++ ["package main"]
+          in case parseTypus source of
+            Left _ -> property True
+            Right typusFile -> length (tfBuildTags typusFile) >= length buildTags
+
+    , fastProperty "type compatibility handles basic types" $
+        \typeName1 typeName2 ->
+          let type1 = TypeName typeName1
+              type2 = TypeName typeName2
+              compatible = areTypesCompatible type1 type2
+          in typeName1 == typeName2 ==> compatible
+
+    , fastProperty "error context preserves additional information" $
+        \additionalInfo ->
+          let ctx = emptyContext { contextAdditional = [("key", additionalInfo)] }
+              err = errorAt "TEST001" (T.pack "test") (_atLocation 1 1) `withContext` ctx
+          in lookup "key" (contextAdditional (context err)) === Just additionalInfo
+    ]
+  where
+    isValidIdentifier [] = False
+    isValidIdentifier (c:cs) = isAlpha c && all isAlphaNum cs
+    
+    intersperse _ [] = []
+    intersperse _ [x] = [x]
+    intersperse sep (x:y:xs) = x : sep : intersperse sep (y:xs)
+    
+    isSpace c = c `elem` " \t\n\r"

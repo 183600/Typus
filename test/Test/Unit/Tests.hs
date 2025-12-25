@@ -37,6 +37,18 @@ import qualified Test.Unit.AdditionalCoreTestsSpec
 -- New Cabal Test Module
 import qualified Test.Unit.NewCabalTestSpec
 
+-- New Test Modules Added for Enhanced Coverage
+import qualified Test.Unit.NewErrorHandlingSpec
+import qualified Test.Unit.NewParserSpec
+import qualified Test.Unit.NewCompilerSpec
+import qualified Test.Unit.NewOwnershipSpec
+import qualified Test.Unit.NewTypeSystemSpec
+import qualified Test.Unit.NewSourceLocationSpec
+import qualified Test.Unit.NewDependencySpec
+import qualified Test.Unit.NewIntegrationSpec
+import qualified Test.Unit.NewPerformanceSpec
+import qualified Test.Unit.NewQuickCheckSpec
+
 -- New Comprehensive QuickCheck Test Modules
 import qualified Test.Unit.ParserConsistencyQuickCheckSpec
 import qualified Test.Unit.StringUtilsQuickCheckTestSpec
@@ -586,5 +598,17 @@ tests =
         , Test.Unit.IRConsistencySpec.tests
         , Test.Unit.ErrorHandlingAdvancedSpec.tests
         , Test.Unit.TypeEnvironmentBuildingSpec.tests
+        ]
+    , testGroup "New Comprehensive Test Modules"
+        [ Test.Unit.NewErrorHandlingSpec.tests
+        , Test.Unit.NewParserSpec.tests
+        , Test.Unit.NewCompilerSpec.tests
+        , Test.Unit.NewOwnershipSpec.tests
+        , Test.Unit.NewTypeSystemSpec.tests
+        , Test.Unit.NewSourceLocationSpec.tests
+        , Test.Unit.NewDependencySpec.tests
+        , Test.Unit.NewIntegrationSpec.tests
+        , Test.Unit.NewPerformanceSpec.tests
+        , Test.Unit.NewQuickCheckSpec.tests
         ]
     ]
