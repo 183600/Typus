@@ -201,6 +201,7 @@ import qualified Test.Unit.OwnershipCoreSpec
 import qualified Test.Unit.TypeSystemPropertiesSpec
 import qualified Test.Unit.CompilerIRSpec
 import qualified Test.Unit.IntegrationBasicSpec
+import qualified Test.Unit.AdditionalTypusSpec
 
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
@@ -249,6 +250,7 @@ tests =
         , Test.Unit.TypeSystemPropertiesSpec.tests
         , Test.Unit.CompilerIRSpec.tests
         , Test.Unit.IntegrationBasicSpec.tests
+        , Test.Unit.AdditionalTypusSpec.tests
         ]
     , testGroup "New Core Tests"
         [ Test.Unit.SourceLocationCoreTestSpec.tests

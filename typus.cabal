@@ -373,6 +373,7 @@ test-suite typus-test
         Test.Unit.AdditionalUtilsQuickCheckSpec,
         Test.Unit.SourceLocationAdditionalSpec,
         Test.Unit.ParserAdditionalSpec,
+        Test.Unit.AdditionalTypusSpec,
         Test.Golden,
         Test.Golden.Tests,
         Test.Golden.CompilerSpec,
