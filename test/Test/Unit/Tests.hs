@@ -225,6 +225,16 @@ import qualified Test.Unit.CodeGenerationQuickCheckSpec
 import qualified Test.Unit.DependentTypeSystemQuickCheckSpec
 import qualified Test.Unit.ToolchainIntegrationQuickCheckSpec
 
+-- New comprehensive QuickCheck test modules
+import qualified Test.Unit.NewErrorHandlerQuickCheckSpec
+import qualified Test.Unit.NewDependentTypesQuickCheckSpec
+import qualified Test.Unit.NewOwnershipQuickCheckSpec
+import qualified Test.Unit.NewSourceLocationQuickCheckSpec
+import qualified Test.Unit.NewSyntaxValidatorQuickCheckSpec
+import qualified Test.Unit.NewGoToolchainQuickCheckSpec
+import qualified Test.Unit.NewIRQuickCheckSpec
+import qualified Test.Unit.NewSymbolTableQuickCheckSpec
+
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
 --
@@ -350,5 +360,15 @@ tests =
         , Test.Unit.CodeGenerationQuickCheckSpec.tests
         , Test.Unit.DependentTypeSystemQuickCheckSpec.tests
         , Test.Unit.ToolchainIntegrationQuickCheckSpec.tests
+        ]
+    , testGroup "New Comprehensive QuickCheck Test Modules"
+        [ Test.Unit.NewErrorHandlerQuickCheckSpec.tests
+        , Test.Unit.NewDependentTypesQuickCheckSpec.tests
+        , Test.Unit.NewOwnershipQuickCheckSpec.tests
+        , Test.Unit.NewSourceLocationQuickCheckSpec.tests
+        , Test.Unit.NewSyntaxValidatorQuickCheckSpec.tests
+        , Test.Unit.NewGoToolchainQuickCheckSpec.tests
+        , Test.Unit.NewIRQuickCheckSpec.tests
+        , Test.Unit.NewSymbolTableQuickCheckSpec.tests
         ]
     ]

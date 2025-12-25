@@ -402,7 +402,15 @@ test-suite typus-test
         Test.Unit.SemanticAnalysisQuickCheckSpec,
         Test.Unit.CodeGenerationQuickCheckSpec,
         Test.Unit.DependentTypeSystemQuickCheckSpec,
-        Test.Unit.ToolchainIntegrationQuickCheckSpec
+        Test.Unit.ToolchainIntegrationQuickCheckSpec,
+        Test.Unit.NewErrorHandlerQuickCheckSpec,
+        Test.Unit.NewDependentTypesQuickCheckSpec,
+        Test.Unit.NewOwnershipQuickCheckSpec,
+        Test.Unit.NewSourceLocationQuickCheckSpec,
+        Test.Unit.NewSyntaxValidatorQuickCheckSpec,
+        Test.Unit.NewGoToolchainQuickCheckSpec,
+        Test.Unit.NewIRQuickCheckSpec,
+        Test.Unit.NewSymbolTableQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
