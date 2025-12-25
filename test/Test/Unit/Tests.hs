@@ -47,6 +47,14 @@ import qualified Test.Unit.DependentTypesValidationQuickCheckSpec
 import qualified Test.Unit.ErrorRecoveryQuickCheckSpec
 import qualified Test.Unit.SourceLocationTrackingQuickCheckSpec
 
+-- New core QuickCheck test modules
+import qualified Test.Unit.SourceLocationCoreQuickCheckSpec
+import qualified Test.Unit.ErrorHandlerCoreQuickCheckSpec
+import qualified Test.Unit.DependenciesCoreQuickCheckSpec
+import qualified Test.Unit.GoToolchainCoreQuickCheckSpec
+import qualified Test.Unit.EnhancedErrorHandlerCoreQuickCheckSpec
+import qualified Test.Unit.DebugIntegrationCoreQuickCheckSpec
+
 -- QuickCheck test modules
 import qualified Test.Unit.ParserQuickCheckSpec
 import qualified Test.Unit.CompilerQuickCheckSpec
@@ -238,5 +246,13 @@ tests =
         , Test.Unit.DependentTypesValidationQuickCheckSpec.tests
         , Test.Unit.ErrorRecoveryQuickCheckSpec.tests
         , Test.Unit.SourceLocationTrackingQuickCheckSpec.tests
+        ]
+    , testGroup "New Core QuickCheck Tests"
+        [ Test.Unit.SourceLocationCoreQuickCheckSpec.tests
+        , Test.Unit.ErrorHandlerCoreQuickCheckSpec.tests
+        , Test.Unit.DependenciesCoreQuickCheckSpec.tests
+        , Test.Unit.GoToolchainCoreQuickCheckSpec.tests
+        , Test.Unit.EnhancedErrorHandlerCoreQuickCheckSpec.tests
+        , Test.Unit.DebugIntegrationCoreQuickCheckSpec.tests
         ]
     ]
