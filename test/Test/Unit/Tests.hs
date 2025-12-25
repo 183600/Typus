@@ -31,6 +31,9 @@ import qualified Test.Unit.SourceLocationAdditionalQuickCheckSpec
 import qualified Test.Unit.ParserAdditionalQuickCheckSpec
 import qualified Test.Unit.IntegrationAdditionalQuickCheckSpec
 
+-- Additional Core Tests Module
+import qualified Test.Unit.AdditionalCoreTestsSpec
+
 -- New Cabal Test Module
 import qualified Test.Unit.NewCabalTestSpec
 
@@ -253,6 +256,7 @@ tests =
         , Test.Unit.ErrorHandlerCoreTestSpec.tests
         , Test.Unit.DependenciesCoreTestSpec.tests
         ]
+    , Test.Unit.AdditionalCoreTestsSpec.tests
     , Test.Unit.UtilsAdditionalQuickCheckSpec.tests
     , Test.Unit.SourceLocationAdditionalQuickCheckSpec.tests
     , Test.Unit.ParserAdditionalQuickCheckSpec.tests
