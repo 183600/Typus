@@ -277,6 +277,14 @@ import qualified Test.Unit.EnhancedErrorHandlingQuickCheckSpec
 import qualified Test.Unit.EnhancedSourceLocationQuickCheckSpec
 import qualified Test.Unit.EnhancedUtilsQuickCheckSpec
 
+-- New comprehensive test modules
+import qualified Test.Unit.CoreDataStructuresQuickCheckSpec
+import qualified Test.Unit.ParserBoundaryConditionsSpec
+import qualified Test.Unit.CompilerErrorHandlingSpec
+import qualified Test.Unit.OwnershipAnalysisQuickCheckSpec
+import qualified Test.Unit.DependentTypeSystemSpec
+import qualified Test.Unit.SourceLocationTrackingSpec
+
 -- New Core QuickCheck test modules
 import qualified Test.Unit.SourceLocationCoreQuickCheckSpec
 import qualified Test.Unit.UtilsCoreQuickCheckSpec
@@ -536,5 +544,13 @@ tests =
         , Test.Unit.ParserCoreQuickCheckSpec.tests
         , Test.Unit.GoToolchainCoreQuickCheckSpec.tests
         , Test.Unit.DependenciesCoreQuickCheckSpec.tests
+        ]
+    , testGroup "New Comprehensive Test Modules"
+        [ Test.Unit.CoreDataStructuresQuickCheckSpec.tests
+        , Test.Unit.ParserBoundaryConditionsSpec.tests
+        , Test.Unit.CompilerErrorHandlingSpec.tests
+        , Test.Unit.OwnershipAnalysisQuickCheckSpec.tests
+        , Test.Unit.DependentTypeSystemSpec.tests
+        , Test.Unit.SourceLocationTrackingSpec.tests
         ]
     ]
