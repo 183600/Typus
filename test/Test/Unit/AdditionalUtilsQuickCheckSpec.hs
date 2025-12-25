@@ -67,11 +67,11 @@ prop_splitByCollapsed_no_empty delim s =
 prop_splitBy_join_reconstruct :: Char -> String -> Property
 prop_splitBy_join_reconstruct delim s =
   let parts = splitBy delim s
-  in concat (intersperse [delim] parts) === s
+  in concat (intersperse [[delim]] parts) === s
   where
     intersperse _ [] = []
     intersperse _ [x] = [x]
-    intersperse sep (x:xs) = x ++ sep ++ intersperse sep xs
+    intersperse sep (x:xs) = [x] ++ sep ++ intersperse sep xs
 
 -- Property: normalizeIndentation preserves non-empty line count
 prop_normalizeIndentation_preserves_line_count :: String -> Property
