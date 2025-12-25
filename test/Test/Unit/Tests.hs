@@ -37,6 +37,18 @@ import qualified Test.Unit.AdditionalCoreTestsSpec
 -- New Cabal Test Module
 import qualified Test.Unit.NewCabalTestSpec
 
+-- New Comprehensive QuickCheck Test Modules
+import qualified Test.Unit.ParserConsistencyQuickCheckSpec
+import qualified Test.Unit.StringUtilsQuickCheckTestSpec
+import qualified Test.Unit.CompilerErrorHandlingQuickCheckTestSpec
+import qualified Test.Unit.SourceLocationTrackingQuickCheckTestSpec
+import qualified Test.Unit.OwnershipTransferQuickCheckTestSpec
+import qualified Test.Unit.DependencyAnalysisQuickCheckTestSpec
+import qualified Test.Unit.ErrorRecoveryQuickCheckTestSpec
+import qualified Test.Unit.CodeGenerationQuickCheckTestSpec
+import qualified Test.Unit.ParserBoundaryConditionsQuickCheckTestSpec
+import qualified Test.Unit.IntegrationQuickCheckTestSpec
+
 -- New comprehensive QuickCheck test modules
 import qualified Test.Unit.CompilerErrorHandlingQuickCheckSpec
 import qualified Test.Unit.DependentTypesSystemQuickCheckSpec
@@ -442,5 +454,17 @@ tests =
         , Test.Unit.CodeGenerationQuickCheckSpec.tests
         , Test.Unit.DependencyAnalysisQuickCheckSpec.tests
         , Test.Unit.PerformanceOptimizationQuickCheckSpec.tests
+        ]
+    , testGroup "Additional Comprehensive QuickCheck Test Modules"
+        [ Test.Unit.ParserConsistencyQuickCheckSpec.tests
+        , Test.Unit.StringUtilsQuickCheckTestSpec.tests
+        , Test.Unit.CompilerErrorHandlingQuickCheckTestSpec.tests
+        , Test.Unit.SourceLocationTrackingQuickCheckTestSpec.tests
+        , Test.Unit.OwnershipTransferQuickCheckTestSpec.tests
+        , Test.Unit.DependencyAnalysisQuickCheckTestSpec.tests
+        , Test.Unit.ErrorRecoveryQuickCheckTestSpec.tests
+        , Test.Unit.CodeGenerationQuickCheckTestSpec.tests
+        , Test.Unit.ParserBoundaryConditionsQuickCheckTestSpec.tests
+        , Test.Unit.IntegrationQuickCheckTestSpec.tests
         ]
     ]
