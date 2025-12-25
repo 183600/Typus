@@ -277,6 +277,14 @@ import qualified Test.Unit.EnhancedErrorHandlingQuickCheckSpec
 import qualified Test.Unit.EnhancedSourceLocationQuickCheckSpec
 import qualified Test.Unit.EnhancedUtilsQuickCheckSpec
 
+-- New Core QuickCheck test modules
+import qualified Test.Unit.SourceLocationCoreQuickCheckSpec
+import qualified Test.Unit.UtilsCoreQuickCheckSpec
+import qualified Test.Unit.ErrorHandlerCoreQuickCheckSpec
+import qualified Test.Unit.ParserCoreQuickCheckSpec
+import qualified Test.Unit.GoToolchainCoreQuickCheckSpec
+import qualified Test.Unit.DependenciesCoreQuickCheckSpec
+
 -- New cabal test modules (8 new comprehensive tests)
 import qualified Test.Unit.CompilerErrorRecoverySpec
 import qualified Test.Unit.DependentTypeBoundarySpec
@@ -514,5 +522,13 @@ tests =
         , Test.Unit.EnhancedErrorHandlingQuickCheckSpec.tests
         , Test.Unit.EnhancedSourceLocationQuickCheckSpec.tests
         , Test.Unit.EnhancedUtilsQuickCheckSpec.tests
+        ]
+    , testGroup "New Core QuickCheck Test Modules"
+        [ Test.Unit.SourceLocationCoreQuickCheckSpec.tests
+        , Test.Unit.UtilsCoreQuickCheckSpec.tests
+        , Test.Unit.ErrorHandlerCoreQuickCheckSpec.tests
+        , Test.Unit.ParserCoreQuickCheckSpec.tests
+        , Test.Unit.GoToolchainCoreQuickCheckSpec.tests
+        , Test.Unit.DependenciesCoreQuickCheckSpec.tests
         ]
     ]

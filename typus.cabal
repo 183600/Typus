@@ -304,6 +304,8 @@ test-suite typus-test
         Test.Unit.ErrorHandlerCoreQuickCheckSpec,
         Test.Unit.DependenciesCoreQuickCheckSpec,
         Test.Unit.GoToolchainCoreQuickCheckSpec,
+        Test.Unit.ParserCoreQuickCheckSpec,
+        Test.Unit.UtilsCoreQuickCheckSpec,
         Test.Unit.EnhancedErrorHandlerCoreQuickCheckSpec,
         Test.Unit.DebugIntegrationCoreQuickCheckSpec,
         Test.Unit.NewIRQuickCheckSpec,
