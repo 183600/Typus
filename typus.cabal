@@ -449,7 +449,16 @@ test-suite typus-test
         Test.Unit.NewUtilsQuickCheckSpec,
         Test.Unit.NewSourceLocationQuickCheckSpec,
         Test.Unit.NewErrorHandlerQuickCheckSpec,
-        Test.Unit.NewParserQuickCheckSpec
+        Test.Unit.NewParserQuickCheckSpec,
+        Test.Unit.CustomParserQuickCheckSpec,
+        Test.Unit.CustomUtilsQuickCheckSpec,
+        Test.Unit.CustomSourceLocationQuickCheckSpec,
+        Test.Unit.CustomOwnershipQuickCheckSpec,
+        Test.Unit.CustomDependentTypesQuickCheckSpec,
+        Test.Unit.CustomErrorHandlingQuickCheckSpec,
+        Test.Unit.CustomCompilerQuickCheckSpec,
+        Test.Unit.CustomSyntaxValidatorQuickCheckSpec,
+        Test.Unit.CustomSymbolTableQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
