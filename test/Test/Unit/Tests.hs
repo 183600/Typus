@@ -247,6 +247,16 @@ import qualified Test.Unit.SourceLocationAccuracyQuickCheckSpec
 import qualified Test.Unit.IRGenerationConsistencyQuickCheckSpec
 import qualified Test.Unit.TypeEnvironmentBuildingQuickCheckSpec
 
+-- New cabal test modules (8 new comprehensive tests)
+import qualified Test.Unit.CompilerErrorRecoverySpec
+import qualified Test.Unit.DependentTypeBoundarySpec
+import qualified Test.Unit.OwnershipTransitivitySpec
+import qualified Test.Unit.SourceLocationAccuracySpec
+import qualified Test.Unit.SyntaxValidatorAdvancedSpec
+import qualified Test.Unit.ToolchainIntegrationSpec
+import qualified Test.Unit.IRGenerationConsistencySpec
+import qualified Test.Unit.SymbolTableManagementSpec
+
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
 --
@@ -394,5 +404,15 @@ tests =
         , Test.Unit.SourceLocationAccuracyQuickCheckSpec.tests
         , Test.Unit.IRGenerationConsistencyQuickCheckSpec.tests
         , Test.Unit.TypeEnvironmentBuildingQuickCheckSpec.tests
+        ]
+    , testGroup "New Comprehensive Cabal Test Modules"
+        [ Test.Unit.CompilerErrorRecoverySpec.tests
+        , Test.Unit.DependentTypeBoundarySpec.tests
+        , Test.Unit.OwnershipTransitivitySpec.tests
+        , Test.Unit.SourceLocationAccuracySpec.tests
+        , Test.Unit.SyntaxValidatorAdvancedSpec.tests
+        , Test.Unit.ToolchainIntegrationSpec.tests
+        , Test.Unit.IRGenerationConsistencySpec.tests
+        , Test.Unit.SymbolTableManagementSpec.tests
         ]
     ]
