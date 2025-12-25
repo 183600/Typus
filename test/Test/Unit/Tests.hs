@@ -25,6 +25,12 @@ import qualified Test.Unit.PerformanceSpec
 import qualified Test.Unit.EdgeCaseSpec
 import qualified Test.Unit.EnhancedQuickCheckSpec
 
+-- Additional QuickCheck test modules
+import qualified Test.Unit.UtilsAdditionalQuickCheckSpec
+import qualified Test.Unit.SourceLocationAdditionalQuickCheckSpec
+import qualified Test.Unit.ParserAdditionalQuickCheckSpec
+import qualified Test.Unit.IntegrationAdditionalQuickCheckSpec
+
 -- QuickCheck test modules
 import qualified Test.Unit.ParserQuickCheckSpec
 import qualified Test.Unit.CompilerQuickCheckSpec
@@ -178,6 +184,10 @@ tests =
     , Test.Unit.EdgeCaseSpec.tests
     , Test.Unit.EnhancedQuickCheckSpec.tests
     , Test.Unit.AdditionalCabalTestsSpec.tests
+    , Test.Unit.UtilsAdditionalQuickCheckSpec.tests
+    , Test.Unit.SourceLocationAdditionalQuickCheckSpec.tests
+    , Test.Unit.ParserAdditionalQuickCheckSpec.tests
+    , Test.Unit.IntegrationAdditionalQuickCheckSpec.tests
     , testGroup "QuickCheck Tests"
         [ Test.Unit.ParserQuickCheckSpec.tests
         , Test.Unit.CompilerQuickCheckSpec.tests
