@@ -44,7 +44,7 @@ monitor_watchdog() {
 
     if (( elapsed > timeout )); then
       echo "⚠️ [$(date '+%F %T')] 检测到${timeout}秒内无输出，正在重启..."
-      kill -- -"$master_pid" 2>/dev/null || true
+      kill -- -"$master_pid" 2>/dev/null || :
       sleep 1
       exec "$0" "$@"
     fi
@@ -60,7 +60,13 @@ fi
 
 # ==================== 工具：带心跳的命令执行（逐行刷新心跳） ====================
 run_with_heartbeat() {
-  stdbuf -oL -eL "$@" 2>&1 | awk -v hb="$HEARTBEAT_FILE" '{ print; fflush(); system("touch " hb) }'
+  # 检查 stdbuf 是否存在，部分系统（如默认macOS）可能没有 coreutils
+  if command -v stdbuf >/dev/null 2>&1; then
+    stdbuf -oL -eL "$@" 2>&1 | awk -v hb="$HEARTBEAT_FILE" '{ print; fflush(); system("touch " hb) }'
+  else
+    "$@" 2>&1 | awk -v hb="$HEARTBEAT_FILE" '{ print; fflush(); system("touch " hb) }'
+  fi
+  
   # 在 set -u 下安全读取 PIPESTATUS
   set +u
   local status=${PIPESTATUS[0]:-127}
@@ -78,7 +84,7 @@ while true; do
   echo "$(date '+%F %T') 运行测试：cabal test --flags=\"-fast production\" --test-show-details=direct"
   echo "===================="
 
-  # 运行测试：不写入日志文件，实时检测 warning，并按行刷新心跳
+  # 运行测试：实时检测 warning，并按行刷新心跳
   stdbuf -oL -eL cabal test --flags="-fast production" --test-show-details=direct 2>&1 | \
     awk -v hb="$HEARTBEAT_FILE" '
       BEGIN { found=0 }
@@ -118,18 +124,20 @@ while true; do
   touch "$HEARTBEAT_FILE"
 
   if [[ $CABAL_STATUS -eq 0 ]]; then
-    run_with_heartbeat iflow "给这个项目增加一些cabal test测试用例，不要超过10个，如果需要使用QuickCheck就使用QuickCheck think:high" --yolo || true
+    # 使用冒号 : 代替 true，避免 "command not found" 错误
+    run_with_heartbeat iflow "给这个项目增加一些cabal test测试用例，不要超过10个，如果需要使用QuickCheck就使用QuickCheck think:high" --yolo || :
     echo "✅ 未发现任何问题（包括 warning）——进行提交"
 
     git add .
     if git diff --cached --quiet; then
       echo "ℹ️ 没有文件变化可提交"
     else
-      git commit -m "测试通过" || true
+      git commit -m "测试通过" || :
     fi
   else
     echo "⚠️ 发现问题或 warning（退出码=$CABAL_STATUS），调用 iflow 修复..."
-​    run_with_heartbeat iflow ​'​解决cabal test --flags="-fast production" --test-show-details=direct显示的所有问题（包括warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点​，尽量不要消耗大量CPU/内存资源 think:high​'​ --yolo ​||​ ​true
+    # 使用冒号 : 代替 true
+    run_with_heartbeat iflow '解决cabal test --flags="-fast production" --test-show-details=direct显示的所有问题（包括warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点，尽量不要消耗大量CPU/内存资源 think:high' --yolo || :
   fi
 
   echo "🔁 回到第 1 步..."
