@@ -394,7 +394,15 @@ test-suite typus-test
         Test.Unit.NewUtilsAdditionalSpec,
         Test.Unit.NewDependenciesAnalysisSpec,
         Test.Unit.NewAnalyzerIntegrationSpec,
-        Test.Unit.NewCliIntegrationSpec
+        Test.Unit.NewCliIntegrationSpec,
+        Test.Unit.EnhancedErrorHandlingQuickCheckSpec,
+        Test.Unit.CompilerIntegrationQuickCheckSpec,
+        Test.Unit.TypeSystemBoundaryQuickCheckSpec,
+        Test.Unit.ParserErrorRecoveryQuickCheckSpec,
+        Test.Unit.SemanticAnalysisQuickCheckSpec,
+        Test.Unit.CodeGenerationQuickCheckSpec,
+        Test.Unit.DependentTypeSystemQuickCheckSpec,
+        Test.Unit.ToolchainIntegrationQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

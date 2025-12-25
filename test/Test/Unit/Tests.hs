@@ -215,6 +215,16 @@ import qualified Test.Unit.NewDependenciesAnalysisSpec
 import qualified Test.Unit.NewAnalyzerIntegrationSpec
 import qualified Test.Unit.NewCliIntegrationSpec
 
+-- Additional new test modules for enhanced coverage
+import qualified Test.Unit.EnhancedErrorHandlingQuickCheckSpec
+import qualified Test.Unit.CompilerIntegrationQuickCheckSpec
+import qualified Test.Unit.TypeSystemBoundaryQuickCheckSpec
+import qualified Test.Unit.ParserErrorRecoveryQuickCheckSpec
+import qualified Test.Unit.SemanticAnalysisQuickCheckSpec
+import qualified Test.Unit.CodeGenerationQuickCheckSpec
+import qualified Test.Unit.DependentTypeSystemQuickCheckSpec
+import qualified Test.Unit.ToolchainIntegrationQuickCheckSpec
+
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
 --
@@ -330,5 +340,15 @@ tests =
         , Test.Unit.GoToolchainCoreQuickCheckSpec.tests
         , Test.Unit.EnhancedErrorHandlerCoreQuickCheckSpec.tests
         , Test.Unit.DebugIntegrationCoreQuickCheckSpec.tests
+        ]
+    , testGroup "Additional Enhanced Test Modules"
+        [ Test.Unit.EnhancedErrorHandlingQuickCheckSpec.tests
+        , Test.Unit.CompilerIntegrationQuickCheckSpec.tests
+        , Test.Unit.TypeSystemBoundaryQuickCheckSpec.tests
+        , Test.Unit.ParserErrorRecoveryQuickCheckSpec.tests
+        , Test.Unit.SemanticAnalysisQuickCheckSpec.tests
+        , Test.Unit.CodeGenerationQuickCheckSpec.tests
+        , Test.Unit.DependentTypeSystemQuickCheckSpec.tests
+        , Test.Unit.ToolchainIntegrationQuickCheckSpec.tests
         ]
     ]
