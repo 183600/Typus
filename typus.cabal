@@ -426,7 +426,8 @@ test-suite typus-test
         Test.Unit.SyntaxValidatorAdvancedSpec,
         Test.Unit.ToolchainIntegrationSpec,
         Test.Unit.IRGenerationConsistencySpec,
-        Test.Unit.SymbolTableManagementSpec
+        Test.Unit.SymbolTableManagementSpec,
+        Test.Unit.AdditionalCabalQuickCheckTestSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

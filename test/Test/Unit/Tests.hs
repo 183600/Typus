@@ -257,6 +257,9 @@ import qualified Test.Unit.ToolchainIntegrationSpec
 import qualified Test.Unit.IRGenerationConsistencySpec
 import qualified Test.Unit.SymbolTableManagementSpec
 
+-- Additional comprehensive QuickCheck test modules
+import qualified Test.Unit.AdditionalCabalQuickCheckTestSpec
+
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
 --
@@ -415,4 +418,5 @@ tests =
         , Test.Unit.IRGenerationConsistencySpec.tests
         , Test.Unit.SymbolTableManagementSpec.tests
         ]
+    , Test.Unit.AdditionalCabalQuickCheckTestSpec.tests
     ]
