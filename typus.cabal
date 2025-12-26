@@ -651,7 +651,19 @@ test-suite typus-test
         Test.Unit.SecurityValidationTestSpec,
         Test.Unit.ParserBoundarySpec,
         Test.Unit.CompilerErrorBoundarySpec,
-        Test.Unit.NewQuickCheckPropertiesSpec
+        Test.Unit.NewQuickCheckPropertiesSpec,
+        
+        -- New Cabals Test Modules (10 comprehensive tests)
+        Test.Unit.ParserErrorRecoveryCabalsSpec,
+        Test.Unit.CompilerOptimizationCabalsSpec,
+        Test.Unit.OwnershipMemorySafetyCabalsSpec,
+        Test.Unit.DependentTypeValidationCabalsSpec,
+        Test.Unit.SourceLocationPrecisionCabalsSpec,
+        Test.Unit.ErrorHandlerConsistencyCabalsSpec,
+        Test.Unit.TypeInferenceAdvancedCabalsSpec,
+        Test.Unit.IntegrationEndToEndCabalsSpec,
+        Test.Unit.PerformanceRegressionCabalsSpec,
+        Test.Unit.SecurityValidationCabalsSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

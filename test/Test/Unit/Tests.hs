@@ -40,6 +40,18 @@ import qualified Test.Unit.SourceLocationAdditionalQuickCheckSpec
 import qualified Test.Unit.ParserAdditionalQuickCheckSpec
 import qualified Test.Unit.IntegrationAdditionalQuickCheckSpec
 
+-- New Cabals Test Modules (10 comprehensive tests)
+import qualified Test.Unit.ParserErrorRecoveryCabalsSpec
+import qualified Test.Unit.CompilerOptimizationCabalsSpec
+import qualified Test.Unit.OwnershipMemorySafetyCabalsSpec
+import qualified Test.Unit.DependentTypeValidationCabalsSpec
+import qualified Test.Unit.SourceLocationPrecisionCabalsSpec
+import qualified Test.Unit.ErrorHandlerConsistencyCabalsSpec
+import qualified Test.Unit.TypeInferenceAdvancedCabalsSpec
+import qualified Test.Unit.IntegrationEndToEndCabalsSpec
+import qualified Test.Unit.PerformanceRegressionCabalsSpec
+import qualified Test.Unit.SecurityValidationCabalsSpec
+
 -- New Core QuickCheck Test Modules
 import qualified Test.Unit.DebugCoreQuickCheckSpec
 import qualified Test.Unit.EnhancedDebugCoreQuickCheckSpec
@@ -1410,4 +1422,18 @@ tests =
     [ Test.Unit.ParserBoundarySpec.tests
     , Test.Unit.CompilerErrorBoundarySpec.tests
     , Test.Unit.NewQuickCheckPropertiesSpec.tests
+    ]
+
+  -- New Cabals Test Suite (10 comprehensive tests)
+  , testGroup "New Cabals Test Suite"
+    [ Test.Unit.ParserErrorRecoveryCabalsSpec.tests
+    , Test.Unit.CompilerOptimizationCabalsSpec.tests
+    , Test.Unit.OwnershipMemorySafetyCabalsSpec.tests
+    , Test.Unit.DependentTypeValidationCabalsSpec.tests
+    , Test.Unit.SourceLocationPrecisionCabalsSpec.tests
+    , Test.Unit.ErrorHandlerConsistencyCabalsSpec.tests
+    , Test.Unit.TypeInferenceAdvancedCabalsSpec.tests
+    , Test.Unit.IntegrationEndToEndCabalsSpec.tests
+    , Test.Unit.PerformanceRegressionCabalsSpec.tests
+    , Test.Unit.SecurityValidationCabalsSpec.tests
     ]
