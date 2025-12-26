@@ -607,6 +607,7 @@ import qualified Test.Unit.NewEnhancedCabalQuickCheckSpec
 -- New core functionality test modules
 import qualified Test.Unit.NewCoreFunctionalitySpec
 import qualified Test.Unit.NewCoreQuickCheckSpec
+import qualified Test.Unit.EnhancedCoreFunctionalityQuickCheckSpec
 
 -- New comprehensive QuickCheck test module
 
@@ -1109,6 +1110,7 @@ tests =
         , Test.Unit.EnhancedDependenciesQuickCheckSpec.tests
         , Test.Unit.EnhancedSyntaxValidatorQuickCheckSpec.tests
         ]
+    , Test.Unit.EnhancedCoreFunctionalityQuickCheckSpec.tests
     , testGroup "New Comprehensive Test Suite (2025)"
         [ Test.Unit.NewIntegratedParserTestsSpec.tests
         , Test.Unit.NewCompilerErrorRecoverySpec.tests
