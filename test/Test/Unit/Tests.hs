@@ -79,6 +79,18 @@ import qualified Test.Unit.EnhancedErrorHandlerQuickCheckSpec
 import qualified Test.Unit.EnhancedDependenciesQuickCheckSpec
 import qualified Test.Unit.EnhancedSyntaxValidatorQuickCheckSpec
 
+-- New comprehensive test modules added for enhanced coverage
+import qualified Test.Unit.NewIntegratedParserTestsSpec
+import qualified Test.Unit.NewCompilerErrorRecoverySpec
+import qualified Test.Unit.NewOwnershipMemorySafetySpec
+import qualified Test.Unit.NewDependentTypeValidationSpec
+import qualified Test.Unit.NewSourceLocationPrecisionSpec
+import qualified Test.Unit.NewUtilsPerformanceSpec
+import qualified Test.Unit.NewErrorHandlingConsistencySpec
+import qualified Test.Unit.NewSyntaxValidationComprehensiveSpec
+import qualified Test.Unit.NewTypeSystemInferenceSpec
+import qualified Test.Unit.NewCompilationOptimizationSpec
+
 -- New Cabal Test Suite Module
 import qualified Test.Unit.NewCabalTestSuiteSpec
 
@@ -1087,5 +1099,17 @@ tests =
         , Test.Unit.EnhancedErrorHandlerQuickCheckSpec.tests
         , Test.Unit.EnhancedDependenciesQuickCheckSpec.tests
         , Test.Unit.EnhancedSyntaxValidatorQuickCheckSpec.tests
+        ]
+    , testGroup "New Comprehensive Test Suite (2025)"
+        [ Test.Unit.NewIntegratedParserTestsSpec.tests
+        , Test.Unit.NewCompilerErrorRecoverySpec.tests
+        , Test.Unit.NewOwnershipMemorySafetySpec.tests
+        , Test.Unit.NewDependentTypeValidationSpec.tests
+        , Test.Unit.NewSourceLocationPrecisionSpec.tests
+        , Test.Unit.NewUtilsPerformanceSpec.tests
+        , Test.Unit.NewErrorHandlingConsistencySpec.tests
+        , Test.Unit.NewSyntaxValidationComprehensiveSpec.tests
+        , Test.Unit.NewTypeSystemInferenceSpec.tests
+        , Test.Unit.NewCompilationOptimizationSpec.tests
         ]
     ]
