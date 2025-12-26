@@ -449,7 +449,6 @@ test-suite typus-test
         Test.Unit.CompilerOptimizationsQuickCheckSpec,
         
         Test.Unit.MemorySafetyQuickCheckSpec,
-        Test.Unit.ErrorRecoveryAdvancedQuickCheckSpec,
         Test.Unit.ConcurrentParsingQuickCheckSpec,
         Test.Unit.SymbolTableOperationsQuickCheckSpec,
         
@@ -618,7 +617,6 @@ test-suite typus-test
         Test.Unit.CompilerPipelineIntegrationSpec,
         Test.Unit.DependentTypesOwnershipInteractionSpec,
         Test.Unit.ToolchainIntegrationSpec,
-        Test.Unit.PerformanceRegressionQuickCheckSpec,
         
         -- New Core QuickCheck Test Modules (2025)
         Test.Unit.UtilsCoreQuickCheckTests,
@@ -680,13 +678,13 @@ test-suite typus-test
         Test.Unit.UtilsBoundaryQuickCheckSpec,
         Test.Unit.SourceLocationMathQuickCheckSpec,
         Test.Unit.ParserRobustnessQuickCheckSpec,
-        Test.Unit.ErrorRecoveryAdvancedQuickCheckSpec,
+        Test.Unit.ErrorRecoveryEnhancedQuickCheckSpec,
         Test.Unit.CompilerOptimizationQuickCheckSpec,
         Test.Unit.OwnershipMemorySafetyQuickCheckSpec,
         Test.Unit.DependentTypeValidationQuickCheckSpec,
         Test.Unit.TypeInferenceBoundaryQuickCheckSpec,
         Test.Unit.IntegrationEndToEndQuickCheckSpec,
-        Test.Unit.PerformanceRegressionQuickCheckSpec
+        Test.Unit.PerformanceEnhancedQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
