@@ -60,7 +60,7 @@ test_dependency_types = do
     assertEqual "Variable dependency name" "x" (dependencyName varDep)
 
 -- Test dependency properties
-prop_dependency_graph_consistency :: [(String, [String])] -> Bool
+prop_dependency_graph_consistency :: [(String, [String])] -> Property
 prop_dependency_graph_consistency deps =
     let graph = Map.fromList deps
         allDeps = concat (Map.elems graph)

@@ -64,7 +64,7 @@ prop_splitByCollapsed_concatenation_with_delim delim s =
     intersperse sep (x:xs) = x ++ sep ++ intersperse sep xs
 
 -- Test removeLineComments function properties
-prop_removeLineComments_no_comments :: String -> Bool
+prop_removeLineComments_no_comments :: String -> Property
 prop_removeLineComments_no_comments s = not ("//" `isInfixOf` s) ==> removeLineComments s == s
 
 prop_removeLineComments_preserves_non_comment_content :: String -> String -> Property
@@ -83,20 +83,20 @@ prop_posAfter_advances_column line col =
     col >= 0 && line >= 0 ==>
     let pos = SourcePos line col
         pos' = posAfter pos
-    in sourceLine pos' == line && sourceColumn pos' == col + 1
+    in posLine pos' == line && posColumn pos' == col + 1
 
 prop_spanFrom_creates_valid_span :: Int -> Int -> Property
 prop_spanFrom_creates_valid_span line col =
     line >= 0 && col >= 0 ==>
-    let pos = SourcePos line col
+    let pos = SourcePos line col 0
         span = spanFrom pos
     in isValidSpan span && spanStart span == pos && spanEnd span == pos
 
 prop_mergeSpans_properties :: Int -> Int -> Int -> Int -> Property
 prop_mergeSpans_properties line1 col1 line2 col2 =
     all (>= 0) [line1, col1, line2, col2] ==>
-    let pos1 = SourcePos line1 col1
-        pos2 = SourcePos line2 col2
+    let pos1 = SourcePos line1 col1 0
+        pos2 = SourcePos line2 col2 0
         span1 = spanFrom pos1
         span2 = spanFrom pos2
         merged = mergeSpans span1 span2

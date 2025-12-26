@@ -55,12 +55,12 @@ test_embed_different_asset_types = do
         Left _ -> assertBool "Binary asset embedding should work" False
 
 -- Test asset properties
-prop_asset_content_preservation :: String -> AssetType -> Bool
+prop_asset_content_preservation :: String -> AssetType -> Property
 prop_asset_content_preservation content assetType = 
     let mockAsset = Asset content assetType
     in getAssetContent mockAsset == content
 
-prop_asset_type_preservation :: String -> AssetType -> Bool
+prop_asset_type_preservation :: String -> AssetType -> Property
 prop_asset_type_preservation content assetType = 
     let mockAsset = Asset content assetType
     in getAssetType mockAsset == assetType
@@ -141,7 +141,7 @@ test_run_cli_compile = do
         ExitFailure _ -> assertBool "CLI compile should handle failures gracefully" True
 
 -- Test CLI properties
-prop_cli_config_preservation :: CLIConfig -> Bool
+prop_cli_config_preservation :: CLIConfig -> Property
 prop_cli_config_preservation config = 
     cliCommand config == cliCommand config &&
     cliInputFile config == cliInputFile config &&

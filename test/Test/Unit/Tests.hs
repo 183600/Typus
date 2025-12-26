@@ -48,6 +48,9 @@ import qualified Test.Unit.IntegrationCoreQuickCheckSpec
 -- Additional Core Tests Module
 import qualified Test.Unit.AdditionalCoreTestsSpec
 
+-- New Core Functionality Test Module
+import qualified Test.Unit.NewCoreFunctionalitySpec
+
 -- New Cabal Enhanced Test Module
 import qualified Test.Unit.NewCabalEnhancedTestSpec
 
@@ -1036,4 +1039,5 @@ tests =
     , testGroup "New Cabal Enhanced Test Suite (2025)"
         [ Test.Unit.NewCabalEnhancedTestSpec.tests
         ]
+    , Test.Unit.NewCoreFunctionalitySpec.tests
     ]
