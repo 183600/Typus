@@ -116,35 +116,35 @@ tests =
         ]
         
     , testGroup "Property Tests"
-        [ testProperty "removeLineComments never increases length" $ fastProperty $ \input ->
+        [ fastProperty "removeLineComments never increases length" $ \input ->
             let result = removeLineComments input
             in length result <= length input
             
-        , testProperty "removeComments never increases length" $ fastProperty $ \input ->
+        , fastProperty "removeComments never increases length" $ \input ->
             let result = removeComments input
             in length result <= length input
             
-        , testProperty "removeLineComments is idempotent" $ fastProperty $ \input ->
+        , fastProperty "removeLineComments is idempotent" $ \input ->
             let once = removeLineComments input
                 twice = removeLineComments once
             in once == twice
             
-        , testProperty "removeComments is idempotent" $ fastProperty $ \input ->
+        , fastProperty "removeComments is idempotent" $ \input ->
             let once = removeComments input
                 twice = removeComments once
             in once == twice
             
-        , testProperty "removeComments removes all comment markers" $ fastProperty $ \input ->
+        , fastProperty "removeComments removes all comment markers" $ \input ->
             let result = removeComments input
             in not ("//" `isInfixOf` result) && not ("/*" `isInfixOf` result) && not ("*/" `isInfixOf` result)
             
-        , testProperty "removeLineComments preserves code structure" $ fastProperty $ \input ->
+        , fastProperty "removeLineComments preserves code structure" $ \input ->
             let result = removeLineComments input
                 originalLines = lines input
                 resultLines = lines result
             in length resultLines == length originalLines
             
-        , testProperty "functions handle Unicode correctly" $ fastProperty $ \input ->
+        , fastProperty "functions handle Unicode correctly" $ \input ->
             let lineResult = removeLineComments input
                 blockResult = removeComments input
             in length lineResult >= 0 && length blockResult >= 0
@@ -162,7 +162,7 @@ tests =
             let result = removeComments input
             length result >= 0 @?= True
             
-        , testProperty "functions don't crash on any input" $ fastProperty $ \input ->
+        , fastProperty "functions don't crash on any input" $ \input ->
             let lineResult = removeLineComments input
                 blockResult = removeComments input
             in length lineResult >= 0 && length blockResult >= 0

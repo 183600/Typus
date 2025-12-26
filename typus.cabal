@@ -494,6 +494,17 @@ test-suite typus-test
         Test.Unit.DebugIntegrationSpec,
         Test.Unit.IntegratedCompilerSpec,
 
+        -- New Enhanced QuickCheck Test Modules (2025)
+        Test.Unit.CoreCompilerQuickCheckSpec,
+        Test.Unit.DependentTypeBoundaryQuickCheckSpec,
+        Test.Unit.OwnershipRobustnessQuickCheckSpec,
+        Test.Unit.SourceLocationPrecisionQuickCheckSpec,
+        Test.Unit.ErrorHandlingConsistencyQuickCheckSpec,
+        Test.Unit.ParserBoundaryQuickCheckSpec,
+        Test.Unit.UtilsRobustnessQuickCheckSpec,
+        Test.Unit.DependencyAnalysisQuickCheckSpec,
+        Test.Unit.CompilerIntegrationQuickCheckSpec,
+
         -- New QuickCheck Test Suite 2025
         Test.Unit.NewQuickCheckTestSuiteSpec,
         Test.Unit.NewParserPropertiesSpec,
@@ -507,9 +518,7 @@ test-suite typus-test
 
         -- New Comprehensive QuickCheck Test Modules (2025)
         Test.Unit.ErrorHandlingBoundaryQuickCheckSpec,
-        Test.Unit.DependentTypeBoundaryQuickCheckSpec,
         Test.Unit.OwnershipTransferComplexQuickCheckSpec,
-        Test.Unit.SourceLocationPrecisionQuickCheckSpec,
         Test.Unit.TypeEnvironmentQuickCheckSpec,
         Test.Unit.LexerBoundaryQuickCheckSpec,
         

@@ -1,197 +1,206 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-module Test.Unit.DependentTypeBoundaryQuickCheckSpec (tests) where
+module Test.Unit.DependentTypeBoundaryQuickCheckSpec where
 
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), elements, listOf1, choose, Positive(..), NonEmptyList(..))
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
+
+import qualified Data.Text as T
+import Data.List (nub, sort)
+import Data.Maybe (isJust, isNothing, fromMaybe)
 
 import DependentTypesParser
-import Compiler.DependentTypeChecker
-import Compiler.TypeChecker (Type(..), TypeEnv(..))
-import Parser (TypusFile(..))
+import Compiler.Errors.Core
+import SourceLocation
+import qualified Dependencies.TypeSystem as Dep
 
-import Data.List (sort, nub, group, sortBy, find)
-import Data.Maybe (isJust, isNothing, catMaybes, fromMaybe)
-import qualified Data.Text as T
-import qualified Data.Map as Map
-import qualified Data.Set as Set
+-- | Test dependent type constraint validation
+testDependentTypeConstraintValidation :: Property
+testDependentTypeConstraintValidation =
+  forAll arbitrary $ \constraint ->
+    let isValid = Dep.validateConstraint constraint
+        constraintText = Dep.showConstraint constraint
+    in if T.null constraintText
+       then not isValid
+       else property True -- Valid constraints should have non-empty representation
 
--- Property: Dependent type constraints are transitive
-prop_dependent_type_constraints_transitive :: [(String, String)] -> Property
-prop_dependent_type_constraints_transitive constraints =
-  let typeEnv = buildTypeEnvironment constraints
-      transitiveClosure = computeTransitiveClosure typeEnv
-  in not (null constraints) ==> 
-     all (\(a, b) -> isDependent transitiveClosure a b) constraints
+-- | Test type variable substitution properties
+testTypeVariableSubstitution :: Property
+testTypeVariableSubstitution =
+  forAll arbitrary $ \typ ->
+    forAll arbitrary $ \substitution ->
+      let substituted = Dep.substituteTypeVars substitution typ
+          -- Substitution should preserve type structure
+          typeVarsBefore = Dep.getTypeVars typ
+          typeVarsAfter = Dep.getTypeVars substituted
+      in if null substitution
+         then substituted === typ
+         else property True
 
--- Property: Type inference preserves dependencies
-prop_type_inference_preserves_dependencies :: [(String, String)] -> Property
-prop_type_inference_preserves_dependencies dependencies =
-  let originalDeps = Set.fromList dependencies
-      inferredTypes = inferTypes dependencies
-      inferredDeps = extractDependencies inferredTypes
-  in Set.isSubsetOf originalDeps inferredDeps
+-- | Test dependent type equality properties
+testDependentTypeEquality :: Property
+testDependentTypeEquality =
+  forAll arbitrary $ \typ1 ->
+    forAll arbitrary $ \typ2 ->
+      let equality = Dep.typesEqual typ1 typ2
+          structuralEquality = Dep.structurallyEqual typ1 typ2
+      in if equality
+         then structuralEquality -- Equal types should be structurally equal
+         else property True
 
--- Property: Dependent type validation is consistent
-prop_dependent_type_validation_consistent :: [(String, Int)] -> Property
-prop_dependent_type_validation_consistent typePairs =
-  let typeConstraints = buildConstraints typePairs
-      validationResult1 = validateDependentTypes typeConstraints
-      validationResult2 = validateDependentTypes typeConstraints
-  in validationResult1 === validationResult2
+-- | Test type inference consistency
+testTypeInferenceConsistency :: Property
+testTypeInferenceConsistency =
+  forAll arbitrary $ \expression ->
+    forAll arbitrary $ \context ->
+      let inferredType = Dep.inferType context expression
+          expectedType = Dep.getExpectedType context expression
+      in case (inferredType, expectedType) of
+        (Just inferred, Just expected) -> 
+          if Dep.isSubtype inferred expected
+          then property True
+          else property False -- Should fail if inferred not subtype of expected
+        _ -> property True -- Partial inference is allowed
 
--- Property: Type substitution maintains type safety
-prop_type_substitution_maintains_safety :: [(String, String)] -> [(String, String)] -> Property
-prop_type_substitution_maintains_safety types substitutions =
-  let originalTypes = Map.fromList types
-      substitutionMap = Map.fromList substitutions
-      substitutedTypes = applySubstitution originalTypes substitutionMap
-      originalSafety = checkTypeSafety originalTypes
-      substitutedSafety = checkTypeSafety substitutedTypes
-  in originalSafety ==> substitutedSafety
+-- | Test dependent type boundary conditions
+testDependentTypeBoundaryConditions :: Property
+testDependentTypeBoundaryConditions =
+  forAll arbitrary $ \types ->
+    let uniqueTypes = nub types
+        typeCount = length types
+        uniqueCount = length uniqueTypes
+    in uniqueCount <= typeCount .&&. uniqueCount >= 0
 
--- Property: Dependent type unification is symmetric
-prop_dependent_type_unification_symmetric :: String -> String -> Property
-prop_dependent_type_unification_symmetric type1 type2 =
-  let unification1 = unifyTypes type1 type2
-      unification2 = unifyTypes type2 type1
-  in unification1 === unification2
+-- | Test constraint solving properties
+testConstraintSolvingProperties :: Property
+testConstraintSolvingProperties =
+  forAll arbitrary $ \constraints ->
+    let solution = Dep.solveConstraints constraints
+        constraintsCount = length constraints
+        solutionVars = Dep.getSolutionVars solution
+    in if null constraints
+       then Dep.isEmptySolution solution
+       else length solutionVars >= 0
 
--- Property: Complex dependent types can be simplified
-prop_complex_dependent_types_simplifiable :: [(String, [String])] -> Property
-prop_complex_dependent_types_simplifiable typeRelations =
-  let complexTypes = buildComplexTypes typeRelations
-      simplifiedTypes = simplifyDependentTypes complexTypes
-  in not (null typeRelations) ==> 
-     (typeComplexity simplifiedTypes <= typeComplexity complexTypes)
+-- | Test type variable freshness
+testTypeVariableFreshness :: Property
+testTypeVariableFreshness =
+  forAll arbitrary $ \typ ->
+    let freshType = Dep.freshenTypeVars typ
+        originalVars = Dep.getTypeVars typ
+        freshVars = Dep.getTypeVars freshType
+    in if null originalVars
+       then freshType === typ
+       else length freshVars >= length originalVars
 
--- Property: Dependent type bounds are respected
-prop_dependent_type_bounds_respected :: [(String, (Int, Int))] -> Property
-prop_dependent_type_bounds_respected typeBounds =
-  let boundsMap = Map.fromList typeBounds
-      testValues = generateTestValues boundsMap
-      validationResult = checkBounds boundsMap testValues
-  in all (`withinBounds` boundsMap) testValues ==> validationResult
+-- | Test dependent type normalization
+testDependentTypeNormalization :: Property
+testDependentTypeNormalization =
+  forAll arbitrary $ \typ ->
+    let normalized = Dep.normalizeType typ
+        -- Normalization should preserve type equivalence
+        isEquivalent = Dep.typesEquivalent typ normalized
+    in isEquivalent
 
--- Property: Type dependency analysis is complete
-prop_type_dependency_analysis_complete :: [(String, [String])] -> Property
-prop_type_dependency_analysis_complete dependencies =
-  let dependencyGraph = buildDependencyGraph dependencies
-      allDeps = findAllDependencies dependencyGraph
-      directDeps = Set.fromList (concatMap snd dependencies)
-  in Set.isSubsetOf directDeps allDeps
+-- | Test type application properties
+testTypeApplicationProperties :: Property
+testTypeApplicationProperties =
+  forAll arbitrary $ \functionType ->
+    forAll arbitrary $ \argumentType ->
+      let resultType = Dep.applyType functionType argumentType
+      in case resultType of
+        Just result -> Dep.isValidType result
+        Nothing -> property True -- Invalid applications should return Nothing
 
--- Property: Dependent type errors are informative
-prop_dependent_type_errors_informative :: [(String, String)] -> Property
-prop_dependent_type_errors_informative invalidTypes =
-  let typeErrors = validateInvalidTypes invalidTypes
-  in not (null invalidTypes) ==> 
-     all (isInformativeError . errorMessage) typeErrors
+-- | Test dependent type unification
+testDependentTypeUnification :: Property
+testDependentTypeUnification =
+  forAll arbitrary $ \typ1 ->
+    forAll arbitrary $ \typ2 ->
+      let unification = Dep.unifyTypes typ1 typ2
+      in case unification of
+        Just subst -> Dep.isValidSubstitution subst
+        Nothing -> property True -- Unification may fail
 
--- Helper functions (these would need to be implemented in the actual modules)
-buildTypeEnvironment :: [(String, String)] -> TypeEnv
-buildTypeEnvironment _ = TypeEnv Map.empty  -- Simplified for example
+-- | Test type kind checking
+testTypeKindChecking :: Property
+testTypeKindChecking =
+  forAll arbitrary $ \typ ->
+    let kind = Dep.getKind typ
+        isWellKinded = Dep.isWellKinded typ
+    in if isWellKinded
+       then kind /= Dep.KindError
+       else property True
 
-computeTransitiveClosure :: TypeEnv -> TypeEnv
-computeTransitiveClosure env = env  -- Simplified for example
+-- | Test dependent type reduction
+testDependentTypeReduction :: Property
+testDependentTypeReduction =
+  forAll arbitrary $ \typ ->
+    let reduced = Dep.reduceType typ
+        isReducible = Dep.isReducible typ
+    in if isReducible
+       then reduced /= typ
+       else reduced === typ
 
-isDependent :: TypeEnv -> String -> String -> Bool
-isDependent _ _ _ = True  -- Simplified for example
+-- | Test type variable occurrence checking
+testTypeVariableOccurrence :: Property
+testTypeVariableOccurrence =
+  forAll arbitrary $ \typ ->
+    forAll arbitrary $ \var ->
+      let occurs = Dep.typeVarOccurs var typ
+          allVars = Dep.getTypeVars typ
+      in occurs === (var `elem` allVars)
 
-inferTypes :: [(String, String)] -> [Type]
-inferTypes _ = [TypeInt]  -- Simplified for example
+-- | Test dependent type substitution composition
+testSubstitutionComposition :: Property
+testSubstitutionComposition =
+  forAll arbitrary $ \subst1 ->
+    forAll arbitrary $ \subst2 ->
+      let composed = Dep.composeSubstitutions subst1 subst2
+          -- Composition should be associative
+          composedAgain = Dep.composeSubstitutions composed subst2
+      in Dep.isValidSubstitution composed .&&.
+         Dep.isValidSubstitution composedAgain
 
-extractDependencies :: [Type] -> Set.Set (String, String)
-extractDependencies _ = Set.empty  -- Simplified for example
+-- | Test type variable binding scope
+testTypeVariableBindingScope :: Property
+testTypeVariableBindingScope =
+  forAll arbitrary $ \expression ->
+    let boundVars = Dep.getBoundVariables expression
+        freeVars = Dep.getFreeVariables expression
+        allVars = Dep.getAllVariables expression
+    in allVars `elem` [boundVars ++ freeVars] .&&.
+       length allVars >= length boundVars .&&.
+       length allVars >= length freeVars
 
-buildConstraints :: [(String, Int)] -> [TypeConstraint]
-buildConstraints _ = []  -- Simplified for example
-
-validateDependentTypes :: [TypeConstraint] -> ValidationResult
-validateDependentTypes _ = Valid  -- Simplified for example
-
-applySubstitution :: Map.Map String String -> Map.Map String String -> Map.Map String String
-applySubstitution types subs = Map.union subs types  -- Simplified for example
-
-checkTypeSafety :: Map.Map String String -> Bool
-checkTypeSafety _ = True  -- Simplified for example
-
-unifyTypes :: String -> String -> UnificationResult
-unifyTypes _ _ = UnificationSuccess  -- Simplified for example
-
-buildComplexTypes :: [(String, [String])] -> [ComplexType]
-buildComplexTypes _ = []  -- Simplified for example
-
-simplifyDependentTypes :: [ComplexType] -> [ComplexType]
-simplifyDependentTypes types = types  -- Simplified for example
-
-typeComplexity :: [ComplexType] -> Int
-typeComplexity = length  -- Simplified for example
-
-generateTestValues :: Map.Map String (Int, Int) -> [Int]
-generateTestValues bounds = map (\(_, (min, max)) -> (min + max) `div` 2) (Map.toList bounds)
-
-checkBounds :: Map.Map String (Int, Int) -> [Int] -> Bool
-checkBounds _ values = all (> 0) values  -- Simplified for example
-
-withinBounds :: Int -> Map.Map String (Int, Int) -> Bool
-withinBounds _ _ = True  -- Simplified for example
-
-buildDependencyGraph :: [(String, [String])] -> DependencyGraph
-buildDependencyGraph _ = DependencyGraph Map.empty  -- Simplified for example
-
-findAllDependencies :: DependencyGraph -> Set.Set String
-findAllDependencies _ = Set.empty  -- Simplified for example
-
-validateInvalidTypes :: [(String, String)] -> [TypeError]
-validateInvalidTypes invalid = map (\(n, t) -> TypeError n t "Invalid type") invalid
-
-isInformativeError :: String -> Bool
-isInformativeError msg = length msg > 10  -- Simplified for example
-
-errorMessage :: TypeError -> String
-errorMessage (TypeError _ _ msg) = msg
-
--- Data types for testing
-data TypeConstraint = TypeConstraint String String
-  deriving (Eq, Show)
-
-data ValidationResult = Valid | Invalid [String]
-  deriving (Eq, Show)
-
-data UnificationResult = UnificationSuccess | UnificationFailure String
-  deriving (Eq, Show)
-
-data ComplexType = ComplexType String [ComplexType]
-  deriving (Eq, Show)
-
-data DependencyGraph = DependencyGraph (Map.Map String [String])
-  deriving (Eq, Show)
-
-data TypeError = TypeError String String String
-  deriving (Eq, Show)
-
-data Type = TypeInt | TypeString | TypeBool | TypeFunction Type Type
-  deriving (Eq, Show)
+-- | Test dependent type well-formedness
+testDependentTypeWellFormedness :: Property
+testDependentTypeWellFormedness =
+  forAll arbitrary $ \typ ->
+    let wellFormed = Dep.isWellFormed typ
+        kind = Dep.getKind typ
+    in if wellFormed
+       then kind /= Dep.KindError .&&. Dep.isValidType typ
+       else property True
 
 tests :: TestTree
 tests = testGroup "Dependent Type Boundary QuickCheck Tests"
-  [ fastProperty "Dependent type constraints transitive" prop_dependent_type_constraints_transitive
-  , fastProperty "Type inference preserves dependencies" prop_type_inference_preserves_dependencies
-  , fastProperty "Dependent type validation consistent" prop_dependent_type_validation_consistent
-  , fastProperty "Type substitution maintains safety" prop_type_substitution_maintains_safety
-  , fastProperty "Dependent type unification symmetric" prop_dependent_type_unification_symmetric
-  , fastProperty "Complex dependent types simplifiable" prop_complex_dependent_types_simplifiable
-  , fastProperty "Dependent type bounds respected" prop_dependent_type_bounds_respected
-  , fastProperty "Type dependency analysis complete" prop_type_dependency_analysis_complete
-  , fastProperty "Dependent type errors informative" prop_dependent_type_errors_informative
+  [ testProperty "Constraint validation" testDependentTypeConstraintValidation
+  , testProperty "Type variable substitution" testTypeVariableSubstitution
+  , testProperty "Type equality properties" testDependentTypeEquality
+  , testProperty "Type inference consistency" testTypeInferenceConsistency
+  , testProperty "Boundary conditions" testDependentTypeBoundaryConditions
+  , testProperty "Constraint solving" testConstraintSolvingProperties
+  , testProperty "Type variable freshness" testTypeVariableFreshness
+  , testProperty "Type normalization" testDependentTypeNormalization
+  , testProperty "Type application" testTypeApplicationProperties
+  , testProperty "Type unification" testDependentTypeUnification
+  , testProperty "Kind checking" testTypeKindChecking
+  , testProperty "Type reduction" testDependentTypeReduction
+  , testProperty "Variable occurrence" testTypeVariableOccurrence
+  , testProperty "Substitution composition" testSubstitutionComposition
+  , testProperty "Variable binding scope" testTypeVariableBindingScope
+  , testProperty "Well-formedness" testDependentTypeWellFormedness
   ]

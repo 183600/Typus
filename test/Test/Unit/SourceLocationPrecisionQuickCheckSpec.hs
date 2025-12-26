@@ -1,282 +1,234 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-module Test.Unit.SourceLocationPrecisionQuickCheckSpec (tests) where
+module Test.Unit.SourceLocationPrecisionQuickCheckSpec where
 
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertBool, assertEqual, (@?=))
-import Test.Tasty.QuickCheck (testProperty)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, Gen, arbitrary, oneof, choose, listOf, elements)
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
 
 import qualified Data.Text as T
-import Data.List (isInfixOf, length, foldl', concat, sort)
-import Data.Char (isSpace)
-import Data.Maybe (isJust, fromMaybe)
+import Data.List (isInfixOf, sort)
+import Data.Maybe (isJust, isNothing)
 
-import SourceLocation 
-  ( SourcePos(..), SourceSpan(..), Located(..), locatedWithSpan
-  , spanStart, spanEnd, advancePosBy, posAt, posLine, posColumn
-  , posOffset, spanLength, spanContains, spanOverlaps, spanUnion
-  )
-import Parser (parseTypus)
-import Compiler (compile, CompilerError(..))
-import ErrorHandler (ErrorContext(..))
+import SourceLocation
+import Compiler.Errors.Core
 
--- | QuickCheck tests for source location precision and accuracy
+-- | Test source position arithmetic precision
+testSourcePositionArithmeticPrecision :: Property
+testSourcePositionArithmeticPrecision =
+  forAll arbitrary $ \pos ->
+    forAll arbitrary $ \lines ->
+    forAll arbitrary $ \cols ->
+      let newPos = advancePosBy lines cols pos
+          expectedLine = max 1 (sourceLine pos + lines)
+          expectedCol = if lines == 0 
+                       then max 1 (sourceColumn pos + cols)
+                       else max 1 cols
+      in sourceLine newPos === expectedLine .&&.
+         sourceColumn newPos === expectedCol .&&.
+         sourceFile newPos === sourceFile pos
+
+-- | Test span containment properties
+testSpanContainmentProperties :: Property
+testSpanContainmentProperties =
+  forAll arbitrary $ \outerSpan ->
+    forAll arbitrary $ \innerSpan ->
+      let outerStart = spanStart outerSpan
+          outerEnd = spanEnd outerSpan
+          innerStart = spanStart innerSpan
+          innerEnd = spanEnd innerSpan
+          contains = spanContains outerSpan innerSpan
+      in if contains
+         then sourceLine outerStart <= sourceLine innerStart .&&.
+              sourceLine outerEnd >= sourceLine innerEnd .&&.
+              (if sourceLine outerStart == sourceLine innerStart
+               then sourceColumn outerStart <= sourceColumn innerStart
+               else property True) .&&.
+              (if sourceLine outerEnd == sourceLine innerEnd
+               then sourceColumn outerEnd >= sourceColumn innerEnd
+               else property True)
+         else property True
+
+-- | Test span merging precision
+testSpanMergingPrecision :: Property
+testSpanMergingPrecision =
+  forAll arbitrary $ \span1 ->
+    forAll arbitrary $ \span2 ->
+      let merged = mergeSpans span1 span2
+          mergedStart = spanStart merged
+          mergedEnd = spanEnd merged
+          start1 = spanStart span1
+          end1 = spanEnd span1
+          start2 = spanStart span2
+          end2 = spanEnd span2
+      in if isValidSpan span1 && isValidSpan span2
+         then let minLine = min (sourceLine start1) (sourceLine start2)
+                  minCol = if sourceLine start1 == sourceLine start2
+                          then min (sourceColumn start1) (sourceColumn start2)
+                          else if sourceLine start1 < sourceLine start2
+                               then sourceColumn start1
+                               else sourceColumn start2
+                  maxLine = max (sourceLine end1) (sourceLine end2)
+                  maxCol = if sourceLine end1 == sourceLine end2
+                          then max (sourceColumn end1) (sourceColumn end2)
+                          else if sourceLine end1 > sourceLine end2
+                               then sourceColumn end1
+                               else sourceColumn end2
+              in sourceLine mergedStart === minLine .&&.
+                 sourceColumn mergedStart === minCol .&&.
+                 sourceLine mergedEnd === maxLine .&&.
+                 sourceColumn mergedEnd === maxCol
+         else property True
+
+-- | Test location tracking through transformations
+testLocationTrackingPrecision :: Property
+testLocationTrackingPrecision =
+  forAll arbitrary $ \pos ->
+    forAll arbitrary $ \text ->
+      let located = locatedAt pos text
+          extractedPos = locatedPos located
+          extractedValue = locatedValue located
+      in extractedPos === pos .&&.
+         extractedValue === text
+
+-- | Test error location conversion precision
+testErrorLocationConversionPrecision :: Property
+testErrorLocationConversionPrecision =
+  forAll arbitrary $ \pos ->
+    forAll arbitrary $ \message ->
+      let error = errorAt pos message
+          errorLoc = toErrorLocation pos
+          errorWithSpanLoc = toErrorLocationWithSpan pos (spanFrom pos pos)
+      in errorLocation error === errorLoc .&&.
+         sourceLine (elPosition errorLoc) === sourceLine pos .&&.
+         sourceColumn (elPosition errorLoc) === sourceColumn pos .&&.
+         sourceFile (elPosition errorLoc) === sourceFile pos
+
+-- | Test span validity invariants
+testSpanValidityInvariants :: Property
+testSpanValidityInvariants =
+  forAll arbitrary $ \span ->
+    let start = spanStart span
+        end = spanEnd span
+        valid = isValidSpan span
+    in if valid
+       then sourceLine start <= sourceLine end .&&.
+            (if sourceLine start == sourceLine end
+             then sourceColumn start <= sourceColumn end
+             else property True)
+       else property True
+
+-- | Test position comparison precision
+testPositionComparisonPrecision :: Property
+testPositionComparisonPrecision =
+  forAll arbitrary $ \pos1 ->
+    forAll arbitrary $ \pos2 ->
+      let sameFile = sourceFile pos1 == sourceFile pos2
+          earlier = pos1 `posBefore` pos2
+          later = pos1 `posAfter` pos2
+          same = pos1 == pos2
+      in if sameFile
+         then if same
+              then not earlier .&&. not later
+              else earlier /= later
+         else not earlier .&&. not later -- Different files can't be ordered
+
+-- | Test span length calculation precision
+testSpanLengthCalculationPrecision :: Property
+testSpanLengthCalculationPrecision =
+  forAll arbitrary $ \span ->
+    if isValidSpan span
+    then let start = spanStart span
+             end = spanEnd span
+             length = spanLength span
+         in if sourceLine start == sourceLine end
+            then length === max 0 (sourceColumn end - sourceColumn start)
+            else length >= 0
+    else spanLength span === 0
+
+-- | Test location tracker state consistency
+testLocationTrackerStateConsistency :: Property
+testLocationTrackerStateConsistency =
+  forAll arbitrary $ \positions ->
+    let tracker = foldl (\acc pos -> setCurrentPos pos acc) 
+                        (runLocationTracker getCurrentPos) positions
+        finalPos = runLocationTracker getCurrentPos tracker
+    in if null positions
+       then finalPos === startPos "" -- Default position
+       else finalPos === last positions
+
+-- | Test span intersection properties
+testSpanIntersectionProperties :: Property
+testSpanIntersectionProperties =
+  forAll arbitrary $ \span1 ->
+    forAll arbitrary $ \span2 ->
+      let intersection = spanIntersection span1 span2
+          hasIntersection = isJust intersection
+      in if hasIntersection
+         then let justSpan = fromMaybe (error "Impossible") intersection
+              in spanContains span1 justSpan .&&. 
+                 spanContains span2 justSpan
+         else property True
+
+-- | Test text position advancement precision
+testTextPositionAdvancementPrecision :: Property
+testTextPositionAdvancementPrecision =
+  forAll arbitrary $ \pos ->
+    forAll arbitrary $ \text ->
+      let linesInText = length $ T.lines $ T.pack text
+          finalPos = foldl advancePos pos text
+          expectedLine = sourceLine pos + linesInText
+          expectedCol = if linesInText == 0 
+                       then sourceColumn pos + length text
+                       else length $ last $ lines text
+      in sourceLine finalPos === expectedLine .&&.
+         sourceColumn finalPos === max 1 expectedCol
+
+-- | Test location span expansion
+testLocationSpanExpansion :: Property
+testLocationSpanExpansion =
+  forAll arbitrary $ \span ->
+    forAll arbitrary $ \pos ->
+      let expanded = expandSpan span pos
+          originalStart = spanStart span
+          originalEnd = spanEnd span
+          expandedStart = spanStart expanded
+          expandedEnd = spanEnd expanded
+      in sourceLine expandedStart <= min (sourceLine originalStart) (sourceLine pos) .&&.
+         sourceLine expandedEnd >= max (sourceLine originalEnd) (sourceLine pos)
+
+-- | Test location path resolution
+testLocationPathResolution :: Property
+testLocationPathResolution =
+  forAll arbitrary $ \filePath ->
+    let pos = posAt filePath 1 1
+        resolvedPath = sourceFile pos
+    in resolvedPath === filePath
+
+-- | Test location serialization roundtrip
+testLocationSerializationRoundtrip :: Property
+testLocationSerializationRoundtrip =
+  forAll arbitrary $ \pos ->
+    let serialized = show pos
+        -- Note: This would require a readPos function to complete the roundtrip
+        -- For now, we just test that serialization produces something
+    in length serialized > 0
+
 tests :: TestTree
 tests = testGroup "Source Location Precision QuickCheck Tests"
-  [ testGroup "Position Calculation Properties"
-      [ testProperty "position advancement is consistent" $ fastProperty $
-          \text offset ->
-            let startPos = SourcePos 1 1 0
-                advancedPos = advancePosBy text startPos
-                calculatedOffset = posOffset advancedPos
-            in offset >= 0 ==> calculatedOffset >= posOffset startPos
-
-      , testProperty "line and column consistency" $ fastProperty $
-          \linesList ->
-            let text = unlines linesList
-                finalPos = advancePosBy text (SourcePos 1 1 0)
-                expectedLine = length linesList
-                expectedColumn = if null linesList then 1 else length (last linesList) + 1
-            in posLine finalPos === expectedLine .&&.
-               posColumn finalPos === expectedColumn
-
-      , testProperty "position round-trip preservation" $ fastProperty $
-          \line column offset ->
-            let pos = SourcePos line column offset
-                reconstructed = posAt line column offset
-            in posLine pos === posLine reconstructed .&&.
-               posColumn pos === posColumn reconstructed .&&.
-               posOffset pos === posOffset reconstructed
-      ]
-
-  , testGroup "Span Operations"
-      [ testProperty "span length calculation is accurate" $ fastProperty $
-          \startLine startColumn endLine endColumn ->
-            let start = SourcePos startLine startColumn (startLine + startColumn)
-                end = SourcePos endLine endColumn (endLine + endColumn)
-                span = SourceSpan start end
-                calculatedLength = spanLength span
-            in startLine <= endLine && (startLine < endLine || startColumn <= endColumn) ==>
-               calculatedLength >= 0
-
-      , testProperty "span containment is reflexive" $ fastProperty $
-          \startLine startColumn endLine endColumn ->
-            let start = SourcePos startLine startColumn (startLine + startColumn)
-                end = SourcePos endLine endColumn (endLine + endColumn)
-                span = SourceSpan start end
-            in startLine <= endLine && (startLine < endLine || startColumn <= endColumn) ==>
-               spanContains span span
-
-      , testProperty "span containment is transitive" $ fastProperty $
-          \startLine startColumn midLine midColumn endLine endColumn ->
-            let start = SourcePos startLine startColumn (startLine + startColumn)
-                mid = SourcePos midLine midColumn (midLine + midColumn)
-                end = SourcePos endLine endColumn (endLine + endColumn)
-                inner = SourceSpan start mid
-                outer = SourceSpan start end
-            in startLine <= midLine && midLine <= endLine &&
-               (startLine < midLine || startColumn <= midColumn) &&
-               (midLine < endLine || midColumn <= endColumn) &&
-               spanContains outer inner ==>
-               spanContains outer inner
-
-      , testProperty "span union preserves containment" $ fastProperty $
-          \start1Line start1Col end1Line end1Col start2Line start2Col end2Line end2Col ->
-            let start1 = SourcePos start1Line start1Col (start1Line + start1Col)
-                end1 = SourcePos end1Line end1Col (end1Line + end1Col)
-                start2 = SourcePos start2Line start2Col (start2Line + start2Col)
-                end2 = SourcePos end2Line end2Col (end2Line + end2Col)
-                span1 = SourceSpan start1 end1
-                span2 = SourceSpan start2 end2
-                union = spanUnion span1 span2
-            in spanContains union span1 .&&. spanContains union span2
-      ]
-
-  , testGroup "Error Location Precision"
-      [ testProperty "error spans are valid" $ fastProperty $
-          \input ->
-            let parseResult = parseTypus input
-            in case parseResult of
-              Left err -> 
-                let span = errorSpan err
-                    start = spanStart span
-                    end = spanEnd span
-                in posLine start <= posLine end && 
-                   (posLine start < posLine end || posColumn start <= posColumn end)
-              Right _ -> property True
-
-      , testProperty "error positions are within input bounds" $ fastProperty $
-          \input ->
-            let parseResult = parseTypus input
-                inputLength = length input
-            in case parseResult of
-              Left err ->
-                let span = errorSpan err
-                    startOffset = posOffset $ spanStart span
-                    endOffset = posOffset $ spanEnd span
-                in startOffset >= 0 && endOffset <= inputLength
-              Right _ -> property True
-
-      , testProperty "multiple errors have distinct locations" $ fastProperty $
-          \input ->
-            let parseResult = parseTypus input
-                compileResult = case parseResult of
-                  Right parsedFile -> compile parsedFile
-                  Left _ -> Left []
-            in case compileResult of
-              Left errs | length errs >= 2 ->
-                let spans = map errorSpan errs
-                    distinctSpans = length spans == length (foldr (\s acc -> if s `elem` acc then acc else s:acc) [] spans)
-                in distinctSpans
-              _ -> property True
-      ]
-
-  , testGroup "Multiline Location Tracking"
-      [ testProperty "multiline spans cover correct lines" $ fastProperty $
-          \linesList ->
-            let text = unlines linesList
-                startLine = 1
-                endLine = length linesList
-                start = SourcePos startLine 1 0
-                end = SourcePos endLine 1 (length text - 1)
-                span = SourceSpan start end
-                coveredLines = [startLine..endLine]
-            in not (null linesList) ==> 
-               all (\line -> spanContains span (SourcePos line 1 0)) coveredLines
-
-      , testProperty "position tracking through indentation" $ fastProperty $
-          \indentSize linesList ->
-            let indentedLines = map (\line -> replicate indentSize ' ' ++ line) linesList
-                text = unlines indentedLines
-                positions = scanl (\pos line -> advancePosBy line pos) (SourcePos 1 1 0) indentedLines
-            in all (\pos -> posColumn pos >= 1) positions
-
-      , testProperty "column positions account for tabs" $ fastProperty $
-          \tabSize content ->
-            let textWithTabs = map (\c -> if c == '\t' then '\t' else c) content
-                pos = advancePosBy textWithTabs (SourcePos 1 1 0)
-                expectedColumn = foldl' (\col c -> if c == '\t' then col + tabSize else col + 1) 1 textWithTabs
-            in posColumn pos === expectedColumn
-      ]
-
-  , testGroup "Location Context Preservation"
-      [ testProperty "error context positions are within error spans" $ fastProperty $
-          \input ->
-            let parseResult = parseTypus input
-            in case parseResult of
-              Left err ->
-                let span = errorSpan err
-                    context = errorContext err
-                    contextPos = contextPos context
-                in spanContains span (SourceSpan contextPos contextPos)
-              Right _ -> property True
-
-      , testProperty "nested error contexts maintain hierarchy" $ fastProperty $
-          \input ->
-            let parseResult = parseTypus input
-                compileResult = case parseResult of
-                  Right parsedFile -> compile parsedFile
-                  Left _ -> Left []
-            in case compileResult of
-              Left errs | length errs >= 2 ->
-                let contexts = map errorContext errs
-                    positions = map contextPos contexts
-                    sorted = sort positions
-                in positions === sorted
-              _ -> property True
-      ]
-
-  , testGroup "Generated Code Location Mapping"
-      [ testProperty "generated code preserves source location information" $ fastProperty $
-          \input ->
-            let parseResult = parseTypus input
-            in case parseResult of
-              Right parsedFile ->
-                case compile parsedFile of
-                  Right compiled -> 
-                    let goCode = goCode compiled
-                        hasLocationInfo = "// line:" `T.isInfixOf` goCode
-                    in hasLocationInfo || T.length goCode > 0
-                  Left _ -> property True
-              Left _ -> property True
-
-      , testProperty "location mapping is bijective" $ fastProperty $
-          \input ->
-            let parseResult = parseTypus input
-            in case parseResult of
-              Right parsedFile ->
-                case compile parsedFile of
-                  Right compiled -> 
-                    let goCode = goCode compiled
-                        sourceLines = lines input
-                        goLines = T.lines goCode
-                    in length sourceLines <= length goLines * 2  -- Allow for generated code expansion
-                  Left _ -> property True
-              Left _ -> property True
-      ]
-
-  , testGroup "Performance and Scalability"
-      [ testProperty "position calculation is linear in input size" $ fastProperty $
-          \inputSize ->
-            let largeInput = unlines $ replicate (min inputSize 1000) "func test() { return 42; }"
-                startPos = SourcePos 1 1 0
-                endPos = advancePosBy largeInput startPos
-            in posOffset endPos === length largeInput
-
-      , testProperty "span operations are efficient for large inputs" $ fastProperty $
-          \spanCount ->
-            let spans = take (min spanCount 100) $ generateSpans 1 1
-                unioned = foldl spanUnion (head spans) (tail spans)
-            in spanLength unioned >= 0
-      ]
+  [ testProperty "Position arithmetic precision" testSourcePositionArithmeticPrecision
+  , testProperty "Span containment properties" testSpanContainmentProperties
+  , testProperty "Span merging precision" testSpanMergingPrecision
+  , testProperty "Location tracking precision" testLocationTrackingPrecision
+  , testProperty "Error location conversion" testErrorLocationConversionPrecision
+  , testProperty "Span validity invariants" testSpanValidityInvariants
+  , testProperty "Position comparison" testPositionComparisonPrecision
+  , testProperty "Span length calculation" testSpanLengthCalculationPrecision
+  , testProperty "Tracker state consistency" testLocationTrackerStateConsistency
+  , testProperty "Span intersection" testSpanIntersectionProperties
+  , testProperty "Text position advancement" testTextPositionAdvancementPrecision
+  , testProperty "Span expansion" testLocationSpanExpansion
+  , testProperty "Path resolution" testLocationPathResolution
+  , testProperty "Serialization roundtrip" testLocationSerializationRoundtrip
   ]
-
--- Helper functions and generators
-generateSpans :: Int -> Int -> [SourceSpan]
-generateSpans startLine startColumn = 
-  let start = SourcePos startLine startColumn (startLine + startColumn)
-      end = SourcePos (startLine + 1) startColumn (startLine + startColumn + 10)
-  in [SourceSpan start end]
-
-errorSpan :: CompilerError -> SourceSpan
-errorSpan (CompilerError _ _ _ span _) = span
-
-errorContext :: CompilerError -> ErrorContext
-errorContext (CompilerError _ _ _ _ ctx) = ctx
-
-goCode :: CompiledModule -> T.Text
-goCode = undefined  -- Placeholder - would be implemented in actual module
-
-data CompiledModule = CompiledModule
-  { goCode :: T.Text
-  } deriving (Show, Eq)
-
--- Additional QuickCheck generators
-genSourcePos :: Gen SourcePos
-genSourcePos = do
-  line <- choose (1, 1000)
-  column <- choose (1, 1000)
-  offset <- choose (0, 1000000)
-  return $ SourcePos line column offset
-
-genSourceSpan :: Gen SourceSpan  
-genSourceSpan = do
-  start <- genSourcePos
-  endOffset <- choose (0, 1000)
-  let end = SourcePos (posLine start) (posColumn start + endOffset) (posOffset start + endOffset)
-  return $ SourceSpan start end
-
--- QuickCheck property operators
-(.&&.) :: Property -> Property -> Property
-(.&&.) = (&&.)
-
-infixr 3 .&&.

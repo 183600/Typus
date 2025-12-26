@@ -629,6 +629,17 @@ import qualified Test.Unit.DependenciesCoreQuickCheckSpec
 -- New cabal test modules (8 new comprehensive tests)
 
 import qualified Test.Unit.DependentTypeBoundarySpec
+
+-- New Enhanced QuickCheck Test Modules (2025)
+import qualified Test.Unit.CoreCompilerQuickCheckSpec
+import qualified Test.Unit.DependentTypeBoundaryQuickCheckSpec
+import qualified Test.Unit.OwnershipRobustnessQuickCheckSpec
+import qualified Test.Unit.SourceLocationPrecisionQuickCheckSpec
+import qualified Test.Unit.ErrorHandlingConsistencyQuickCheckSpec
+import qualified Test.Unit.ParserBoundaryQuickCheckSpec
+import qualified Test.Unit.UtilsRobustnessQuickCheckSpec
+import qualified Test.Unit.DependencyAnalysisQuickCheckSpec
+import qualified Test.Unit.CompilerIntegrationQuickCheckSpec
 import qualified Test.Unit.OwnershipTransitivitySpec
 
 import qualified Test.Unit.SyntaxValidatorAdvancedSpec
@@ -1287,3 +1298,16 @@ tests =
   , Test.Unit.ErrorRecoveryAdvancedSpec.tests
   , Test.Unit.PerformanceRegressionSpec.tests
   , Test.Unit.IntegrationAdvancedSpec.tests
+
+  -- New Enhanced QuickCheck Test Modules (2025)
+  , testGroup "Enhanced QuickCheck Test Suite 2025"
+    [ Test.Unit.CoreCompilerQuickCheckSpec.tests
+    , Test.Unit.DependentTypeBoundaryQuickCheckSpec.tests
+    , Test.Unit.OwnershipRobustnessQuickCheckSpec.tests
+    , Test.Unit.SourceLocationPrecisionQuickCheckSpec.tests
+    , Test.Unit.ErrorHandlingConsistencyQuickCheckSpec.tests
+    , Test.Unit.ParserBoundaryQuickCheckSpec.tests
+    , Test.Unit.UtilsRobustnessQuickCheckSpec.tests
+    , Test.Unit.DependencyAnalysisQuickCheckSpec.tests
+    , Test.Unit.CompilerIntegrationQuickCheckSpec.tests
+    ]
