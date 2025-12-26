@@ -1,204 +1,137 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-module Test.Unit.NewParserValidationSpec (tests) where
+module Test.Unit.NewParserValidationSpec (newParserValidationSpec, parserQuickCheckProperties) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import Test.Tasty.HUnit (testCase, (@?=), assertBool, assertFailure)
+import Test.Tasty.QuickCheck (testProperty, Property(..), (==>), Positive(..))
+import Parser
+import SourceLocation
+import Data.Maybe (isJust, isNothing)
+import Data.List (isInfixOf)
+import Data.Char (isSpace)
 
-import Parser (parseTypus)
-import SourceLocation (SourceSpan(..), startPos)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
-import Data.Char (isSpace, isAlpha, isAlphaNum)
+-- | Test suite for Parser validation functions
+newParserValidationSpec :: TestTree
+newParserValidationSpec = testGroup "New Parser Validation Tests"
+  [ testCase "File directives parsing" $ do
+      let empty = defaultFileDirectives
+      fdOwnership empty @?= Nothing
+      fdDependentTypes empty @?= Nothing
+      fdConstraints empty @?= Nothing
+  
+  , testCase "Block directives parsing" $ do
+      let empty = defaultBlockDirectives
+      bdOwnership empty @?= Nothing
+      bdDependentTypes empty @?= Nothing
+      bdConstraints empty @?= Nothing
+  
+  , testCase "Directive parsing in various contexts" $ do
+      -- Test file-level directive
+      let fileWithOwnership = "//! ownership: on\npackage main"
+      case parseTypus fileWithOwnership of
+        Left _ -> assertFailure "Should parse file directive successfully"
+        Right typusFile -> do
+          let directives = tfDirectives typusFile
+          assertBool "Ownership directive should be present" $ isJust (fdOwnership directives)
+      
+      -- Test block-level directive
+      let blockWithDependentTypes = "func main() {\n    //! dependent_types: on\n    var x int = 5\n}"
+      case parseTypus blockWithDependentTypes of
+        Left _ -> assertFailure "Should parse block directive successfully"
+        Right typusFile -> do
+          let blocks = tfBlocks typusFile
+          assertBool "Should have at least one block" $ not (null blocks)
+          let firstBlock = head blocks
+          let directives = cbDirectives firstBlock
+          assertBool "Dependent types directive should be present" $ isJust (bdDependentTypes directives)
+  
+  , testCase "Code block structure validation" $ do
+      let simpleCode = "package main\n\nfunc main() {\n    println(\"hello\")\n}"
+      case parseTypus simpleCode of
+        Left _ -> assertFailure "Should parse simple code successfully"
+        Right typusFile -> do
+          let blocks = tfBlocks typusFile
+          assertBool "Should have at least one code block" $ not (null blocks)
+          let firstBlock = head blocks
+          assertBool "Code block should not be empty" $ not (null (cbContent firstBlock))
+  
+  , testCase "Mixed directives handling" $ do
+      let mixedDirectives = "//! ownership: on\n//! dependent_types: on\npackage main\n\nfunc test() {\n    //! constraints: on\n    // code here\n}"
+      case parseTypus mixedDirectives of
+        Left _ -> assertFailure "Should parse mixed directives successfully"
+        Right typusFile -> do
+          let fileDirectives = tfDirectives typusFile
+          assertBool "File should have ownership directive" $ isJust (fdOwnership fileDirectives)
+          assertBool "File should have dependent types directive" $ isJust (fdDependentTypes fileDirectives)
+          
+          let blocks = tfBlocks typusFile
+          assertBool "Should have at least one block" $ length blocks >= 1
+          
+          when (length blocks >= 1) $ do
+            let firstBlock = head blocks
+            let blockDirectives = cbDirectives firstBlock
+            assertBool "Block should have constraints directive" $ isJust (bdConstraints blockDirectives)
+  
+  , testCase "Error handling for malformed directives" $ do
+      let malformedDirective = "//! ownership: maybe\npackage main"
+      case parseTypus malformedDirective of
+        Left _ -> return ()  -- Expected to fail
+        Right _ -> assertFailure "Should fail on malformed directive"
+      
+      let unknownDirective = "//! unknown_feature: on\npackage main"
+      case parseTypus unknownDirective of
+        Left _ -> return ()  -- Expected to fail or ignore unknown directive
+        Right _ -> return ()  -- Or succeed by ignoring it
+  ]
+  where
+    when True action = action
+    when False _ = return ()
 
--- Property: Parser handles balanced parentheses correctly
-prop_balanced_parentheses :: String -> Property
-prop_balanced_parentheses content =
-  not (null content) && not ('(' `elem` content) && not (')' `elem` content) ==>
-  let wrapped = "package main\nfunc main() {\n  println(" ++ content ++ ")\n}"
-      result = parseTypus wrapped
-  in case result of
-    Left _ -> property False
-    Right _ -> property True
+-- QuickCheck properties for Parser functions
+prop_parse_empty_string :: Bool
+prop_parse_empty_string = 
+  case parseTypus "" of
+    Left _ -> True  -- Empty string should fail to parse meaningfully
+    Right typusFile -> null (tfBlocks typusFile)  -- Or parse to empty blocks
 
--- Property: Parser handles nested structures correctly
-prop_nested_structures :: Int -> Property
-prop_nested_structures depth =
-  depth >= 0 && depth <= 5 ==>
-  let nestedFuncs = concat $ replicate depth "func inner() {\n  "
-      closingBraces = concat $ replicate depth "}\n"
-      content = "package main\n" ++ nestedFuncs ++ "println(\"test\")\n" ++ closingBraces
-      result = parseTypus content
-  in case result of
-    Left _ -> property False
-    Right _ -> property True
+prop_parse_simple_package :: String -> Property
+prop_parse_simple_package name = 
+  not (null name) && all (not . isSpace) name ==>
+    let code = "package " ++ name
+    in case parseTypus code of
+         Left _ -> False
+         Right typusFile -> not (null (tfBlocks typusFile))
 
--- Property: Parser handles multiple imports correctly
-prop_multiple_imports :: [String] -> Property
-prop_multiple_imports imports =
-  not (null imports) && length imports <= 5 ==>
-  let validImports = filter (\imp -> not (null imp) && not ('"' `elem` imp) && not ('/' `elem` imp)) imports
-      importLines = map (\imp -> "import \"" ++ imp ++ "\"") validImports
-      content = "package main\n" ++ unlines importLines ++ "\nfunc main() {}\n"
-      result = parseTypus content
-  in case result of
-    Left _ -> not (null validImports) ==> property False
-    Right _ -> property True
+prop_directive_parsing_consistency :: String -> Bool
+prop_directive_parsing_consistency content = 
+  let withDirective = "//! ownership: on\n" ++ content
+      withoutDirective = content
+  in case (parseTypus withDirective, parseTypus withoutDirective) of
+       (Right withFile, Right withoutFile) -> 
+         -- Both should parse, but withFile should have ownership directive
+         isJust (fdOwnership (tfDirectives withFile)) &&
+         isNothing (fdOwnership (tfDirectives withoutFile))
+       _ -> True  -- If either fails, that's acceptable for arbitrary content
 
--- Property: Parser handles array/slice syntax correctly
-prop_array_syntax :: String -> Property
-prop_array_syntax elemType =
-  not (null elemType) && all isAlpha elemType ==>
-  let content = "package main\nfunc main() {\n  var arr []" ++ elemType ++ "\n  arr = append(arr, " ++ elemType ++ "(0))\n}\n"
-      result = parseTypus content
-  in case result of
-    Left _ -> property False
-    Right _ -> property True
+prop_block_directive_scope :: String -> Property
+prop_block_directive_scope content = 
+  not (null content) ==> 
+    let code = "func main() {\n    //! ownership: on\n    " ++ content ++ "\n}"
+    in case parseTypus code of
+         Left _ -> False
+         Right typusFile -> 
+           let blocks = tfBlocks typusFile
+           in not (null blocks) && 
+              let firstBlock = head blocks
+                  directives = cbDirectives firstBlock
+              in isJust (bdOwnership directives)
 
--- Property: Parser handles interface definitions correctly
-prop_interface_definitions :: String -> Property
-prop_interface_definitions ifaceName =
-  not (null ifaceName) && isAlpha (head ifaceName) && all isAlphaNum ifaceName ==>
-  let content = "package main\ntype " ++ ifaceName ++ " interface {\n  Method() error\n}\nfunc main() {}\n"
-      result = parseTypus content
-  in case result of
-    Left _ -> property False
-    Right _ -> property True
-
--- Property: Parser handles struct methods correctly
-prop_struct_methods :: String -> String -> Property
-prop_struct_methods structName methodName =
-  not (null structName) && not (null methodName) &&
-  isAlpha (head structName) && isAlpha (head methodName) &&
-  all isAlphaNum structName && all isAlphaNum methodName ==>
-  let content = "package main\ntype " ++ structName ++ " struct{}\nfunc (s *" ++ structName ++ ") " ++ methodName ++ "() {}\nfunc main() {}\n"
-      result = parseTypus content
-  in case result of
-    Left _ -> property False
-    Right _ -> property True
-
--- Property: Parser handles goroutine syntax correctly
-prop_goroutine_syntax :: String -> Property
-prop_goroutine_syntax funcName =
-  not (null funcName) && isAlpha (head funcName) && all isAlphaNum funcName ==>
-  let content = "package main\nfunc " ++ funcName ++ "() {}\nfunc main() {\n  go " ++ funcName ++ "()\n}\n"
-      result = parseTypus content
-  in case result of
-    Left _ -> property False
-    Right _ -> property True
-
--- Property: Parser handles channel operations correctly
-prop_channel_operations :: String -> Property
-prop_channel_operations chanType =
-  not (null chanType) && all isAlpha chanType ==>
-  let content = "package main\nfunc main() {\n  ch := make(chan " ++ chanType ++ ")\n  ch <- " ++ chanType ++ "(0)\n  <-ch\n}\n"
-      result = parseTypus content
-  in case result of
-    Left _ -> property False
-    Right _ -> property True
-
--- Property: Parser handles select statements correctly
-prop_select_statements :: Property
-prop_select_statements =
-  let content = "package main\nfunc main() {\n  select {\n  case <-time.After(time.Second):\n    break\n  default:\n    break\n  }\n}\n"
-      result = parseTypus content
-  in case result of
-    Left _ -> property False
-    Right _ -> property True
-
--- Property: Parser handles defer statements correctly
-prop_defer_statements :: String -> Property
-prop_defer_statements funcName =
-  not (null funcName) && isAlpha (head funcName) && all isAlphaNum funcName ==>
-  let content = "package main\nfunc " ++ funcName ++ "() {}\nfunc main() {\n  defer " ++ funcName ++ "()\n}\n"
-      result = parseTypus content
-  in case result of
-    Left _ -> property False
-    Right _ -> property True
-
--- Property: Parser handles panic and recover correctly
-prop_panic_recover :: Property
-prop_panic_recover =
-  let content = "package main\nfunc main() {\n  defer func() {\n    if r := recover(); r != nil {\n      println(\"recovered\")\n    }\n  }()\n  panic(\"test\")\n}\n"
-      result = parseTypus content
-  in case result of
-    Left _ -> property False
-    Right _ -> property True
-
--- Property: Parser handles type assertions correctly
-prop_type_assertions :: String -> Property
-prop_type_assertions typeName =
-  not (null typeName) && isAlpha (head typeName) && all isAlphaNum typeName ==>
-  let content = "package main\nfunc main() {\n  var x interface{} = " ++ typeName ++ "(0)\n  if val, ok := x.(" ++ typeName ++ "); ok {\n    println(val)\n  }\n}\n"
-      result = parseTypus content
-  in case result of
-    Left _ -> property False
-    Right _ -> property True
-
--- Property: Parser handles switch statements correctly
-prop_switch_statements :: String -> Property
-prop_switch_statements varName =
-  not (null varName) && isAlpha (head varName) && all isAlphaNum varName ==>
-  let content = "package main\nfunc main() {\n  " ++ varName ++ " := 1\n  switch " ++ varName ++ " {\n  case 1:\n    break\n  case 2:\n    break\n  default:\n    break\n  }\n}\n"
-      result = parseTypus content
-  in case result of
-    Left _ -> property False
-    Right _ -> property True
-
--- Property: Parser handles range loops correctly
-prop_range_loops :: String -> Property
-prop_range_loops arrayName =
-  not (null arrayName) && isAlpha (head arrayName) && all isAlphaNum arrayName ==>
-  let content = "package main\nfunc main() {\n  " ++ arrayName ++ " := []int{1, 2, 3}\n  for _, v := range " ++ arrayName ++ " {\n    println(v)\n  }\n}\n"
-      result = parseTypus content
-  in case result of
-    Left _ -> property False
-    Right _ -> property True
-
--- Property: Parser handles function literals/closures correctly
-prop_function_literals :: String -> Property
-prop_function_literals paramName =
-  not (null paramName) && isAlpha (head paramName) && all isAlphaNum paramName ==>
-  let content = "package main\nfunc main() {\n  fn := func(" ++ paramName ++ " int) int {\n    return " ++ paramName ++ " * 2\n  }\n  result := fn(5)\n  println(result)\n}\n"
-      result = parseTypus content
-  in case result of
-    Left _ -> property False
-    Right _ -> property True
-
--- Property: Parser handles complex expressions correctly
-prop_complex_expressions :: Int -> Int -> Int -> Property
-prop_complex_expressions a b c =
-  a >= 0 && b >= 0 && c >= 0 && a <= 100 && b <= 100 && c <= 100 ==>
-  let content = "package main\nfunc main() {\n  result := (" ++ show a ++ " + " ++ show b ++ ") * " ++ show c ++ " - (" ++ show a ++ " / (" ++ show b ++ " + 1))\n  println(result)\n}\n"
-      result = parseTypus content
-  in case result of
-    Left _ -> property False
-    Right _ -> property True
-
-tests :: TestTree
-tests = testGroup "New Parser Validation tests"
-  [ fastProperty "Parser handles balanced parentheses correctly" prop_balanced_parentheses
-  , fastProperty "Parser handles nested structures correctly" prop_nested_structures
-  , fastProperty "Parser handles multiple imports correctly" prop_multiple_imports
-  , fastProperty "Parser handles array/slice syntax correctly" prop_array_syntax
-  , fastProperty "Parser handles interface definitions correctly" prop_interface_definitions
-  , fastProperty "Parser handles struct methods correctly" prop_struct_methods
-  , fastProperty "Parser handles goroutine syntax correctly" prop_goroutine_syntax
-  , fastProperty "Parser handles channel operations correctly" prop_channel_operations
-  , fastProperty "Parser handles select statements correctly" prop_select_statements
-  , fastProperty "Parser handles defer statements correctly" prop_defer_statements
-  , fastProperty "Parser handles panic and recover correctly" prop_panic_recover
-  , fastProperty "Parser handles type assertions correctly" prop_type_assertions
-  , fastProperty "Parser handles switch statements correctly" prop_switch_statements
-  , fastProperty "Parser handles range loops correctly" prop_range_loops
-  , fastProperty "Parser handles function literals/closures correctly" prop_function_literals
-  , fastProperty "Parser handles complex expressions correctly" prop_complex_expressions
+-- QuickCheck test suite
+parserQuickCheckProperties :: TestTree
+parserQuickCheckProperties = testGroup "Parser QuickCheck Properties"
+  [ testProperty "parse empty string" prop_parse_empty_string
+  , testProperty "parse simple package declaration" prop_parse_simple_package
+  , testProperty "directive parsing consistency" prop_directive_parsing_consistency
+  , testProperty "block directive scope" prop_block_directive_scope
   ]

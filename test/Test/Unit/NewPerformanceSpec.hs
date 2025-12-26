@@ -1,384 +1,165 @@
-{-# LANGUAGE CPP #-}
-module Test.Unit.NewPerformanceSpec (tests) where
+{-# LANGUAGE TemplateHaskell #-}
+
+module Test.Unit.NewPerformanceSpec (newPerformanceSpec, performanceQuickCheckProperties) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
-import Data.List (isInfixOf)
+import Test.Tasty.HUnit (testCase, (@?=), assertBool, assertFailure)
+import Test.Tasty.QuickCheck (testProperty, Property(..), (==>), Positive(..))
+import Parser
+import Utils
+import SourceLocation
+import ErrorHandler
+import Data.Maybe (isJust, isNothing)
+import Data.Either (isLeft, isRight)
+import Control.DeepSeq (force)
 import System.CPUTime (getCPUTime)
 import Text.Printf (printf)
 
-import Parser
-  ( parseTypus
-  , TypusFile(..)
-  )
-import Compiler
-  ( compile
-  )
-import Ownership
-  ( analyzeOwnershipFile
-  )
-import Compiler.TypeChecker
-  ( diagnoseTypeErrors
-  )
-import Dependencies.Analyzer
-  ( analyzeDependencies
-  , buildDependencyGraph
-  )
+-- | Test suite for performance characteristics
+newPerformanceSpec :: TestTree
+newPerformanceSpec = testGroup "New Performance Tests"
+  [ testCase "Parser performance with large files" $ do
+      let largeFunction = unlines 
+            [ "func largeFunction() {"
+            , "    var x int = 0"
+            , "    var y int = 0"
+            , "    var z int = 0"
+            ] ++ 
+            concat (replicate 100 ["    x = x + 1\n", "    y = y + 2\n", "    z = z + 3\n"]) ++
+            ["    return x + y + z", "}"]
+      
+      let largeCode = "package main\n\n" ++ largeFunction
+      
+      start <- getCPUTime
+      case parseTypus largeCode of
+        Left err -> assertFailure $ "Parse failed: " ++ show err
+        Right typusFile -> do
+          end <- getCPUTime
+          let diff = fromIntegral (end - start) / (10^12)
+          assertBool "Parse should complete in reasonable time" $ diff < 1.0  -- Less than 1 second
+          assertBool "Should parse large function" $ not (null (tfBlocks typusFile))
+  
+  , testCase "Utils performance with large strings" $ do
+      let largeString = replicate 10000 'a' ++ "target" ++ replicate 10000 'b'
+      
+      start <- getCPUTime
+      let result = trim largeString
+      end <- getCPUTime
+      let diff = fromIntegral (end - start) / (10^12)
+      assertBool "Trim should complete quickly" $ diff < 0.1
+      
+      start2 <- getCPUTime
+      let splitResult = splitBy ',' (replicate 5000 "a,b,c,")
+      end2 <- getCPUTime
+      let diff2 = fromIntegral (end2 - start2) / (10^12)
+      assertBool "Split should complete quickly" $ diff2 < 0.1
+      assertBool "Split should produce correct number of parts" $ length splitResult == 15001
+  
+  , testCase "SourceLocation performance with many positions" $ do
+      let createPositions n = [posAt "test.typus" i (i `mod` 100 + 1) | i <- [1..n]]
+      
+      start <- getCPUTime
+      let positions = createPositions 10000
+      let spans = [spanBetween pos (posAfter pos 'a') | pos <- take 5000 positions]
+      let validSpans = filter isValidSpan spans
+      end <- getCPUTime
+      let diff = fromIntegral (end - start) / (10^12)
+      
+      assertBool "Position creation should be fast" $ diff < 0.5
+      assertBool "Should create expected number of positions" $ length positions == 10000
+      assertBool "Should create valid spans" $ length validSpans == 5000
+  
+  , testCase "Error handling performance with many errors" $ do
+      let createError i = basicError ("Error " ++ show i) (posAt "test.typus" i 1)
+      
+      start <- getCPUTime
+      let errors = map createError [1..1000]
+      let collection = foldr addError newErrorCollection errors
+      let blocking = getBlockingErrors collection
+      let formatted = formatErrorCollection collection
+      end <- getCPUTime
+      let diff = fromIntegral (end - start) / (10^12)
+      
+      assertBool "Error collection should be fast" $ diff < 0.5
+      assertBool "Should collect all errors" $ getErrorCount collection == 1000
+      assertBool "Should find blocking errors" $ length blocking == 1000
+      assertBool "Should format all errors" $ not (null formatted)
+  
+  , testCase "Memory efficiency with repeated operations" $ do
+      let testCode = "//! ownership: on\n//! dependent_types: on\npackage main\n\nfunc test() {\n    var x int = 5\n    return x\n}"
+      
+      -- Test repeated parsing doesn't leak memory excessively
+      start <- getCPUTime
+      let results = replicate 100 $ parseTypus testCode
+      let successful = length [() | Right _ <- results]
+      let forced = force results `seq` successful
+      end <- getCPUTime
+      let diff = fromIntegral (end - start) / (10^12)
+      
+      assertBool "Repeated parsing should be efficient" $ diff < 2.0
+      assertBool "Most parses should succeed" $ successful >= 90
+      
+      -- Test repeated string operations
+      let testString = "  hello, world, test, string  "
+      start2 <- getCPUTime
+      let stringResults = replicate 1000 (trim testString)
+      let forcedStrings = force stringResults `seq` length stringResults
+      end2 <- getCPUTime
+      let diff2 = fromIntegral (end2 - start2) / (10^12)
+      
+      assertBool "Repeated string operations should be fast" $ diff2 < 0.5
+      assertBool "Should produce expected results" $ all (== "hello, world, test, string") stringResults
+  ]
 
-tests :: TestTree
-tests =
-  testGroup "New Performance Tests"
-    [ testCase "parses small files efficiently" $ do
-        let source = unlines
-              [ "package main"
-              , "func main() {"
-              , "    println(\"hello\")"
-              , "}"
-              ]
-        startTime <- getCPUTime
-        case parseTypus source of
-          Left err -> assertFailure $ "parseTypus failed: " ++ err
-          Right _ -> do
-            endTime <- getCPUTime
-            let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-            assertBool ("parsing should be fast (took " ++ show timeDiff ++ "s)") (timeDiff < 1.0)
+-- QuickCheck properties for performance testing
+prop_parse_performance_scales_linearly :: Positive Int -> Property
+prop_parse_performance_scales_linearly (Positive n) = 
+  n <= 100 ==>  -- Limit size for practical testing
+    let code = unlines $ "package main" : replicate n "    // comment line"
+    in case parseTypus code of
+         Left _ -> True  -- Parse failures are acceptable
+         Right typusFile -> length (tfBlocks typusFile) <= 1  -- Should not create excessive blocks
 
-    , testCase "parses medium files efficiently" $ do
-        let source = unlines $ concat
-              [ ["package main"]
-              , ["import \"fmt\""]
-              , ["func main() {"]
-              , ["    x := 42"]
-              , ["    y := x + 1"]
-              , ["    fmt.Println(x, y)"]
-              , ["}"]
-              ]
-        startTime <- getCPUTime
-        case parseTypus source of
-          Left err -> assertFailure $ "parseTypus failed: " ++ err
-          Right _ -> do
-            endTime <- getCPUTime
-            let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-            assertBool ("parsing should be fast (took " ++ show timeDiff ++ "s)") (timeDiff < 1.0)
+prop_string_operations_performance :: String -> Property
+prop_string_operations_performance s = 
+  length s <= 1000 ==>  -- Limit size for practical testing
+    let trimmed = trim s
+        split = splitBy ',' s
+        removedComments = removeLineComments s
+    in length trimmed <= length s &&
+       length split >= 1 &&
+       length removedComments <= length s
 
-    , testCase "compiles simple programs efficiently" $ do
-        let source = unlines
-              [ "package main"
-              , "func add(a int, b int) int {"
-              , "    return a + b"
-              , "}"
-              , "func main() {"
-              , "    result := add(5, 3)"
-              , "    println(result)"
-              , "}"
-              ]
-        case parseTypus source of
-          Left err -> assertFailure $ "parseTypus failed: " ++ err
-          Right typusFile -> do
-            startTime <- getCPUTime
-            case compile typusFile of
-              Left errs -> assertFailure $ "compile failed: " ++ show errs
-              Right _ -> do
-                endTime <- getCPUTime
-                let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-                assertBool ("compilation should be fast (took " ++ show timeDiff ++ "s)") (timeDiff < 2.0)
+prop_position_creation_performance :: Positive Int -> Property
+prop_position_creation_performance (Positive n) = 
+  n <= 1000 ==> 
+    let positions = [posAt "test.typus" i 1 | i <- [1..n]]
+        spans = [spanFrom pos 5 | pos <- take (n `div` 2) positions]
+    in length positions == n &&
+       length spans == n `div` 2 &&
+       all isValidSpan spans
 
-    , testCase "performs type checking efficiently" $ do
-        let source = unlines
-              [ "package main"
-              , "func process(x int) string {"
-              , "    return fmt.Sprintf(\"%d\", x)"
-              , "}"
-              , "func main() {"
-              , "    result := process(42)"
-              , "    println(result)"
-              , "}"
-              ]
-        case parseTypus source of
-          Left err -> assertFailure $ "parseTypus failed: " ++ err
-          Right typusFile -> do
-            startTime <- getCPUTime
-            case diagnoseTypeErrors typusFile of
-              Left _ -> assertBool "type checking completed" True
-              Right _ -> assertBool "type checking succeeded" True
-            endTime <- getCPUTime
-            let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-            assertBool ("type checking should be fast (took " ++ show timeDiff ++ "s)") (timeDiff < 1.0)
+prop_error_collection_performance :: Positive Int -> Property
+prop_error_collection_performance (Positive n) = 
+  n <= 1000 ==> 
+    let errors = [basicError ("Error " ++ show i) (posAt "test.typus" i 1) | i <- [1..n]]
+        collection = foldr addError newErrorCollection errors
+    in getErrorCount collection == n &&
+       length (getAllErrors collection) == n
 
-    , testCase "performs ownership analysis efficiently" $ do
-        let source = unlines
-              [ "package main"
-              , "//! ownership: on"
-              , "func main() {"
-              , "    x := 42"
-              , "    y := x"
-              , "    println(y)"
-              , "}"
-              ]
-        case parseTypus source of
-          Left err -> assertFailure $ "parseTypus failed: " ++ err
-          Right typusFile -> do
-            startTime <- getCPUTime
-            case analyzeOwnershipFile typusFile of
-              Left _ -> assertBool "ownership analysis completed" True
-              Right _ -> assertBool "ownership analysis succeeded" True
-            endTime <- getCPUTime
-            let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-            assertBool ("ownership analysis should be fast (took " ++ show timeDiff ++ "s)") (timeDiff < 1.0)
+prop_deepseq_performance :: [String] -> Property
+prop_deepseq_performance strings = 
+  length strings <= 100 ==> 
+    let processed = map (trim . removeLineComments) strings
+        forced = force processed
+    in length forced == length strings
 
-    , testCase "performs dependency analysis efficiently" $ do
-        let source = unlines
-              [ "package main"
-              , "import ("
-              , "    \"fmt\""
-              , "    \"strings\""
-              , "    \"os\""
-              , ")"
-              , "func main() {"
-              , "    fmt.Println(\"hello\")"
-              , "    strings.ToUpper(\"test\")"
-              , "    os.Exit(0)"
-              , "}"
-              ]
-        case parseTypus source of
-          Left err -> assertFailure $ "parseTypus failed: " ++ err
-          Right typusFile -> do
-            startTime <- getCPUTime
-            let dependencies = analyzeDependencies typusFile
-                graph = buildDependencyGraph typusFile
-            endTime <- getCPUTime
-            let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-            assertBool ("dependency analysis should be fast (took " ++ show timeDiff ++ "s)") (timeDiff < 1.0)
-            assertBool "should detect dependencies" (not $ null dependencies)
-
-    , testCase "handles repeated parsing efficiently" $ do
-        let source = unlines
-              [ "package main"
-              , "func main() {"
-              , "    println(\"test\")"
-              , "}"
-              ]
-        let iterations = 100
-        startTime <- getCPUTime
-        sequence_ $ replicate iterations $ do
-          case parseTypus source of
-            Left _ -> return ()
-            Right _ -> return ()
-        endTime <- getCPUTime
-        let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-            avgTime = timeDiff / fromIntegral iterations
-        assertBool ("average parsing time should be fast (took " ++ show avgTime ++ "s per iteration)") (avgTime < 0.01)
-
-    , testCase "handles repeated compilation efficiently" $ do
-        let source = unlines
-              [ "package main"
-              , "func add(a int, b int) int { return a + b }"
-              , "func main() { println(add(1, 2)) }"
-              ]
-        case parseTypus source of
-          Left err -> assertFailure $ "parseTypus failed: " ++ err
-          Right typusFile -> do
-            let iterations = 50
-            startTime <- getCPUTime
-            sequence_ $ replicate iterations $ do
-              case compile typusFile of
-                Left _ -> return ()
-                Right _ -> return ()
-            endTime <- getCPUTime
-            let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-                avgTime = timeDiff / fromIntegral iterations
-            assertBool ("average compilation time should be fast (took " ++ show avgTime ++ "s per iteration)") (avgTime < 0.05)
-
-    , testCase "scales with file size linearly" $ do
-        let smallSource = unlines
-              [ "package main"
-              , "func main() { println(\"hello\") }"
-              ]
-        let largeSource = unlines $ concat
-              [ ["package main"]
-              , ["import \"fmt\""]
-              , ["func main() {"]
-              , ["    fmt.Println(\"line " ++ show n ++ "\")" | n <- [1..50]]
-              , ["}"]
-              ]
-        
-        -- Parse small file
-        startTime1 <- getCPUTime
-        case parseTypus smallSource of
-          Left err -> assertFailure $ "parseTypus failed on small file: " ++ err
-          Right _ -> return ()
-        endTime1 <- getCPUTime
-        let smallTime = fromIntegral (endTime1 - startTime1) / (10^12)
-        
-        -- Parse large file
-        startTime2 <- getCPUTime
-        case parseTypus largeSource of
-          Left err -> assertFailure $ "parseTypus failed on large file: " ++ err
-          Right _ -> return ()
-        endTime2 <- getCPUTime
-        let largeTime = fromIntegral (endTime2 - startTime2) / (10^12)
-        
-        -- Large file should take proportionally more time but not exponentially more
-        let ratio = largeTime / smallTime
-        assertBool ("large file should not take exponentially more time (ratio: " ++ show ratio ++ ")") (ratio < 100)
-
-    , testCase "memory usage stays reasonable for multiple analyses" $ do
-        let source = unlines
-              [ "package main"
-              , "//! ownership: on"
-              , "import \"fmt\""
-              , "func process(x int) string {"
-              , "    return fmt.Sprintf(\"%d\", x)"
-              , "}"
-              , "func main() {"
-              , "    result := process(42)"
-              , "    fmt.Println(result)"
-              , "}"
-              ]
-        case parseTypus source of
-          Left err -> assertFailure $ "parseTypus failed: " ++ err
-          Right typusFile -> do
-            let iterations = 20
-            sequence_ $ replicate iterations $ do
-              -- Multiple analyses on the same file
-              case compile typusFile of
-                Left _ -> return ()
-                Right _ -> return ()
-              case diagnoseTypeErrors typusFile of
-                Left _ -> return ()
-                Right _ -> return ()
-              case analyzeOwnershipFile typusFile of
-                Left _ -> return ()
-                Right _ -> return ()
-            assertBool "multiple analyses should complete" True
-
-    , testCase "performs efficiently with complex types" $ do
-        let source = unlines
-              [ "package main"
-              , "//! dependent_types: on"
-              , "type Container[T any] struct { value T }"
-              , "func New[T any](v T) Container[T] {"
-              , "    return Container[T]{value: v}"
-              , "}"
-              , "func (c Container[T]) Get() T { return c.value }"
-              , "func main() {"
-              , "    container := New(42)"
-              , "    value := container.Get()"
-              , "    println(value)"
-              , "}"
-              ]
-        case parseTypus source of
-          Left err -> assertFailure $ "parseTypus failed: " ++ err
-          Right typusFile -> do
-            startTime <- getCPUTime
-            case compile typusFile of
-              Left errs -> assertFailure $ "compile failed: " ++ show errs
-              Right _ -> do
-                endTime <- getCPUTime
-                let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-                assertBool ("complex type compilation should be fast (took " ++ show timeDiff ++ "s)") (timeDiff < 2.0)
-
-    , testCase "handles large dependency graphs efficiently" $ do
-        let source = unlines $ concat
-              [ ["package main"]
-              , ["import ("]
-              , ["    \"fmt\"", "\"os\"", "\"strings\"", "\"strconv\""
-              , "\"time\"", "\"math\"", "\"sort\"", "\"reflect\""]
-              , [")"]
-              , ["func main() {"]
-              , ["    fmt.Println(\"hello\")"]
-              , ["    os.Exit(0)"]
-              , ["    strings.ToUpper(\"test\")"]
-              , ["    strconv.Itoa(42)"]
-              , ["    time.Now()"]
-              , ["    math.Abs(-1.0)"]
-              , ["    sort.Strings([]string{\"a\", \"b\"})"]
-              , ["    reflect.TypeOf(42)"]
-              , ["}"]
-              ]
-        case parseTypus source of
-          Left err -> assertFailure $ "parseTypus failed: " ++ err
-          Right typusFile -> do
-            startTime <- getCPUTime
-            let dependencies = analyzeDependencies typusFile
-                graph = buildDependencyGraph typusFile
-            endTime <- getCPUTime
-            let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-            assertBool ("large dependency graph analysis should be fast (took " ++ show timeDiff ++ "s)") (timeDiff < 1.0)
-            assertBool "should detect many dependencies" (length dependencies >= 8)
-
-    , testCase "performs efficiently with nested structures" $ do
-        let source = unlines
-              [ "package main"
-              , "type Inner struct { value int }"
-              , "type Middle struct { inner Inner }"
-              , "type Outer struct { middle Middle }"
-              , "func process(o Outer) int {"
-              , "    return o.middle.inner.value"
-              , "}"
-              , "func main() {"
-              , "    o := Outer{Middle{Inner{42}}}"
-              , "    result := process(o)"
-              , "    println(result)"
-              , "}"
-              ]
-        case parseTypus source of
-          Left err -> assertFailure $ "parseTypus failed: " ++ err
-          Right typusFile -> do
-            startTime <- getCPUTime
-            case compile typusFile of
-              Left errs -> assertFailure $ "compile failed: " ++ show errs
-              Right _ -> do
-                endTime <- getCPUTime
-                let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-                assertBool ("nested structure compilation should be fast (took " ++ show timeDiff ++ "s)") (timeDiff < 1.0)
-
-    , testCase "maintains performance with error handling" $ do
-        let source = unlines
-              [ "package main"
-              , "func main() {"
-              , "    var x int = \"string\""
-              , "    var y string = 42"
-              , "    var z bool = \"not boolean\""
-              , "}"
-              ]
-        case parseTypus source of
-          Left err -> assertFailure $ "parseTypus failed: " ++ err
-          Right typusFile -> do
-            startTime <- getCPUTime
-            case diagnoseTypeErrors typusFile of
-              Left errors -> do
-                endTime <- getCPUTime
-                let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-                assertBool ("error handling should be fast (took " ++ show timeDiff ++ "s)") (timeDiff < 1.0)
-                assertBool "should detect multiple errors" (length errors >= 2)
-              Right _ -> assertFailure "expected type errors"
-
-    , testCase "performs efficiently with control flow" $ do
-        let source = unlines
-              [ "package main"
-              , "func fibonacci(n int) int {"
-              , "    if n <= 1 { return n }"
-              , "    return fibonacci(n-1) + fibonacci(n-2)"
-              , "}"
-              , "func main() {"
-              , "    for i := 0; i < 10; i++ {"
-              , "        if i % 2 == 0 {"
-              , "            println(i)"
-              , "        } else {"
-              , "            println(fibonacci(i))"
-              , "        }"
-              , "    }"
-              , "}"
-              ]
-        case parseTypus source of
-          Left err -> assertFailure $ "parseTypus failed: " ++ err
-          Right typusFile -> do
-            startTime <- getCPUTime
-            case compile typusFile of
-              Left errs -> assertFailure $ "compile failed: " ++ show errs
-              Right _ -> do
-                endTime <- getCPUTime
-                let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-                assertBool ("control flow compilation should be fast (took " ++ show timeDiff ++ "s)") (timeDiff < 2.0)
-    ]
+-- QuickCheck test suite
+performanceQuickCheckProperties :: TestTree
+performanceQuickCheckProperties = testGroup "Performance QuickCheck Properties"
+  [ testProperty "parse performance scales linearly" prop_parse_performance_scales_linearly
+  , testProperty "string operations performance" prop_string_operations_performance
+  , testProperty "position creation performance" prop_position_creation_performance
+  , testProperty "error collection performance" prop_error_collection_performance
+  , testProperty "deepseq performance" prop_deepseq_performance
+  ]

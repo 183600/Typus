@@ -49,6 +49,15 @@ import qualified Test.Unit.IntegrationCoreQuickCheckSpec
 import qualified Test.Unit.AdditionalCoreTestsSpec
 
 -- New Additional Test Modules
+
+-- New Validation Test Modules (Added by user)
+import qualified Test.Unit.NewUtilsValidationSpec
+import qualified Test.Unit.NewSourceLocationMathSpec
+import qualified Test.Unit.NewParserValidationSpec
+import qualified Test.Unit.NewErrorHandlerValidationSpec
+import qualified Test.Unit.NewIntegrationValidationSpec
+import qualified Test.Unit.NewBoundaryConditionSpec
+import qualified Test.Unit.NewPerformanceSpec
 import qualified Test.Unit.AdditionalCorePropertiesSpec
 import qualified Test.Unit.CompilerCorePropertiesSpec
 import qualified Test.Unit.BoundaryCasePropertiesSpec
@@ -1330,4 +1339,22 @@ tests =
     , Test.Unit.DependenciesAdvancedQuickCheckSpec.tests
     , Test.Unit.OwnershipAdvancedQuickCheckSpec.tests
     , Test.Unit.IntegrationAdvancedQuickCheckSpec.tests
+    ]
+
+  -- New Validation Test Modules (Added by user)
+  , testGroup "New Validation Test Suite"
+    [ Test.Unit.NewUtilsValidationSpec.newUtilsValidationSpec
+    , Test.Unit.NewUtilsValidationSpec.utilsQuickCheckProperties
+    , Test.Unit.NewSourceLocationMathSpec.newSourceLocationMathSpec
+    , Test.Unit.NewSourceLocationMathSpec.sourceLocationQuickCheckProperties
+    , Test.Unit.NewParserValidationSpec.newParserValidationSpec
+    , Test.Unit.NewParserValidationSpec.parserQuickCheckProperties
+    , Test.Unit.NewErrorHandlerValidationSpec.newErrorHandlerValidationSpec
+    , Test.Unit.NewErrorHandlerValidationSpec.errorHandlerQuickCheckProperties
+    , Test.Unit.NewIntegrationValidationSpec.newIntegrationValidationSpec
+    , Test.Unit.NewIntegrationValidationSpec.integrationQuickCheckProperties
+    , Test.Unit.NewBoundaryConditionSpec.newBoundaryConditionSpec
+    , Test.Unit.NewBoundaryConditionSpec.boundaryConditionQuickCheckProperties
+    , Test.Unit.NewPerformanceSpec.newPerformanceSpec
+    , Test.Unit.NewPerformanceSpec.performanceQuickCheckProperties
     ]

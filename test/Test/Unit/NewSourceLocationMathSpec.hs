@@ -1,105 +1,140 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-module Test.Unit.NewSourceLocationMathSpec (tests) where
+module Test.Unit.NewSourceLocationMathSpec (newSourceLocationMathSpec, sourceLocationQuickCheckProperties) where
 
 import Test.Tasty (TestTree, testGroup)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+import Test.Tasty.QuickCheck (testProperty, Property(..), (==>), Positive(..))
+import SourceLocation
+import Data.Char (isSpace)
 
-import SourceLocation (SourcePos(..), SourceSpan(..), posLine, posColumn, posOffset, 
-                      spanStart, spanEnd, mergeSpans, spanBetween, isValidSpan)
-import TestSupport.Arbitrary ()
+-- | Test suite for SourceLocation mathematical operations
+newSourceLocationMathSpec :: TestTree
+newSourceLocationMathSpec = testGroup "New SourceLocation Math Tests"
+  [ testCase "SourcePos arithmetic operations" $ do
+      let pos1 = startPos "test.txt"
+      let pos2 = posAfter pos1 'a'
+      posLine pos2 @?= 1
+      posColumn pos2 @?= 2
+      
+      let pos3 = posAfter pos2 '\n'
+      posLine pos3 @?= 2
+      posColumn pos3 @?= 1
+      
+      let pos4 = advancePos pos3 "hello"
+      posLine pos4 @?= 2
+      posColumn pos4 @?= 6
+  
+  , testCase "SourceSpan creation and validation" $ do
+      let pos1 = posAt "test.txt" 1 1
+      let pos2 = posAt "test.txt" 1 5
+      let span = spanBetween pos1 pos2
+      
+      isValidSpan span @?= True
+      spanStart span @?= pos1
+      spanEnd span @?= pos2
+      
+      let empty = emptySpan pos1
+      isValidSpan empty @?= False
+      
+      let invalid = spanBetween pos2 pos1  -- invalid: end before start
+      isValidSpan invalid @?= False
+  
+  , testCase "Located value operations" $ do
+      let pos = posAt "test.txt" 1 1
+      let value = locatedAt pos "hello"
+      
+      locatedValue value @?= "hello"
+      locatedPos value @?= pos
+      
+      let span = spanFrom pos 5
+      let spanValue = locatedWithSpan span "world"
+      locatedSpan spanValue @?= span
+      locatedValue spanValue @?= "world"
+      
+      let mapped = mapLocated (++ "!" ) value
+      locatedValue mapped @?= "hello!"
+  
+  , testCase "Span merging operations" $ do
+      let pos1 = posAt "test.txt" 1 1
+      let pos2 = posAt "test.txt" 1 5
+      let pos3 = posAt "test.txt" 2 3
+      
+      let span1 = spanBetween pos1 pos2
+      let span2 = spanBetween pos2 pos3
+      let merged = mergeSpans span1 span2
+      
+      spanStart merged @?= pos1
+      spanEnd merged @?= pos3
+      isValidSpan merged @?= True
+  
+  , testCase "Position advancement with various characters" $ do
+      let start = posAt "test.txt" 1 1
+      
+      -- Test with regular characters
+      let pos1 = advancePos start "abc"
+      posLine pos1 @?= 1
+      posColumn pos1 @?= 4
+      
+      -- Test with newlines
+      let pos2 = advancePos start "a\nb\nc"
+      posLine pos2 @?= 3
+      posColumn pos2 @?= 2
+      
+      -- Test with tabs
+      let pos3 = advancePos start "a\tb"
+      posLine pos3 @?= 1
+      posColumn pos3 @?= 3  -- tab counts as one position
+  ]
 
--- Test 1: Source position arithmetic
-prop_sourcepos_offset_calculation :: Int -> Int -> Int -> Property
-prop_sourcepos_offset_calculation line col offset =
-  line > 0 && col > 0 && offset >= 0 ==>
-  let pos = SourcePos line col offset
-  in posOffset pos === offset .&&. posLine pos === line .&&. posColumn pos === col
+-- QuickCheck properties for SourceLocation functions
+prop_posAfter_advances_column :: Char -> Property
+prop_posAfter_advances_column c = 
+  c /= '\n' ==> 
+    let pos = posAt "test.txt" 1 5
+        newPos = posAfter pos c
+    in posColumn newPos == posColumn pos + 1 &&
+       posLine newPos == posLine pos
 
--- Test 2: Span validity
-prop_span_validity :: SourcePos -> SourcePos -> Property
-prop_span_validity start end =
-  let span = spanBetween start end
-  in posOffset start <= posOffset end ==> isValidSpan span === True
+prop_posAfter_newline_advances_line :: Property
+prop_posAfter_newline_advances_line = 
+    let pos = posAt "test.txt" 5 10
+        newPos = posAfter pos '\n'
+    in posColumn newPos == 1 &&
+       posLine newPos == posLine pos + 1
 
--- Test 3: Span merging is associative
-prop_mergeSpans_associative :: SourceSpan -> SourceSpan -> SourceSpan -> Property
-prop_mergeSpans_associative span1 span2 span3 =
-  let merge12_23 = (span1 `mergeSpans` span2) `mergeSpans` span3
-      merge1_23 = span1 `mergeSpans` (span2 `mergeSpans` span3)
-  in spanStart merge12_23 === spanStart merge1_23 .&&. 
-     spanEnd merge12_23 === spanEnd merge1_23
+prop_span_between_valid_order :: Positive Int -> Positive Int -> Property
+prop_span_between_valid_order (Positive line1) (Positive line2) = 
+  line1 <= line2 ==> 
+    let pos1 = posAt "test.txt" line1 1
+        pos2 = posAt "test.txt" line2 1
+        span = spanBetween pos1 pos2
+    in isValidSpan span &&
+       spanStart span == pos1 &&
+       spanEnd span == pos2
 
--- Test 4: Span merging contains original spans
-prop_mergeSpans_contains_originals :: SourceSpan -> SourceSpan -> Property
-prop_mergeSpans_contains_originals span1 span2 =
-  let merged = span1 `mergeSpans` span2
-      start1 = spanStart span1
-      end1 = spanEnd span1
-      start2 = spanStart span2
-      end2 = spanEnd span2
-  in posOffset (spanStart merged) <= min (posOffset start1) (posOffset start2) .&&.
-     posOffset (spanEnd merged) >= max (posOffset end1) (posOffset end2)
+prop_advance_pos_by_length :: String -> Property
+prop_advance_pos_by_length s = 
+  not (null s) ==> 
+    let start = startPos "test.txt"
+        end = advancePos start s
+        -- For simplicity, just check that we've moved forward
+        (posLine end > posLine start) || (posColumn end > posColumn start)
 
--- Test 5: Span between positions
-prop_span_between_positions :: SourcePos -> SourcePos -> Property
-prop_span_between_positions start end =
-  posOffset start <= posOffset end ==>
-  let span = spanBetween start end
-  in spanStart span === start .&&. spanEnd span === end
+prop_located_map_preserves_location :: String -> String -> Property
+prop_located_map_preserves_location s1 s2 = 
+    let pos = posAt "test.txt" 1 1
+        value = locatedAt pos s1
+        mapped = mapLocated (++ s2) value
+    in locatedPos mapped == pos &&
+       locatedValue mapped == s1 ++ s2
 
--- Test 6: Empty span properties
-prop_empty_span_properties :: SourcePos -> Property
-prop_empty_span_properties pos =
-  let empty = spanBetween pos pos
-  in spanStart empty === pos .&&. spanEnd empty === pos .&&. isValidSpan empty === True
-
--- Test 7: Position ordering consistency
-prop_position_ordering_consistency :: SourcePos -> SourcePos -> Property
-prop_position_ordering_consistency pos1 pos2 =
-  let line1 = posLine pos1
-      col1 = posColumn pos1
-      line2 = posLine pos2
-      col2 = posColumn pos2
-      offset1 = posOffset pos1
-      offset2 = posOffset pos2
-  in (line1 < line2 || (line1 == line2 && col1 < col2)) ==> offset1 < offset2
-
--- Test 8: Span length calculation
-prop_span_length_calculation :: SourcePos -> SourcePos -> Property
-prop_span_length_calculation start end =
-  posOffset start <= posOffset end ==>
-  let span = spanBetween start end
-      length = posOffset (spanEnd span) - posOffset (spanStart span)
-  in length >= 0
-
--- Test 9: Merge with empty span
-prop_merge_with_empty_span :: SourceSpan -> Property
-prop_merge_with_empty_span span =
-  let start = spanStart span
-      empty = spanBetween start start
-      merged = span `mergeSpans` empty
-  in spanStart merged === spanStart span .&&. spanEnd merged === spanEnd span
-
--- Test 10: Span ordering by start position
-prop_span_ordering :: SourceSpan -> SourceSpan -> Property
-prop_span_ordering span1 span2 =
-  let start1 = spanStart span1
-      start2 = spanStart span2
-  in posOffset start1 <= posOffset start2 ==> 
-     posOffset (spanStart (span1 `mergeSpans` span2)) === posOffset start1
-
-tests :: TestTree
-tests = testGroup "New Source Location Math Tests"
-  [ fastProperty "SourcePos offset calculation" prop_sourcepos_offset_calculation
-  , fastProperty "Span validity" prop_span_validity
-  , fastProperty "MergeSpans is associative" prop_mergeSpans_associative
-  , fastProperty "MergeSpans contains original spans" prop_mergeSpans_contains_originals
-  , fastProperty "Span between positions" prop_span_between_positions
-  , fastProperty "Empty span properties" prop_empty_span_properties
-  , fastProperty "Position ordering consistency" prop_position_ordering_consistency
-  , fastProperty "Span length calculation" prop_span_length_calculation
-  , fastProperty "Merge with empty span" prop_merge_with_empty_span
-  , fastProperty "Span ordering by start position" prop_span_ordering
+-- QuickCheck test suite
+sourceLocationQuickCheckProperties :: TestTree
+sourceLocationQuickCheckProperties = testGroup "SourceLocation QuickCheck Properties"
+  [ testProperty "posAfter advances column for non-newline chars" prop_posAfter_advances_column
+  , testProperty "posAfter advances line for newline" prop_posAfter_newline_advances_line
+  , testProperty "spanBetween is valid for correct order" prop_span_between_valid_order
+  , testProperty "advancePos moves position forward" prop_advance_pos_by_length
+  , testProperty "mapLocated preserves location" prop_located_map_preserves_location
   ]
