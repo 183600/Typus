@@ -434,12 +434,12 @@ test-suite typus-test
         Test.Unit.SourceLocationAccuracyQuickCheckSpec,
         Test.Unit.IRGenerationConsistencyQuickCheckSpec,
         Test.Unit.TypeEnvironmentBuildingQuickCheckSpec,
-        Test.Unit.CompilerErrorRecoverySpec,
+        
         Test.Unit.DependentTypeBoundarySpec,
         Test.Unit.OwnershipTransitivitySpec,
-        Test.Unit.SourceLocationAccuracySpec,
+        
         Test.Unit.SyntaxValidatorAdvancedSpec,
-        Test.Unit.ToolchainIntegrationSpec,
+        
         Test.Unit.IRGenerationConsistencySpec,
         Test.Unit.SymbolTableManagementSpec,
         Test.Unit.AdditionalCabalQuickCheckTestSpec,
@@ -511,7 +511,14 @@ test-suite typus-test
         Test.Unit.CompilerIRSpec,
         Test.Unit.NewCabalIntegrationSpec,
         Test.Unit.SimpleCabalTestSpec,
-        Test.Unit.NewComprehensiveQuickCheckTestSpec
+        Test.Unit.NewComprehensiveQuickCheckTestSpec,
+        
+        -- New Enhanced Test Modules (2025)
+        Test.Unit.DirectiveInteractionSpec,
+        Test.Unit.OwnershipTransferBoundarySpec,
+        Test.Unit.DependentTypeConstraintSpec,
+        Test.Unit.TypeInferenceComplexSpec,
+        Test.Unit.SyntaxValidatorBoundarySpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

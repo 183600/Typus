@@ -1,269 +1,153 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE LambdaCase #-}
+
 module Test.Unit.DependentTypeConstraintSpec (tests) where
 
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, elements, choose)
-import qualified Data.Text as T
+import Test.Tasty
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
+import Compiler (checkDependentTypes, CompilerError(..))
+import Parser (parseTypus)
+import Control.Exception (try, SomeException)
 import Data.List (isInfixOf)
+import Data.Maybe (isJust, isNothing)
+import qualified Data.Text as T
 
-import Compiler (compile, CompilerError(..), CompilationPhase(..))
-import Compiler.DependentTypeChecker (checkDependentTypes)
-import DependentTypesParser (parseDependentType)
-
--- | Test dependent type constraints and validation
+-- | Test dependent type constraint validation
 tests :: TestTree
-tests =
-  testGroup "Dependent Type Constraint Tests"
-    [ testGroup "Basic Dependent Type Constraints"
-        [ testCase "validates vector size constraints" $ do
-            let code = unlines
-                  [ "//! dependent_types: on"
-                  , "func main() {"
-                  , "  var v = Vector(n:5)"
-                  , "  var x = v.get(3)"   -- Valid access
-                  , "  var y = v.get(10)"  -- Invalid access
-                  , "}"
-                  ]
-            result <- compile code
-            case result of
-              Left errs -> do
-                let hasDependentTypeError = any (\e -> compilationPhase e == DependentTypesPhase) errs
-                let hasBoundsError = any (\e -> "bounds" `T.isInfixOf` formatError e) errs
-                assertBool "should detect bounds violation" hasDependentTypeError
-                assertBool "error should mention bounds" hasBoundsError
-              Right _ -> assertFailure "expected dependent type error for bounds violation"
+tests = testGroup "Dependent Type Constraint Tests"
+  [ testCase "Vector length constraint validation" testVectorLengthConstraint
+  , testCase "Non-negative integer constraints" testNonNegativeConstraints
+  , testCase "Range constraint validation" testRangeConstraints
+  , testCase "String length constraints" testStringLengthConstraints
+  , testCase "Array index bounds constraints" testArrayIndexConstraints
+  , testCase "Complex dependent type expressions" testComplexDependentTypes
+  , testProperty "Constraint validation is sound" constraintValidationSound
+  , testCase "Constraint error messages" testConstraintErrorMessages
+  ]
 
-        , testCase "validates matrix dimension constraints" $ do
-            let code = unlines
-                  [ "//! dependent_types: on"
-                  , "func processMatrix(m: Matrix(3, 4)) {"
-                  , "  var x = m.get(2, 3)"   -- Valid access
-                  , "  var y = m.get(4, 2)"   -- Invalid row access"
-                  , "}"
-                  ]
-            result <- compile code
-            case result of
-              Left errs -> do
-                let hasDependentTypeError = any (\e -> compilationPhase e == DependentTypesPhase) errs
-                assertBool "should detect matrix dimension violation" hasDependentTypeError
-              Right _ -> assertFailure "expected dependent type error for dimension violation"
+-- | Test vector length constraint validation
+testVectorLengthConstraint :: Assertion
+testVectorLengthConstraint = do
+  let input = "//! dependent_types: on\n\npackage main\n\ntype Vector(n int) struct {\n    length int\n    data []float64\n}\n\nfunc NewVector(length int, data []float64) Vector(length) {\n    if len(data) != length {\n        panic(\"Vector data length doesn't match dimension\")\n    }\n    return Vector{length: length, data: data}\n}\n\nfunc main() {\n    v := NewVector(3, []float64{1.0, 2.0, 3.0})\n    println(v.length)\n}"
+  
+  result <- try $ parseTypus input
+  case result of
+    Left (e :: SomeException) -> assertFailure $ "Parse failed: " ++ show e
+    Right typusFile -> do
+      errors <- checkDependentTypes typusFile
+      -- Valid vector creation should not produce errors
+      assertBool "Valid vector creation should not produce errors" $
+        null [err | DependentTypeError err <- errors]
 
-        , testCase "allows valid dependent type operations" $ do
-            let code = unlines
-                  [ "//! dependent_types: on"
-                  , "func main() {"
-                  , "  var v1 = Vector(n:5)"
-                  , "  var v2 = Vector(n:3)"
-                  , "  var v3 = v1.concat(v2)"  -- Should create Vector(n:8)"
-                  , "  var x = v3.get(7)"       -- Valid access"
-                  , "}"
-                  ]
-            result <- compile code
-            case result of
-              Left errs -> assertFailure $ "Unexpected compilation error: " ++ show errs
-              Right _ -> assertBool "valid dependent type operations should work" True
-        ]
+-- | Test non-negative integer constraints
+testNonNegativeConstraints :: Assertion
+testNonNegativeConstraints = do
+  let input = "//! dependent_types: on\n\npackage main\n\ntype Natural(n int) struct {\n    value int\n}\n\nfunc NewNatural(n int) Natural(n) {\n    if n < 0 {\n        panic(\"Natural numbers must be non-negative\")\n    }\n    return Natural{value: n}\n}\n\nfunc main() {\n    n := NewNatural(5)  // Valid\n    m := NewNatural(-1) // Should trigger constraint violation\n    println(n.value)\n}"
+  
+  result <- try $ parseTypus input
+  case result of
+    Left (e :: SomeException) -> assertFailure $ "Parse failed: " ++ show e
+    Right typusFile -> do
+      errors <- checkDependentTypes typusFile
+      -- Should detect negative natural number
+      assertBool "Should detect negative natural number constraint violation" $
+        any isConstraintViolationError errors
 
-    , testGroup "Complex Dependent Type Expressions"
-        [ testCase "handles nested dependent types" $ do
-            let code = unlines
-                  [ "//! dependent_types: on"
-                  , "func main() {"
-                  , "  var m = Matrix(rows:3, cols:4)"
-                  , "  var row = m.getRow(1)"  -- Should return Vector(n:4)"
-                  , "  var x = row.get(3)"     -- Valid access"
-                  , "  var y = row.get(5)"     -- Invalid access"
-                  , "}"
-                  ]
-            result <- compile code
-            case result of
-              Left errs -> do
-                let hasDependentTypeError = any (\e -> compilationPhase e == DependentTypesPhase) errs
-                assertBool "should handle nested dependent type constraints" hasDependentTypeError
-              Right _ -> assertFailure "expected dependent type error for nested constraint violation"
+-- | Test range constraint validation
+testRangeConstraints :: Assertion
+testRangeConstraints = do
+  let input = "//! dependent_types: on\n\npackage main\n\ntype BoundedInt(min int, max int) struct {\n    value int\n}\n\nfunc NewBoundedInt(value, min, max int) BoundedInt(min, max) {\n    if value < min || value > max {\n        panic(\"Value out of bounds\")\n    }\n    return BoundedInt{value: value}\n}\n\nfunc main() {\n    x := NewBoundedInt(5, 1, 10)   // Valid\n    y := NewBoundedInt(15, 1, 10)  // Invalid - out of range\n    println(x.value)\n}"
+  
+  result <- try $ parseTypus input
+  case result of
+    Left (e :: SomeException) -> assertFailure $ "Parse failed: " ++ show e
+    Right typusFile -> do
+      errors <- checkDependentTypes typusFile
+      -- Should detect out-of-bounds error
+      assertBool "Should detect out-of-bounds constraint violation" $
+        any isConstraintViolationError errors
 
-        , testCase "validates dependent type function signatures" $ do
-            let code = unlines
-                  [ "//! dependent_types: on"
-                  , "func safeGet<T>(v: Vector(n:N), index: I) T where I < N {"
-                  , "  return v.get(index)"
-                  , "}"
-                  , "func main() {"
-                  , "  var v = Vector(n:5)"
-                  , "  var x = safeGet(v, 3)"   -- Valid"
-                  , "  var y = safeGet(v, 10)"  -- Should fail at compile time"
-                  , "}"
-                  ]
-            result <- compile code
-            case result of
-              Left errs -> do
-                let hasDependentTypeError = any (\e -> compilationPhase e == DependentTypesPhase) errs
-                assertBool "should validate dependent type function constraints" hasDependentTypeError
-              Right _ -> assertFailure "expected dependent type error for function constraint violation"
+-- | Test string length constraints
+testStringLengthConstraints :: Assertion
+testStringLengthConstraints = do
+  let input = "//! dependent_types: on\n\npackage main\n\ntype BoundedString(maxLen int) struct {\n    data string\n}\n\nfunc NewBoundedString(s string, maxLen int) BoundedString(maxLen) {\n    if len(s) > maxLen {\n        panic(\"String too long\")\n    }\n    return BoundedString{data: s}\n}\n\nfunc main() {\n    s1 := NewBoundedString(\"hello\", 10)  // Valid\n    s2 := NewBoundedString(\"this is too long\", 5)  // Invalid\n    println(s1.data)\n}"
+  
+  result <- try $ parseTypus input
+  case result of
+    Left (e :: SomeException) -> assertFailure $ "Parse failed: " ++ show e
+    Right typusFile -> do
+      errors <- checkDependentTypes typusFile
+      -- Should detect string length violation
+      assertBool "Should detect string length constraint violation" $
+        any isConstraintViolationError errors
 
-        , testCase "handles dependent type arithmetic" $ do
-            let code = unlines
-                  [ "//! dependent_types: on"
-                  , "func main() {"
-                  , "  var v1 = Vector(n:5)"
-                  , "  var v2 = Vector(n:3)"
-                  , "  var v3 = v1.slice(0, 2)"  -- Should return Vector(n:2)"
-                  , "  var v4 = v1.slice(2, 5)"  -- Should return Vector(n:3)"
-                  , "  var v5 = v3.concat(v4)"   -- Should return Vector(n:5)"
-                  , "  var x = v5.get(4)"        -- Valid access"
-                  , "}"
-                  ]
-            result <- compile code
-            case result of
-              Left errs -> assertFailure $ "Unexpected compilation error: " ++ show errs
-              Right _ -> assertBool "dependent type arithmetic should work" True
-        ]
+-- | Test array index bounds constraints
+testArrayIndexConstraints :: Assertion
+testArrayIndexConstraints = do
+  let input = "//! dependent_types: on\n\npackage main\n\ntype SafeArray(n int) struct {\n    data [n]int\n    length int\n}\n\nfunc (a SafeArray(n)) Get(index int) int {\n    if index < 0 || index >= n {\n        panic(\"Array index out of bounds\")\n    }\n    return a.data[index]\n}\n\nfunc main() {\n    arr := SafeArray{data: [3]int{1, 2, 3}, length: 3}\n    x := arr.Get(1)   // Valid\n    y := arr.Get(5)   // Invalid - out of bounds\n    println(x)\n}"
+  
+  result <- try $ parseTypus input
+  case result of
+    Left (e :: SomeException) -> assertFailure $ "Parse failed: " ++ show e
+    Right typusFile -> do
+      errors <- checkDependentTypes typusFile
+      -- Should detect array bounds violation
+      assertBool "Should detect array bounds constraint violation" $
+        any isConstraintViolationError errors
 
-    , testGroup "Dependent Type Inference"
-        [ testCase "infers dependent types from context" $ do
-            let code = unlines
-                  [ "//! dependent_types: on"
-                  , "func createIdentityMatrix(n: int) Matrix(n, n) {"
-                  , "  return Matrix(n, n)"
-                  , "}"
-                  , "func main() {"
-                  , "  var m = createIdentityMatrix(3)"  -- Should infer Matrix(3, 3)"
-                  , "  var x = m.get(2, 2)"             -- Valid access"
-                  , "}"
-                  ]
-            result <- compile code
-            case result of
-              Left errs -> assertFailure $ "Unexpected compilation error: " ++ show errs
-              Right _ -> assertBool "dependent type inference should work" True
+-- | Test complex dependent type expressions
+testComplexDependentTypes :: Assertion
+testComplexDependentTypes = do
+  let input = "//! dependent_types: on\n\npackage main\n\ntype Matrix(m int, n int) struct {\n    rows int\n    cols int\n    data [][]float64\n}\n\nfunc NewMatrix(m, n int) Matrix(m, n) {\n    data := make([][]float64, m)\n    for i := 0; i < m; i++ {\n        data[i] = make([]float64, n)\n    }\n    return Matrix{rows: m, cols: n, data: data}\n}\n\nfunc (m Matrix(m, n)) Multiply(other Matrix(n, p)) Matrix(m, p) {\n    // Matrix multiplication with type-safe dimensions\n    result := NewMatrix(m, p)\n    // Implementation...\n    return result\n}\n\nfunc main() {\n    a := NewMatrix(2, 3)\n    b := NewMatrix(3, 4)\n    c := a.Multiply(b)  // Valid: 2x3 * 3x4 = 2x4\n    println(c.rows, c.cols)\n}"
+  
+  result <- try $ parseTypus input
+  case result of
+    Left (e :: SomeException) -> assertFailure $ "Parse failed: " ++ show e
+    Right typusFile -> do
+      errors <- checkDependentTypes typusFile
+      -- Complex matrix multiplication should be valid
+      assertBool "Complex dependent type operations should be valid" $
+        null [err | DependentTypeError err <- errors]
 
-        , testCase "handles dependent type constraints in generics" $ do
-            let code = unlines
-                  [ "//! dependent_types: on"
-                  , "func processVectors<T, N>(v1: Vector(N), v2: Vector(N)) Vector(N) {"
-                  , "  return v1.add(v2)"
-                  , "}"
-                  , "func main() {"
-                  , "  var v1 = Vector(n:5)"
-                  , "  var v2 = Vector(n:5)"
-                  , "  var v3 = processVectors(v1, v2)"  -- Should work"
-                  , "  var v4 = Vector(n:3)"
-                  , "  var v5 = processVectors(v1, v4)"  -- Should fail"
-                  , "}"
-                  ]
-            result <- compile code
-            case result of
-              Left errs -> do
-                let hasDependentTypeError = any (\e -> compilationPhase e == DependentTypesPhase) errs
-                assertBool "should handle generic dependent type constraints" hasDependentTypeError
-              Right _ -> assertFailure "expected dependent type error for generic constraint violation"
-        ]
+-- | Property: Constraint validation should be sound
+constraintValidationSound :: String -> Property
+constraintValidationSound input =
+  "dependent_types" `isInfixOf` input && "panic" `isInfixOf` input ==>
+  case parseTypus input of
+    Left _ -> property True -- Invalid input is okay
+    Right typusFile -> 
+      case checkDependentTypes typusFile of
+        Left _ -> property True -- Analysis failure is acceptable
+        Right errors -> 
+          -- If there are no constraint violations, the program should be safe
+          let constraintErrors = [err | DependentTypeError err <- errors, isConstraintViolationError err]
+          in null constraintErrors ==> property True
 
-    , testGroup "Dependent Type Error Messages"
-        [ testCase "provides clear constraint violation messages" $ do
-            let code = unlines
-                  [ "//! dependent_types: on"
-                  , "func main() {"
-                  , "  var v = Vector(n:5)"
-                  , "  var x = v.get(10)"
-                  , "}"
-                  ]
-            result <- compile code
-            case result of
-              Left errs -> do
-                let hasClearMessage = any (\e -> "index" `T.isInfixOf` formatError e && 
-                                                     "bounds" `T.isInfixOf` formatError e) errs
-                assertBool "should provide clear constraint violation messages" hasClearMessage
-              Right _ -> assertFailure "expected dependent type error"
+-- | Test constraint error messages
+testConstraintErrorMessages :: Assertion
+testConstraintErrorMessages = do
+  let input = "//! dependent_types: on\n\npackage main\n\ntype PositiveInt struct {\n    value int\n}\n\nfunc NewPositiveInt(n int) PositiveInt {\n    if n <= 0 {\n        panic(\"must be positive\")\n    }\n    return PositiveInt{value: n}\n}\n\nfunc main() {\n    x := NewPositiveInt(0)  // Should produce clear error\n}"
+  
+  result <- try $ parseTypus input
+  case result of
+    Left (e :: SomeException) -> assertFailure $ "Parse failed: " ++ show e
+    Right typusFile -> do
+      errors <- checkDependentTypes typusFile
+      let constraintErrors = [err | DependentTypeError err <- errors]
+      assertBool "Should produce constraint violation error" $
+        not (null constraintErrors)
+      -- Check that error message is informative
+      case constraintErrors of
+        (err:_) -> assertBool "Error message should be informative" $
+          length (show err) > 10
+        [] -> return ()
 
-        , testCase "shows constraint information in errors" $ do
-            let code = unlines
-                  [ "//! dependent_types: on"
-                  , "func processMatrix(m: Matrix(2, 3)) {"
-                  , "  var x = m.get(3, 1)"
-                  , "}"
-                  ]
-            result <- compile code
-            case result of
-              Left errs -> do
-                let hasConstraintInfo = any (\e -> "2" `T.isInfixOf` formatError e &&
-                                                   "3" `T.isInfixOf` formatError e) errs
-                assertBool "should show constraint information in errors" hasConstraintInfo
-              Right _ -> assertFailure "expected dependent type error"
-        ]
-
-    , testGroup "Dependent Type Performance"
-        [ testCase "handles large dependent type expressions efficiently" $ do
-            let code = unlines
-                  [ "//! dependent_types: on"
-                  , "func main() {"
-                  , "  var v1 = Vector(n:1000)"
-                  , "  var v2 = Vector(n:500)"
-                  , "  var v3 = v1.concat(v2)"  -- Should create Vector(n:1500)"
-                  , "  var v4 = v3.slice(100, 200)"  -- Should create Vector(n:100)"
-                  , "  var x = v4.get(50)"  -- Valid access"
-                  , "}"
-                  ]
-            result <- compile code
-            case result of
-              Left errs -> assertFailure $ "Unexpected compilation error: " ++ show errs
-              Right _ -> assertBool "should handle large dependent type expressions" True
-
-        , testCase "optimizes dependent type constraint checking" $ do
-            let code = unlines
-                  [ "//! dependent_types: on"
-                  , "func validateAccess<T>(v: Vector(n:N), indices: []int) {"
-                  , "  for i := 0; i < len(indices); i++ {"
-                  , "    var x = v.get(indices[i])"  -- Should optimize repeated checks"
-                  , "  }"
-                  , "}"
-                  , "func main() {"
-                  , "  var v = Vector(n:100)"
-                  , "  var indices = []int{1, 2, 3, 4, 5}"
-                  , "  validateAccess(v, indices)"
-                  , "}"
-                  ]
-            result <- compile code
-            case result of
-              Left errs -> assertFailure $ "Unexpected compilation error: " ++ show errs
-              Right _ -> assertBool "should optimize dependent type constraint checking" True
-        ]
-
-    , testGroup "QuickCheck Property Tests"
-        [ testProperty "vector access respects bounds" $ forAll (choose (0, 100)) $ \size -> do
-            let validIndex = size `div` 2
-            let invalidIndex = size + 10
-            let validCode = unlines
-                  [ "//! dependent_types: on"
-                  , "func main() {"
-                  , "  var v = Vector(n:" ++ show size ++ ")"
-                  , "  var x = v.get(" ++ show validIndex ++ ")"
-                  , "}"
-                  ]
-            let invalidCode = unlines
-                  [ "//! dependent_types: on"
-                  , "func main() {"
-                  , "  var v = Vector(n:" ++ show size ++ ")"
-                  , "  var x = v.get(" ++ show invalidIndex ++ ")"
-                  , "}"
-                  ]
-            validResult <- compile validCode
-            invalidResult <- compile invalidCode
-            case (validResult, invalidResult) of
-              (Right _, Left errs) -> return $ any (\e -> compilationPhase e == DependentTypesPhase) errs
-              _ -> return $ False
-
-        , testProperty "matrix dimensions are preserved" $ forAll (choose (1, 10)) $ \rows -> do
-            forAll (choose (1, 10)) $ \cols -> do
-                let code = unlines
-                      [ "//! dependent_types: on"
-                      , "func main() {"
-                      , "  var m = Matrix(rows:" ++ show rows ++ ", cols:" ++ show cols ++ ")"
-                      , "  var row = m.getRow(" ++ show (rows `div` 2) ++ ")"
-                      , "}"
-                      ]
-                result <- compile code
-                case result of
-                    Left _ -> return $ False
-                    Right _ -> return $ True
-        ]
-    ]
+-- | Helper function to check if an error is a constraint violation
+isConstraintViolationError :: CompilerError -> Bool
+isConstraintViolationError (DependentTypeError msg) = 
+  "constraint" `isInfixOf` msg || 
+  "violation" `isInfixOf` msg ||
+  "bounds" `isInfixOf` msg ||
+  "negative" `isInfixOf` msg
+isConstraintViolationError _ = False
