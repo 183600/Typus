@@ -154,6 +154,9 @@ import qualified Test.Unit.ValueAnalysisFlowQuickCheckSpec
 import qualified Test.Unit.GoToolchainIntegrationQuickCheckSpec
 import qualified Test.Unit.TypusEndToEndQuickCheckSpec
 
+-- New Cabal QuickCheck Test Cases
+import qualified Test.Unit.NewCabalQuickCheckTestCasesSpec
+
 -- New Test Modules Added for Cabal Testing
 import qualified Test.Unit.DebugIntegrationSpec
 import qualified Test.Unit.IntegratedCompilerSpec
@@ -268,7 +271,6 @@ import qualified Test.Unit.NewQuickCheckTestCasesSpec
 import qualified Test.Unit.CoreModuleQuickCheckSpec
 import qualified Test.Unit.AdditionalCoreQuickCheckSpec
 import qualified Test.Unit.NewQuickCheckTestSpec
-import qualified Test.Unit.NewCabalQuickCheckTestCasesSpec
 import qualified Test.Unit.NewCabalQuickCheckTestsSpec
 import qualified Test.Unit.AdditionalQuickCheckSpec
 import qualified Test.Unit.FreshCabalQuickCheckSpec
@@ -625,7 +627,10 @@ tests =
         ]
     , testGroup "Additional Comprehensive QuickCheck Test Modules"
         [ Test.Unit.ParserConsistencyQuickCheckSpec.tests
-        , Test.Unit.StringUtilsQuickCheckTestSpec.tests
+        ]
+    , Test.Unit.NewCabalQuickCheckTestCasesSpec.tests
+    , testGroup "Additional QuickCheck Test Modules"
+        [ Test.Unit.StringUtilsQuickCheckTestSpec.tests
         , Test.Unit.CompilerErrorHandlingQuickCheckTestSpec.tests
         , Test.Unit.SourceLocationTrackingQuickCheckTestSpec.tests
         , Test.Unit.OwnershipTransferQuickCheckTestSpec.tests
