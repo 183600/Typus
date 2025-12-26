@@ -48,6 +48,15 @@ import qualified Test.Unit.IntegrationCoreQuickCheckSpec
 -- Additional Core Tests Module
 import qualified Test.Unit.AdditionalCoreTestsSpec
 
+-- New Advanced Test Modules for Enhanced Coverage
+import qualified Test.Unit.ParserBoundaryConditionsSpec
+import qualified Test.Unit.SourceLocationMathPropertiesSpec
+import qualified Test.Unit.ErrorHandlerRecoveryAdvancedSpec
+import qualified Test.Unit.OwnershipTransitivityAdvancedSpec
+import qualified Test.Unit.DependentTypeConstraintValidationSpec
+import qualified Test.Unit.UtilsStringProcessingAdvancedSpec
+import qualified Test.Unit.CompilerOptimizationConsistencySpec
+
 -- New Core Functionality Test Module
 import qualified Test.Unit.NewCoreFunctionalitySpec
 
@@ -1135,4 +1144,13 @@ tests =
         , Test.Unit.NewDependentTypeValidationQuickCheckTestSpec.tests
         ]
     , Test.Unit.NewCoreQuickCheckTestSpec.tests
+    , testGroup "New Advanced Test Suite for Enhanced Coverage"
+        [ Test.Unit.ParserBoundaryConditionsSpec.tests
+        , Test.Unit.SourceLocationMathPropertiesSpec.tests
+        , Test.Unit.ErrorHandlerRecoveryAdvancedSpec.tests
+        , Test.Unit.OwnershipTransitivityAdvancedSpec.tests
+        , Test.Unit.DependentTypeConstraintValidationSpec.tests
+        , Test.Unit.UtilsStringProcessingAdvancedSpec.tests
+        , Test.Unit.CompilerOptimizationConsistencySpec.tests
+        ]
     ]
