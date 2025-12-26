@@ -648,7 +648,10 @@ test-suite typus-test
         Test.Unit.TypeInferenceAdvancedTestSpec,
         Test.Unit.IntegrationEndToEndTestSpec,
         Test.Unit.PerformanceRegressionTestSpec,
-        Test.Unit.SecurityValidationTestSpec
+        Test.Unit.SecurityValidationTestSpec,
+        Test.Unit.ParserBoundarySpec,
+        Test.Unit.CompilerErrorBoundarySpec,
+        Test.Unit.NewQuickCheckPropertiesSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

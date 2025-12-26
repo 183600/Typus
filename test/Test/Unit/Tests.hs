@@ -29,6 +29,11 @@ import qualified Test.Unit.EnhancedCompilerTestSpec
 import qualified Test.Unit.UtilsPropertiesQuickCheckSpec
 import qualified Test.Unit.ParserCompilerPropertiesQuickCheckSpec
 
+-- New test modules added for enhanced coverage
+import qualified Test.Unit.ParserBoundarySpec
+import qualified Test.Unit.CompilerErrorBoundarySpec
+import qualified Test.Unit.NewQuickCheckPropertiesSpec
+
 -- Additional QuickCheck test modules
 import qualified Test.Unit.UtilsAdditionalQuickCheckSpec
 import qualified Test.Unit.SourceLocationAdditionalQuickCheckSpec
@@ -1399,3 +1404,10 @@ tests =
 
   -- New Cabal Test Suite (10 comprehensive tests)
   , Test.Unit.NewCabalTestSuiteSpec.tests
+
+  -- New Boundary and Property Test Modules
+  , testGroup "New Boundary and Property Tests"
+    [ Test.Unit.ParserBoundarySpec.tests
+    , Test.Unit.CompilerErrorBoundarySpec.tests
+    , Test.Unit.NewQuickCheckPropertiesSpec.tests
+    ]
