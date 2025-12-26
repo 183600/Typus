@@ -697,7 +697,19 @@ test-suite typus-test
         Test.Unit.NewOwnershipTransferCoreQuickCheckSpec,
         Test.Unit.NewDependencyAnalysisCoreQuickCheckSpec,
         Test.Unit.NewGoToolchainCoreQuickCheckSpec,
-        Test.Unit.NewComprehensiveCabalQuickCheckSpec
+        Test.Unit.NewComprehensiveCabalQuickCheckSpec,
+        
+        -- New comprehensive QuickCheck test modules (2025)
+        Test.Unit.NewEnhancedUtilsQuickCheckSpec,
+        Test.Unit.NewAdvancedSourceLocationQuickCheckSpec,
+        Test.Unit.NewRobustErrorHandlerQuickCheckSpec,
+        Test.Unit.NewComprehensiveParserQuickCheckSpec,
+        Test.Unit.NewAdvancedOwnershipQuickCheckSpec,
+        Test.Unit.NewCompilerIRQuickCheckSpec,
+        Test.Unit.NewDependenciesQuickCheckSpec,
+        Test.Unit.NewTypeSystemQuickCheckSpec,
+        Test.Unit.NewIntegrationQuickCheckSpec,
+        Test.Unit.NewPerformanceQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

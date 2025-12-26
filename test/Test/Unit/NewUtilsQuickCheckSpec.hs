@@ -1,153 +1,113 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-module Test.Unit.NewUtilsQuickCheckSpec (tests) where
+module Test.Unit.NewUtilsQuickCheckSpec (spec) where
 
-import Test.Tasty
-import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+import Test.Hspec
+import Test.QuickCheck
 import Utils
 import Data.Char (isSpace)
 import qualified Data.Text as T
 
--- | Test properties for Utils module
-tests :: TestTree
-tests = testGroup "Utils QuickCheck Tests"
-  [ testProperty "trim: idempotent property" propTrimIdempotent
-  , testProperty "trim: removes leading and trailing whitespace" propTrimRemovesWhitespace
-  , testProperty "splitBy: preserves empty segments" propSplitByPreservesEmpty
-  , testProperty "splitByCollapsed: removes empty segments" propSplitByCollapsedRemovesEmpty
-  , testProperty "splitByComma: same as splitBy ','" propSplitByCommaEqualsSplitBy
-  , testProperty "splitByCommaCollapsed: same as splitByCollapsed ','" propSplitByCommaCollapsedEqualsSplitByCollapsed
-  , testProperty "removeLineComments: preserves content without comments" propRemoveLineCommentsPreservesContent
-  , testProperty "removeComments: preserves content without comments" propRemoveCommentsPreservesContent
-  , testProperty "removeComments: handles block comments correctly" propRemoveCommentsHandlesBlockComments
-  , testProperty "normalizeIndentation: preserves relative indentation" propNormalizeIndentationPreservesRelative
-  , testProperty "breakOn: correct split properties" propBreakOnCorrectSplit
-  ]
+-- | Test string splitting properties
+spec :: Spec
+spec = describe "NewUtils QuickCheck Tests" $ do
 
--- | trim: Applying trim twice should give same result as applying once
-propTrimIdempotent :: String -> Bool
-propTrimIdempotent s = trim (trim s) == trim s
+  describe "splitBy properties" $ do
+    it "preserves empty segments when splitting" $ property $
+      \c str -> 
+        let result = splitBy c str
+            expected = map T.unpack $ T.split (== c) (T.pack str)
+        in result === expected
 
--- | trim: Result should have no leading or trailing whitespace
-propTrimRemovesWhitespace :: String -> Bool
-propTrimRemovesWhitespace s = 
-  let trimmed = trim s
-  in null trimmed || (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+    it "splitByCollapsed removes empty segments" $ property $
+      \c str ->
+        let result = splitByCollapsed c str
+            withEmpty = splitBy c str
+        in all (not . null) result && 
+           result === filter (not . null) withEmpty
 
--- | splitBy: Should preserve empty segments
-propSplitByPreservesEmpty :: Char -> String -> Property
-propSplitByPreservesEmpty delim s = 
-  let parts = splitBy delim s
-      rejoined = intercalate [delim] parts
-  in counterexample ("Original: " ++ show s ++ ", Parts: " ++ show parts ++ ", Rejoined: " ++ show rejoined) $
-     rejoined == s
+    it "splitting and joining with single character preserves original" $ property $
+      \c str ->
+        let result = splitBy c str
+        in not (null str) ==> (c `elem` str) ==> (concat (intersperse [c] result) === str)
 
--- | splitByCollapsed: Should remove empty segments
-propSplitByCollapsedRemovesEmpty :: Char -> String -> Bool
-propSplitByCollapsedRemovesEmpty delim s = 
-  let parts = splitByCollapsed delim s
-  in all (not . null) parts
+  describe "trim properties" $ do
+    it "trim removes leading and trailing whitespace" $ property $
+      \str ->
+        let trimmed = trim str
+        in (not (null trimmed) || all isSpace str) &&
+           (null trimmed || not (isSpace (head trimmed))) &&
+           (null trimmed || not (isSpace (last trimmed)))
 
--- | splitByComma: Should be equivalent to splitBy ','
-propSplitByCommaEqualsSplitBy :: String -> Bool
-propSplitByCommaEqualsSplitBy s = splitByComma s == splitBy ',' s
+    it "trim is idempotent" $ property $
+      \str -> trim (trim str) === trim str
 
--- | splitByCommaCollapsed: Should be equivalent to splitByCollapsed ','
-propSplitByCommaCollapsedEqualsSplitByCollapsed :: String -> Bool
-propSplitByCommaCollapsedEqualsSplitByCollapsed s = 
-  splitByCommaCollapsed s == splitByCollapsed ',' s
+    it "trim of all whitespace returns empty" $ property $
+      \str -> all isSpace str ==> trim str === ""
 
--- | removeLineComments: Should preserve content without line comments
-propRemoveLineCommentsPreservesContent :: String -> Property
-propRemoveLineCommentsPreservesContent s = 
-  not ('/' `elem` s) ==> removeLineComments s == s
+  describe "removeLineComments properties" $ do
+    it "preserves lines without comments" $ property $
+      \str -> not ('/' `elem` str) ==> removeLineComments str === str
 
--- | removeComments: Should preserve content without comments
-propRemoveCommentsPreservesContent :: String -> Property
-propRemoveCommentsPreservesContent s = 
-  not ('/' `elem` s) ==> removeComments s == s
+    it "removes content after // on each line" $ property $
+      \line1 line2 ->
+        let input = line1 ++ "//comment\n" ++ line2 ++ "//another"
+            result = removeLineComments input
+            lines' = lines result
+        in length lines' === 2 &&
+           all (not . isSubstringOf "//") lines'
 
--- | removeComments: Should handle block comments correctly
-propRemoveCommentsHandlesBlockComments :: String -> String -> Property
-propRemoveCommentsHandlesBlockComments prefix suffix = 
-  let comment = "/* comment */"
-      input = prefix ++ comment ++ suffix
-      result = removeComments input
-  in counterexample ("Input: " ++ show input ++ ", Result: " ++ show result) $
-     not (comment `isInfixOf` result)
+    it "preserves // inside string literals" $ property $
+      \before after ->
+        let input = before ++ "\"string with // inside\" more" ++ after
+            result = removeLineComments input
+        in "// inside" `isSubstringOf` result
 
--- | normalizeIndentation: Should preserve relative indentation
-propNormalizeIndentationPreservesRelative :: String -> Property
-propNormalizeIndentationPreservesRelative s = 
-  let lines' = lines s
-  in length lines' > 1 ==> 
-     let normalized = normalizeIndentation s
-         normLines = lines normalized
-         -- Check that relative indentation is preserved
-         checkRelativeIndent [] [] = True
-         checkRelativeIndent (l1:ls1) (l2:ls2) = 
-           let indent1 = length (takeWhile isSpace l1)
-               indent2 = length (takeWhile isSpace l2)
-           in (if null (dropWhile isSpace l1) then null (dropWhile isSpace l2) else True) &&
-              checkRelativeIndent ls1 ls2
-         checkRelativeIndent _ _ = False
-     in checkRelativeIndent lines' normLines
+  describe "removeComments properties" $ do
+    it "preserves strings without comment markers" $ property $
+      \str -> not ('/' `elem` str) ==> removeComments str === str
 
--- | breakOn: Should correctly split strings
-propBreakOnCorrectSplit :: String -> String -> Property
-propBreakOnCorrectSplit pat s = 
-  not (null pat) ==> 
-    let (before, after) = breakOn pat s
-        expected = if pat `isInfixOf` s
-                   then let parts = splitOn' pat s
-                        in case parts of
-                             [] -> (s, "")
-                             [x] -> (x, "")
-                             (x:xs) -> (x, intercalate pat xs)
-                   else (s, "")
-    in counterexample ("Pattern: " ++ show pat ++ ", String: " ++ show s ++ 
-                      ", Result: (" ++ show before ++ ", " ++ show after ++ ")" ++
-                      ", Expected: (" ++ show (fst expected) ++ ", " ++ show (snd expected) ++ ")") $
-       (before, after) == expected
+    it "removes both line and block comments" $ property $
+      \code ->
+        let withComments = code ++ "// line comment\n/* block\ncomment */" ++ code
+            result = removeComments withComments
+        in not ("// line comment" `isSubstringOf` result) &&
+           not ("/* block" `isSubstringOf` result) &&
+           code `isSubstringOf` result
 
--- Helper function to split on first occurrence
-splitOn' :: Eq a => [a] -> [a] -> [[a]]
-splitOn' _ [] = [[]]
-splitOn' pat str = 
-  case findIndex' pat str of
-    Nothing -> [str]
-    Just idx -> 
-      let (before, rest) = splitAt idx str
-          after = drop (length pat) rest
-      in [before, after]
+  describe "normalizeIndentation properties" $ do
+    it "preserves relative indentation" $ property $
+      \lines' ->
+        let input = unlines lines'
+            normalized = normalizeIndentation input
+            resultLines = lines normalized
+        in length resultLines === length lines'
 
--- Helper function to find index of sublist
-findIndex' :: Eq a => [a] -> [a] -> Maybe Int
-findIndex' pat str = findIndexHelper pat str 0
+    it "removes common prefix indentation" $ property $
+      \indent content ->
+        let indentedLine = replicate indent ' ' ++ content
+            input = unlines [indentedLine, indentedLine]
+            normalized = normalizeIndentation input
+            resultLines = lines normalized
+        in all (not . isPrefixOf "    ") resultLines
 
-findIndexHelper :: Eq a => [a] -> [a] -> Int -> Maybe Int
-findIndexHelper [] _ _ = Just 0
-findIndexHelper _ [] _ = Nothing
-findIndexHelper pat@(p:ps) str@(s:ss) idx
-  | p == s = case findIndexHelper ps ss idx of
-               Just 0 -> Just idx
-               Just n -> findIndexHelper pat (tail str) (idx + 1)
-               Nothing -> findIndexHelper pat (tail str) (idx + 1)
-  | otherwise = findIndexHelper pat (tail str) (idx + 1)
+  describe "breakOn properties" $ do
+    it "finds first occurrence of pattern" $ property $
+      \pat str ->
+        let (before, after) = breakOn pat str
+        in if null pat 
+           then before === "" && after === str
+           else not (pat `isInfixOf` before) &&
+                (pat `isInfixOf` str ==> before ++ pat ++ after === str)
 
--- Helper function for intercalate
-intercalate :: [a] -> [[a]] -> [a]
-intercalate _ [] = []
-intercalate _ [x] = x
-intercalate sep (x:xs) = x ++ sep ++ intercalate sep xs
+    it "returns original string when pattern not found" $ property $
+      \pat str -> not (pat `isInfixOf` str) ==> 
+        let (before, after) = breakOn pat str
+        in before === str && after === ""
 
--- Helper function for isInfixOf
-isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
   where
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
-    tails [] = [[]]
-    tails xs@(x:xs') = xs : tails xs'
+    isSubstringOf substring string = substring `isInfixOf` string
+    intersperse _ [] = []
+    intersperse sep (x:xs) = x : sep : intersperse sep xs
+    isPrefixOf prefix str = take (length prefix) str == prefix
+    isInfixOf needle haystack = needle `elem` [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]

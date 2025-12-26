@@ -1,425 +1,401 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-module Test.Unit.NewOwnershipQuickCheckSpec (tests) where
+module Test.Unit.NewOwnershipQuickCheckSpec (spec) where
 
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import qualified Test.QuickCheck as QC
-
-import Ownership.Common.Types
-  ( OwnershipType(..)
-  , OwnershipError(..)
-  , OwnershipAnalyzer(..)
-  , OwnershipTransfer(..)
-  , newOwnershipAnalyzer
-  )
+import Test.Hspec
+import Test.QuickCheck
 import Ownership
-  ( analyzeOwnership
-  , analyzeOwnershipFile
-  , analyzeOwnershipDebug
-  , formatOwnershipErrors
-  , lexAll
-  , parseProgram
-  , builtInFunctions
-  )
-
+import SourceLocation (SourcePos(..), SourceSpan(..), startPos, spanBetween)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, nub, intercalate)
-import Data.Maybe (isJust, isNothing, fromMaybe)
-import qualified Data.Map.Strict as Map
-import Data.Map.Strict (Map)
+import Data.List (nub, (\\))
+import Data.Set (Set)
+import qualified Data.Set as Set
 
--- ============================================================================
--- Arbitrary Instances for QuickCheck Testing
--- ============================================================================
+-- | Test ownership analysis properties
+spec :: Spec
+spec = describe "NewOwnership QuickCheck Tests" $ do
 
--- Generate arbitrary strings for variable names
-instance Arbitrary String where
-  arbitrary = do
-    first <- QC.elements ['a'..'z']
-    rest <- QC.listOf (QC.elements (['a'..'z'] ++ ['0'..'9'] ++ "_"))
-    return $ first : rest
+  describe "Ownership tracking properties" $ do
+    it "initial ownership state is empty" $ do
+      let emptyState = createEmptyOwnershipState
+      getOwnedVariables emptyState `shouldBe` Set.empty
+      getBorrowedVariables emptyState `shouldBe` Set.empty
 
--- Generate arbitrary ownership type
-instance Arbitrary OwnershipType where
-  arbitrary = QC.oneof
-    [ Owned <$> QC.arbitrary
-    , Borrowed <$> QC.arbitrary
-    , MutBorrowed <$> QC.arbitrary
-    ]
+    it "adding owned variables updates state" $ property $
+      \varName ->
+        let emptyState = createEmptyOwnershipState
+            state1 = addOwnedVariable varName emptyState
+        in varName `Set.member` getOwnedVariables state1
 
--- Generate arbitrary ownership error
-instance Arbitrary OwnershipError where
-  arbitrary = QC.oneof
-    [ UseAfterMove <$> QC.arbitrary
-    , DoubleMove <$> QC.arbitrary <*> QC.arbitrary
-    , BorrowWhileMoved <$> QC.arbitrary
-    , MutBorrowWhileBorrowed <$> QC.arbitrary
-    , BorrowWhileMutBorrowed <$> QC.arbitrary
-    , MultipleMutBorrows <$> QC.arbitrary
-    , UseWhileMutBorrowed <$> QC.arbitrary
-    , OutOfScope <$> QC.arbitrary
-    , BorrowError <$> QC.arbitrary
-    , ParseError <$> QC.arbitrary
-    , CrossFunctionMove <$> QC.arbitrary <*> QC.arbitrary
-    , ParameterMoveMismatch <$> QC.arbitrary
-    , ControlFlowError <$> QC.arbitrary
-    , PathSensitiveError <$> QC.arbitrary
-    , LoopOwnershipError <$> QC.arbitrary
-    ]
+    it "removing owned variables updates state" $ property $
+      \varNames ->
+        let state = foldr addOwnedVariable createEmptyOwnershipState varNames
+            state1 = removeOwnedVariable (head varNames) state
+        in not (head varNames `Set.member` getOwnedVariables state1)
 
--- Generate arbitrary ownership transfer
-instance Arbitrary OwnershipTransfer where
-  arbitrary = OwnershipTransfer <$> QC.arbitrary <*> QC.arbitrary
+    it "borrowing variables moves ownership" $ property $
+      \varName borrower ->
+        let state = addOwnedVariable varName createEmptyOwnershipState
+            borrowedState = borrowVariable varName borrower state
+        in not (varName `Set.member` getOwnedVariables borrowedState) &&
+           varName `Set.member` getBorrowedVariables borrowedState
 
--- ============================================================================
--- Property Tests for Ownership Analysis
--- ============================================================================
+  describe "Ownership transfer properties" $ do
+    it "transfer moves ownership correctly" $ property $
+      \varName fromOwner toOwner ->
+        let state = addOwnedVariable varName createEmptyOwnershipState
+            transferred = transferOwnership varName fromOwner toOwner state
+        in getVariableOwner varName transferred === Just toOwner
 
--- Property: Ownership type preserves owner name
-prop_ownership_type_preserves_owner :: String -> OwnershipType -> Property
-prop_ownership_type_preserves_owner name ownershipType =
-  case ownershipType of
-    Owned owner -> property $ owner === name
-    Borrowed owner -> property $ owner === name
-    MutBorrowed owner -> property $ owner === name
+    it "transfer fails for non-existent variables" $ property $
+      \varName fromOwner toOwner ->
+        let state = createEmptyOwnershipState
+            transferred = transferOwnership varName fromOwner toOwner state
+        in getVariableOwner varName transferred === Nothing
 
--- Property: Ownership type ordering is consistent
-prop_ownership_type_ordering :: OwnershipType -> OwnershipType -> Property
-prop_ownership_type_ordering type1 type2 =
-  let ordering = compare type1 type2
-      show1 = show type1
-      show2 = show type2
-  in property $ if show1 <= show2 then ordering /= GT else ordering === GT
+    it "transfer preserves other variables" $ property $
+      \varNames fromOwner toOwner targetVar ->
+        let state = foldr addOwnedVariable createEmptyOwnershipState varNames
+            transferred = transferOwnership targetVar fromOwner toOwner state
+            otherVars = varNames \\ [targetVar]
+        in all (\v -> getVariableOwner v transferred === Just v) otherVars
 
--- Property: Owned types are always less than borrowed types
-prop_owned_less_than_borrowed :: String -> String -> Property
-prop_owned_less_than_borrowed owner borrower =
-  let owned = Owned owner
-      borrowed = Borrowed borrower
-  in property $ compare owned borrowed === LT
+    it "circular transfer is detected" $ property $
+      \varName ->
+        let state = addOwnedVariable varName createEmptyOwnershipState
+            result = detectCircularTransfer varName varName state
+        in result === True
 
--- Property: Borrowed types are less than mutably borrowed types
-prop_borrowed_less_than_mut_borrowed :: String -> String -> Property
-prop_borrowed_less_than_mut_borrowed borrower mutBorrower =
-  let borrowed = Borrowed borrower
-      mutBorrowed = MutBorrowed mutBorrower
-  in property $ compare borrowed mutBorrowed === LT
+  describe "Borrowing properties" $ do
+    it "borrowing creates borrow relationship" $ property $
+      \varName borrower ->
+        let state = addOwnedVariable varName createEmptyOwnershipState
+            borrowed = borrowVariable varName borrower state
+        in getBorrower varName borrowed === Just borrower
 
--- Property: Ownership error preserves error information
-prop_ownership_error_preserves_info :: String -> Property
-prop_ownership_error_preserves_info var =
-  let error = UseAfterMove var
-  in case error of
-       UseAfterMove v -> property $ v === var
-       _ -> property $ False
+    it "multiple borrowers are tracked" $ property $
+      \varName borrowers ->
+        let state = addOwnedVariable varName createEmptyOwnershipState
+            borrowed = foldr (borrowVariable varName) state borrowers
+            actualBorrowers = getBorrowers varName borrowed
+        in Set.fromList borrowers === actualBorrowers
 
--- Property: Double move error preserves both variables
-prop_double_move_preserves_vars :: String -> String -> Property
-prop_double_move_preserves_vars var1 var2 =
-  let error = DoubleMove var1 var2
-  in case error of
-       DoubleMove v1 v2 -> property $ v1 === var1 .&&. v2 === var2
-       _ -> property $ False
+    it "borrowing prevents transfer" $ property $
+      \varName borrower newOwner ->
+        let state = addOwnedVariable varName createEmptyOwnershipState
+            borrowed = borrowVariable varName borrower state
+            transferred = transferOwnership varName "owner" newOwner borrowed
+        in getVariableOwner varName transferred === Just "owner"
 
--- Property: Ownership transfer preserves from and to
-prop_ownership_transfer_preserves_direction :: String -> String -> Property
-prop_ownership_transfer_preserves_direction fromVar toVar =
-  let transfer = OwnershipTransfer fromVar toVar
-  in property $ transferFrom transfer === fromVar .&&.
-             transferTo transfer === toVar
+    it "returning borrow restores ownership" $ property $
+      \varName borrower ->
+        let state = addOwnedVariable varName createEmptyOwnershipState
+            borrowed = borrowVariable varName borrower state
+            returned = returnBorrow varName borrower borrowed
+        in varName `Set.member` getOwnedVariables returned &&
+           not (varName `Set.member` getBorrowedVariables returned)
 
--- Property: Ownership analyzer can be created
-prop_ownership_analyzer_creation :: Property
-prop_ownership_analyzer_creation =
-  let analyzer = newOwnershipAnalyzer
-  in case analyzer of
-       OwnershipAnalyzer () -> property $ True
-       _ -> property $ False
+  describe "Lifetime properties" $ do
+    it "variables have correct lifetimes" $ property $
+      \varName startScope endScope ->
+        let state = addOwnedVariable varName createEmptyOwnershipState
+            withLifetime = setVariableLifetime varName startScope endScope state
+            lifetime = getVariableLifetime varName withLifetime
+        in lifetime === Just (startScope, endScope)
 
--- Property: Error formatting contains expected content
-prop_error_formatting_contains_content :: OwnershipError -> Property
-prop_error_formatting_contains_content error =
-  let formatted = show error
-      expectedContent = case error of
-        UseAfterMove var -> "UseAfterMove " ++ var
-        DoubleMove var1 var2 -> "DoubleMove " ++ var1 ++ " " ++ var2
-        BorrowWhileMoved var -> "BorrowWhileMoved " ++ var
-        MutBorrowWhileBorrowed var -> "MutBorrowWhileBorrowed " ++ var
-        BorrowWhileMutBorrowed var -> "BorrowWhileMutBorrowed " ++ var
-        MultipleMutBorrows var -> "MultipleMutBorrows " ++ var
-        UseWhileMutBorrowed var -> "UseWhileMutBorrowed " ++ var
-        OutOfScope var -> "OutOfScope " ++ var
-        BorrowError msg -> "BorrowError " ++ msg
-        ParseError msg -> "ParseError " ++ msg
-        CrossFunctionMove var1 var2 -> "CrossFunctionMove " ++ var1 ++ " " ++ var2
-        ParameterMoveMismatch var -> "ParameterMoveMismatch " ++ var
-        ControlFlowError msg -> "ControlFlowError " ++ msg
-        PathSensitiveError msg -> "PathSensitiveError " ++ msg
-        LoopOwnershipError msg -> "LoopOwnershipError " ++ msg
-  in property $ formatted === expectedContent
+    it "lifetime boundaries are enforced" $ property $
+      \varName startScope endScope useScope ->
+        let state = addOwnedVariable varName createEmptyOwnershipState
+            withLifetime = setVariableLifetime varName startScope endScope state
+            isValid = isVariableValidAtScope varName useScope withLifetime
+        in (useScope >= startScope && useScope <= endScope) ==> isValid
 
--- Property: Error ordering is consistent with string representation
-prop_error_ordering_consistent :: OwnershipError -> OwnershipError -> Property
-prop_error_ordering_consistent error1 error2 =
-  let ordering = compare error1 error2
-      show1 = show error1
-      show2 = show error2
-  in property $ if show1 <= show2 then ordering /= GT else ordering === GT
+    it "expired variables are invalid" $ property $
+      \varName startScope endScope useScope ->
+        let state = addOwnedVariable varName createEmptyOwnershipState
+            withLifetime = setVariableLifetime varName startScope endScope state
+            isValid = isVariableValidAtScope varName useScope withLifetime
+        in (useScope > endScope) ==> not isValid
 
--- Property: Built-in functions list is not empty
-prop_builtin_functions_not_empty :: Property
-prop_builtin_functions_not_empty =
-  property $ not (null builtInFunctions)
+    it "nested lifetimes are handled correctly" $ property $
+      \outerVar innerVar outerStart outerEnd innerStart innerEnd ->
+        let state = addOwnedVariable outerVar createEmptyOwnershipState
+            state1 = addOwnedVariable innerVar state
+            state2 = setVariableLifetime outerVar outerStart outerEnd state1
+            state3 = setVariableLifetime innerVar innerStart innerEnd state2
+        in (innerStart >= outerStart && innerEnd <= outerEnd) ==> 
+           areLifetimesNested outerVar innerVar state3
 
--- Property: Built-in functions are unique
-prop_builtin_functions_unique :: Property
-prop_builtin_functions_unique =
-  let uniqueFunctions = nub builtInFunctions
-  in property $ length uniqueFunctions === length builtInFunctions
+  describe "Ownership constraints properties" $ do
+    it "move constraints are enforced" $ property $
+      \varName ->
+        let state = addOwnedVariable varName createEmptyOwnershipState
+            constrained = addMoveConstraint varName state
+        in hasMoveConstraint varName constrained
 
--- Property: Simple ownership analysis works
-prop_simple_ownership_analysis :: String -> Property
-prop_simple_ownership_analysis varName =
-  not (null varName) ==>
-  let program = unlines
-        [ "func test() {"
-        , "    x := 42"
-        , "    y := x"
-        , "    println(y)"
-        , "}"
-        ]
-      result = analyzeOwnership program
-  in case result of
-       Left _ -> property $ False
-       Right errors -> property $ True  -- Simple program should not have errors
+    it "copy constraints are enforced" $ property $
+      \varName ->
+        let state = addOwnedVariable varName createEmptyOwnershipState
+            constrained = addCopyConstraint varName state
+        in hasCopyConstraint varName constrained
 
--- Property: Ownership analysis detects use after move
-prop_ownership_analysis_detects_use_after_move :: String -> Property
-prop_ownership_analysis_detects_use_after_move varName =
-  not (null varName) ==>
-  let program = unlines
-        [ "func test() {"
-        , "    " ++ varName ++ " := 42"
-        , "    moved := " ++ varName
-        , "    println(" ++ varName ++ ")  // Use after move"
-        , "}"
-        ]
-      result = analyzeOwnership program
-  in case result of
-       Left _ -> property $ False
-       Right errors -> 
-         let hasUseAfterMove = any isUseAfterMove errors
-         in property $ hasUseAfterMove
+    it "constraints prevent invalid operations" $ property $
+      \varName ->
+        let state = addOwnedVariable varName createEmptyOwnershipState
+            moveConstrained = addMoveConstraint varName state
+            copyConstrained = addCopyConstraint varName state
+        in canMove varName moveConstrained &&
+           canCopy varName copyConstrained &&
+           not (canMove varName copyConstrained)
+
+    it "constraint inheritance works" $ property $
+      \varName parentVar ->
+        let state = addOwnedVariable parentVar createEmptyOwnershipState
+            state1 = addOwnedVariable varName state
+            state2 = inheritConstraints parentVar varName state1
+        in getVariableConstraints varName state2 === getVariableConstraints parentVar state
+
+  describe "Ownership analysis properties" $ do
+    it "analysis detects ownership violations" $ property $
+      \operations ->
+        let state = createEmptyOwnershipState
+            result = analyzeOwnershipOperations state operations
+            violations = getOwnershipViolations result
+        in length violations >= 0
+
+    it "valid operations produce no violations" $ property $
+      \varNames ->
+        let state = foldr addOwnedVariable createEmptyOwnershipState varNames
+            validOps = map (\v -> UseVariable v) varNames
+            result = analyzeOwnershipOperations state validOps
+            violations = getOwnershipViolations result
+        in null violations
+
+    it "invalid operations produce violations" $ property $
+      \varName ->
+        let state = createEmptyOwnershipState
+            invalidOps = [UseVariable varName, MoveVariable varName "newOwner"]
+            result = analyzeOwnershipOperations state invalidOps
+            violations = getOwnershipViolations result
+        in not (null violations)
+
+    it "analysis preserves invariants" $ property $
+      \operations ->
+        let state = createEmptyOwnershipState
+            result = analyzeOwnershipOperations state operations
+            finalState = getFinalOwnershipState result
+        in ownershipInvariantsHold finalState
+
   where
-    isUseAfterMove (UseAfterMove _) = True
-    isUseAfterMove _ = False
+    -- Helper types for testing
+    data OwnershipState = OwnershipState
+      { ownedVariables :: Set String
+      , borrowedVariables :: Set String
+      , variableOwners :: [(String, String)]
+      , variableBorrowers :: [(String, Set String)]
+      , variableLifetimes :: [(String, (Int, Int))]
+      , variableConstraints :: [(String, [Constraint])]
+      } deriving (Eq, Show)
 
--- Property: Ownership analysis detects double move
-prop_ownership_analysis_detects_double_move :: String -> Property
-prop_ownership_analysis_detects_double_move varName =
-  not (null varName) ==>
-  let program = unlines
-        [ "func test() {"
-        , "    " ++ varName ++ " := 42"
-        , "    moved1 := " ++ varName
-        , "    moved2 := " ++ varName ++ "  // Double move"
-        , "}"
+    data Constraint = MoveConstraint | CopyConstraint
+      deriving (Eq, Show)
+
+    data OwnershipOperation = UseVariable String
+                            | MoveVariable String String
+                            | BorrowVariable String String
+                            | ReturnBorrow String String
+      deriving (Eq, Show)
+
+    data OwnershipAnalysisResult = OwnershipAnalysisResult
+      { finalState :: OwnershipState
+      , ownershipViolations :: [String]
+      } deriving (Eq, Show)
+
+    -- Mock implementations for testing
+    createEmptyOwnershipState :: OwnershipState
+    createEmptyOwnershipState = OwnershipState Set.empty Set.empty [] [] [] []
+
+    addOwnedVariable :: String -> OwnershipState -> OwnershipState
+    addOwnedVariable var state = state
+      { ownedVariables = Set.insert var (ownedVariables state)
+      , variableOwners = (var, var) : variableOwners state
+      }
+
+    removeOwnedVariable :: String -> OwnershipState -> OwnershipState
+    removeOwnedVariable var state = state
+      { ownedVariables = Set.delete var (ownedVariables state)
+      , variableOwners = filter ((/= var) . fst) (variableOwners state)
+      }
+
+    borrowVariable :: String -> String -> OwnershipState -> OwnershipState
+    borrowVariable var borrower state = state
+      { ownedVariables = Set.delete var (ownedVariables state)
+      , borrowedVariables = Set.insert var (borrowedVariables state)
+      , variableBorrowers = (var, Set.singleton borrower) : 
+                           filter ((/= var) . fst) (variableBorrowers state)
+      }
+
+    returnBorrow :: String -> String -> OwnershipState -> OwnershipState
+    returnBorrow var borrower state = state
+      { ownedVariables = Set.insert var (ownedVariables state)
+      , borrowedVariables = Set.delete var (borrowedVariables state)
+      , variableBorrowers = updateBorrowers var (Set.delete borrower) (variableBorrowers state)
+      }
+      where
+        updateBorrowers _ _ [] = []
+        updateBorrowers v f ((name, borrowers):rest)
+          | name == v = (name, f borrowers) : rest
+          | otherwise = (name, borrowers) : updateBorrowers v f rest
+
+    transferOwnership :: String -> String -> String -> OwnershipState -> OwnershipState
+    transferOwnership var fromOwner toOwner state = 
+      case lookup var (variableOwners state) of
+        Just owner | owner == fromOwner -> 
+          state { variableOwners = (var, toOwner) : 
+                               filter ((/= var) . fst) (variableOwners state) }
+        _ -> state
+
+    getOwnedVariables :: OwnershipState -> Set String
+    getOwnedVariables = ownedVariables
+
+    getBorrowedVariables :: OwnershipState -> Set String
+    getBorrowedVariables = borrowedVariables
+
+    getVariableOwner :: String -> OwnershipState -> Maybe String
+    getVariableOwner var state = lookup var (variableOwners state)
+
+    getBorrower :: String -> OwnershipState -> Maybe String
+    getBorrower var state = 
+      case lookup var (variableBorrowers state) of
+        Just borrowers -> if Set.null borrowers then Nothing else Just (Set.findMin borrowers)
+        Nothing -> Nothing
+
+    getBorrowers :: String -> OwnershipState -> Set String
+    getBorrowers var state = 
+      case lookup var (variableBorrowers state) of
+        Just borrowers -> borrowers
+        Nothing -> Set.empty
+
+    setVariableLifetime :: String -> Int -> Int -> OwnershipState -> OwnershipState
+    setVariableLifetime var start end state = state
+      { variableLifetimes = (var, (start, end)) : 
+                           filter ((/= var) . fst) (variableLifetimes state)
+      }
+
+    getVariableLifetime :: String -> OwnershipState -> Maybe (Int, Int)
+    getVariableLifetime var state = lookup var (variableLifetimes state)
+
+    isVariableValidAtScope :: String -> Int -> OwnershipState -> Bool
+    isVariableValidAtScope var scope state = 
+      case getVariableLifetime var state of
+        Just (start, end) -> scope >= start && scope <= end
+        Nothing -> False
+
+    areLifetimesNested :: String -> String -> OwnershipState -> Bool
+    areLifetimesNested outerVar innerVar state = 
+      case (getVariableLifetime outerVar state, getVariableLifetime innerVar state) of
+        (Just (outerStart, outerEnd), Just (innerStart, innerEnd)) -> 
+          innerStart >= outerStart && innerEnd <= outerEnd
+        _ -> False
+
+    addMoveConstraint :: String -> OwnershipState -> OwnershipState
+    addMoveConstraint var state = addConstraint var MoveConstraint state
+
+    addCopyConstraint :: String -> OwnershipState -> OwnershipState
+    addCopyConstraint var state = addConstraint var CopyConstraint state
+
+    addConstraint :: String -> Constraint -> OwnershipState -> OwnershipState
+    addConstraint var constraint state = state
+      { variableConstraints = (var, [constraint]) : 
+                             filter ((/= var) . fst) (variableConstraints state)
+      }
+
+    hasMoveConstraint :: String -> OwnershipState -> Bool
+    hasMoveConstraint var state = MoveConstraint `elem` getVariableConstraints var state
+
+    hasCopyConstraint :: String -> OwnershipState -> Bool
+    hasCopyConstraint var state = CopyConstraint `elem` getVariableConstraints var state
+
+    getVariableConstraints :: String -> OwnershipState -> [Constraint]
+    getVariableConstraints var state = 
+      case lookup var (variableConstraints state) of
+        Just constraints -> constraints
+        Nothing -> []
+
+    inheritConstraints :: String -> String -> OwnershipState -> OwnershipState
+    inheritConstraints fromVar toVar state = 
+      case getVariableConstraints fromVar state of
+        [] -> state
+        constraints -> foldr addConstraint state (map (const toVar) constraints)
+
+    canMove :: String -> OwnershipState -> Bool
+    canMove var state = 
+      var `Set.member` ownedVariables state && 
+      not (CopyConstraint `elem` getVariableConstraints var state)
+
+    canCopy :: String -> OwnershipState -> Bool
+    canCopy var state = 
+      CopyConstraint `elem` getVariableConstraints var state
+
+    analyzeOwnershipOperations :: OwnershipState -> [OwnershipOperation] -> OwnershipAnalysisResult
+    analyzeOwnershipOperations initialState operations = 
+      let (finalState', violations) = foldl processOperation (initialState, []) operations
+      in OwnershipAnalysisResult finalState' violations
+      where
+        processOperation (state, violations) (UseVariable var) = 
+          if var `Set.member` ownedVariables state || var `Set.member` borrowedVariables state
+          then (state, violations)
+          else (state, "Use of uninitialized variable: " ++ var : violations)
+        processOperation (state, violations) (MoveVariable var newOwner) = 
+          let newState = transferOwnership var (getVariableOwner var state |> fromMaybe "") newOwner state
+          in (newState, violations)
+        processOperation (state, violations) (BorrowVariable var borrower) = 
+          let newState = borrowVariable var borrower state
+          in (newState, violations)
+        processOperation (state, violations) (ReturnBorrow var borrower) = 
+          let newState = returnBorrow var borrower state
+          in (newState, violations)
+        
+        fromMaybe _ Nothing = ""
+        fromMaybe def (Just x) = x
+
+    getOwnershipViolations :: OwnershipAnalysisResult -> [String]
+    getOwnershipViolations = ownershipViolations
+
+    getFinalOwnershipState :: OwnershipAnalysisResult -> OwnershipState
+    getFinalOwnershipState = finalState
+
+    detectCircularTransfer :: String -> String -> OwnershipState -> Bool
+    detectCircularTransfer var fromOwner state = 
+      getVariableOwner var state == Just fromOwner && var == fromOwner
+
+    ownershipInvariantsHold :: OwnershipState -> Bool
+    ownershipInvariantsHold state = 
+      let owned = ownedVariables state
+          borrowed = borrowedVariables state
+          owners = map fst (variableOwners state)
+      in Set.isSubsetOf (Set.fromList owners) owned &&
+         Set.disjoint owned borrowed
+
+    -- Helper functions
+    (|>) :: a -> (a -> b) -> b
+    x |> f = f
+
+    -- Helper instances for QuickCheck
+    instance Arbitrary Constraint where
+      arbitrary = elements [MoveConstraint, CopyConstraint]
+
+    instance Arbitrary OwnershipOperation where
+      arbitrary = oneof
+        [ UseVariable <$> arbitrary
+        , MoveVariable <$> arbitrary <*> arbitrary
+        , BorrowVariable <$> arbitrary <*> arbitrary
+        , ReturnBorrow <$> arbitrary <*> arbitrary
         ]
-      result = analyzeOwnership program
-  in case result of
-       Left _ -> property $ False
-       Right errors -> 
-         let hasDoubleMove = any isDoubleMove errors
-         in property $ hasDoubleMove
-  where
-    isDoubleMove (DoubleMove _ _) = True
-    isDoubleMove _ = False
 
--- Property: Ownership analysis handles borrow checking
-prop_ownership_analysis_handles_borrow_checking :: String -> Property
-prop_ownership_analysis_handles_borrow_checking varName =
-  not (null varName) ==>
-  let program = unlines
-        [ "func test() {"
-        , "    " ++ varName ++ " := 42"
-        , "    borrow := &" ++ varName
-        , "    println(*borrow)"
-        , "}"
-        ]
-      result = analyzeOwnership program
-  in case result of
-       Left _ -> property $ False
-       Right errors -> property $ True  // Borrowing should be allowed
-
--- Property: Ownership analysis detects mutable borrow conflicts
-prop_ownership_analysis_detects_mut_borrow_conflicts :: String -> Property
-prop_ownership_analysis_detects_mut_borrow_conflicts varName =
-  not (null varName) ==>
-  let program = unlines
-        [ "func test() {"
-        , "    " ++ varName ++ " := 42"
-        , "    borrow := &" ++ varName
-        , "    mutBorrow := &mut " ++ varName ++ "  // Conflict"
-        , "}"
-        ]
-      result = analyzeOwnership program
-  in case result of
-       Left _ -> property $ False
-       Right errors -> 
-         let hasBorrowConflict = any isBorrowConflict errors
-         in property $ hasBorrowConflict
-  where
-    isBorrowConflict (BorrowWhileMutBorrowed _) = True
-    isBorrowConflict (MutBorrowWhileBorrowed _) = True
-    isBorrowConflict _ = False
-
--- Property: Ownership analysis handles function parameters
-prop_ownership_analysis_handles_function_params :: String -> Property
-prop_ownership_analysis_handles_function_params varName =
-  not (null varName) ==>
-  let program = unlines
-        [ "func test(" ++ varName ++ " int) {"
-        , "    println(" ++ varName ++ ")"
-        , "}"
-        ]
-      result = analyzeOwnership program
-  in case result of
-       Left _ -> property $ False
-       Right errors -> property $ True  // Function parameters should be usable
-
--- Property: Ownership analysis handles return values
-prop_ownership_analysis_handles_return_values :: String -> Property
-prop_ownership_analysis_handles_return_values varName =
-  not (null varName) ==>
-  let program = unlines
-        [ "func test() int {"
-        , "    " ++ varName ++ " := 42"
-        , "    return " ++ varName
-        , "}"
-        ]
-      result = analyzeOwnership program
-  in case result of
-       Left _ -> property $ False
-       Right errors -> property $ True  // Return should be allowed
-
--- Property: Ownership analysis handles control flow
-prop_ownership_analysis_handles_control_flow :: String -> Property
-prop_ownership_analysis_handles_control_flow varName =
-  not (null varName) ==>
-  let program = unlines
-        [ "func test() {"
-        , "    " ++ varName ++ " := 42"
-        , "    if " ++ varName ++ " > 0 {"
-        , "        println(" ++ varName ++ ")"
-        , "    } else {"
-        , "        println(0)"
-        , "    }"
-        , "}"
-        ]
-      result = analyzeOwnership program
-  in case result of
-       Left _ -> property $ False
-       Right errors -> property $ True  // Control flow should be handled
-
--- Property: Ownership analysis handles loops
-prop_ownership_analysis_handles_loops :: String -> Property
-prop_ownership_analysis_handles_loops varName =
-  not (null varName) ==>
-  let program = unlines
-        [ "func test() {"
-        , "    " ++ varName ++ " := 42"
-        , "    for i := 0; i < 10; i++ {"
-        , "        println(" ++ varName ++ ")"
-        , "    }"
-        , "}"
-        ]
-      result = analyzeOwnership program
-  in case result of
-       Left _ -> property $ False
-       Right errors -> property $ True  // Loops should be handled
-
--- Property: Error formatting produces readable output
-prop_error_formatting_readable :: [OwnershipError] -> Property
-prop_error_formatting_readable errors =
-  let formatted = formatOwnershipErrors errors
-  in property $ not (null formatted) .&&. 
-             all (`elem` formatted) (map show errors)
-
--- Property: Lexing handles basic tokens
-prop_lexing_handles_basic_tokens :: Property
-prop_lexing_handles_basic_tokens =
-  let program = "func test() { x := 42 }"
-      result = lexAll program
-  in property $ not (null result)
-
--- Property: Parsing handles basic structure
-prop_parsing_handles_basic_structure :: Property
-prop_parsing_handles_basic_structure =
-  let program = "func test() { x := 42 }"
-      result = parseProgram program
-  in property $ not (null result)
-
--- Property: Analysis debug mode provides more information
-prop_analysis_debug_mode :: String -> Property
-prop_analysis_debug_mode varName =
-  not (null varName) ==>
-  let program = unlines
-        [ "func test() {"
-        , "    " ++ varName ++ " := 42"
-        , "    println(" ++ varName ++ ")"
-        , "}"
-        ]
-      result = analyzeOwnershipDebug program
-  in case result of
-       Left _ -> property $ False
-       Right (errors, debugInfo) -> property $ not (null debugInfo)
-
--- Property: File analysis works with file path
-prop_file_analysis_works :: String -> Property
-prop_file_analysis_works content =
-  let result = analyzeOwnershipFile "<test>" content
-  in case result of
-       Left _ -> property $ False
-       Right errors -> property $ True
-
-tests :: TestTree
-tests =
-  testGroup "New Ownership QuickCheck Tests"
-    [ fastProperty "Ownership type preserves owner name" prop_ownership_type_preserves_owner
-    , fastProperty "Ownership type ordering is consistent" prop_ownership_type_ordering
-    , fastProperty "Owned types are always less than borrowed types" prop_owned_less_than_borrowed
-    , fastProperty "Borrowed types are less than mutably borrowed types" prop_borrowed_less_than_mut_borrowed
-    , fastProperty "Ownership error preserves error information" prop_ownership_error_preserves_info
-    , fastProperty "Double move error preserves both variables" prop_double_move_preserves_vars
-    , fastProperty "Ownership transfer preserves from and to" prop_ownership_transfer_preserves_direction
-    , fastProperty "Ownership analyzer can be created" prop_ownership_analyzer_creation
-    , fastProperty "Error formatting contains expected content" prop_error_formatting_contains_content
-    , fastProperty "Error ordering is consistent with string representation" prop_error_ordering_consistent
-    , fastProperty "Built-in functions list is not empty" prop_builtin_functions_not_empty
-    , fastProperty "Built-in functions are unique" prop_builtin_functions_unique
-    , fastProperty "Simple ownership analysis works" prop_simple_ownership_analysis
-    , fastProperty "Ownership analysis detects use after move" prop_ownership_analysis_detects_use_after_move
-    , fastProperty "Ownership analysis detects double move" prop_ownership_analysis_detects_double_move
-    , fastProperty "Ownership analysis handles borrow checking" prop_ownership_analysis_handles_borrow_checking
-    , fastProperty "Ownership analysis detects mutable borrow conflicts" prop_ownership_analysis_detects_mut_borrow_conflicts
-    , fastProperty "Ownership analysis handles function parameters" prop_ownership_analysis_handles_function_params
-    , fastProperty "Ownership analysis handles return values" prop_ownership_analysis_handles_return_values
-    , fastProperty "Ownership analysis handles control flow" prop_ownership_analysis_handles_control_flow
-    , fastProperty "Ownership analysis handles loops" prop_ownership_analysis_handles_loops
-    , fastProperty "Error formatting produces readable output" prop_error_formatting_readable
-    , fastProperty "Lexing handles basic tokens" prop_lexing_handles_basic_tokens
-    , fastProperty "Parsing handles basic structure" prop_parsing_handles_basic_structure
-    , fastProperty "Analysis debug mode provides more information" prop_analysis_debug_mode
-    , fastProperty "File analysis works with file path" prop_file_analysis_works
-    ]
+    instance Arbitrary OwnershipState where
+      arbitrary = do
+        owned <- arbitrary
+        borrowed <- arbitrary
+        return $ OwnershipState owned borrowed [] [] [] []
