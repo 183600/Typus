@@ -615,7 +615,12 @@ test-suite typus-test
         Test.Unit.EnhancedCabalQuickCheckTestSpec,
         
         -- New Additional QuickCheck Test Module
-        Test.Unit.NewAdditionalQuickCheckSpec
+        Test.Unit.NewAdditionalQuickCheckSpec,
+        
+        -- New Additional Test Modules
+        Test.Unit.AdditionalCorePropertiesSpec,
+        Test.Unit.CompilerCorePropertiesSpec,
+        Test.Unit.BoundaryCasePropertiesSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

@@ -48,6 +48,11 @@ import qualified Test.Unit.IntegrationCoreQuickCheckSpec
 -- Additional Core Tests Module
 import qualified Test.Unit.AdditionalCoreTestsSpec
 
+-- New Additional Test Modules
+import qualified Test.Unit.AdditionalCorePropertiesSpec
+import qualified Test.Unit.CompilerCorePropertiesSpec
+import qualified Test.Unit.BoundaryCasePropertiesSpec
+
 -- New QuickCheck Test Modules (2025)
 import qualified Test.Unit.SourceLocationNewQuickCheckSpec
 import qualified Test.Unit.ErrorHandlerNewQuickCheckSpec
@@ -1251,4 +1256,7 @@ tests =
     -- New Additional QuickCheck Test Suite
   , testGroup "New Additional QuickCheck Tests"
     [ Test.Unit.NewAdditionalQuickCheckSpec.tests
+    , Test.Unit.AdditionalCorePropertiesSpec.tests
+    , Test.Unit.CompilerCorePropertiesSpec.tests
+    , Test.Unit.BoundaryCasePropertiesSpec.tests
     ]
