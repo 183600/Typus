@@ -388,7 +388,6 @@ import qualified Test.Unit.NewCabalQuickCheckTestSpec
 import qualified Test.Unit.NewCabalTestQuickCheckSpec
 import qualified Test.Unit.AdditionalCabalQuickCheckSpec
 import qualified Test.Unit.NewSimpleCabalQuickCheckSpec
-import qualified Test.Unit.AdditionalCabalTestsSpec
 import qualified Test.Unit.CabalQuickCheckTests
 import qualified Test.Unit.NewCabslQuickCheckTests
 import qualified Test.Unit.AdditionalQuickCheckTests
@@ -410,7 +409,6 @@ import qualified Test.Unit.EfficientCabalQuickCheckSpec
 import qualified Test.Unit.ConciseCabalQuickCheckSpec
 import qualified Test.Unit.NewCabalTestSuiteQuickCheckSpec
 import qualified Test.Unit.NewCabalQuickCheckTestSuite2Spec
-import qualified Test.Unit.AdditionalCabalTestsSpec
 import qualified Test.Unit.AdditionalUtilsSpec
 import qualified Test.Unit.AdditionalUtilsQuickCheckSpec
 import qualified Test.Unit.SourceLocationAdditionalSpec
@@ -576,6 +574,7 @@ import qualified Test.Unit.SymbolTableManagementSpec
 
 -- Additional comprehensive QuickCheck test modules
 import qualified Test.Unit.AdditionalCabalQuickCheckTestSpec
+import qualified Test.Unit.AdditionalCabalTestsSpec
 
 -- New QuickCheck test modules (10 new comprehensive tests)
 import qualified Test.Unit.BasicParsingQuickCheckSpec
@@ -660,7 +659,6 @@ tests =
     , Test.Unit.UtilsPropertiesQuickCheckSpec.tests
     , Test.Unit.ParserCompilerPropertiesQuickCheckSpec.tests
     , Test.Unit.NewCoreQuickCheckPropertiesSpec.tests
-    , Test.Unit.AdditionalCabalTestsSpec.tests
     , Test.Unit.AdditionalUtilsSpec.tests
     , Test.Unit.AdditionalUtilsQuickCheckSpec.tests
     , Test.Unit.SourceLocationAdditionalSpec.tests
@@ -799,6 +797,7 @@ tests =
         , Test.Unit.SymbolTableManagementSpec.tests
         ]
     , Test.Unit.AdditionalCabalQuickCheckTestSpec.tests
+    , Test.Unit.AdditionalCabalTestsSpec.tests
     
     , testGroup "New QuickCheck Test Modules"
         [ Test.Unit.BasicParsingQuickCheckSpec.tests
