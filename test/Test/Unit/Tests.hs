@@ -371,6 +371,9 @@ import qualified Test.Unit.NewCabalTestCasesSpec
 -- New Enhanced Cabal QuickCheck Test Module
 import qualified Test.Unit.NewEnhancedCabalQuickCheckSpec
 
+-- New comprehensive test modules for enhanced coverage
+-- (Note: Some modules already exist in the project)
+
 -- New core functionality test modules
 import qualified Test.Unit.NewCoreFunctionalitySpec
 import qualified Test.Unit.NewCoreQuickCheckSpec
@@ -665,4 +668,5 @@ tests =
         , Test.Unit.NewTypeSystemSubstitutionQuickCheckSpec.tests
         , Test.Unit.NewSymbolTableCommutativeQuickCheckSpec.tests
         ]
+    -- Note: Test modules already exist in the project
     ]

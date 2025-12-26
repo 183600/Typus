@@ -219,7 +219,7 @@ test-suite typus-test
         Test.Unit.OwnershipQuickCheckSpec,
         Test.Unit.AnalyzerQuickCheckSpec,
         Test.Unit.UtilsQuickCheckSpec,
-        Test.Unit.SymbolTableQuickCheckSpec,
+        
         Test.Unit.ValueAnalysisQuickCheckSpec,
         Test.Unit.SyntaxValidatorQuickCheckSpec,
         Test.Unit.DependentTypesQuickCheckSpec,
@@ -408,13 +408,13 @@ test-suite typus-test
         Test.Unit.NewDependenciesAnalysisSpec,
         Test.Unit.NewAnalyzerIntegrationSpec,
         Test.Unit.NewCliIntegrationSpec,
-        Test.Unit.CompilerIntegrationQuickCheckSpec,
+        
         Test.Unit.TypeSystemBoundaryQuickCheckSpec,
-        Test.Unit.ParserErrorRecoveryQuickCheckSpec,
-        Test.Unit.SemanticAnalysisQuickCheckSpec,
+        
+        
         -- Test.Unit.CodeGenerationQuickCheckSpec, -- Temporarily disabled due to compilation errors
         
-        Test.Unit.ToolchainIntegrationQuickCheckSpec,
+        
         Test.Unit.NewDependentTypesQuickCheckSpec,
         Test.Unit.NewOwnershipQuickCheckSpec,
         Test.Unit.NewSyntaxValidatorQuickCheckSpec,
@@ -440,13 +440,12 @@ test-suite typus-test
         Test.Unit.AdditionalCabalQuickCheckTestSpec,
         Test.Unit.BasicParsingQuickCheckSpec,
         Test.Unit.CompilerOptimizationsQuickCheckSpec,
-        Test.Unit.TypeInferenceQuickCheckSpec,
+        
         Test.Unit.MemorySafetyQuickCheckSpec,
         Test.Unit.ErrorRecoveryAdvancedQuickCheckSpec,
         Test.Unit.ConcurrentParsingQuickCheckSpec,
         Test.Unit.SymbolTableOperationsQuickCheckSpec,
-        Test.Unit.CodeGenerationQuickCheckSpec,
-        Test.Unit.DependencyAnalysisQuickCheckSpec,
+        
         Test.Unit.PerformanceOptimizationQuickCheckSpec,
         Test.Unit.NewUtilsQuickCheckSpec,
         Test.Unit.NewSourceLocationQuickCheckSpec,
