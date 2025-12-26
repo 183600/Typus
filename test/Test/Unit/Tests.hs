@@ -46,6 +46,17 @@ import qualified Test.Unit.ErrorHandlerConsistencySpec
 import qualified Test.Unit.OwnershipAnalysisBoundarySpec
 import qualified Test.Unit.EndToEndCompilationSpec
 
+-- New Cabal Test Modules (9 comprehensive tests)
+import qualified Test.Unit.SourceLocationCoreTestSpec
+import qualified Test.Unit.ParserErrorRecoveryTestSpec
+import qualified Test.Unit.OwnershipTransferTestSpec
+import qualified Test.Unit.ErrorHandlerConsistencyTestSpec
+import qualified Test.Unit.DependencyAnalysisTestSpec
+import qualified Test.Unit.TypeInferenceBoundaryTestSpec
+import qualified Test.Unit.IntegrationEndToEndTestSpec
+import qualified Test.Unit.PerformanceRegressionTestSpec
+import qualified Test.Unit.SecurityValidationTestSpec
+
 -- New test modules added for enhanced coverage
 import qualified Test.Unit.ParserBoundarySpec
 import qualified Test.Unit.CompilerErrorBoundarySpec
@@ -1494,4 +1505,17 @@ tests =
     , Test.Unit.ErrorHandlerConsistencySpec.tests
     , Test.Unit.OwnershipAnalysisBoundarySpec.tests
     , Test.Unit.EndToEndCompilationSpec.tests
+    ]
+
+  -- New Cabal Test Suite (9 comprehensive tests)
+  , testGroup "New Cabal Test Suite"
+    [ Test.Unit.SourceLocationCoreTestSpec.tests
+    , Test.Unit.ParserErrorRecoveryTestSpec.tests
+    , Test.Unit.OwnershipTransferTestSpec.tests
+    , Test.Unit.ErrorHandlerConsistencyTestSpec.tests
+    , Test.Unit.DependencyAnalysisTestSpec.tests
+    , Test.Unit.TypeInferenceBoundaryTestSpec.tests
+    , Test.Unit.IntegrationEndToEndTestSpec.tests
+    , Test.Unit.PerformanceRegressionTestSpec.tests
+    , Test.Unit.SecurityValidationTestSpec.tests
     ]
