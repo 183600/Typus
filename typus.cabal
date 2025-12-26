@@ -564,7 +564,8 @@ test-suite typus-test
         Test.Unit.EnhancedParserTestSpec,
         Test.Unit.EnhancedCompilerTestSpec,
         Test.Unit.UtilsPropertiesQuickCheckSpec,
-        Test.Unit.ParserCompilerPropertiesQuickCheckSpec
+        Test.Unit.ParserCompilerPropertiesQuickCheckSpec,
+        Test.Unit.NewCabalEnhancedTestSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
