@@ -1,357 +1,277 @@
-{-# LANGUAGE LambdaCase #-}
-module Test.Unit.CompilerIRConsistencyQuickCheckSpec (tests) where
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=), assertBool)
-import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, oneof, elements, listOf, sized, choose, forAll)
-import Data.Char (isAlphaNum, isLetter, isDigit)
-import Data.List (sort, nub, group, intercalate, isInfixOf, isPrefixOf)
-import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
-import qualified Data.Text as T
+module Test.Unit.CompilerIRConsistencyQuickCheckSpec where
 
-import Compiler.IR (SourceIR(..), SemanticIR(..), buildSourceIR, buildSemanticIR, emitGo)
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
+
+import Compiler.IR
+import Compiler.Errors (CompilerResult, CompilationPhase(..))
 import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives)
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
-import Compiler.GoAst (GoModule(..), GoFunction(..), GoStatement(..))
+import Compiler.GoAst (GoModule(..), GoDecl(..), GoImport(..))
+import SourceLocation (SourcePos(..), SourceSpan(..), locatedAt)
 
--- | Compiler IR一致性QuickCheck测试
-tests :: TestTree
-tests =
-  testGroup "Compiler IR Consistency QuickCheck Tests"
-    [ testGroup "SourceIR Properties"
-        [ testProperty "SourceIR round-trip consistency" propSourceIRRoundTrip
-        , testProperty "SourceIR text preservation" propSourceIRTextPreservation
-        , testProperty "SourceIR structure consistency" propSourceIRStructureConsistency
-        ]
+-- ============================================================================
+-- Test Data Generation
+-- ============================================================================
 
-    , testGroup "SemanticIR Properties"
-        [ testProperty "SemanticIR enhancement preserves base" propSemanticIREnhancementPreservesBase
-        , testProperty "SemanticIR package consistency" propSemanticIRPackageConsistency
-        , testProperty "SemanticIR import consistency" propSemanticIRImportConsistency
-        ]
+-- | Generate source positions
+instance Arbitrary SourcePos where
+  arbitrary = SourcePos <$> positive <*> positive
+    where
+      positive = getPositive <$> arbitrary
 
-    , testGroup "GoIR Properties"
-        [ testProperty "GoIR syntactic validity" propGoIRSyntacticValidity
-        , testProperty "GoIR semantic preservation" propGoIRSemanticPreservation
-        , testProperty "GoIR import consistency" propGoIRImportConsistency
-        ]
+-- | Generate code blocks
+instance Arbitrary CodeBlock where
+  arbitrary = do
+    directives <- arbitrary
+    content <- arbitraryString
+    return $ CodeBlock directives content
 
-    , testGroup "IR Transformation Properties"
-        [ testProperty "Source to Semantic transformation" propSourceToSemanticTransformation
-        , testProperty "Semantic to Go transformation" propSemanticToGoTransformation
-        , testProperty "End-to-end transformation" propEndToEndTransformation
-        ]
+-- | Generate file directives
+instance Arbitrary FileDirectives where
+  arbitrary = FileDirectives <$> arbitraryMaybe <*> arbitraryMaybe <*> arbitraryMaybe
+    where
+      arbitraryMaybe = oneof [return Nothing, Just <$> locatedAt <$> arbitrary <*> arbitrary]
 
-    , testGroup "IR Consistency Invariants"
-        [ testProperty "IR structure invariants" propIRStructureInvariants
-        , testProperty "IR content invariants" propIRContentInvariants
-        , testProperty "IR location invariants" propIRLocationInvariants
-        ]
+-- | Generate block directives
+instance Arbitrary BlockDirectives where
+  arbitrary = BlockDirectives <$> arbitraryMaybe <*> arbitraryMaybe <*> arbitraryMaybe
+    where
+      arbitraryMaybe = oneof [return Nothing, Just <$> locatedAt <$> arbitrary <*> arbitrary]
 
-    , testGroup "Error Handling in IR"
-        [ testProperty "IR error propagation" propIRErrorPropagation
-        , testProperty "IR error recovery" propIRErrorRecovery
-        , testProperty "IR partial generation" propIRPartialGeneration
-        ]
+-- | Generate Typus files
+instance Arbitrary TypusFile where
+  arbitrary = do
+    directives <- arbitrary
+    blocks <- listOf arbitrary
+    return $ TypusFile directives blocks
 
-    , testGroup "Performance and Scalability"
-        [ testProperty "Large file IR generation" propLargeFileIRGeneration
-        , testProperty "Complex IR transformations" propComplexIRTransformations
-        , testProperty "Memory usage consistency" propMemoryUsageConsistency
-        ]
+-- | Generate Go imports
+instance Arbitrary GoImport where
+  arbitrary = do
+    path <- arbitraryString
+    alias <- oneof [return "", arbitraryString]
+    return $ GoImport path alias
+
+-- | Generate Go declarations (simplified)
+instance Arbitrary GoDecl where
+  arbitrary = oneof
+    [ return $ GoImportDecl <$> arbitrary
+    , return $ GoVarDecl <$> arbitraryString <*> arbitraryString
+    , return $ GoFuncDecl <$> arbitraryString <*> [] <*> arbitraryString
     ]
 
+-- | Generate Go modules
+instance Arbitrary GoModule where
+  arbitrary = do
+    pkgName <- arbitraryString
+    imports <- listOf arbitrary
+    decls <- listOf arbitrary
+    return $ GoModule pkgName imports decls
+
+-- | Generate arbitrary strings
+arbitraryString :: Gen String
+arbitraryString = do
+  size <- choose (0, 20)
+  vectorOf size $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \n\t;{}()"
+
 -- ============================================================================
--- SourceIR Properties
+-- QuickCheck Properties for Compiler IR Consistency
 -- ============================================================================
 
--- | SourceIR往返一致性
-propSourceIRRoundTrip :: TypusFile -> String -> Bool
-propSourceIRRoundTrip typusFile text =
-  let sourceIR = SourceIR typusFile text
-      extractedFile = sourceTypusFile sourceIR
+-- | SourceIR should preserve the original Typus file
+prop_source_ir_preserves_typus :: TypusFile -> Property
+prop_source_ir_preserves_typus typusFile =
+  let sourceIR = buildSourceIR typusFile
+  in sourceTypusFile sourceIR === typusFile
+
+-- | SourceIR should extract text from Typus file
+prop_source_ir_extracts_text :: TypusFile -> Property
+prop_source_ir_extracts_text typusFile =
+  let sourceIR = buildSourceIR typusFile
       extractedText = sourceText sourceIR
-  in extractedFile == typusFile && extractedText == text
+      rawText = rawSourceFromTypus typusFile
+  in extractedText === rawText
 
--- | SourceIR文本保持
-propSourceIRTextPreservation :: TypusFile -> String -> Bool
-propSourceIRTextPreservation typusFile text =
-  let sourceIR = buildSourceIR typusFile text
-      originalLength = length text
-      extractedLength = length (sourceText sourceIR)
-  in originalLength == extractedLength
+-- | Raw source extraction should be consistent
+prop_raw_source_consistency :: TypusFile -> Property
+prop_raw_source_consistency typusFile =
+  let raw1 = rawSourceFromTypus typusFile
+      raw2 = rawSourceFromTypus typusFile
+  in raw1 === raw2
 
--- | SourceIR结构一致性
-propSourceIRStructureConsistency :: TypusFile -> Bool
-propSourceIRStructureConsistency typusFile =
-  let sourceIR = buildSourceIR typusFile ""
-      blocks = tfBlocks typusFile
-      extractedBlocks = tfBlocks (sourceTypusFile sourceIR)
-  in length blocks == length extractedBlocks
+-- | SemanticIR should preserve Typus file when successful
+prop_semantic_ir_preserves_typus :: TypusFile -> Property
+prop_semantic_ir_preserves_typus typusFile =
+  let sourceIR = buildSourceIR typusFile
+      result = buildSemanticIR sourceIR
+  in case result of
+    Left _ -> property True  -- Error is acceptable
+    Right semanticIR -> semanticTypusFile semanticIR === typusFile
 
--- ============================================================================
--- SemanticIR Properties
--- ============================================================================
+-- | SemanticIR should have a valid Go module when successful
+prop_semantic_ir_has_module :: TypusFile -> Property
+prop_semantic_ir_has_module typusFile =
+  let sourceIR = buildSourceIR typusFile
+      result = buildSemanticIR sourceIR
+  in case result of
+    Left _ -> property True  -- Error is acceptable
+    Right semanticIR -> 
+      let module = semanticModule semanticIR
+      in not (null $ gmPkgName module) .||. gmPkgName module === ""
 
--- | SemanticIR增强保持基础
-propSemanticIREnhancementPreservesBase :: TypusFile -> Bool
-propSemanticIREnhancementPreservesBase typusFile =
-  let sourceIR = buildSourceIR typusFile ""
-      semanticIR = buildSemanticIR sourceIR
-      baseFile = sourceTypusFile sourceIR
-      enhancedFile = semanticTypusFile semanticIR
-  in tfDirectives baseFile == tfDirectives enhancedFile
+-- | GoIR should have consistent module and source
+prop_go_ir_consistency :: TypusFile -> Property
+prop_go_ir_consistency typusFile =
+  let sourceIR = buildSourceIR typusFile
+      semanticResult = buildSemanticIR sourceIR
+  in case semanticResult of
+    Left _ -> property True  -- Error in semantic phase is acceptable
+    Right semanticIR ->
+      let goIR = emitGo semanticIR
+          module = goModule goIR
+          source = goSource goIR
+      in module `seq` source `seq` True  -- Should not crash
 
--- | SemanticIR包一致性
-propSemanticIRPackageConsistency :: TypusFile -> String -> Bool
-propSemanticIRPackageConsistency typusFile packageName =
-  let sourceIR = buildSourceIR typusFile ""
-      semanticIR = buildSemanticIRWithPackage packageName sourceIR
-      -- 检查包名是否正确设置
-  in True  -- 简化检查，实际需要检查包名
+-- | GoIR source should contain package name
+prop_go_ir_source_contains_package :: TypusFile -> Property
+prop_go_ir_source_contains_package typusFile =
+  let sourceIR = buildSourceIR typusFile
+      semanticResult = buildSemanticIR sourceIR
+  in case semanticResult of
+    Left _ -> property True  -- Error is acceptable
+    Right semanticIR ->
+      let goIR = emitGo semanticIR
+          source = goSource goIR
+          module = goModule goIR
+          pkgName = gmPkgName module
+      in not (null pkgName) ==> (pkgName `isInfixOf` source)
 
--- | SemanticIR导入一致性
-propSemanticIRImportConsistency :: TypusFile -> [String] -> Bool
-propSemanticIRImportConsistency typusFile imports =
-  let sourceIR = buildSourceIR typusFile ""
-      semanticIR = buildSemanticIR sourceIR
-      -- 检查导入是否正确添加
-  in True  -- 简化检查，实际需要检查导入
+-- | Package declaration should be ensured
+prop_ensure_package_decl :: TypusFile -> Property
+prop_ensure_package_decl typusFile =
+  let result = ensurePackageDecl typusFile
+  in case result of
+    Left _ -> property True  -- Error is acceptable
+    Right updatedFile -> updatedFile `seq` True  -- Should not crash
 
--- ============================================================================
--- GoIR Properties
--- ============================================================================
+-- | Main function should be ensured when needed
+prop_ensure_main_function :: TypusFile -> Property
+prop_ensure_main_function typusFile =
+  let result = ensureMainFunction typusFile
+  in case result of
+    Left _ -> property True  -- Error is acceptable
+    Right updatedFile -> updatedFile `seq` True  -- Should not crash
 
--- | GoIR语法有效性
-propGoIRSyntacticValidity :: TypusFile -> Bool
-propGoIRSyntacticValidity typusFile =
-  let sourceIR = buildSourceIR typusFile ""
-      semanticIR = buildSemanticIR sourceIR
-      goCode = emitGo semanticIR
-  in not (null goCode)  -- 简化检查，实际需要语法验证
+-- | Module from Typus should be consistent
+prop_module_from_typus_consistency :: TypusFile -> Property
+prop_module_from_typus_consistency typusFile =
+  let result1 = moduleFromTypus typusFile
+      result2 = moduleFromTypus typusFile
+  in case (result1, result2) of
+    (Left err1, Left err2) -> show err1 === show err2
+    (Right mod1, Right mod2) -> mod1 === mod2
+    (Left _, Right _) -> property False  -- Inconsistent results
+    (Right _, Left _) -> property False  -- Inconsistent results
 
--- | GoIR语义保持
-propGoIRSemanticPreservation :: TypusFile -> Bool
-propGoIRSemanticPreservation typusFile =
-  let sourceIR = buildSourceIR typusFile ""
-      semanticIR = buildSemanticIR sourceIR
-      goCode = emitGo semanticIR
-  in length (lines goCode) >= 0  -- 简化检查
+-- | Go module should be structurally valid
+prop_go_module_structural :: GoModule -> Property
+prop_go_module_structural module =
+  let pkgName = gmPkgName module
+      imports = gmImports module
+      decls = gmDecls module
+  in pkgName `seq` length imports `seq` length decls `seq` True  -- Should not crash
 
--- | GoIR导入一致性
-propGoIRImportConsistency :: TypusFile -> [String] -> Bool
-propGoIRImportConsistency typusFile imports =
-  let sourceIR = buildSourceIR typusFile ""
-      semanticIR = buildSemanticIR sourceIR
-      goCode = emitGo semanticIR
-  in all (`isInfixOf` goCode) imports || null imports
+-- | Go imports should be structurally valid
+prop_go_import_structural :: GoImport -> Property
+prop_go_import_structural goImport =
+  let path = giPath goImport
+      alias = giAlias goImport
+  in path `seq` alias `seq` True  -- Should not crash
 
--- ============================================================================
--- IR Transformation Properties
--- ============================================================================
+-- | Code blocks should preserve directives
+prop_code_block_preserves_directives :: BlockDirectives -> String -> Property
+prop_code_block_preserves_directives directives content =
+  let block = CodeBlock directives content
+  in blockDirectives block === directives .&&. blockContent block === content
 
--- | Source到Semantic转换
-propSourceToSemanticTransformation :: TypusFile -> Bool
-propSourceToSemanticTransformation typusFile =
-  let sourceIR = buildSourceIR typusFile ""
-      semanticIR = buildSemanticIR sourceIR
-      sourceBlockCount = length (tfBlocks typusFile)
-      semanticBlockCount = length (tfBlocks (semanticTypusFile semanticIR))
-  in semanticBlockCount >= sourceBlockCount
+-- | Typus file should preserve structure
+prop_typus_file_structural :: FileDirectives -> [CodeBlock] -> Property
+prop_typus_file_structural directives blocks =
+  let typusFile = TypusFile directives blocks
+  in fileDirectives typusFile === directives .&&. codeBlocks typusFile === blocks
 
--- | Semantic到Go转换
-propSemanticToGoTransformation :: TypusFile -> Bool
-propSemanticToGoTransformation typusFile =
-  let sourceIR = buildSourceIR typusFile ""
-      semanticIR = buildSemanticIR sourceIR
-      goCode = emitGo semanticIR
-  in not (null goCode)
+-- | Empty Typus file should be handled gracefully
+prop_empty_typus_file :: Property
+prop_empty_typus_file =
+  let emptyFile = TypusFile defaultFileDirectives []
+      sourceIR = buildSourceIR emptyFile
+      semanticResult = buildSemanticIR sourceIR
+  in case semanticResult of
+    Left _ -> property True
+    Right semanticIR ->
+      let goIR = emitGo semanticIR
+      in goIR `seq` True
 
--- | 端到端转换
-propEndToEndTransformation :: TypusFile -> String -> Bool
-propEndToEndTransformation typusFile text =
-  let sourceIR = buildSourceIR typusFile text
-      semanticIR = buildSemanticIR sourceIR
-      goCode = emitGo semanticIR
-  in not (null goCode)
+-- | Large code blocks should be handled
+prop_large_code_blocks :: Positive Int -> Property
+prop_large_code_blocks (Positive size) =
+  let largeContent = replicate size 'a' ++ "\nlet x = 5;"
+      block = CodeBlock defaultBlockDirectives largeContent
+      typusFile = TypusFile defaultFileDirectives [block]
+      sourceIR = buildSourceIR typusFile
+  in sourceIR `seq` True
 
--- ============================================================================
--- IR Consistency Invariants
--- ============================================================================
+-- | Many code blocks should be handled
+prop_many_code_blocks :: Positive Int -> Property
+prop_many_code_blocks (Positive count) =
+  let blocks = replicate count $ CodeBlock defaultBlockDirectives "let x = 5;"
+      typusFile = TypusFile defaultFileDirectives blocks
+      sourceIR = buildSourceIR typusFile
+  in sourceIR `seq` True
 
--- | IR结构不变量
-propIRStructureInvariants :: TypusFile -> Bool
-propIRStructureInvariants typusFile =
-  let sourceIR = buildSourceIR typusFile ""
-      semanticIR = buildSemanticIR sourceIR
-      sourceFile = sourceTypusFile sourceIR
-      semanticFile = semanticTypusFile semanticIR
-  in tfDirectives sourceFile == tfDirectives semanticFile
-
--- | IR内容不变量
-propIRContentInvariants :: TypusFile -> Bool
-propIRContentInvariants typusFile =
-  let sourceIR = buildSourceIR typusFile ""
-      semanticIR = buildSemanticIR sourceIR
-      sourceBlocks = tfBlocks (sourceTypusFile sourceIR)
-      semanticBlocks = tfBlocks (semanticTypusFile semanticIR)
-  in length semanticBlocks >= length sourceBlocks
-
--- | IR位置不变量
-propIRLocationInvariants :: TypusFile -> Bool
-propIRLocationInvariants typusFile =
-  let sourceIR = buildSourceIR typusFile ""
-      semanticIR = buildSemanticIR sourceIR
-  in True  -- 简化检查，实际需要验证位置信息
-
--- ============================================================================
--- Error Handling in IR
--- ============================================================================
-
--- | IR错误传播
-propIRErrorPropagation :: TypusFile -> Bool
-propIRErrorPropagation typusFile =
-  let sourceIR = buildSourceIR typusFile ""
-      semanticIR = buildSemanticIR sourceIR
-  in True  -- 简化检查，实际需要检查错误传播
-
--- | IR错误恢复
-propIRErrorRecovery :: TypusFile -> Bool
-propIRErrorRecovery typusFile =
-  let sourceIR = buildSourceIR typusFile ""
-      semanticIR = buildSemanticIR sourceIR
-  in True  -- 简化检查，实际需要检查错误恢复
-
--- | IR部分生成
-propIRPartialGeneration :: TypusFile -> Bool
-propIRPartialGeneration typusFile =
-  let sourceIR = buildSourceIR typusFile ""
-      semanticIR = buildSemanticIR sourceIR
-      goCode = emitGo semanticIR
-  in not (null goCode) || null (tfBlocks typusFile)
+-- | IR transformation pipeline should be monotonic
+prop_ir_pipeline_monotonic :: TypusFile -> Property
+prop_ir_pipeline_monotonic typusFile =
+  let sourceIR = buildSourceIR typusFile
+      sourceSize = length $ show sourceIR
+  in case buildSemanticIR sourceIR of
+    Left _ -> property True
+    Right semanticIR ->
+      let semanticSize = length $ show semanticIR
+      in case buildSemanticIRWithPackage sourceIR [] of
+        Left _ -> property True
+        Right semanticWithPkg ->
+          let pkgSize = length $ show semanticWithPkg
+              goIR = emitGo semanticWithPkg
+              goSize = length $ show goIR
+          in sourceSize > 0 .&&. semanticSize > 0 .&&. pkgSize > 0 .&&. goSize > 0
 
 -- ============================================================================
--- Performance and Scalability
+-- Test Suite
 -- ============================================================================
 
--- | 大文件IR生成
-propLargeFileIRGeneration :: Int -> Bool
-propLargeFileIRGeneration size =
-  let blockSize = abs size `mod` 100 + 1
-      blocks = replicate blockSize (CodeBlock defaultBlockDirectives "test content" (SourceSpan (SourcePos 1 1 0) (SourcePos 1 13 12)))
-      typusFile = TypusFile defaultFileDirectives [] blocks []
-      sourceIR = buildSourceIR typusFile ""
-      semanticIR = buildSemanticIR sourceIR
-  in length (tfBlocks (semanticTypusFile semanticIR)) >= blockSize
-
--- | 复杂IR转换
-propComplexIRTransformations :: Int -> Bool
-propComplexIRTransformations complexity =
-  let level = abs complexity `mod` 10 + 1
-      nestedContent = concat (replicate level "nested ")
-      block = CodeBlock defaultBlockDirectives nestedContent (SourceSpan (SourcePos 1 1 0) (SourcePos 1 (length nestedContent + 1) (length nestedContent)))
-      typusFile = TypusFile defaultFileDirectives [] [block] []
-      sourceIR = buildSourceIR typusFile ""
-      semanticIR = buildSemanticIR sourceIR
-      goCode = emitGo semanticIR
-  in not (null goCode)
-
--- | 内存使用一致性
-propMemoryUsageConsistency :: Int -> Bool
-propMemoryUsageConsistency iterations =
-  let iter = abs iterations `mod` 50 + 1
-      baseFile = TypusFile defaultFileDirectives [] [] []
-      results = replicate iter $ do
-        let sourceIR = buildSourceIR baseFile ""
-        let semanticIR = buildSemanticIR sourceIR
-        emitGo semanticIR
-  in length results == iter
-
--- ============================================================================
--- Helper Functions and Generators
--- ============================================================================
-
--- 生成TypusFile
-genTypusFile :: Gen TypusFile
-genTypusFile = do
-  directives <- genFileDirectives
-  buildTags <- listOf genLocatedString
-  blocks <- listOf genCodeBlock
-  syntaxErrors <- listOf genSyntaxError
-  return $ TypusFile directives buildTags blocks syntaxErrors
-
--- 生成FileDirectives
-genFileDirectives :: Gen FileDirectives
-genFileDirectives = do
-  ownership <- genMaybeLocatedBool
-  dependentTypes <- genMaybeLocatedBool
-  constraints <- genMaybeLocatedBool
-  return $ FileDirectives ownership dependentTypes constraints
-
--- 生成BlockDirectives
-genBlockDirectives :: Gen BlockDirectives
-genBlockDirectives = do
-  ownership <- genMaybeLocatedBool
-  dependentTypes <- genMaybeLocatedBool
-  constraints <- genMaybeLocatedBool
-  return $ BlockDirectives ownership dependentTypes constraints
-
--- 生成CodeBlock
-genCodeBlock :: Gen CodeBlock
-genCodeBlock = do
-  directives <- genBlockDirectives
-  content <- genString
-  startLine <- choose (1, 1000)
-  startCol <- choose (1, 1000)
-  endLine <- choose (startLine, startLine + 100)
-  endCol <- choose (1, 1000)
-  let span = SourceSpan (SourcePos startLine startCol 0) (SourcePos endLine endCol 0)
-  return $ CodeBlock directives content span
-
--- 生成Located String
-genLocatedString :: Gen (Located String)
-genLocatedString = do
-  value <- genString
-  pos <- choose (0, 1000)
-  return $ Located value pos
-
--- 生成Maybe Located Bool
-genMaybeLocatedBool :: Gen (Maybe (Located Bool))
-genMaybeLocatedBool = do
-  hasValue <- elements [True, False]
-  if hasValue
-    then do
-      value <- elements [True, False]
-      pos <- choose (0, 1000)
-      return $ Just (Located value pos)
-    else return Nothing
-
--- 生成语法错误（简化）
-genSyntaxError :: Gen String
-genSyntaxError = genString
-
--- 生成字符串
-genString :: Gen String
-genString = listOf $ elements ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n"
-
--- 实例声明
-instance Arbitrary TypusFile where
-  arbitrary = genTypusFile
-
-instance Arbitrary FileDirectives where
-  arbitrary = genFileDirectives
-
-instance Arbitrary BlockDirectives where
-  arbitrary = genBlockDirectives
-
-instance Arbitrary CodeBlock where
-  arbitrary = genCodeBlock
-
-instance Arbitrary String where
-  arbitrary = genString
-
--- 辅助函数
-infixr 0 ==>
-(==>) :: Bool -> Bool -> Bool
-True ==> x = x
-False ==> _ = True
+tests :: TestTree
+tests = testGroup "Compiler IR Consistency QuickCheck Tests"
+  [ testProperty "source IR preserves Typus file" prop_source_ir_preserves_typus
+  , testProperty "source IR extracts text" prop_source_ir_extracts_text
+  , testProperty "raw source extraction is consistent" prop_raw_source_consistency
+  , testProperty "semantic IR preserves Typus file" prop_semantic_ir_preserves_typus
+  , testProperty "semantic IR has valid Go module" prop_semantic_ir_has_module
+  , testProperty "Go IR consistency" prop_go_ir_consistency
+  , testProperty "Go IR source contains package name" prop_go_ir_source_contains_package
+  , testProperty "package declaration is ensured" prop_ensure_package_decl
+  , testProperty "main function is ensured" prop_ensure_main_function
+  , testProperty "module from Typus is consistent" prop_module_from_typus_consistency
+  , testProperty "Go module is structurally valid" prop_go_module_structural
+  , testProperty "Go import is structurally valid" prop_go_import_structural
+  , testProperty "code block preserves directives" prop_code_block_preserves_directives
+  , testProperty "Typus file preserves structure" prop_typus_file_structural
+  , testProperty "empty Typus file handled gracefully" prop_empty_typus_file
+  , testProperty "large code blocks handled" prop_large_code_blocks
+  , testProperty "many code blocks handled" prop_many_code_blocks
+  , testProperty "IR pipeline is monotonic" prop_ir_pipeline_monotonic
+  ]

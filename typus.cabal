@@ -674,7 +674,19 @@ test-suite typus-test
         Test.Unit.TypeInferenceAdvancedCabalsSpec,
         Test.Unit.IntegrationEndToEndCabalsSpec,
         Test.Unit.PerformanceRegressionCabalsSpec,
-        Test.Unit.SecurityValidationCabalsSpec
+        Test.Unit.SecurityValidationCabalsSpec,
+
+        -- New Additional QuickCheck Test Modules (2025)
+        Test.Unit.UtilsBoundaryQuickCheckSpec,
+        Test.Unit.SourceLocationMathQuickCheckSpec,
+        Test.Unit.ParserRobustnessQuickCheckSpec,
+        Test.Unit.ErrorRecoveryAdvancedQuickCheckSpec,
+        Test.Unit.CompilerOptimizationQuickCheckSpec,
+        Test.Unit.OwnershipMemorySafetyQuickCheckSpec,
+        Test.Unit.DependentTypeValidationQuickCheckSpec,
+        Test.Unit.TypeInferenceBoundaryQuickCheckSpec,
+        Test.Unit.IntegrationEndToEndQuickCheckSpec,
+        Test.Unit.PerformanceRegressionQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

@@ -57,6 +57,25 @@ import qualified Test.Unit.IntegrationEndToEndTestSpec
 import qualified Test.Unit.PerformanceRegressionTestSpec
 import qualified Test.Unit.SecurityValidationTestSpec
 
+-- New Additional Test Modules (2025)
+import qualified Test.Unit.UtilsBoundaryQuickCheckSpec
+import qualified Test.Unit.SourceLocationMathQuickCheckSpec
+import qualified Test.Unit.ParserRobustnessQuickCheckSpec
+import qualified Test.Unit.ErrorRecoveryEnhancedQuickCheckSpec
+import qualified Test.Unit.CompilerOptimizationQuickCheckSpec
+import qualified Test.Unit.OwnershipMemorySafetyQuickCheckSpec
+import qualified Test.Unit.DependentTypeValidationQuickCheckSpec
+import qualified Test.Unit.TypeInferenceBoundaryQuickCheckSpec
+import qualified Test.Unit.IntegrationEndToEndQuickCheckSpec
+import qualified Test.Unit.PerformanceEnhancedQuickCheckSpec
+
+-- New Cabal Test Modules (10 comprehensive QuickCheck tests)
+import qualified Test.Unit.ParserErrorRecoveryQuickCheckSpec
+import qualified Test.Unit.OwnershipTransferConsistencyQuickCheckSpec
+import qualified Test.Unit.CompilerIRConsistencyQuickCheckSpec
+import qualified Test.Unit.ErrorLocationTrackingQuickCheckSpec
+import qualified Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec
+
 -- New test modules added for enhanced coverage
 import qualified Test.Unit.ParserBoundarySpec
 import qualified Test.Unit.CompilerErrorBoundarySpec
@@ -1518,4 +1537,29 @@ tests =
     , Test.Unit.IntegrationEndToEndTestSpec.tests
     , Test.Unit.PerformanceRegressionTestSpec.tests
     , Test.Unit.SecurityValidationTestSpec.tests
+    ]
+
+  -- New Additional QuickCheck Test Modules (2025)
+  , testGroup "New Additional QuickCheck Test Modules 2025"
+    [ Test.Unit.UtilsBoundaryQuickCheckSpec.tests
+    , Test.Unit.SourceLocationMathQuickCheckSpec.tests
+    , Test.Unit.ParserRobustnessQuickCheckSpec.tests
+    , Test.Unit.ErrorRecoveryEnhancedQuickCheckSpec.tests
+    , Test.Unit.CompilerOptimizationQuickCheckSpec.tests
+    , Test.Unit.OwnershipMemorySafetyQuickCheckSpec.tests
+    , Test.Unit.DependentTypeValidationQuickCheckSpec.tests
+    , Test.Unit.TypeInferenceBoundaryQuickCheckSpec.tests
+    , Test.Unit.IntegrationEndToEndQuickCheckSpec.tests
+    , Test.Unit.PerformanceEnhancedQuickCheckSpec.tests
+    ]
+
+  -- New Cabal Test Modules (10 comprehensive QuickCheck tests)
+  , testGroup "New Cabal Test Modules 2025"
+    [ Test.Unit.SourceLocationMathQuickCheckSpec.tests
+    , Test.Unit.UtilsBoundaryQuickCheckSpec.tests
+    , Test.Unit.ParserErrorRecoveryQuickCheckSpec.tests
+    , Test.Unit.OwnershipTransferConsistencyQuickCheckSpec.tests
+    , Test.Unit.CompilerIRConsistencyQuickCheckSpec.tests
+    , Test.Unit.ErrorLocationTrackingQuickCheckSpec.tests
+    , Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec.tests
     ]
