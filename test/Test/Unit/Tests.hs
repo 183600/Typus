@@ -690,6 +690,9 @@ import qualified Test.Unit.CompilerEndToEndIntegrationSpec
 import qualified Test.Unit.DependenciesOwnershipInteractionSpec
 import qualified Test.Unit.PerformanceRegressionExtendedSpec
 
+-- New Core Integration Test Module
+import qualified Test.Unit.NewCoreIntegrationSpec
+
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
 --
@@ -1260,3 +1263,6 @@ tests =
     , Test.Unit.CompilerCorePropertiesSpec.tests
     , Test.Unit.BoundaryCasePropertiesSpec.tests
     ]
+    
+    -- New Core Integration Test Suite
+  , Test.Unit.NewCoreIntegrationSpec.tests
