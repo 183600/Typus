@@ -98,6 +98,9 @@ import qualified Test.Unit.NewCabalIntegrationSpec
 -- New Simple Cabal Test Module
 import qualified Test.Unit.SimpleCabalTestSpec
 
+-- Enhanced Cabal QuickCheck Test Module
+import qualified Test.Unit.EnhancedCabalQuickCheckTestSpec
+
 -- New Enhanced QuickCheck Test Modules
 import qualified Test.Unit.EnhancedUtilsQuickCheckSpec
 import qualified Test.Unit.EnhancedSourceLocationQuickCheckSpec
@@ -1239,4 +1242,5 @@ tests =
         , Test.Unit.DependenciesOwnershipInteractionSpec.tests
         , Test.Unit.PerformanceRegressionExtendedSpec.tests
         ]
+    , Test.Unit.EnhancedCabalQuickCheckTestSpec.tests
     ]

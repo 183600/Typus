@@ -609,7 +609,10 @@ test-suite typus-test
         Test.Unit.ErrorHandlerNewQuickCheckSpec,
         Test.Unit.DependenciesNewQuickCheckSpec,
         Test.Unit.OwnershipNewQuickCheckSpec,
-        Test.Unit.UtilsNewQuickCheckSpec
+        Test.Unit.UtilsNewQuickCheckSpec,
+        
+        -- Enhanced Cabal QuickCheck Test Module
+        Test.Unit.EnhancedCabalQuickCheckTestSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
