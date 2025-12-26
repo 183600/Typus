@@ -1,128 +1,127 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-
 module Test.Unit.DebugIntegrationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertBool, (@?=))
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property)
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 
 import DebugIntegration
-import CommandLineDebug (defaultCLIDebugConfig, getCallStack, listWatchVariables, listBreakpoints)
-import Data.IORef (readIORef)
+import CommandLineDebug (defaultCLIDebugConfig)
+import Control.Exception (try, SomeException)
 
--- Unit tests for DebugIntegration module
+-- | Unit tests for DebugIntegration module
 tests :: TestTree
-tests = testGroup "DebugIntegration tests"
-    [ testGroup "Debug configuration setup"
-        [ testCase "setupCompilerDebugging creates valid config" $ do
-            config <- setupCompilerDebugging
-            assertBool "Config should be created" True
-            
-        , testCase "withDebugging manages call stack correctly" $ do
-            config <- defaultCLIDebugConfig
-            let phase = "test-phase"
-            _ <- withDebugging config phase $ return ()
-            -- Test that call stack is properly managed
-            assertBool "Call stack should be managed correctly" True
+tests = 
+  testGroup "DebugIntegration"
+    [ testGroup "Debugging workflow"
+        [ testCase "withDebugging executes action with proper call stack" $ do
+            let config = defaultCLIDebugConfig
+            result <- withDebugging config "test-phase" (return "success")
+            result @?= "success"
+
+        , testCase "debugParseStep handles file parsing workflow" $ do
+            let config = defaultCLIDebugConfig
+            result <- debugParseStep config "test.typus" (return "parsed")
+            result @?= "parsed"
+
+        , testCase "debugCompileStep handles compilation workflow" $ do
+            let config = defaultCLIDebugConfig
+            result <- debugCompileStep config "test.typus" (return "compiled")
+            result @?= "compiled"
+
+        , testCase "debugOwnershipStep handles ownership analysis workflow" $ do
+            let config = defaultCLIDebugConfig
+            result <- debugOwnershipStep config "test.typus" (return "analyzed")
+            result @?= "analyzed"
         ]
-    
-    , testGroup "Debug step functions"
-        [ testCase "debugParseStep handles file parsing" $ do
-            config <- defaultCLIDebugConfig
-            let filename = "test.typus"
-            _ <- debugParseStep config filename $ return ()
-            assertBool "Parse step should complete" True
-            
-        , testCase "debugCompileStep handles compilation" $ do
-            config <- defaultCLIDebugConfig
-            let filename = "test.typus"
-            _ <- debugCompileStep config filename $ return ()
-            assertBool "Compile step should complete" True
-            
-        , testCase "debugOwnershipStep handles ownership analysis" $ do
-            config <- defaultCLIDebugConfig
-            let filename = "test.typus"
-            _ <- debugOwnershipStep config filename $ return ()
-            assertBool "Ownership step should complete" True
-        ]
-    
+
     , testGroup "Breakpoint management"
-        [ testCase "createDebugBreakpoints sets standard breakpoints" $ do
-            config <- defaultCLIDebugConfig
-            createDebugBreakpoints config
-            -- Verify breakpoints are set (implementation specific)
-            assertBool "Standard breakpoints should be created" True
-            
-        , testCase "addCustomBreakpoint adds user-defined breakpoints" $ do
-            config <- defaultCLIDebugConfig
-            let customPoint = "custom:location"
-            addCustomBreakpoint config customPoint
-            assertBool "Custom breakpoint should be added" True
-            
+        [ testCase "createDebugBreakpoints creates breakpoints without errors" $ do
+            let config = defaultCLIDebugConfig
+            result <- try $ createDebugBreakpoints config ["parse", "compile", "ownership"]
+            case result of
+                Left (_ :: SomeException) -> assertBool "Should not throw exception" False
+                Right _ -> assertBool "Breakpoints created successfully" True
+
+        , testCase "addCustomBreakpoint adds single breakpoint" $ do
+            let config = defaultCLIDebugConfig
+            result <- try $ addCustomBreakpoint config "custom-point"
+            case result of
+                Left (_ :: SomeException) -> assertBool "Should not throw exception" False
+                Right _ -> assertBool "Custom breakpoint added successfully" True
+
         , testCase "removeAllBreakpoints clears all breakpoints" $ do
-            config <- defaultCLIDebugConfig
-            createDebugBreakpoints config
-            removeAllBreakpoints config
-            assertBool "All breakpoints should be removed" True
+            let config = defaultCLIDebugConfig
+            result <- try $ removeAllBreakpoints config
+            case result of
+                Left (_ :: SomeException) -> assertBool "Should not throw exception" False
+                Right _ -> assertBool "All breakpoints removed successfully" True
         ]
-    
-    , testGroup "Interactive mode control"
+
+    , testGroup "Interactive mode"
         [ testCase "enableInteractiveMode enables interactive debugging" $ do
-            config <- defaultCLIDebugConfig
-            enableInteractiveMode config
-            assertBool "Interactive mode should be enabled" True
-            
+            let config = defaultCLIDebugConfig
+            result <- try $ enableInteractiveMode config
+            case result of
+                Left (_ :: SomeException) -> assertBool "Should not throw exception" False
+                Right _ -> assertBool "Interactive mode enabled successfully" True
+
         , testCase "disableInteractiveMode disables interactive debugging" $ do
-            config <- defaultCLIDebugConfig
-            disableInteractiveMode config
-            assertBool "Interactive mode should be disabled" True
+            let config = defaultCLIDebugConfig
+            result <- try $ disableInteractiveMode config
+            case result of
+                Left (_ :: SomeException) -> assertBool "Should not throw exception" False
+                Right _ -> assertBool "Interactive mode disabled successfully" True
         ]
-    
-    , testGroup "Error and warning reporting"
-        [ testCase "debugErrorReport handles error reporting" $ do
-            config <- defaultCLIDebugConfig
-            let location = "test:location"
-                errorMsg = "Test error message"
-            debugErrorReport config location errorMsg
-            assertBool "Error should be reported" True
-            
+
+    , testGroup "Compiler debugging"
+        [ testCase "debugCompilerStart initializes compiler debugging" $ do
+            let config = defaultCLIDebugConfig
+            result <- try $ debugCompilerStart config "test.typus"
+            case result of
+                Left (_ :: SomeException) -> assertBool "Should not throw exception" False
+                Right _ -> assertBool "Compiler debugging started successfully" True
+
+        , testCase "debugCompilerEnd finalizes compiler debugging" $ do
+            let config = defaultCLIDebugConfig
+            result <- try $ debugCompilerEnd config "test.typus"
+            case result of
+                Left (_ :: SomeException) -> assertBool "Should not throw exception" False
+                Right _ -> assertBool "Compiler debugging ended successfully" True
+
+        , testCase "debugErrorReport handles error reporting" $ do
+            let config = defaultCLIDebugConfig
+            result <- try $ debugErrorReport config "Test error message"
+            case result of
+                Left (_ :: SomeException) -> assertBool "Should not throw exception" False
+                Right _ -> assertBool "Error reported successfully" True
+
         , testCase "debugWarningReport handles warning reporting" $ do
-            config <- defaultCLIDebugConfig
-            let location = "test:location"
-                warning = "Test warning message"
-            debugWarningReport config location warning
-            assertBool "Warning should be reported" True
+            let config = defaultCLIDebugConfig
+            result <- try $ debugWarningReport config "Test warning message"
+            case result of
+                Left (_ :: SomeException) -> assertBool "Should not throw exception" False
+                Right _ -> assertBool "Warning reported successfully" True
+
+        , testCase "debugPerformance handles performance metrics" $ do
+            let config = defaultCLIDebugConfig
+            result <- try $ debugPerformance config "parse" 1.5
+            case result of
+                Left (_ :: SomeException) -> assertBool "Should not throw exception" False
+                Right _ -> assertBool "Performance metrics recorded successfully" True
         ]
-    
-    , testGroup "Performance monitoring"
-        [ testCase "debugPerformance tracks performance metrics" $ do
-            config <- defaultCLIDebugConfig
-            let metric = "compilation_time"
-                value = "150ms"
-            debugPerformance config metric value
-            assertBool "Performance metric should be tracked" True
-        ]
-    
-    , testGroup "Compiler lifecycle"
-        [ testCase "debugCompilerStart marks compilation start" $ do
-            config <- defaultCLIDebugConfig
-            let filename = "test.typus"
-            debugCompilerStart config filename
-            assertBool "Compilation start should be marked" True
-            
-        , testCase "debugCompilerEnd marks compilation end" $ do
-            config <- defaultCLIDebugConfig
-            let filename = "test.typus"
-            debugCompilerEnd config filename
-            assertBool "Compilation end should be marked" True
-        ]
-    
+
     , testGroup "Example integration"
         [ testCase "exampleDebugIntegration runs without errors" $ do
-            -- This test ensures the example integration works
-            assertBool "Example integration should complete" True
+            let config = defaultCLIDebugConfig
+            result <- try $ exampleDebugIntegration config
+            case result of
+                Left (_ :: SomeException) -> assertBool "Should not throw exception" False
+                Right _ -> assertBool "Example debug integration completed successfully" True
+
+        , testCase "showCurrentBreakpoints displays breakpoints" $ do
+            let config = defaultCLIDebugConfig
+            result <- try $ showCurrentBreakpoints config
+            case result of
+                Left (_ :: SomeException) -> assertBool "Should not throw exception" False
+                Right _ -> assertBool "Current breakpoints displayed successfully" True
         ]
     ]

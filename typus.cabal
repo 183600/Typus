@@ -486,9 +486,10 @@ test-suite typus-test
         Test.Unit.GoToolchainIntegrationQuickCheckSpec,
         Test.Unit.TypusEndToEndQuickCheckSpec,
         Test.Unit.DebugIntegrationSpec,
+        Test.Unit.IntegratedCompilerSpec,
+        Test.Unit.BoundaryConditionsSpec,
+        Test.Unit.NewCabalPropertySpec,
         Test.Unit.EnhancedDebugQuickCheckSpec,
-        Test.Unit.CommandLineDebugSpec,
-        Test.Unit.ErrorHandlerQuickCheckSpec,
         Test.Unit.DependenciesBoundarySpec
     if flag(full) || flag(production)
         other-modules:

@@ -109,6 +109,12 @@ import qualified Test.Unit.UtilsEfficiencyQuickCheckSpec
 import qualified Test.Unit.ValueAnalysisFlowQuickCheckSpec
 import qualified Test.Unit.GoToolchainIntegrationQuickCheckSpec
 import qualified Test.Unit.TypusEndToEndQuickCheckSpec
+
+-- New Test Modules Added for Cabal Testing
+import qualified Test.Unit.DebugIntegrationSpec
+import qualified Test.Unit.IntegratedCompilerSpec
+import qualified Test.Unit.BoundaryConditionsSpec
+import qualified Test.Unit.NewCabalPropertySpec
 import qualified Test.Unit.ErrorHandlerCoreQuickCheckSpec
 import qualified Test.Unit.DependenciesCoreQuickCheckSpec
 import qualified Test.Unit.GoToolchainCoreQuickCheckSpec
@@ -688,5 +694,11 @@ tests =
         , Test.Unit.ValueAnalysisFlowQuickCheckSpec.tests
         , Test.Unit.GoToolchainIntegrationQuickCheckSpec.tests
         , Test.Unit.TypusEndToEndQuickCheckSpec.tests
+        ]
+    , testGroup "New Cabal Test Modules"
+        [ Test.Unit.DebugIntegrationSpec.tests
+        , Test.Unit.IntegratedCompilerSpec.tests
+        , Test.Unit.BoundaryConditionsSpec.tests
+        , Test.Unit.NewCabalPropertySpec.tests
         ]
     ]
