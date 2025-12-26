@@ -600,7 +600,8 @@ test-suite typus-test
         Test.Unit.OwnershipCoreQuickCheckTests,
         Test.Unit.CompilerCoreQuickCheckTests,
         Test.Unit.ErrorHandlerCoreQuickCheckTests,
-        Test.Unit.DependentTypesCoreQuickCheckTests
+        Test.Unit.DependentTypesCoreQuickCheckTests,
+        Test.Unit.NewCoreQuickCheckTestSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

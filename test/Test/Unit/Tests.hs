@@ -476,6 +476,9 @@ import qualified Test.Unit.CompilerCoreQuickCheckTests
 import qualified Test.Unit.ErrorHandlerCoreQuickCheckTests
 import qualified Test.Unit.DependentTypesCoreQuickCheckTests
 
+-- New Additional QuickCheck Test Module
+import qualified Test.Unit.NewCoreQuickCheckTestSpec
+
 -- New comprehensive QuickCheck test modules
 import qualified Test.Unit.NewDependentTypesQuickCheckSpec
 import qualified Test.Unit.NewOwnershipQuickCheckSpec
@@ -1131,4 +1134,5 @@ tests =
         , Test.Unit.NewOwnershipMemorySafetyQuickCheckTestSpec.tests
         , Test.Unit.NewDependentTypeValidationQuickCheckTestSpec.tests
         ]
+    , Test.Unit.NewCoreQuickCheckTestSpec.tests
     ]
