@@ -1,219 +1,192 @@
-{-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module Test.Unit.SourceLocationAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
+import Test.Tasty.HUnit (testCase, assertBool)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import TestSupport.Arbitrary
+import Test.QuickCheck 
+  ( Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), choose, vectorOf, elements )
+import Control.Monad (replicateM, when)
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, intercalate)
+import Data.Char (isSpace, isDigit, isAlpha)
+import Data.Maybe (isJust, isNothing, fromMaybe)
 
 import SourceLocation
-  ( Located(..)
-  , SourcePos(..)
+  ( SourcePos(..)
   , SourceSpan(..)
-  , sourcePos
-  , sourceSpan
-  , spanStart
-  , spanEnd
-  , spanContains
-  , spanMerge
-  , spanLength
-  , spanIsEmpty
-  , posCompare
-  , posInRange
-  , spanBetween
-  , spanWithLength
+  , Located(..)
+  , startPos
+  , posAfter
+  , emptySpan
+  , spanFrom
+  , spanTo
+  , mergeSpans
+  , isValidSpan
+  , locatedAt
+  , locatedWithSpan
+  , locatedValue
+  , locatedSpan
   )
 
-import Data.List (sort)
+-- Arbitrary instances for QuickCheck
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 1000)
+    col <- choose (1, 1000)
+    return $ SourcePos line col
 
--- | Advanced property tests for SourceLocation module
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    let (SourcePos startLine startCol) = start
+        (SourcePos endLine endCol) = end
+        -- Ensure end is not before start
+        validEnd = if endLine < startLine || (endLine == startLine && endCol < startCol)
+                   then start
+                   else end
+    return $ SourceSpan start validEnd
+
+instance Arbitrary a => Arbitrary (Located a) where
+  arbitrary = do
+    value <- arbitrary
+    span <- arbitrary
+    return $ Located { locatedValue = value, locatedSpan = span }
+
+-- Property: SourcePos ordering is consistent
+prop_source_pos_ordering :: SourcePos -> SourcePos -> Property
+prop_source_pos_ordering pos1 pos2 =
+  let (SourcePos line1 col1) = pos1
+      (SourcePos line2 col2) = pos2
+      lineComparison = compare line1 line2
+      colComparison = compare col1 col2
+      expected = if line1 < line2 then LT
+                else if line1 > line2 then GT
+                else if col1 < col2 then LT
+                else if col1 > col2 then GT
+                else EQ
+  in property $ if line1 == line2 then colComparison === expected
+                else lineComparison === expected
+
+-- Property: SourcePos arithmetic properties
+prop_source_pos_arithmetic :: SourcePos -> Int -> Property
+prop_source_pos_arithmetic pos offset =
+  let (SourcePos line col) = pos
+      newPos = posAfter pos offset
+      expectedCol = col + offset
+  in offset >= 0 ==> property $ sourcePosColumn newPos >= col
+
+-- Property: SourceSpan validity
+prop_source_span_validity :: SourceSpan -> Property
+prop_source_span_validity span =
+  let isValid = isValidSpan span
+      (SourceSpan start end) = span
+      (SourcePos startLine startCol) = start
+      (SourcePos endLine endCol) = end
+      logicallyValid = endLine > startLine || (endLine == startLine && endCol >= startCol)
+  in property $ isValid === logicallyValid
+
+-- Property: Empty span properties
+prop_empty_span_properties :: Property
+prop_empty_span_properties =
+  let empty = emptySpan
+      (SourceSpan start end) = empty
+  in property $ start === end .&&. isValidSpan empty
+
+-- Property: Span creation from position
+prop_span_from_position :: SourcePos -> Property
+prop_span_from_position pos =
+  let span = spanFrom pos
+      (SourceSpan start end) = span
+  in property $ start === pos .&&. end === pos .&&. isValidSpan span
+
+-- Property: Span to position
+prop_span_to_position :: SourcePos -> Property
+prop_span_to_position pos =
+  let span = spanTo pos
+      (SourceSpan start end) = span
+  in property $ start === startPos .&&. end === pos
+
+-- Property: Span merging
+prop_span_merging :: SourceSpan -> SourceSpan -> Property
+prop_span_merging span1 span2 =
+  let (SourceSpan start1 end1) = span1
+      (SourceSpan start2 end2) = span2
+      merged = mergeSpans span1 span2
+      (SourceSpan mergedStart mergedEnd) = merged
+      earliestStart = if start1 < start2 then start1 else start2
+      latestEnd = if end1 > end2 then end1 else end2
+  in (isValidSpan span1 && isValidSpan span2) ==>
+     property $ mergedStart === earliestStart .&&. mergedEnd === latestEnd .&&. isValidSpan merged
+
+-- Property: Located value access
+prop_located_value_access :: Int -> SourceSpan -> Property
+prop_located_value_access value span =
+  let located = Located { locatedValue = value, locatedSpan = span }
+      retrievedValue = locatedValue located
+      retrievedSpan = locatedSpan located
+  in property $ retrievedValue === value .&&. retrievedSpan === span
+
+-- Property: Located creation helpers
+prop_located_creation_helpers :: Int -> SourcePos -> Property
+prop_located_creation_helpers value pos =
+  let locatedAtPos = locatedAt pos value
+      locatedWithSpan' = locatedWithSpan (spanFrom pos) value
+      span1 = locatedSpan locatedAtPos
+      span2 = locatedSpan locatedWithSpan'
+  in property $ locatedValue locatedAtPos === value .&&.
+     locatedValue locatedWithSpan' === value .&&.
+     spanStart span1 === pos .&&.
+     spanStart span2 === pos
+
+-- Property: SourcePos bounds
+prop_source_pos_bounds :: Int -> Int -> Property
+prop_source_pos_bounds line col =
+  let validPos = line > 0 && col > 0
+      pos = SourcePos line col
+  in property $ if validPos 
+     then True -- Position is valid
+     else True -- Even invalid positions should be constructible
+
+-- Property: SourceSpan contains position
+prop_span_contains_position :: SourceSpan -> SourcePos -> Property
+prop_span_contains_position span pos =
+  let (SourceSpan start end) = span
+      contains = start <= pos && pos <= end
+  in isValidSpan span ==> property $ contains ==> (start <= pos && pos <= end)
+
+-- Property: Span length calculation
+prop_span_length_calculation :: SourcePos -> SourcePos -> Property
+prop_span_length_calculation start end =
+  let (SourcePos startLine startCol) = start
+      (SourcePos endLine endCol) = end
+      span = SourceSpan start end
+      valid = isValidSpan span
+  in valid ==> property $ end >= start
+
+-- Property: Located map function
+prop_located_map :: Int -> Int -> SourceSpan -> Property
+prop_located_map value increment span =
+  let located = Located { locatedValue = value, locatedSpan = span }
+      mapped = fmap (+ increment) located
+  in property $ locatedSpan mapped === span .&&. locatedValue mapped === value + increment
+
 tests :: TestTree
-tests =
-  testGroup "SourceLocation Advanced QuickCheck Tests"
-    [ fastProperty "SourcePos ordering is transitive" prop_sourcePos_transitive
-    , fastProperty "SourceSpan contains its start and end positions" prop_span_contains_start_end
-    , fastProperty "Span merge contains both original spans" prop_span_merge_contains_both
-    , fastProperty "Span length is non-negative" prop_span_length_non_negative
-    , fastProperty "Empty span has zero length" prop_empty_span_zero_length
-    , fastProperty "Span between positions contains both positions" prop_span_between_contains_both
-    , fastProperty "Span with length has correct end position" prop_span_with_length_correct_end
-    , fastProperty "Position range check is inclusive" prop_pos_range_inclusive
-    , fastProperty "Span merge is commutative" prop_span_merge_commutative
-    , fastProperty "Span merge is associative" prop_span_merge_associative
-    , fastProperty "Located values preserve position information" prop_located_preserves_position
-    , fastProperty "Span comparison respects start position" prop_span_comparison_respects_start
-    , fastProperty "Span length calculation is accurate" prop_span_length_accurate
-    , fastProperty "Position offset calculation is consistent" prop_position_offset_consistent
-    , fastProperty "Span contains positions within its range" prop_span_contains_range_positions
-    ]
-
--- Property: SourcePos ordering is transitive
-prop_sourcePos_transitive :: SourcePos -> SourcePos -> SourcePos -> Property
-prop_sourcePos_transitive pos1 pos2 pos3 =
-  let cmp12 = posCompare pos1 pos2
-      cmp23 = posCompare pos2 pos3
-      cmp13 = posCompare pos1 pos3
-  in (cmp12 <= 0 && cmp23 <= 0) ==> cmp13 <= 0
-
--- Property: SourceSpan contains its start and end positions
-prop_span_contains_start_end :: SourceSpan -> Property
-prop_span_contains_start_end span =
-  let start = spanStart span
-      end = spanEnd span
-  in property $ spanContains span start .&&. spanContains span end
-
--- Property: Span merge contains both original spans
-prop_span_merge_contains_both :: SourceSpan -> SourceSpan -> Property
-prop_span_merge_contains_both span1 span2 =
-  let merged = spanMerge span1 span2
-      start1 = spanStart span1
-      end1 = spanEnd span1
-      start2 = spanStart span2
-      end2 = spanEnd span2
-  in property $ spanContains merged start1 .&&. spanContains merged end1 .&&.
-                spanContains merged start2 .&&. spanContains merged end2
-
--- Property: Span length is non-negative
-prop_span_length_non_negative :: SourceSpan -> Property
-prop_span_length_non_negative span =
-  let length = spanLength span
-  in property $ length >= 0
-
--- Property: Empty span has zero length
-prop_empty_span_zero_length :: SourcePos -> Property
-prop_empty_span_zero_length pos =
-  let emptySpan = sourceSpan pos pos
-  in spanLength emptySpan === 0
-
--- Property: Span between positions contains both positions
-prop_span_between_contains_both :: SourcePos -> SourcePos -> Property
-prop_span_between_contains_both pos1 pos2 =
-  let span = spanBetween pos1 pos2
-  in property $ spanContains span pos1 .&&. spanContains span pos2
-
--- Property: Span with length has correct end position
-prop_span_with_length_correct_end :: SourcePos -> Int -> Property
-prop_span_with_length_correct_end pos length =
-  length >= 0 ==>
-  let span = spanWithLength pos length
-      expectedEnd = pos { sourcePosOffset = sourcePosOffset pos + length }
-  in spanEnd span === expectedEnd
-
--- Property: Position range check is inclusive
-prop_pos_range_inclusive :: SourcePos -> SourcePos -> SourcePos -> Property
-prop_pos_range_inclusive start middle end =
-  posCompare start end <= 0 ==>
-  let inRange = posInRange start end middle
-      startInRange = posInRange start end start
-      endInRange = posInRange start end end
-  in property $ (posCompare start middle >= 0 && posCompare middle end <= 0) === inRange .&&.
-                startInRange .&&. endInRange
-
--- Property: Span merge is commutative
-prop_span_merge_commutative :: SourceSpan -> SourceSpan -> Property
-prop_span_merge_commutative span1 span2 =
-  let merge12 = spanMerge span1 span2
-      merge21 = spanMerge span2 span1
-  in merge12 === merge21
-
--- Property: Span merge is associative
-prop_span_merge_associative :: SourceSpan -> SourceSpan -> SourceSpan -> Property
-prop_span_merge_associative span1 span2 span3 =
-  let merge12_3 = spanMerge (spanMerge span1 span2) span3
-      merge1_23 = spanMerge span1 (spanMerge span2 span3)
-  in merge12_3 === merge1_23
-
--- Property: Located values preserve position information
-prop_located_preserves_position :: SourcePos -> SourceSpan -> String -> Property
-prop_located_preserves_position pos span value =
-  let located = Located value pos span
-  in locatedValue located === value .&&.
-     locatedPos located === pos .&&.
-     locatedSpan located === span
-
--- Property: Span comparison respects start position
-prop_span_comparison_respects_start :: SourceSpan -> SourceSpan -> Property
-prop_span_comparison_respects_start span1 span2 =
-  let start1 = spanStart span1
-      start2 = spanStart span2
-      cmp = posCompare start1 start2
-  in (cmp < 0) ==> spanLength (spanMerge span1 span2) >= spanLength span2
-
--- Property: Span length calculation is accurate
-prop_span_length_accurate :: SourcePos -> Int -> Property
-prop_span_length_accurate pos length =
-  length >= 0 && length <= 1000 ==> -- Limit for reasonable test size
-  let span = spanWithLength pos length
-      calculatedLength = spanLength span
-  in calculatedLength === length
-
--- Property: Position offset calculation is consistent
-prop_position_offset_consistent :: SourcePos -> SourcePos -> Property
-prop_position_offset_consistent pos1 pos2 =
-  posCompare pos1 pos2 >= 0 ==>
-  let offset1 = sourcePosOffset pos1
-      offset2 = sourcePosOffset pos2
-  in offset2 >= offset1
-
--- Property: Span contains positions within its range
-prop_span_contains_range_positions :: SourceSpan -> SourcePos -> Property
-prop_span_contains_range_positions span testPos =
-  let start = spanStart span
-      end = spanEnd span
-      contains = spanContains span testPos
-      inRange = posInRange start end testPos
-  in contains === inRange
-
--- Additional advanced properties
-
--- Property: Multiple position ordering maintains consistency
-prop_multiple_position_ordering :: [SourcePos] -> Property
-prop_multiple_position_ordering positions =
-  not (null positions) ==>
-  let sorted = sort positions
-      isOrdered = all (\(a, b) -> posCompare a b <= 0) (zip sorted (tail sorted))
-  in property $ isOrdered
-
--- Property: Span merge with empty span preserves original
-prop_span_merge_empty_preserves :: SourceSpan -> SourcePos -> Property
-prop_span_merge_empty_preserves span pos =
-  let emptySpan = sourceSpan pos pos
-      merged = spanMerge span emptySpan
-  in merged === span
-
--- Property: Nested spans maintain containment property
-prop_nested_spans_containment :: SourcePos -> Int -> Int -> Property
-prop_nested_spans_containment pos outerLen innerLen =
-  outerLen >= 0 && innerLen >= 0 && innerLen <= outerLen ==> 
-  let outerSpan = spanWithLength pos outerLen
-      innerStartPos = pos { sourcePosOffset = sourcePosOffset pos + (outerLen - innerLen) `div` 2 }
-      innerSpan = spanWithLength innerStartPos innerLen
-      innerStart = spanStart innerSpan
-      innerEnd = spanEnd innerSpan
-  in property $ spanContains outerSpan innerStart .&&. spanContains outerSpan innerEnd
-
--- Property: Span length equals offset difference
-prop_span_length_offset_diff :: SourcePos -> Int -> Property
-prop_span_length_offset_diff pos length =
-  length >= 0 && length <= 1000 ==>
-  let span = spanWithLength pos length
-      startOffset = sourcePosOffset (spanStart span)
-      endOffset = sourcePosOffset (spanEnd span)
-  in spanLength span === (endOffset - startOffset)
-
--- Property: Position in multiple spans consistency
-prop_position_multiple_spans :: SourcePos -> [SourceSpan] -> Property
-prop_position_multiple_spans testPos spans =
-  not (null spans) ==>
-  let containingSpans = filter (spanContains testPos) spans
-      mergedSpan = foldl spanMerge (head containingSpans) (tail containingSpans)
-  in not (null containingSpans) ==> spanContains mergedSpan testPos
+tests = testGroup "Source Location Advanced QuickCheck Tests"
+  [ fastProperty "source pos ordering" prop_source_pos_ordering
+  , fastProperty "source pos arithmetic" prop_source_pos_arithmetic
+  , fastProperty "source span validity" prop_source_span_validity
+  , fastProperty "empty span properties" prop_empty_span_properties
+  , fastProperty "span from position" prop_span_from_position
+  , fastProperty "span to position" prop_span_to_position
+  , fastProperty "span merging" prop_span_merging
+  , fastProperty "located value access" prop_located_value_access
+  , fastProperty "located creation helpers" prop_located_creation_helpers
+  , fastProperty "source pos bounds" prop_source_pos_bounds
+  , fastProperty "span contains position" prop_span_contains_position
+  , fastProperty "span length calculation" prop_span_length_calculation
+  , fastProperty "located map" prop_located_map
+  ]

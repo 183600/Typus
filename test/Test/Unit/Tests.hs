@@ -35,6 +35,16 @@ import qualified Test.Unit.SourceLocationAdditionalQuickCheckSpec
 import qualified Test.Unit.ParserAdditionalQuickCheckSpec
 import qualified Test.Unit.IntegrationAdditionalQuickCheckSpec
 
+-- New Core QuickCheck Test Modules
+import qualified Test.Unit.DebugCoreQuickCheckSpec
+import qualified Test.Unit.EnhancedDebugCoreQuickCheckSpec
+import qualified Test.Unit.CompilerUtilsCoreQuickCheckSpec
+import qualified Test.Unit.SourceLocationAdvancedQuickCheckSpec
+import qualified Test.Unit.ParserAdvancedQuickCheckSpec
+import qualified Test.Unit.CompilerAdvancedQuickCheckSpec
+import qualified Test.Unit.OwnershipAdvancedQuickCheckSpec
+import qualified Test.Unit.IntegrationCoreQuickCheckSpec
+
 -- Additional Core Tests Module
 import qualified Test.Unit.AdditionalCoreTestsSpec
 
@@ -657,6 +667,14 @@ tests =
         , Test.Unit.GoToolchainCoreQuickCheckSpec.tests
         , Test.Unit.EnhancedErrorHandlerCoreQuickCheckSpec.tests
         , Test.Unit.DebugIntegrationCoreQuickCheckSpec.tests
+        , Test.Unit.DebugCoreQuickCheckSpec.tests
+        , Test.Unit.EnhancedDebugCoreQuickCheckSpec.tests
+        , Test.Unit.CompilerUtilsCoreQuickCheckSpec.tests
+        , Test.Unit.SourceLocationAdvancedQuickCheckSpec.tests
+        , Test.Unit.ParserAdvancedQuickCheckSpec.tests
+        , Test.Unit.CompilerAdvancedQuickCheckSpec.tests
+        , Test.Unit.OwnershipAdvancedQuickCheckSpec.tests
+        , Test.Unit.IntegrationCoreQuickCheckSpec.tests
         ]
     , testGroup "Additional Enhanced Test Modules"
         [ Test.Unit.EnhancedErrorHandlingQuickCheckSpec.tests
