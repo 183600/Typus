@@ -108,6 +108,18 @@ import qualified Test.Unit.NewParserSpec
 import qualified Test.Unit.NewCompilerSpec
 import qualified Test.Unit.NewOwnershipSpec
 
+-- New QuickCheck Test Modules (2025)
+import qualified Test.Unit.CoreFunctionalityQuickCheckSpec
+import qualified Test.Unit.TextProcessingPropertiesQuickCheckSpec
+import qualified Test.Unit.ParserInvariantQuickCheckSpec
+import qualified Test.Unit.ErrorLocationPropertiesQuickCheckSpec
+import qualified Test.Unit.CompilerConsistencyQuickCheckSpec
+import qualified Test.Unit.SymbolTableInvariantQuickCheckSpec
+import qualified Test.Unit.OwnershipTransferPropertiesQuickCheckSpec
+import qualified Test.Unit.TypeSystemConsistencyQuickCheckSpec
+import qualified Test.Unit.DependencyAnalysisPropertiesQuickCheckSpec
+import qualified Test.Unit.SourcePositionInvariantQuickCheckSpec
+
 -- New Test Modules Added for Additional Coverage
 import qualified Test.Unit.UtilsStringPropertiesSpec
 import qualified Test.Unit.SourceLocationConsistencySpec
@@ -1005,5 +1017,17 @@ tests =
         , Test.Unit.NewParserCoreSpec.tests
         , Test.Unit.NewUtilsCoreSpec.tests
         , Test.Unit.EnhancedDebugCoreSpec.tests
+        ]
+    , testGroup "New Comprehensive QuickCheck Test Suite (2025)"
+        [ Test.Unit.CoreFunctionalityQuickCheckSpec.tests
+        , Test.Unit.TextProcessingPropertiesQuickCheckSpec.tests
+        , Test.Unit.ParserInvariantQuickCheckSpec.tests
+        , Test.Unit.ErrorLocationPropertiesQuickCheckSpec.tests
+        , Test.Unit.CompilerConsistencyQuickCheckSpec.tests
+        , Test.Unit.SymbolTableInvariantQuickCheckSpec.tests
+        , Test.Unit.OwnershipTransferPropertiesQuickCheckSpec.tests
+        , Test.Unit.TypeSystemConsistencyQuickCheckSpec.tests
+        , Test.Unit.DependencyAnalysisPropertiesQuickCheckSpec.tests
+        , Test.Unit.SourcePositionInvariantQuickCheckSpec.tests
         ]
     ]
