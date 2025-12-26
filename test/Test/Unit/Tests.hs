@@ -100,6 +100,15 @@ import qualified Test.Unit.AdditionalCabalTestSpec
 -- New Cabal Integration Test Module
 import qualified Test.Unit.NewCabalIntegrationSpec
 
+-- New Cabal Test Suite Module
+import qualified Test.Unit.NewCabalTestSuiteSpec
+
+-- Advanced Test Modules
+import qualified Test.Unit.BoundaryConditionsAdvancedSpec
+import qualified Test.Unit.ErrorRecoveryAdvancedSpec
+import qualified Test.Unit.PerformanceRegressionSpec
+import qualified Test.Unit.IntegrationAdvancedSpec
+
 -- New Simple Cabal Test Module
 import qualified Test.Unit.SimpleCabalTestSpec
 
@@ -1272,3 +1281,9 @@ tests =
   
     -- New Comprehensive Cabal Test Suite
   , Test.Unit.NewCabalTestSuiteSpec.tests
+  
+  -- Advanced Test Modules
+  , Test.Unit.BoundaryConditionsAdvancedSpec.tests
+  , Test.Unit.ErrorRecoveryAdvancedSpec.tests
+  , Test.Unit.PerformanceRegressionSpec.tests
+  , Test.Unit.IntegrationAdvancedSpec.tests

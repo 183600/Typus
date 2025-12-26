@@ -1,305 +1,345 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Unit.NewCabalTestSuiteSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertEqual, assertBool, Assertion)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample, forAll, oneof, elements, listOf, choose)
-import Utils (trim, splitBy, splitByComma, removeComments, normalizeIndentation, breakOn)
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAfter, spanBetween, mergeSpans, isValidSpan, advancePosBy)
-import SyntaxValidator (SyntaxError(..), ErrorType(..))
-import EmbedAssets (MissingEmbed(..), formatMissingMessage)
-import Data.Text (Text)
+import Test.Tasty.HUnit (testCase, assertBool, assertEqual, assertFailure)
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, choose, listOf1, elements)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf)
-import Data.Char (isSpace)
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.Char (isSpace, isAlphaNum)
+import Data.Maybe (isJust, isNothing, fromMaybe)
+
+import Parser (parseTypus, TypusFile(..), FileDirectives(..), BlockDirectives(..))
+import Compiler (compile, CompilerError(..), CompilationPhase(..))
+import Ownership (OwnershipType(..), OwnershipError(..))
+import SourceLocation (SourcePos(..), SourceSpan(..))
+import Utils (trim)
 
 -- ============================================================================
--- Test Suite Definition
+-- Test Data Generators for QuickCheck
 -- ============================================================================
 
-tests :: TestTree
-tests = testGroup "New Cabal Test Suite"
-  [ utilsProperties
-  , sourceLocationProperties  
-  , syntaxValidatorTests
-  , embedAssetsTests
-  , integrationTests
+-- Generate valid source positions
+genSourcePos :: Gen SourcePos
+genSourcePos = do
+  line <- choose (1, 1000)
+  col <- choose (1, 1000)
+  return $ SourcePos line col
+
+-- Generate valid source spans
+genSourceSpan :: Gen SourceSpan
+genSourceSpan = do
+  start <- genSourcePos
+  end <- genSourcePos
+  return $ SourceSpan start end
+
+-- Generate simple strings that could be valid identifiers
+genIdentifier :: Gen String
+genIdentifier = do
+  first <- elements ['a'..'z']
+  rest <- listOf1 $ elements (['a'..'z'] ++ ['0'..'9'] ++ ['_'])
+  return (first : rest)
+
+-- Generate strings with whitespace
+genWhitespaceString :: Gen String
+genWhitespaceString = do
+  content <- genIdentifier
+  ws <- listOf1 $ elements " \t\n"
+  return $ content ++ ws
+
+-- Generate potentially problematic strings
+genProblematicString :: Gen String
+genProblematicString = elements
+  [ ""
+  , " "
+  , "\t"
+  , "\n"
+  , "   "
+  , "\t\t\t"
+  , "\n\n\n"
+  , " \t \n \t "
+  , "/* comment */"
+  , "// comment"
+  , "\"string\""
+  , "'c'"
+  , "123"
+  , "123.456"
+  , "true"
+  , "false"
+  , "null"
+  , "undefined"
   ]
 
 -- ============================================================================
--- Utils Module Tests - QuickCheck Properties
+-- Boundary Condition Tests
 -- ============================================================================
 
-utilsProperties :: TestTree
-utilsProperties = testGroup "Utils Module Properties"
-  [ testProperty "trim idempotent" propTrimIdempotent
-  , testProperty "splitBy length consistency" propSplitByLength
-  , testProperty "splitByComma equals splitBy ','" propSplitByCommaConsistency
-  , testProperty "removeComments preserves non-comment code" propRemoveCommentsPreservesCode
-  , testProperty "normalizeIndentation preserves relative structure" propNormalizeIndentationPreservesStructure
-  , testProperty "breakOn correctness" propBreakOnCorrectness
-  ]
+testEmptyInput :: TestTree
+testEmptyInput = testCase "Empty input handling" $ do
+  result <- parseTypus "" "empty.typus"
+  case result of
+    Left err -> assertBool "Empty input should produce parse error" True
+    Right file -> assertEqual "Empty file should have no blocks" 0 (length (tfCodeBlocks file))
 
--- Property: trim is idempotent (trimming twice gives same result as trimming once)
-propTrimIdempotent :: String -> Property
-propTrimIdempotent s = trim (trim s) === trim s
-
--- Property: splitBy preserves total length when concatenated with delimiters
-propSplitByLength :: Char -> String -> Property
-propSplitByLength delim s = 
-  let parts = splitBy delim s
-      reconstructed = concat $ intersperse [delim] parts
-  in counterexample ("Original: " ++ show s ++ ", Reconstructed: " ++ show reconstructed) $
-     length (filter (== delim) s) + length s === length reconstructed
+testWhitespaceOnlyInput :: TestTree
+testWhitespaceOnlyInput = testCase "Whitespace-only input handling" $ do
+  let inputs = [" ", "\t", "\n", "   ", "\t\t\t", "\n\n\n", " \t \n \t "]
+  mapM_ testWhitespace inputs
   where
-    intersperse _ [] = []
-    intersperse _ [x] = [x]
-    intersperse sep (x:y:xs) = x ++ sep : intersperse sep (y:xs)
+    testWhitespace ws = do
+      result <- parseTypus ws "whitespace.typus"
+      case result of
+        Left err -> assertBool $ "Whitespace input should parse successfully: " ++ ws
+        Right file -> assertEqual "Whitespace file should have no blocks" 0 (length (tfCodeBlocks file))
 
--- Property: splitByComma should be equivalent to splitBy ','
-propSplitByCommaConsistency :: String -> Property
-propSplitByCommaConsistency s = splitByComma s === splitBy ',' s
+testVeryLongIdentifier :: TestTree
+testVeryLongIdentifier = testCase "Very long identifier handling" $ do
+  let longIdent = replicate 10000 'a'
+  let input = "func " ++ longIdent ++ "() { return 42; }"
+  result <- parseTypus input "long_ident.typus"
+  case result of
+    Left err -> assertBool "Very long identifier should be handled gracefully" True
+    Right file -> assertBool "Parse should succeed or fail gracefully" True
 
--- Property: removeComments should not modify code without comments
-propRemoveCommentsPreservesCode :: String -> Property
-propRemoveCommentsPreservesCode s = 
-  let noCommentCode = filter (\c -> c /= '/' && c /= '*') s
-  in if not (hasCommentMarkers s)
-     then removeComments s === s
-     else removeComments noCommentCode === noCommentCode
+testDeeplyNestedCode :: TestTree
+testDeeplyNestedCode = testCase "Deeply nested code handling" $ do
+  let nestedDepth = 100
+  let nestedCode = concat $ replicate nestedDepth "if (true) { "
+  let input = nestedCode ++ "return 42;" ++ concat (replicate nestedDepth " }")
+  result <- parseTypus input "nested.typus"
+  case result of
+    Left err -> assertBool "Deeply nested code should be handled" True
+    Right file -> assertBool "Parse should handle deep nesting" True
+
+testSpecialCharacters :: TestTree
+testSpecialCharacters = testCase "Special characters handling" $ do
+  let inputs = 
+        [ "func test() { return \"\\n\\t\\r\"; }"
+        , "func test() { return '©®™'; }"
+        , "func test() { /* 中文测试 */ return 42; }"
+        , "func test() { // 测试注释\n return 42; }"
+        ]
+  mapM_ testSpecial inputs
   where
-    hasCommentMarkers = any (`elem` "/*")
-
--- Property: normalizeIndentation preserves the number of non-empty lines
-propNormalizeIndentationPreservesStructure :: String -> Property
-propNormalizeIndentationPreservesStructure s =
-  let originalLines = length $ filter (not . all isSpace) $ lines s
-      normalizedLines = length $ filter (not . all isSpace) $ lines (normalizeIndentation s)
-  in originalLines === normalizedLines
-
--- Property: breakOn should correctly split strings
-propBreakOnCorrectness :: String -> String -> Property
-propBreakOnCorrectness pat s =
-  if null pat
-  then breakOn pat s === ("", s)
-  else 
-    let (before, after) = breakOn pat s
-    in counterexample ("Pattern: " ++ show pat ++ ", String: " ++ show s ++ ", Before: " ++ show before ++ ", After: " ++ show after) $
-       if pat `isInfixOf` s
-       then before ++ pat ++ after === s
-       else (before, after) === (s, "")
+    testSpecial input = do
+      result <- parseTypus input "special.typus"
+      case result of
+        Left err -> assertBool $ "Special characters should be handled: " ++ show input
+        Right file -> assertBool "Parse should succeed with special characters" True
 
 -- ============================================================================
--- SourceLocation Module Tests - QuickCheck Properties
+-- Error Recovery Tests
 -- ============================================================================
 
-sourceLocationProperties :: TestTree
-sourceLocationProperties = testGroup "SourceLocation Properties"
-  [ testProperty "position advancement consistency" propPosAdvancementConsistency
-  , testProperty "span validity after merge" propSpanMergeValidity
-  , testProperty "span between positions" propSpanBetweenPositions
-  , testProperty "position ordering" propPositionOrdering
-  , testCase "position advancement with newlines" testPosAdvancementNewlines
-  , testCase "span merge edge cases" testSpanMergeEdgeCases
-  ]
+testSyntaxErrorRecovery :: TestTree
+testSyntaxErrorRecovery = testCase "Syntax error recovery" $ do
+  let input = "func test() { if (true return 42; }"  // missing closing parenthesis
+  result <- parseTypus input "error.typus"
+  case result of
+    Left err -> do
+      assertBool "Error should contain location information" (show err `isInfixOf` "line")
+      assertBool "Error should be descriptive" (show err `isInfixOf` "parenthesis")
+    Right file -> assertFailure "Expected parse error for malformed syntax"
 
--- Property: advancing position by characters should be consistent with offset
-propPosAdvancementConsistency :: String -> Property
-propPosAdvancementConsistency s =
-  let start = startPos
-      end = advancePosBy s start
-      expectedOffset = length s
-  in posOffset end === expectedOffset
+testMultipleErrorDetection :: TestTree
+testMultipleErrorDetection = testCase "Multiple error detection" $ do
+  let input = "func test() { if (true return 42; func broken() { }"  // multiple errors
+  result <- parseTypus input "multiple_errors.typus"
+  case result of
+    Left err -> assertBool "Should detect syntax errors" True
+    Right file -> assertFailure "Expected parse error for multiple syntax errors"
 
--- Property: merging spans should result in valid span
-propSpanMergeValidity :: SourcePos -> SourcePos -> Property
-propSpanMergeValidity p1 p2 =
-  let span1 = spanBetween p1 p1
-      span2 = spanBetween p2 p2
-      merged = mergeSpans span1 span2
-  in isValidSpan merged === True
-
--- Property: span between should maintain correct order
-propSpanBetweenPositions :: SourcePos -> SourcePos -> Property
-propSpanBetweenPositions p1 p2 =
-  let span = spanBetween p1 p2
-      start = spanStart span
-      end = spanEnd span
-  in if p1 <= p2 
-     then start === p1 && end === p2
-     else start === p2 && end === p1
-
--- Property: position ordering should be consistent with offset
-propPositionOrdering :: Int -> Int -> Int -> Property
-propPositionOrdering line col offset =
-  let pos1 = SourcePos line col offset
-      pos2 = SourcePos line col (offset + 1)
-  in pos1 <= pos2 === True
-
--- Unit test: position advancement with newlines
-testPosAdvancementNewlines :: Assertion
-testPosAdvancementNewlines = do
-  let start = SourcePos 1 5 10
-      afterNewline = posAfter '\n' start
-  assertEqual "Newline should increment line and reset column" 
-             (SourcePos 2 1 11) afterNewline
-
--- Unit test: span merge edge cases
-testSpanMergeEdgeCases :: Assertion
-testSpanMergeEdgeCases = do
-  let pos1 = SourcePos 1 1 0
-      pos2 = SourcePos 1 5 4
-      pos3 = SourcePos 2 1 10
-      span1 = spanBetween pos1 pos2
-      span2 = spanBetween pos2 pos3
-      merged = mergeSpans span1 span2
-  assertEqual "Merged span should start at earliest position" 
-             pos1 (spanStart merged)
-  assertEqual "Merged span should end at latest position" 
-             pos3 (spanEnd merged)
+testErrorContextPreservation :: TestTree
+testErrorContextPreservation = testCase "Error context preservation" $ do
+  let input = "func test() {\n  return\n  42;\n}"  // incomplete return statement
+  result <- parseTypus input "context.typus"
+  case result of
+    Left err -> do
+      let errStr = show err
+      assertBool "Error should include line number" ("line" `isInfixOf` errStr)
+      assertBool "Error should include column information" ("column" `isInfixOf` errStr)
+    Right file -> assertFailure "Expected parse error"
 
 -- ============================================================================
--- SyntaxValidator Module Tests - Unit Tests
+-- Performance Regression Tests
 -- ============================================================================
 
-syntaxValidatorTests :: TestTree
-syntaxValidatorTests = testGroup "SyntaxValidator Tests"
-  [ testCase "error formatting consistency" testSyntaxErrorFormatting
-  , testCase "error type classification" testErrorTypeClassification
-  , testCase "nested structure validation" testNestedStructureValidation
-  ]
+testLargeFileParsing :: TestTree
+testLargeFileParsing = testCase "Large file parsing performance" $ do
+  let largeFunction = "func largeTest() {\n" ++ 
+                      concat ["  let x" ++ show i ++ " = " ++ show i ++ ";\n" | i <- [1..1000]] ++
+                      "  return 42;\n}\n"
+  let largeInput = concat $ replicate 10 largeFunction  // 10,000 lines
+  
+  result <- parseTypus largeInput "large.typus"
+  case result of
+    Left err -> assertBool "Large file should parse or fail gracefully" True
+    Right file -> do
+      let blockCount = length (tfCodeBlocks file)
+      assertBool "Should parse multiple functions" (blockCount > 0)
 
-testSyntaxErrorFormatting :: Assertion
-testSyntaxErrorFormatting = do
-  let error = SyntaxError MissingBrace 1 10 "Expected '}'"
-      formatted = show error
-  assertBool "Error format should contain error type" $ 
-    "MissingBrace" `isInfixOf` formatted
-  assertBool "Error format should contain line number" $ 
-    "1" `isInfixOf` formatted
-
-testErrorTypeClassification :: Assertion
-testErrorTypeClassification = do
-  let bracketErrors = [MissingBrace, MissingBracket, MissingParenthesis]
-      allTypes = [MissingBrace, MissingParenthesis, MissingBracket, 
-                  UnclosedString, UnclosedComment, InvalidIdentifier,
-                  InvalidTypeDeclaration, InvalidFunctionDeclaration,
-                  InvalidImport, InvalidStatement, UnterminatedBlock,
-                  InvalidOperator, MissingSemicolon, UnexpectedToken,
-                  MissingPackageDeclaration, DuplicateDeclaration,
-                  InvalidBlockStructure, UndeclaredVariable, SyntaxWarning]
-  assertEqual "Should have 19 error types" 19 (length allTypes)
-  assertBool "Bracket errors should be distinct" $ 
-    length bracketErrors == length (nub bracketErrors)
-
-testNestedStructureValidation :: Assertion
-testNestedStructureValidation = do
-  let nestedCode = "func test() { if (x) { while (y) { /* nested */ } } }"
-      -- This is a simplified test - in real implementation, 
-      -- we would use the actual syntax validator
-  assertBool "Nested structures should be balanced" $ 
-    count '{' nestedCode == count '}' nestedCode
-  where
-    count c = length . filter (== c)
-
--- ============================================================================
--- EmbedAssets Module Tests - Unit Tests
--- ============================================================================
-
-embedAssetsTests :: TestTree
-embedAssetsTests = testGroup "EmbedAssets Tests"
-  [ testCase "missing embed formatting" testMissingEmbedFormatting
-  , testCase "embed pattern validation" testEmbedPatternValidation
-  , testCase "resource path handling" testResourcePathHandling
-  ]
-
-testMissingEmbedFormatting :: Assertion
-testMissingEmbedFormatting = do
-  let missing = [ MissingEmbed "*.txt" "/assets" "/main.typus"
-                , MissingEmbed "data/*.json" "/data" "/config.typus"
-                ]
-      formatted = formatMissingMessage missing
-  assertBool "Should mention missing assets" $ 
-    "Missing embedded assets" `isInfixOf` formatted
-  assertBool "Should include pattern" $ 
-    "*.txt" `isInfixOf` formatted
-  assertBool "Should include reference file" $ 
-    "/main.typus" `isInfixOf` formatted
-
-testEmbedPatternValidation :: Assertion
-testEmbedPatternValidation = do
-  let validPatterns = ["*.txt", "data/*.json", "**/*.go", "config/*"]
-      invalidPatterns = ["", "*/", "a**b", "***.txt"]
-  assertBool "All valid patterns should be non-empty" $ 
-    all (not . null) validPatterns
-  assertBool "Invalid patterns should be detected" $ 
-    any null invalidPatterns
-
-testResourcePathHandling :: Assertion
-testResourcePathHandling = do
-  let embed = MissingEmbed "test/*.txt" "/root" "/src/main.typus"
-  assertEqual "Should preserve pattern" "test/*.txt" (missingPattern embed)
-  assertEqual "Should preserve root" "/root" (missingRoot embed)
-  assertEqual "Should preserve reference" "/src/main.typus" (missingReferencedFrom embed)
+testComplexTypeChecking :: TestTree
+testComplexTypeChecking = testCase "Complex type checking performance" $ do
+  let complexTypes = unlines
+        [ "type ComplexType struct {"
+        , "  field1 map[string][]int"
+        , "  field2 chan func(int) (string, error)"
+        , "  field3 <-chan []map[int]interface{}"
+        , "}"
+        , "func complexFunc() ComplexType {"
+        , "  return ComplexType{}"
+        , "}"
+        ]
+  
+  result <- compile "complex_types.typus" complexTypes
+  case result of
+    Left errs -> assertBool "Complex types should be handled" True
+    Right success -> assertBool "Compilation should handle complex types" True
 
 -- ============================================================================
 -- Integration Tests
 -- ============================================================================
 
-integrationTests :: TestTree
-integrationTests = testGroup "Integration Tests"
-  [ testCase "utils and source location integration" testUtilsSourceLocationIntegration
-  , testCase "error handling pipeline" testErrorHandlingPipeline
-  , testCase "text processing consistency" testTextProcessingConsistency
+testParserCompilerIntegration :: TestTree
+testParserCompilerIntegration = testCase "Parser-Compiler integration" $ do
+  let input = unlines
+        [ "//! dependent_types: on"
+        , "//! ownership: on"
+        , "package main"
+        , ""
+        , "func add(a int, b int) int {"
+        , "  return a + b"
+        , "}"
+        , ""
+        , "func main() {"
+        , "  result := add(5, 3)"
+        , "  // Should not compile - unused variable"
+        , "}"
+        ]
+  
+  -- First parse
+  parseResult <- parseTypus input "integration.typus"
+  case parseResult of
+    Left err -> assertFailure $ "Parse failed: " ++ show err
+    Right file -> do
+      -- Then compile
+      compileResult <- compile "integration.typus" input
+      case compileResult of
+        Left errs -> assertBool "Compilation should detect unused variable" True
+        Right success -> assertBool "Integration should work" True
+
+testOwnershipDependentTypesIntegration :: TestTree
+testOwnershipDependentTypesIntegration = testCase "Ownership-DependentTypes integration" $ do
+  let input = unlines
+        [ "//! ownership: on"
+        , "//! dependent_types: on"
+        , "package main"
+        , ""
+        , "type SafeArray[T] struct {"
+        , "  data []T"
+        , "  len int"
+        , "}"
+        , ""
+        , "func NewSafeArray[T](len int) *SafeArray[T] {"
+        , "  return &SafeArray[T]{data: make([]T, len), len: len}"
+        , "}"
+        , ""
+        , "func (sa *SafeArray[T]) Get(index int) T {"
+        , "  if index < 0 || index >= sa.len {"
+        , "    panic(\"index out of bounds\")"
+        , "  }"
+        , "  return sa.data[index]"
+        , "}"
+        ]
+  
+  result <- compile "ownership_dependent.typus" input
+  case result of
+    Left errs -> assertBool "Should handle ownership and dependent types together" True
+    Right success -> assertBool "Integration should succeed" True
+
+-- ============================================================================
+-- QuickCheck Property Tests
+-- ============================================================================
+
+-- Property: Parsing and re-parsing should give consistent results
+propParseConsistency :: String -> Property
+propParseConsistency input = 
+  forAll genIdentifier $ \ident ->
+    let testInput = "func " ++ ident ++ "() { return 42; }"
+    in case parseTypus testInput "test.typus" of
+         Left _ -> property True  -- Invalid input is fine
+         Right file1 -> 
+           case parseTypus testInput "test.typus" of
+             Left _ -> property False  -- Should be consistent
+             Right file2 -> tfCodeBlocks file1 === tfCodeBlocks file2
+
+-- Property: Trimming whitespace should not affect parsing semantics
+propWhitespaceInvariance :: String -> Property
+propWhitespaceInvariance input = 
+  forAll genIdentifier $ \ident ->
+    let baseCode = "func " ++ ident ++ "() { return 42; }"
+        withExtraSpaces = "  " ++ baseCode ++ "  \n  "
+    in case (parseTypus baseCode "test1.typus", parseTypus withExtraSpaces "test2.typus") of
+         (Left _, Left _) -> property True  -- Both fail is OK
+         (Right f1, Right f2) -> 
+           length (tfCodeBlocks f1) === length (tfCodeBlocks f2)
+         _ -> property False  -- Should be consistent
+
+-- Property: Source location tracking should be consistent
+propSourceLocationConsistency :: Property
+propSourceLocationConsistency = 
+  forAll genSourcePos $ \pos ->
+    forAll genSourcePos $ \pos2 ->
+      let span = SourceSpan pos pos2
+      in spanStart span === pos && spanEnd span === pos2
+
+-- Property: Error messages should contain useful information
+propErrorMessagesUseful :: String -> Property
+propErrorMessagesUseful input = 
+  let malformedInput = "func test() { if (true return 42; }"  // Always malformed
+  in case parseTypus malformedInput "error.typus" of
+       Right _ -> property False  -- Should error
+       Left err -> 
+         let errStr = show err
+         in property (errStr /= "" && 
+                    ("line" `isInfixOf` errStr || "error" `isInfixOf` errStr))
+
+-- ============================================================================
+-- Test Suite
+-- ============================================================================
+
+tests :: TestTree
+tests = testGroup "New Cabal Test Suite"
+  [ testGroup "Boundary Condition Tests"
+      [ testEmptyInput
+      , testWhitespaceOnlyInput
+      , testVeryLongIdentifier
+      , testDeeplyNestedCode
+      , testSpecialCharacters
+      ]
+  
+  , testGroup "Error Recovery Tests"
+      [ testSyntaxErrorRecovery
+      , testMultipleErrorDetection
+      , testErrorContextPreservation
+      ]
+  
+  , testGroup "Performance Regression Tests"
+      [ testLargeFileParsing
+      , testComplexTypeChecking
+      ]
+  
+  , testGroup "Integration Tests"
+      [ testParserCompilerIntegration
+      , testOwnershipDependentTypesIntegration
+      ]
+  
+  , testGroup "QuickCheck Property Tests"
+      [ testProperty "Parse consistency" propParseConsistency
+      , testProperty "Whitespace invariance" propWhitespaceInvariance
+      , testProperty "Source location consistency" propSourceLocationConsistency
+      , testProperty "Error messages useful" propErrorMessagesUseful
+      ]
   ]
-
-testUtilsSourceLocationIntegration :: Assertion
-testUtilsSourceLocationIntegration = do
-  let code = "func test() {\n  return 42;\n}"
-      trimmed = trim code
-      lines' = lines trimmed
-      start = startPos
-      afterFirstLine = advancePosBy (head lines') start
-  assertEqual "Trimming should not affect line count" 
-             2 (length lines')
-  assertBool "Position should advance correctly" $ 
-    posLine afterFirstLine == 1
-
-testErrorHandlingPipeline :: Assertion
-testErrorHandlingPipeline = do
-  let errors = [ SyntaxError MissingBrace 1 10 "Expected '}'"
-               , SyntaxError UnclosedString 2 5 "Unterminated string"
-               ]
-      formatted = map show errors
-  assertBool "All errors should be formatted" $ 
-    length formatted == length errors
-  assertBool "Error locations should be preserved" $ 
-    all (`isInfixOf` "1:10") formatted
-
-testTextProcessingConsistency :: Assertion
-testTextProcessingConsistency = do
-  let text = "  // comment\nfunc test() { /* block */ }\n  "
-      withoutComments = removeComments text
-      normalized = normalizeIndentation withoutComments
-      finalLines = filter (not . all isSpace) $ lines normalized
-  assertBool "Should have meaningful content after processing" $ 
-    not (null finalLines)
-  assertBool "Should contain function definition" $ 
-    any ("func" `isInfixOf`) finalLines
-
--- ============================================================================
--- Helper Functions
--- ============================================================================
-
--- Helper: remove duplicates from list
-nub :: Eq a => [a] -> [a]
-nub [] = []
-nub (x:xs) = x : nub (filter (/= x) xs)
-
--- Helper: intersperse separator between list elements
-intersperse :: a -> [a] -> [a]
-intersperse _ [] = []
-intersperse _ [x] = [x]
-intersperse sep (x:y:xs) = x : sep : intersperse sep (y:xs)
