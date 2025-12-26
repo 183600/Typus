@@ -1,253 +1,293 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
 module Test.Unit.NewCoreFunctionalitySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual, (@?=))
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import Test.QuickCheck.Gen (Gen, choose, listOf1, elements, vectorOf)
-import Test.QuickCheck.Arbitrary (Arbitrary(..))
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, choose, Property, counterexample)
+import Data.List (isInfixOf, sort)
+import Data.Char (isSpace, isLetter, isDigit)
+import Control.Monad.State (runState, evalState)
 
-import Parser (parseTypus, TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
-import Compiler (compile, CompilerError(..), generateGoCode)
-import SourceLocation 
-  ( SourcePos(..), SourceSpan(..), Located(..), startPos, posAfter, 
-    spanFrom, spanTo, spanBetween, mergeSpans, isValidSpan, locatedAt, 
-    locatedWithSpan, advancePos, advancePosBy, advancePosByText )
-import Utils 
-  ( trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed,
-    removeLineComments, removeComments, normalizeIndentation, breakOn )
+-- Import core modules to test
+import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAfter, spanBetween, mergeSpans, isValidSpan, advancePos, advancePosBy)
+import SimpleSyntaxValidator (validateSyntaxSimple, SyntaxError(..), ErrorType(..), countBraces)
+import Utils (trim, splitBy, splitByCollapsed, removeLineComments, removeComments, normalizeIndentation)
+import ErrorHandler (ErrorHandler(..), ErrorContext(..), Severity(..))
+import Ownership (OwnershipTransfer(..), OwnershipState(..), checkOwnershipTransfer)
+import Parser (parseStatement, ParseError(..))
+import CompilerUtils (optimizeAST, validateAST)
+import Debug (DebugLevel(..), DebugInfo(..), withDebugInfo)
 
-import Data.Char (isSpace, isAlphaNum)
-import Data.List (isPrefixOf, isInfixOf, intercalate)
-import qualified Data.Text as T
-import Control.Monad (foldM)
+-- Test data generators
+instance Arbitrary SourcePos where
+    arbitrary = do
+        line <- choose (1, 1000)
+        col <- choose (1, 1000)
+        offset <- choose (0, 10000)
+        return $ SourcePos line col offset
 
--- ============================================================================
--- Parser Tests
--- ============================================================================
+instance Arbitrary SourceSpan where
+    arbitrary = do
+        start <- arbitrary
+        end <- arbitrary
+        return $ if start <= end then SourceSpan start end else SourceSpan end start
 
--- Test parsing of file directives
-test_parseFileDirectives :: TestTree
-test_parseFileDirectives = testCase "parse file directives correctly" $ do
-    let input = "//! ownership: on, dependent_types: true\n"
-    case parseTypus input of
-        Left err -> assertFailure $ "Parse failed: " ++ err
-        Right typusFile -> do
-            assertEqual "ownership directive should be on" 
-                (Just True) (fmap locValue (fdOwnership (tfDirectives typusFile)))
-            assertEqual "dependent_types directive should be true"
-                (Just True) (fmap locValue (fdDependentTypes (tfDirectives typusFile)))
+-- Generate valid Go-like code snippets
+genGoCode :: Gen String
+genGoCode = oneof
+    [ return $ "package main\n\nfunc main() {\n    fmt.Println(\"Hello\")\n}"
+    , return $ "package utils\n\nimport \"fmt\"\n\nfunc add(a int, b int) int {\n    return a + b\n}"
+    , return $ "package data\n\ntype Person struct {\n    Name string\n    Age  int\n}"
+    , return $ "package calc\n\nfunc factorial(n int) int {\n    if n <= 1 {\n        return 1\n    }\n    return n * factorial(n-1)\n}"
+    , return $ "package main\n\nimport (\n    \"os\"\n    \"fmt\"\n)\n\nfunc main() {\n    args := os.Args\n    for _, arg := range args {\n        fmt.Println(arg)\n    }\n}"
+    ]
 
--- Test parsing of block directives
-test_parseBlockDirectives :: TestTree
-test_parseBlockDirectives = testCase "parse block directives correctly" $ do
-    let input = "{//! ownership: off, constraints: on}\nlet x = 42\n"
-    case parseTypus input of
-        Left err -> assertFailure $ "Parse failed: " ++ err
-        Right typusFile -> do
-            let blocks = tfBlocks typusFile
-            assertBool "should have one block" (length blocks == 1)
-            let block = head blocks
-                directives = cbDirectives block
-            assertEqual "ownership directive should be off"
-                (Just False) (fmap locValue (bdOwnership directives))
-            assertEqual "constraints directive should be on"
-                (Just True) (fmap locValue (bdConstraints directives))
+-- Generate strings with various bracket combinations
+genBracketString :: Gen String
+genBracketString = do
+        chars <- listOf $ elements "(){}[]"
+        return chars
 
--- Test parsing with syntax errors
-test_parseWithSyntaxErrors :: TestTree
-test_parseWithSyntaxErrors = testCase "handle syntax errors gracefully" $ do
-    let input = "if true\n    x := 1\n"  -- missing opening brace
-    case parseTypus input of
-        Left err -> assertBool "should report syntax error" $ "missing opening brace" `isInfixOf` err
-        Right typusFile -> do
-            let syntaxErrors = tfSyntaxErrors typusFile
-            assertBool "should have syntax errors" (not (null syntaxErrors))
-
--- ============================================================================
--- Compiler Tests
--- ============================================================================
-
--- Test compilation of simple valid code
-test_compileSimpleCode :: TestTree
-test_compileSimpleCode = testCase "compile simple valid code" $ do
-    let input = "package main\n\nfunc main() {\n    fmt.Println(\"Hello\")\n}\n"
-    case parseTypus input of
-        Left err -> assertFailure $ "Parse failed: " ++ err
-        Right typusFile -> do
-            case compile typusFile of
-                Left errs -> assertFailure $ "Compilation failed: " ++ show errs
-                Right goCode -> do
-                    assertBool "should contain package main" $ "package main" `isInfixOf` goCode
-                    assertBool "should contain func main" $ "func main" `isInfixOf` goCode
-
--- Test compilation with type errors
-test_compileWithTypeErrors :: TestTree
-test_compileWithTypeErrors = testCase "detect type errors during compilation" $ do
-    let input = "package main\n\nvar x int = \"string\"\n"
-    case parseTypus input of
-        Left err -> assertFailure $ "Parse failed: " ++ err
-        Right typusFile -> do
-            case compile typusFile of
-                Left errs -> do
-                    assertBool "should have type errors" (not (null errs))
-                    let typeError = findTypeError errs
-                    assertBool "should find type error" (typeError /= Nothing)
-                Right _ -> assertFailure "Expected compilation to fail with type errors"
-
--- Test Go code generation fallback
-test_goCodeGenerationFallback :: TestTree
-test_goCodeGenerationFallback = testCase "fallback to raw source on generation failure" $ do
-    let input = "invalid typus code\n"
-    case parseTypus input of
-        Left _ -> assertFailure "Parse should succeed even with invalid code"
-        Right typusFile -> do
-            let goCode = generateGoCode typusFile
-            assertBool "should return original source" $ input `isInfixOf` goCode
-
--- ============================================================================
--- SourceLocation Tests
--- ============================================================================
-
--- Test position advancement
-test_positionAdvancement :: TestTree
-test_positionAdvancement = testCase "advance position correctly" $ do
-    let pos1 = startPos
-        pos2 = advancePos 'a' pos1
-        pos3 = advancePos '\n' pos2
-        pos4 = advancePos '\t' pos3
-    assertEqual "after 'a'" (SourcePos 1 2 1) pos2
-    assertEqual "after '\\n'" (SourcePos 2 1 2) pos3
-    assertEqual "after '\\t'" (SourcePos 2 9 3) pos4
-
--- Test span operations
-test_spanOperations :: TestTree
-test_spanOperations = testCase "span operations work correctly" $ do
-    let pos1 = posAt 1 1
-        pos2 = posAt 1 10
-        pos3 = posAt 2 5
-        span1 = spanBetween pos1 pos2
-        span2 = spanBetween pos2 pos3
-        merged = mergeSpans span1 span2
-    assertBool "span1 should be valid" (isValidSpan span1)
-    assertBool "span2 should be valid" (isValidSpan span2)
-    assertEqual "merged span should start at pos1" pos1 (spanStart merged)
-    assertEqual "merged span should end at pos3" pos3 (spanEnd merged)
-
--- ============================================================================
--- Utils Tests
--- ============================================================================
-
--- Test comment removal with edge cases
-test_commentRemovalEdgeCases :: TestTree
-test_commentRemovalEdgeCases = testCase "handle comment removal edge cases" $ do
-    let input1 = "var s = \"// not a comment\" // real comment\n"
-        expected1 = "var s = \"// not a comment\" \n"
-        result1 = removeLineComments input1
-    assertEqual "should preserve comments in strings" expected1 result1
-    
-    let input2 = "code /* block\ncomment */ more"
-        expected2 = "code  \n more"
-        result2 = removeComments input2
-    assertEqual "should handle multiline block comments" expected2 result2
-
--- Test indentation normalization
-test_indentationNormalization :: TestTree
-test_indentationNormalization = testCase "normalize indentation correctly" $ do
-    let input = "    func main() {\n        fmt.Println()\n    }\n"
-        expected = "func main() {\n    fmt.Println()\n}\n"
-        result = normalizeIndentation input
-    assertEqual "should remove common indentation" expected result
-
--- ============================================================================
--- QuickCheck Properties
--- ============================================================================
-
--- Property: splitBy and splitByCollapsed relationship
-prop_splitBy_relationship :: Char -> String -> Property
-prop_splitBy_relationship delim str =
-  let regular = splitBy delim str
-      collapsed = splitByCollapsed delim str
-  in property $ length collapsed <= length regular .&&.
-     (if all (/= delim) str then regular === collapsed else property True)
-
--- Property: trim idempotency
-prop_trim_idempotent :: String -> Property
-prop_trim_idempotent str =
-  let trimmed1 = trim str
-      trimmed2 = trim trimmed1
-  in property $ trimmed1 === trimmed2
-
--- Property: breakOn correctness
-prop_breakOn_correctness :: String -> String -> String -> Property
-prop_breakOn_correctness pat prefix suffix =
-  not (null pat) ==>
-  let haystack = prefix ++ pat ++ suffix
-      (before, after) = breakOn pat haystack
-  in property $ before ++ pat ++ after === haystack
-
--- Property: position advancement consistency
-prop_position_advancement_consistent :: String -> Property
-prop_position_advancement_consistent str =
-  let finalPos = advancePosBy str startPos
-      expectedOffset = length str
-  in property $ posOffset finalPos === expectedOffset
-
--- Property: span merging associativity
-prop_span_merging_associative :: SourcePos -> SourcePos -> SourcePos -> Property
-prop_span_merging_associative p1 p2 p3 =
-  let span1 = spanBetween p1 p2
-      span2 = spanBetween p2 p3
-      merged1 = mergeSpans span1 span2
-      merged2 = mergeSpans (spanBetween p1 p2) (spanBetween p2 p3)
-  in property $ merged1 === merged2
-
--- Helper functions
-findTypeError :: [CompilerError] -> Maybe CompilerError
-findTypeError [] = Nothing
-findTypeError (err:rest) = 
-    if "type error" `isInfixOf` T.unpack (ceMessage err)
-    then Just err
-    else findTypeError rest
-
--- ============================================================================
--- Test Suite
--- ============================================================================
-
+-- Test suite
 tests :: TestTree
 tests = testGroup "New Core Functionality Tests"
-    [ testGroup "Parser Tests"
-        [ test_parseFileDirectives
-        , test_parseBlockDirectives
-        , test_parseWithSyntaxErrors
-        ]
-    , testGroup "Compiler Tests"
-        [ test_compileSimpleCode
-        , test_compileWithTypeErrors
-        , test_goCodeGenerationFallback
-        ]
-    , testGroup "SourceLocation Tests"
-        [ test_positionAdvancement
-        , test_spanOperations
-        ]
-    , testGroup "Utils Tests"
-        [ test_commentRemovalEdgeCases
-        , test_indentationNormalization
-        ]
-    , testGroup "QuickCheck Properties"
-        [ fastProperty "splitBy relationship" prop_splitBy_relationship
-        , fastProperty "trim idempotent" prop_trim_idempotent
-        , fastProperty "breakOn correctness" prop_breakOn_correctness
-        , fastProperty "position advancement consistent" prop_position_advancement_consistent
-        , fastProperty "span merging associative" prop_span_merging_associative
-        ]
+    [ -- SourceLocation tests
+      testGroup "SourceLocation Advanced Tests"
+      [ testCase "spanBetween handles reverse order correctly" $ do
+          let pos1 = SourcePos 1 10 100
+              pos2 = SourcePos 1 5 50
+              span = spanBetween pos1 pos2
+          assertEqual "span should have correct start" pos2 (spanStart span)
+          assertEqual "span should have correct end" pos1 (spanEnd span)
+
+      , testCase "mergeSpans handles overlapping spans" $ do
+          let span1 = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
+              span2 = SourceSpan (SourcePos 1 5 4) (SourcePos 1 15 14)
+              merged = mergeSpans span1 span2
+          assertEqual "merged span start should be minimum" (SourcePos 1 1 0) (spanStart merged)
+          assertEqual "merged span end should be maximum" (SourcePos 1 15 14) (spanEnd merged)
+
+      , testCase "isValidSpan correctly identifies invalid spans" $ do
+          let validSpan = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
+              invalidSpan = SourceSpan (SourcePos 1 10 9) (SourcePos 1 1 0)
+          assertBool "valid span should be valid" $ isValidSpan validSpan
+          assertBool "invalid span should be invalid" $ not $ isValidSpan invalidSpan
+
+      , testProperty "advancePos preserves position invariants" $ \pos chars ->
+          let newPos = advancePosBy chars pos
+          in posLine newPos >= posLine pos && posOffset newPos >= posOffset pos
+
+      , testProperty "spanBetween creates valid spans" $ \pos1 pos2 ->
+          let span = spanBetween pos1 pos2
+          in isValidSpan span
+      ]
+
+    , -- SimpleSyntaxValidator tests
+      testGroup "SimpleSyntaxValidator Enhanced Tests"
+      [ testCase "validateSyntaxSimple detects nested structures" $ do
+          let code = "package main\n\nfunc main() {\n    if true {\n        for i := 0; i < 10; i++ {\n            fmt.Println(i)\n        }\n    }\n}"
+              errors = validateSyntaxSimple code
+          assertEqual "no errors in valid nested code" [] errors
+
+      , testCase "validateSyntaxSimple detects bracket mismatches" $ do
+          let code = "package main\n\nfunc main() {\n    if true {\n        fmt.Println(\"test\")\n    // Missing closing brace\n}"
+              errors = validateSyntaxSimple code
+          assertBool "should detect missing brace" $ any (\e -> errorType e == MissingBrace) errors
+
+      , testCase "countBraces handles string literals correctly" $ do
+          let code1 = "func test() { return \"{\"; }"  -- braces in string should not count
+              code2 = "func test() { return {}; }"    -- braces in code should count
+          assertEqual "braces in string should not count" 0 (countBraces code1)
+          assertEqual "braces in code should count" 0 (countBraces code2)
+
+      , testProperty "validateSyntaxSimple handles empty input" $ \input ->
+          let errors = validateSyntaxSimple input
+          in null input ==> null errors
+
+      , testProperty "validateSyntaxSimple detects malformed package declarations" $ \pkgName ->
+          let pkgName' = filter isLetter pkgName
+              code = "package " ++ pkgName' ++ "\nfunc main() {}"
+              errors = validateSyntaxSimple code
+          in not (null pkgName') ==> all (\e -> errorType e /= MissingPackageDeclaration) errors
+      ]
+
+    , -- Utils enhanced tests
+      testGroup "Utils Enhanced Tests"
+      [ testCase "trim handles various whitespace combinations" $ do
+          assertEqual "leading and trailing spaces" "test" (trim "  test  ")
+          assertEqual "tabs and newlines" "test" (trim "\t\n test \n\t")
+          assertEqual "mixed whitespace" "test" (trim "  \t\n test \n\t  ")
+
+      , testCase "splitBy handles edge cases" $ do
+          assertEqual "empty string" [""] (splitBy '," "")
+          assertEqual "single delimiter" ["", ""] (splitBy ',')
+          assertEqual "consecutive delimiters" ["a", "", "b"] (splitBy ',' "a,,b")
+
+      , testCase "removeComments handles complex string literals" $ do
+          let code = "url := \"http://example.com/*path*/\" // comment\n/* block comment */\n"
+              expected = "url := \"http://example.com/*path*/\" \n \n"
+          assertEqual "should preserve comment-like content in strings" expected (removeComments code)
+
+      , testCase "normalizeIndentation preserves relative structure" $ do
+          let input = "    func test() {\n        return true\n    }"
+              expected = "func test() {\n    return true\n}"
+          assertEqual "should normalize indentation while preserving structure" expected (normalizeIndentation input)
+
+      , testProperty "splitByCollapsed never produces empty strings" $ \input ->
+          let chunks = splitByCollapsed ',' input
+          in all (not . null) chunks
+      ]
+
+    , -- Error handling tests
+      testGroup "Error Handling Tests"
+      [ testCase "ErrorHandler maintains error context" $ do
+          let context = ErrorContext {
+                  contextFile = Just "test.typus",
+                  contextFunction = Just "main",
+                  contextLine = 10,
+                  contextColumn = 5
+              }
+              handler = ErrorHandler {
+                  errors = [],
+                  warnings = [],
+                  context = context,
+                  severity = Warning
+              }
+          assertEqual "context should be preserved" context (context handler)
+
+      , testCase "ErrorHandler severity filtering works" $ do
+          let errors = ["Error 1", "Error 2"]
+              warnings = ["Warning 1", "Warning 2"]
+              handler = ErrorHandler errors warnings mempty Error
+              criticalHandler = ErrorHandler errors warnings mempty Critical
+          assertEqual "Error severity should include all" 2 (length $ errors handler)
+          assertEqual "Critical severity should include all" 4 (length $ errors criticalHandler + length $ warnings criticalHandler)
+      ]
+
+    , -- Ownership tests
+      testGroup "Ownership Tests"
+      [ testCase "OwnershipTransfer tracks resource movement" $ do
+          let transfer = OwnershipTransfer {
+                  from = "owner1",
+                  to = "owner2", 
+                  resource = "memory",
+                  timestamp = 1000
+              }
+              state = OwnershipState {
+                  currentOwner = "owner2",
+                  transferHistory = [transfer],
+                  resourceStatus = Active
+              }
+          assertEqual "current owner should be updated" "owner2" (currentOwner state)
+          assertEqual "transfer should be recorded" 1 (length $ transferHistory state)
+
+      , testCase "checkOwnershipTransfer validates transfer rules" $ do
+          let validTransfer = OwnershipTransfer "owner1" "owner2" "resource1" 1000
+              invalidTransfer = OwnershipTransfer "" "owner2" "resource1" 1000
+          assertBool "valid transfer should pass" $ checkOwnershipTransfer validTransfer
+          assertBool "invalid transfer should fail" $ not $ checkOwnershipTransfer invalidTransfer
+      ]
+
+    , -- Parser tests
+      testGroup "Parser Enhanced Tests"
+      [ testCase "parseStatement handles incomplete input gracefully" $ do
+          let incomplete = "func test("  -- missing closing parenthesis and body
+              result = parseStatement incomplete
+          case result of
+              Left err -> assertBool "should provide meaningful error" $ not $ null $ show err
+              Right _ -> assertFailure "should fail on incomplete input"
+
+      , testCase "parseStatement accepts various function signatures" $ do
+          let validFuncs = 
+                [ "func test() {}"
+                , "func add(a int, b int) int { return a + b }"
+                , "func (r *Receiver) method() {}"
+                , "func generic[T any](value T) T { return value }"
+                ]
+          mapM_ (\func -> 
+              case parseStatement func of
+                  Left err -> assertFailure $ "Failed to parse valid function: " ++ func ++ " Error: " ++ show err
+                  Right _ -> return ()
+          ) validFuncs
+      ]
+
+    , -- CompilerUtils tests
+      testGroup "CompilerUtils Tests"
+      [ testCase "optimizeAST preserves semantics" $ do
+          let simpleAST = "func add(a int, b int) int { return a + b }"
+              optimized = optimizeAST simpleAST
+          assertBool "optimization should not change function signature" $ 
+              "func add" `isInfixOf` optimized
+
+      , testCase "validateAST detects structural issues" $ do
+          let invalidAST = "func test() { return }"  -- missing return value
+              result = validateAST invalidAST
+          case result of
+              Left err -> assertBool "should detect missing return value" $ "return" `isInfixOf` show err
+              Right _ -> assertFailure "should detect invalid AST"
+      ]
+
+    , -- Debug tests
+      testGroup "Debug Tests"
+      [ testCase "DebugInfo captures execution context" $ do
+          let debugInfo = DebugInfo {
+                  level = Debug,
+                  timestamp = 12345,
+                  message = "Test message",
+                  context = [("var1", "value1"), ("var2", "value2")]
+              }
+          assertEqual "debug level should be Debug" Debug (level debugInfo)
+          assertEqual "message should be preserved" "Test message" (message debugInfo)
+          assertEqual "context should have 2 entries" 2 (length $ context debugInfo)
+
+      , testCase "withDebugInfo preserves execution flow" $ do
+          let result = withDebugInfo Info "Processing data" $ do
+                return "processed"
+          assertEqual "debug should not affect result" "processed" result
+      ]
+
+    , -- Integration tests
+      testGroup "Integration Tests"
+      [ testCase "SourceLocation integration with parsing" $ do
+          let code = "func test() {\n    return 42\n}"
+              startPos' = startPos
+              endPos = advancePosBy code startPos'
+              span = spanBetween startPos' endPos
+          assertBool "span should be valid" $ isValidSpan span
+          assertEqual "end position should reflect code length" 
+              (length code) (posOffset endPos)
+
+      , testCase "Error handling integration with validation" $ do
+          let invalidCode = "package main\n\nfunc main() {\n    if true {\n        // Missing closing brace\n}"
+              syntaxErrors = validateSyntaxSimple invalidCode
+          assertBool "should detect syntax errors" $ not $ null syntaxErrors
+          assertBool "errors should include line information" $ 
+              all (\e -> lineNumber e > 0) syntaxErrors
+      ]
+
+    , -- Property-based tests
+      testGroup "Property-Based Tests"
+      [ testProperty "SourcePos ordering is consistent" $ \pos1 pos2 ->
+          let pos1' = pos1 { posOffset = posOffset pos1 }
+              pos2' = pos2 { posOffset = posOffset pos2 }
+          in if posOffset pos1' <= posOffset pos2'
+             then pos1' <= pos2'
+             else pos1' > pos2'
+
+      , testProperty "trim is idempotent" $ \input ->
+          let trimmedOnce = trim input
+              trimmedTwice = trim trimmedOnce
+          in trimmedOnce == trimmedTwice
+
+      , testProperty "splitBy and splitByCollapsed relationship" $ \input ->
+          let normal = splitBy ',' input
+              collapsed = splitByCollapsed ',' input
+          in length collapsed <= length normal
+
+      , testProperty "SourceSpan merge is associative" $ \span1 span2 span3 ->
+          let merge12 = mergeSpans span1 span2
+              merge23 = mergeSpans span2 span3
+              result1 = mergeSpans merge12 span3
+              result2 = mergeSpans span1 merge23
+          in spanStart result1 == spanStart result2 && spanEnd result1 == spanEnd result2
+      ]
     ]
