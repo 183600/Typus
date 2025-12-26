@@ -684,7 +684,14 @@ test-suite typus-test
         Test.Unit.DependentTypeValidationQuickCheckSpec,
         Test.Unit.TypeInferenceBoundaryQuickCheckSpec,
         Test.Unit.IntegrationEndToEndQuickCheckSpec,
-        Test.Unit.PerformanceEnhancedQuickCheckSpec
+        Test.Unit.PerformanceEnhancedQuickCheckSpec,
+
+        -- New Cabal Test Modules (5 comprehensive tests added)
+        Test.Unit.NewStringProcessingQuickCheckSpec,
+        Test.Unit.NewSourceLocationMathQuickCheckSpec,
+        Test.Unit.NewParserBoundaryQuickCheckSpec,
+        Test.Unit.NewErrorHandlerCoreQuickCheckSpec,
+        Test.Unit.NewComprehensiveCabalQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
