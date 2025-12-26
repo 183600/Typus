@@ -63,7 +63,7 @@ import qualified Test.Unit.ErrorRecoveryPropertiesSpec
 import qualified Test.Unit.DependentTypeSystemSpec
 import qualified Test.Unit.OwnershipAnalysisSpec
 import qualified Test.Unit.CompilerIRSpec
-import qualified Test.Unit.IntegrationQuickCheckSpec
+import qualified Test.Unit.EnhancedIntegrationQuickCheckSpec
 
 -- New Comprehensive QuickCheck Test Modules
 import qualified Test.Unit.TextProcessingBoundaryQuickCheckSpec
@@ -797,7 +797,7 @@ tests =
         , Test.Unit.DependentTypeSystemSpec.dependentTypeSystemSpec
         , Test.Unit.OwnershipAnalysisSpec.ownershipAnalysisSpec
         , Test.Unit.CompilerIRSpec.compilerIRSpec
-        , Test.Unit.IntegrationQuickCheckSpec.integrationQuickCheckSpec
+        , Test.Unit.EnhancedIntegrationQuickCheckSpec.tests
         ]
     , testGroup "New Enhanced Cabal Test Modules"
         [ Test.Unit.ToolingErrorSpec.tests

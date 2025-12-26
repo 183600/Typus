@@ -196,7 +196,9 @@ test-suite typus-test
         Test.Unit.DependentTypesSpec,
         Test.Unit.DependenciesCoreSpec,
         Test.Unit.ErrorHandlingSpec,
+        Test.Unit.ErrorHandlerCoreSpec,
         Test.Unit.EmbedAssetsSpec,
+        Test.Unit.EnhancedIntegrationQuickCheckSpec,
         Test.Unit.OwnershipReporterSpec,
         Test.Unit.AnalyzerCrossAnalysisSpec,
         Test.Unit.ToolingErrorSpec,
@@ -481,11 +483,13 @@ test-suite typus-test
         
         -- New Comprehensive QuickCheck Test Modules (2025)
         Test.Unit.SourceLocationAdvancedQuickCheckSpec,
+        Test.Unit.SourceLocationMathSpec,
         Test.Unit.ErrorHandlerBoundaryQuickCheckSpec,
         Test.Unit.ParserEdgeCaseQuickCheckSpec,
         Test.Unit.CompilerOptimizationQuickCheckSpec,
         Test.Unit.DependenciesInferenceQuickCheckSpec,
         Test.Unit.UtilsEfficiencyQuickCheckSpec,
+        Test.Unit.UtilsPropertiesExtendedSpec,
         Test.Unit.ValueAnalysisFlowQuickCheckSpec,
         Test.Unit.GoToolchainIntegrationQuickCheckSpec,
         Test.Unit.TypusEndToEndQuickCheckSpec,
@@ -505,7 +509,6 @@ test-suite typus-test
         Test.Unit.DependentTypeSystemSpec,
         Test.Unit.OwnershipAnalysisSpec,
         Test.Unit.CompilerIRSpec,
-        Test.Unit.IntegrationQuickCheckSpec,
         Test.Unit.NewCabalIntegrationSpec,
         Test.Unit.SimpleCabalTestSpec,
         Test.Unit.NewComprehensiveQuickCheckTestSpec
