@@ -636,7 +636,19 @@ test-suite typus-test
         -- New Additional Test Modules
         Test.Unit.AdditionalCorePropertiesSpec,
         Test.Unit.CompilerCorePropertiesSpec,
-        Test.Unit.BoundaryCasePropertiesSpec
+        Test.Unit.BoundaryCasePropertiesSpec,
+        
+        -- New Comprehensive QuickCheck Test Modules (2025)
+        Test.Unit.SourceLocationAdvancedTestSpec,
+        Test.Unit.ParserRobustnessTestSpec,
+        Test.Unit.CompilerOptimizationTestSpec,
+        Test.Unit.OwnershipMemorySafetyTestSpec,
+        Test.Unit.DependentTypeValidationTestSpec,
+        Test.Unit.ErrorHandlerRecoveryTestSpec,
+        Test.Unit.TypeInferenceAdvancedTestSpec,
+        Test.Unit.IntegrationEndToEndTestSpec,
+        Test.Unit.PerformanceRegressionTestSpec,
+        Test.Unit.SecurityValidationTestSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

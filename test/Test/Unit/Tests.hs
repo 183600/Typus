@@ -53,6 +53,18 @@ import qualified Test.Unit.NewParserQuickCheckTestsSpec
 import qualified Test.Unit.NewSourceLocationQuickCheckTestsSpec
 import qualified Test.Unit.NewUtilsQuickCheckTestsSpec
 
+-- New Comprehensive QuickCheck Test Modules (2025)
+import qualified Test.Unit.SourceLocationAdvancedTestSpec
+import qualified Test.Unit.ParserRobustnessTestSpec
+import qualified Test.Unit.CompilerOptimizationTestSpec
+import qualified Test.Unit.OwnershipMemorySafetyTestSpec
+import qualified Test.Unit.DependentTypeValidationTestSpec
+import qualified Test.Unit.ErrorHandlerRecoveryTestSpec
+import qualified Test.Unit.TypeInferenceAdvancedTestSpec
+import qualified Test.Unit.IntegrationEndToEndTestSpec
+import qualified Test.Unit.PerformanceRegressionTestSpec
+import qualified Test.Unit.SecurityValidationTestSpec
+
 -- New Additional Test Modules
 
 -- New Validation Test Modules (Added by user)
@@ -1369,4 +1381,18 @@ tests =
     [ Test.Unit.NewParserQuickCheckTestsSpec.tests
     , Test.Unit.NewSourceLocationQuickCheckTestsSpec.tests
     , Test.Unit.NewUtilsQuickCheckTestsSpec.tests
+    ]
+
+  -- New Comprehensive QuickCheck Test Modules (2025)
+  , testGroup "New Comprehensive QuickCheck Test Modules 2025"
+    [ Test.Unit.SourceLocationAdvancedTestSpec.tests
+    , Test.Unit.ParserRobustnessTestSpec.tests
+    , Test.Unit.CompilerOptimizationTestSpec.tests
+    , Test.Unit.OwnershipMemorySafetyTestSpec.tests
+    , Test.Unit.DependentTypeValidationTestSpec.tests
+    , Test.Unit.ErrorHandlerRecoveryTestSpec.tests
+    , Test.Unit.TypeInferenceAdvancedTestSpec.tests
+    , Test.Unit.IntegrationEndToEndTestSpec.tests
+    , Test.Unit.PerformanceRegressionTestSpec.tests
+    , Test.Unit.SecurityValidationTestSpec.tests
     ]
