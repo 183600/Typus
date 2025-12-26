@@ -131,6 +131,19 @@ import qualified Test.Unit.ParserErrorRecoveryAdvancedQuickCheckSpec
 import qualified Test.Unit.ConcurrentSafetyQuickCheckSpec
 import qualified Test.Unit.PerformanceRegressionQuickCheckSpec
 import qualified Test.Unit.IntegrationFeaturesQuickCheckSpec
+
+-- New Cabal Test Suite modules
+import qualified Test.Unit.SimpleCabalTestSpec
+import qualified Test.Unit.NewCabalTestSuiteSpec
+import qualified Test.Unit.SourceLocationCoreFunctionsSpec
+import qualified Test.Unit.ParserBasicFunctionsSpec
+import qualified Test.Unit.CompilerErrorHandlingSpec
+import qualified Test.Unit.OwnershipTransferSpec
+import qualified Test.Unit.TypeSystemBasicSpec
+import qualified Test.Unit.DependentTypesBasicSpec
+import qualified Test.Unit.SymbolTableOperationsSpec
+import qualified Test.Unit.ErrorRecoveryBasicSpec
+import qualified Test.Unit.IntegrationBasicSpec
 -- New Cabal QuickCheck test modules
 import qualified Test.Unit.NewCabalQuickCheckTestSpec
 import qualified Test.Unit.NewCabalTestsSpec
@@ -836,10 +849,21 @@ tests =
         , Test.Unit.DependentTypeSystemSpec.dependentTypeSystemSpec
         , Test.Unit.OwnershipAnalysisSpec.ownershipAnalysisSpec
         , Test.Unit.CompilerIRSpec.compilerIRSpec
-        , Test.Unit.EnhancedIntegrationQuickCheckSpec.tests
-        ]
-    , testGroup "New Enhanced Cabal Test Modules"
-        [ Test.Unit.ToolingErrorSpec.tests
+                , Test.Unit.EnhancedIntegrationQuickCheckSpec.tests
+            ]
+            , testGroup "New Cabal Test Suite"
+                    [ Test.Unit.SimpleCabalTestSpec.tests
+                    , Test.Unit.NewCabalTestSuiteSpec.tests
+                    , Test.Unit.SourceLocationCoreFunctionsSpec.tests
+                    , Test.Unit.ParserBasicFunctionsSpec.tests
+                    , Test.Unit.CompilerErrorHandlingSpec.tests
+                    , Test.Unit.OwnershipTransferSpec.tests
+                    , Test.Unit.TypeSystemBasicSpec.tests
+                    , Test.Unit.DependentTypesBasicSpec.tests
+                    , Test.Unit.SymbolTableOperationsSpec.tests
+                    , Test.Unit.ErrorRecoveryBasicSpec.tests
+                    , Test.Unit.IntegrationBasicSpec.tests
+                    ]            , testGroup "New Enhanced Cabal Test Modules"        [ Test.Unit.ToolingErrorSpec.tests
         , Test.Unit.CommandLineDebugSpec.tests
         , Test.Unit.EmbedAssetsSpec.tests
         , Test.Unit.DependenciesCoreSpec.tests
