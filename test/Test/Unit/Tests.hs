@@ -49,6 +49,17 @@ import qualified Test.Unit.NewCabalIntegrationSpec
 -- New Simple Cabal Test Module
 import qualified Test.Unit.SimpleCabalTestSpec
 
+-- New Core Functionality Test Modules
+import qualified Test.Unit.CoreParserSpec
+import qualified Test.Unit.CoreSourceLocationSpec
+import qualified Test.Unit.UtilsStringProcessingSpec
+
+-- New QuickCheck Property Test Modules
+import qualified Test.Unit.CoreQuickCheckPropertiesSpec
+import qualified Test.Unit.ParserPropertySpec
+import qualified Test.Unit.ErrorHandlingPropertySpec
+import qualified Test.Unit.NewComprehensivePropertySpec
+
 -- New Test Modules Added for Enhanced Coverage
 import qualified Test.Unit.NewErrorHandlingSpec
 import qualified Test.Unit.NewParserSpec
@@ -257,7 +268,7 @@ import qualified Test.Unit.BasicQuickCheckTestSpec
 import qualified Test.Unit.PropertyQuickCheckTestSpec
 import qualified Test.Unit.CoreQuickCheckTestSpec
 import qualified Test.Unit.AdvancedQuickCheckTestSpec
-import qualified Test.Unit.ComprehensiveQuickCheckTestSpec
+
 import qualified Test.Unit.FinalQuickCheckTestSpec
 -- New comprehensive QuickCheck test modules
 import qualified Test.Unit.NewCoreQuickCheckSpec
@@ -473,7 +484,7 @@ import qualified Test.Unit.NewCoreFunctionalitySpec
 import qualified Test.Unit.NewCoreQuickCheckSpec
 
 -- New comprehensive QuickCheck test module
-import qualified Test.Unit.NewComprehensiveQuickCheckTestSpec
+
 
 -- New QuickCheck test modules created for enhanced testing
 import qualified Test.Unit.NewUtilsPropertiesQuickCheckSpec
@@ -640,7 +651,7 @@ tests =
         , Test.Unit.SymbolTableManagementSpec.tests
         ]
     , Test.Unit.AdditionalCabalQuickCheckTestSpec.tests
-    , Test.Unit.NewComprehensiveQuickCheckTestSpec.tests
+    
     , testGroup "New QuickCheck Test Modules"
         [ Test.Unit.BasicParsingQuickCheckSpec.tests
         , Test.Unit.CompilerOptimizationsQuickCheckSpec.tests
@@ -851,5 +862,16 @@ tests =
         , Test.Unit.ParserErrorRecoveryAdvancedQuickCheckSpec.tests
         , Test.Unit.ConcurrentSafetyQuickCheckSpec.tests
         , Test.Unit.PerformanceRegressionQuickCheckSpec.tests
+        ]
+    , testGroup "New Core Functionality Tests"
+        [ Test.Unit.CoreParserSpec.tests
+        , Test.Unit.CoreSourceLocationSpec.tests
+        , Test.Unit.UtilsStringProcessingSpec.tests
+        ]
+    , testGroup "New QuickCheck Property Tests"
+        [ Test.Unit.CoreQuickCheckPropertiesSpec.tests
+        , Test.Unit.ParserPropertySpec.tests
+        , Test.Unit.ErrorHandlingPropertySpec.tests
+        , Test.Unit.NewComprehensivePropertySpec.tests
         ]
     ]

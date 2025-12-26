@@ -340,7 +340,7 @@ test-suite typus-test
         Test.Unit.PropertyQuickCheckTestSpec,
         Test.Unit.CoreQuickCheckTestSpec,
         Test.Unit.AdvancedQuickCheckTestSpec,
-        Test.Unit.ComprehensiveQuickCheckTestSpec,
+        
         Test.Unit.FinalQuickCheckTestSpec,
         Test.Unit.ParserConsistencyQuickCheckSpec,
         Test.Unit.StringUtilsQuickCheckTestSpec,
@@ -482,7 +482,7 @@ test-suite typus-test
         
         -- New Enhanced Test Modules (2025)
         Test.Unit.SourceLocationAdvancedQuickCheckSpec,
-        Test.Unit.SourceLocationMathSpec,
+        
         Test.Unit.ErrorHandlerBoundaryQuickCheckSpec,
         Test.Unit.ParserEdgeCaseQuickCheckSpec,
         Test.Unit.DependenciesInferenceQuickCheckSpec,
@@ -517,14 +517,25 @@ test-suite typus-test
         Test.Unit.CompilerIRSpec,
         Test.Unit.NewCabalIntegrationSpec,
         Test.Unit.SimpleCabalTestSpec,
-        Test.Unit.NewComprehensiveQuickCheckTestSpec,
+        
         
         -- New Enhanced Test Modules (2025)
         Test.Unit.DirectiveInteractionSpec,
         Test.Unit.OwnershipTransferBoundarySpec,
         Test.Unit.DependentTypeConstraintSpec,
         Test.Unit.TypeInferenceComplexSpec,
-        Test.Unit.SyntaxValidatorBoundarySpec
+        Test.Unit.SyntaxValidatorBoundarySpec,
+
+        -- New Core Functionality Test Modules
+        Test.Unit.CoreParserSpec,
+        Test.Unit.CoreSourceLocationSpec,
+        Test.Unit.UtilsStringProcessingSpec,
+
+        -- New QuickCheck Property Test Modules
+        Test.Unit.CoreQuickCheckPropertiesSpec,
+        Test.Unit.ParserPropertySpec,
+        Test.Unit.ErrorHandlingPropertySpec,
+        Test.Unit.NewComprehensivePropertySpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
