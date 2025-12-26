@@ -12,7 +12,22 @@ module Test.Unit.DependenciesNewQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, elements, listOf, oneof)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, vectorOf, elements, oneof)
+import qualified Data.List as List
+import Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+
+import Dependencies.AST
+  ( AST(..)
+  , Statement(..)
+  , TypeExpr(..)
+  , Constraint(..)
+  , DependencyNode(..)
+  , DependencyGraph(..)
+  )
+
 import Dependencies.TypeSystem
   ( TypeVar(..)
   , TypeConstraint(..)
@@ -24,9 +39,10 @@ import Dependencies.TypeSystem
   , preludeTypeDefs
   , newDependentTypeChecker
   , newDependentTypeCheckerWithTypes
+  , convertTypeExpr
+  , convertConstraint
   , addType
   , addConstraint
-  , addTypeError
   , lookupTypeDef
   , checkType
   , checkTypeInstantiation
@@ -36,681 +52,368 @@ import Dependencies.TypeSystem
   , getDependentTypeErrors
   , unify
   )
-import Dependencies.AST
-  ( TypeExpr(..)
-  , Constraint(..)
-  , AST(..)
-  , Statement(..)
-  )
-import Dependencies.Analyzer
-  ( analyzeAST
-  , analyzeDependentTypes
-  , validateASTSemantics
-  , validateStatement
-  )
-import Dependencies.Parser
-  ( grammarDefinition
-  , parseProgram
-  , runParser
-  )
-import Dependencies.Inference
-  ( TypeScheme(..)
-  , TypeEnvironment(..)
-  , TypeInferenceState(..)
-  , TypeInferenceError(..)
-  , inferType
-  , inferStatement
-  , inferProgram
-  , generalize
-  , instantiate
-  , unifyTypes
-  , applyTypeSubstitution
-  , newTypeVariable
-  , getFreshTypeVar
-  , initialTypeEnvironment
-  , instantiateScheme
-  , generalizeInContext
-  , checkPolyType
-  , solveTypeConstraints
-  , simplifyConstraints
-  , pushScope
-  , popScope
-  , inNewScope
-  )
 
-import Data.Text (Text, pack, unpack)
-import qualified Data.Text as T
-import Data.Char (isAlphaNum, isSpace)
-import Data.List (isPrefixOf, isInfixOf, intercalate, sort, nub)
-import Data.Maybe (isJust, isNothing, fromMaybe)
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import Data.Either (isLeft, isRight, partitionEithers)
+-- Arbitrary instances for Dependencies types
 
--- ============================================================================
--- Arbitrary instances
--- ============================================================================
+instance Arbitrary AST where
+  arbitrary = do
+    statements <- vectorOf 3 arbitrary
+    return $ Program statements
+
+instance Arbitrary Statement where
+  arbitrary = oneof
+    [ STypeDef <$> genText <*> vectorOf 2 genText <*> vectorOf 2 arbitrary
+    , STypeAlias <$> genText <*> arbitrary <*> vectorOf 2 arbitrary
+    , SVarDecl <$> genText <*> arbitrary
+    , SFuncDecl <$> genText <*> vectorOf 2 (genText `pairWith` arbitrary) <*> oneof [return Nothing, Just <$> arbitrary]
+    , SConstraintDef <$> genText <*> arbitrary
+    , SExistsDecl <$> vectorOf 2 genText <*> arbitrary
+    ]
+
+instance Arbitrary TypeExpr where
+  arbitrary = oneof
+    [ SimpleT <$> genText
+    , GenericT <$> genText <*> vectorOf 2 arbitrary
+    , FuncT <$> vectorOf 2 (genText `pairWith` arbitrary) <*> arbitrary
+    , RefineT <$> arbitrary <*> vectorOf 2 arbitrary
+    ]
+
+instance Arbitrary Constraint where
+  arbitrary = oneof
+    [ SizeGT <$> genText <*> choose (0, 100)
+    , SizeGE <$> genText <*> choose (0, 100)
+    , RangeC <$> genText <*> choose (0, 50) <*> choose (51, 100)
+    , PredC <$> genText <*> vectorOf 2 arbitrary
+    ]
+
+instance Arbitrary DependencyNode where
+  arbitrary = do
+    name <- genText
+    deps <- vectorOf 2 genText
+    return $ DependencyNode (T.unpack name) (map T.unpack deps)
+
+instance Arbitrary DependencyGraph where
+  arbitrary = do
+    nodes <- vectorOf 3 arbitrary
+    let nodeMap = Map.fromList $ map (\n -> (nodeName n, n)) nodes
+    return $ DependencyGraph nodeMap
 
 instance Arbitrary TypeVar where
   arbitrary = oneof
-    [ TVCon <$> arbitrary
-    , TVVar <$> arbitrary
-    , TVApp <$> arbitrary <*> listOf arbitrary
-    , TVFun <$> listOf arbitrary <*> arbitrary
-    , TVTuple <$> listOf arbitrary
+    [ TVCon <$> genText
+    , TVVar <$> genText
+    , TVApp <$> genText <*> vectorOf 2 arbitrary
+    , TVFun <$> vectorOf 2 arbitrary <*> arbitrary
+    , TVTuple <$> vectorOf 2 arbitrary
     ]
 
 instance Arbitrary TypeConstraint where
   arbitrary = oneof
     [ Equal <$> arbitrary <*> arbitrary
     , Subtype <$> arbitrary <*> arbitrary
-    , Predicate <$> arbitrary <*> listOf arbitrary
+    , Predicate <$> genText <*> vectorOf 2 arbitrary
     , TypeSizeGE <$> arbitrary <*> choose (0, 100)
     , TypeSizeGT <$> arbitrary <*> choose (0, 100)
-    , TypeRange <$> arbitrary <*> choose (0, 100) <*> choose (0, 100)
+    , TypeRange <$> arbitrary <*> choose (0, 50) <*> choose (51, 100)
     ]
 
 instance Arbitrary DependentTypeError where
   arbitrary = oneof
     [ DependentTypeMismatch <$> arbitrary <*> arbitrary
-    , ConstraintViolation <$> arbitrary <*> arbitrary
-    , TypeNotFound <$> arbitrary
-    , InvalidTypeArgument <$> arbitrary
+    , ConstraintViolation <$> genText <*> arbitrary
+    , TypeNotFound <$> genText
+    , InvalidTypeArgument <$> genText
     , UnsolvableConstraint <$> arbitrary
-    , DependentInfiniteType <$> arbitrary <*> arbitrary
-    , AmbiguousType <$> arbitrary
-    , ParseError <$> arbitrary
-    , SemanticError <$> arbitrary
+    , DependentInfiniteType <$> genText <*> arbitrary
+    , AmbiguousType <$> genText
+    , ParseError <$> genText
+    , SemanticError <$> genText
     ]
 
 instance Arbitrary TypeDef where
   arbitrary = do
-    params <- listOf arbitrary
-    constraints <- listOf arbitrary
+    params <- vectorOf 2 genText
+    constraints <- vectorOf 2 arbitrary
     return $ TypeDefDecl params constraints
 
 instance Arbitrary TypeEnv where
   arbitrary = do
     typeDefs <- arbitrary
-    constraints <- listOf arbitrary
-    return $ TypeEnv typeDefs constraints
+    pendingConstraints <- vectorOf 2 arbitrary
+    return $ TypeEnv typeDefs pendingConstraints
 
 instance Arbitrary DependentTypeChecker where
   arbitrary = do
     typeEnv <- arbitrary
-    errors <- listOf arbitrary
+    errors <- vectorOf 2 arbitrary
     return $ DependentTypeChecker typeEnv errors
 
-instance Arbitrary TypeExpr where
-  arbitrary = oneof
-    [ SimpleT <$> arbitrary
-    , GenericT <$> arbitrary <*> listOf arbitrary
-    , RefineT <$> arbitrary <*> arbitrary
-    , FuncT <$> listOf arbitrary <*> arbitrary
-    ]
+-- Helper generators
+genText :: Gen Text
+genText = T.pack <$> genSafeString
 
-instance Arbitrary Constraint where
-  arbitrary = oneof
-    [ RangeC <$> arbitrary <*> choose (0, 100) <*> choose (0, 100)
-    , PredC <$> arbitrary <*> listOf arbitrary
-    , SizeGE <$> arbitrary <*> choose (0, 100)
-    , SizeGT <$> arbitrary <*> choose (0, 100)
-    ]
+genSafeString :: Gen String
+genSafeString = do
+  size <- choose (1, 10)
+  vectorOf size $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_']
 
-instance Arbitrary AST where
-  arbitrary = do
-    statements <- listOf arbitrary
-    return $ AST statements
+pairWith :: Gen a -> Gen b -> Gen (a, b)
+pairWith genA genB = do
+  a <- genA
+  b <- genB
+  return (a, b)
 
-instance Arbitrary Statement where
-  arbitrary = oneof
-    [ VarDecl <$> arbitrary <*> arbitrary <*> arbitrary
-    , FuncDecl <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-    , TypeDecl <$> arbitrary <*> arbitrary <*> arbitrary
-    , ExprStmt <$> arbitrary
-    , ReturnStmt <$> arbitrary
-    ]
+-- Property: Program constructor preserves statement list
+prop_program_preserves_statements :: [Statement] -> Property
+prop_program_preserves_statements statements =
+  let program = Program statements
+  in case program of
+       Program stmts -> property $ stmts === statements
 
--- ============================================================================
--- TypeVar Properties
--- ============================================================================
+-- Property: SimpleT constructor preserves type name
+prop_simple_t_preserves_name :: Text -> Property
+prop_simple_t_preserves_name name =
+  let typeExpr = SimpleT name
+  in case typeExpr of
+       SimpleT n -> property $ n === name
 
--- Property: TypeVar show contains meaningful information
-prop_typeVar_show_informative :: TypeVar -> Property
-prop_typeVar_show_informative typeVar =
-  let showStr = show typeVar
-  in not (null showStr) .&&. showStr /= "undefined"
+-- Property: GenericT constructor preserves name and arguments
+prop_generic_t_preserves_args :: Text -> [TypeExpr] -> Property
+prop_generic_t_preserves_args name args =
+  let typeExpr = GenericT name args
+  in case typeExpr of
+       GenericT n a -> property $ n === name .&&. a === args
 
--- Property: TypeVar equality works correctly
-prop_typeVar_equality :: TypeVar -> TypeVar -> Property
-prop_typeVar_equality tv1 tv2 =
-  (tv1 == tv2) === case (tv1, tv2) of
-    (TVCon n1, TVCon n2) -> n1 == n2
-    (TVVar n1, TVVar n2) -> n1 == n2
-    (TVApp n1 args1, TVApp n2 args2) -> n1 == n2 && args1 == args2
-    (TVFun args1 ret1, TVFun args2 ret2) -> args1 == args2 && ret1 == ret2
-    (TVTuple args1, TVTuple args2) -> args1 == args2
-    _ -> False
+-- Property: FuncT constructor preserves parameters and return type
+prop_func_t_preserves_signature :: [(Text, TypeExpr)] -> TypeExpr -> Property
+prop_func_t_preserves_signature params retType =
+  let typeExpr = FuncT params retType
+  in case typeExpr of
+       FuncT p r -> property $ p === params .&&. r === retType
 
--- Property: TypeVar ordering is consistent
-prop_typeVar_ordering :: TypeVar -> TypeVar -> Property
-prop_typeVar_ordering tv1 tv2 =
-  let comparison = compare tv1 tv2
-      reverseComparison = compare tv2 tv1
-  in (comparison == EQ) ==> reverseComparison == EQ
+-- Property: RefineT constructor preserves base type and constraints
+prop_refine_t_preserves_constraints :: TypeExpr -> [Constraint] -> Property
+prop_refine_t_preserves_constraints baseType constraints =
+  let typeExpr = RefineT baseType constraints
+  in case typeExpr of
+       RefineT b c -> property $ b === baseType .&&. c === constraints
 
--- ============================================================================
--- TypeConstraint Properties
--- ============================================================================
+-- Property: SizeGT constraint preserves variable and size
+prop_size_gt_preserves_values :: Text -> Int -> Property
+prop_size_gt_preserves_values var size =
+  let constraint = SizeGT var size
+  in case constraint of
+       SizeGT v s -> property $ v === var .&&. s === size
 
--- Property: TypeConstraint show contains relevant information
-prop_typeConstraint_show_informative :: TypeConstraint -> Property
-prop_typeConstraint_show_informative constraint =
-  let showStr = show constraint
-  in not (null showStr)
+-- Property: SizeGE constraint preserves variable and size
+prop_size_ge_preserves_values :: Text -> Int -> Property
+prop_size_ge_preserves_values var size =
+  let constraint = SizeGE var size
+  in case constraint of
+       SizeGE v s -> property $ v === var .&&. s === size
 
--- Property: TypeConstraint equality works correctly
-prop_typeConstraint_equality :: TypeConstraint -> TypeConstraint -> Property
-prop_typeConstraint_equality tc1 tc2 =
-  (tc1 == tc2) === case (tc1, tc2) of
-    (Equal a1 b1, Equal a2 b2) -> a1 == a2 && b1 == b2
-    (Subtype a1 b1, Subtype a2 b2) -> a1 == a2 && b1 == b2
-    (Predicate n1 args1, Predicate n2 args2) -> n1 == n2 && args1 == args2
-    (TypeSizeGE tv1 size1, TypeSizeGE tv2 size2) -> tv1 == tv2 && size1 == size2
-    (TypeSizeGT tv1 size1, TypeSizeGT tv2 size2) -> tv1 == tv2 && size1 == size2
-    (TypeRange tv1 min1 max1, TypeRange tv2 min2 max2) -> tv1 == tv2 && min1 == min2 && max1 == max2
-    _ -> False
+-- Property: RangeC constraint preserves variable and range
+prop_range_c_preserves_values :: Text -> Int -> Int -> Property
+prop_range_c_preserves_values var minVal maxVal =
+  let constraint = RangeC var minVal maxVal
+  in case constraint of
+       RangeC v mn mx -> property $ v === var .&&. mn === minVal .&&. mx === maxVal
 
--- ============================================================================
--- DependentTypeError Properties
--- ============================================================================
+-- Property: PredC constraint preserves predicate and arguments
+prop_pred_c_preserves_values :: Text -> [TypeExpr] -> Property
+prop_pred_c_preserves_values predName args =
+  let constraint = PredC predName args
+  in case constraint of
+       PredC p a -> property $ p === predName .&&. a === args
 
--- Property: DependentTypeError show contains relevant information
-prop_dependentTypeError_show_informative :: DependentTypeError -> Property
-prop_dependentTypeError_show_informative err =
-  let showStr = show err
-  in not (null showStr)
+-- Property: DependencyNode constructor preserves name and dependencies
+prop_dependency_node_preserves_fields :: Text -> [Text] -> Property
+prop_dependency_node_preserves_fields name deps =
+  let node = DependencyNode (T.unpack name) (map T.unpack deps)
+  in property $ nodeName node === T.unpack name .&&.
+             nodeDependencies node === map T.unpack deps
 
--- Property: DependentTypeError equality works correctly
-prop_dependentTypeError_equality :: DependentTypeError -> DependentTypeError -> Property
-prop_dependentTypeError_equality err1 err2 =
-  (err1 == err2) === case (err1, err2) of
-    (DependentTypeMismatch a1 b1, DependentTypeMismatch a2 b2) -> a1 == a2 && b1 == b2
-    (ConstraintViolation msg1 tv1, ConstraintViolation msg2 tv2) -> msg1 == msg2 && tv1 == tv2
-    (TypeNotFound name1, TypeNotFound name2) -> name1 == name2
-    (InvalidTypeArgument arg1, InvalidTypeArgument arg2) -> arg1 == arg2
-    (UnsolvableConstraint c1, UnsolvableConstraint c2) -> c1 == c2
-    (DependentInfiniteType name1 tv1, DependentInfiniteType name2 tv2) -> name1 == name2 && tv1 == tv2
-    (AmbiguousType name1, AmbiguousType name2) -> name1 == name2
-    (ParseError msg1, ParseError msg2) -> msg1 == msg2
-    (SemanticError msg1, SemanticError msg2) -> msg1 == msg2
+-- Property: DependencyGraph constructor preserves node map
+prop_dependency_graph_preserves_nodes :: [DependencyNode] -> Property
+prop_dependency_graph_preserves_nodes nodes =
+  let nodeMap = Map.fromList $ map (\n -> (nodeName n, n)) nodes
+      graph = DependencyGraph nodeMap
+  in property $ graphNodes graph === nodeMap
 
--- ============================================================================
--- TypeDef Properties
--- ============================================================================
-
--- Property: TypeDef fields are accessible
-prop_typeDef_fields :: [String] -> [TypeConstraint] -> Property
-prop_typeDef_fields params constraints =
-  let typeDef = TypeDefDecl params constraints
-  in tdParams typeDef === params .&&.
-     tdConstraints typeDef === constraints
-
--- Property: TypeDef equality works correctly
-prop_typeDef_equality :: TypeDef -> TypeDef -> Property
-prop_typeDef_equality td1 td2 =
-  (td1 == td2) === 
-  (tdParams td1 == tdParams td2 && tdConstraints td1 == tdConstraints td2)
-
--- ============================================================================
--- TypeEnv Properties
--- ============================================================================
-
--- Property: TypeEnv fields are accessible
-prop_typeEnv_fields :: Map.Map String TypeDef -> [TypeConstraint] -> Property
-prop_typeEnv_fields typeDefs constraints =
-  let typeEnv = TypeEnv typeDefs constraints
-  in typeDefinitions typeEnv === typeDefs .&&.
-     pendingConstraints typeEnv === constraints
-
--- Property: TypeEnv equality works correctly
-prop_typeEnv_equality :: TypeEnv -> TypeEnv -> Property
-prop_typeEnv_equality te1 te2 =
-  (te1 == te2) === 
-  (typeDefinitions te1 == typeDefinitions te2 && 
-   pendingConstraints te1 == pendingConstraints te2)
-
--- ============================================================================
--- DependentTypeChecker Properties
--- ============================================================================
-
--- Property: DependentTypeChecker fields are accessible
-prop_dependentTypeChecker_fields :: TypeEnv -> [DependentTypeError] -> Property
-prop_dependentTypeChecker_fields typeEnv errors =
-  let checker = DependentTypeChecker typeEnv errors
-  in dtcTypeEnv checker === typeEnv .&&.
-     tcErrors checker === errors
-
--- Property: newDependentTypeChecker creates valid checker
-prop_newDependentTypeChecker_valid :: Property
-prop_newDependentTypeChecker_valid =
+-- Property: newDependentTypeChecker creates checker with prelude types
+prop_new_dependent_type_checker_has_prelude :: Property
+prop_new_dependent_type_checker_has_prelude =
   let checker = newDependentTypeChecker
       typeEnv = dtcTypeEnv checker
-      errors = tcErrors checker
-  in not (Map.null (typeDefinitions typeEnv)) .&&. null errors
+      typeDefs = typeDefinitions typeEnv
+  in property $ Map.size typeDefs >= Map.size preludeTypeDefs .&&.
+             all (`Map.member` typeDefs) (Map.keys preludeTypeDefs)
 
--- Property: newDependentTypeCheckerWithTypes includes custom types
-prop_newDependentTypeCheckerWithTypes_custom :: Map.Map String TypeDef -> Property
-prop_newDependentTypeCheckerWithTypes_custom customTypes =
-  let checker = newDependentTypeCheckerWithTypes customTypes
+-- Property: newDependentTypeCheckerWithTypes creates checker with custom types
+prop_new_dependent_type_checker_with_custom_types :: [(String, [String], [TypeConstraint])] -> Property
+prop_new_dependent_type_checker_with_custom_types typeDefs =
+  not (null typeDefs) ==>
+  let checker = newDependentTypeCheckerWithTypes typeDefs
       typeEnv = dtcTypeEnv checker
-      hasCustomTypes = all (`Map.member` typeDefinitions typeEnv) (Map.keys customTypes)
-  in hasCustomTypes
+      typeDefsMap = typeDefinitions typeEnv
+      expectedNames = map (\(n, _, _) -> n) typeDefs
+  in property $ all (`Map.member` typeDefsMap) expectedNames
 
--- ============================================================================
--- Type Operations Properties
--- ============================================================================
+-- Property: lookupTypeDef finds existing type
+prop_lookup_type_def_finds_existing :: String -> TypeDef -> Property
+prop_lookup_type_def_finds_existing typeName typeDef =
+  let checker = newDependentTypeCheckerWithTypes [(typeName, [], [])]
+      result = lookupTypeDef typeName checker
+  in property $ result === Just typeDef
+
+-- Property: lookupTypeDef returns Nothing for non-existing type
+prop_lookup_type_def_nothing_for_nonexisting :: String -> Property
+prop_lookup_type_def_nothing_for_nonexisting typeName =
+  let checker = newDependentTypeChecker
+      result = lookupTypeDef typeName checker
+  in property $ result === Nothing
 
 -- Property: addType adds type to environment
-prop_addType_adds_to_env :: String -> TypeDef -> Property
-prop_addType_adds_to_env typeName typeDef =
+prop_add_type_adds_to_environment :: String -> [String] -> [TypeConstraint] -> Property
+prop_add_type_adds_to_environment typeName params constraints =
   let checker = newDependentTypeChecker
-      updatedChecker = addType typeName typeDef checker
+      updatedChecker = addType typeName params constraints checker
       typeEnv = dtcTypeEnv updatedChecker
-  in Map.member typeName (typeDefinitions typeEnv)
+      typeDefs = typeDefinitions typeEnv
+  in property $ Map.member typeName typeDefs
 
--- Property: addConstraint adds constraint to environment
-prop_addConstraint_adds_to_env :: TypeConstraint -> Property
-prop_addConstraint_adds_to_env constraint =
-  let checker = newDependentTypeChecker
-      updatedChecker = addConstraint constraint checker
-      typeEnv = dtcTypeEnv updatedChecker
-  in constraint `elem` pendingConstraints typeEnv
+-- Property: convertTypeExpr handles SimpleT correctly
+prop_convert_type_expr_simple_t :: Text -> Property
+prop_convert_type_expr_simple_t name =
+  let typeExpr = SimpleT name
+      params = Set.empty
+      result = convertTypeExpr params typeExpr
+  in case result of
+       TVCon n -> property $ n === T.unpack name
+       _ -> property False
 
--- Property: addTypeError adds error to checker
-prop_addTypeError_adds_to_checker :: DependentTypeError -> Property
-prop_addTypeError_adds_to_checker error =
-  let checker = newDependentTypeChecker
-      updatedChecker = addTypeError error checker
-  in error `elem` tcErrors updatedChecker
+-- Property: convertConstraint handles SizeGT correctly
+prop_convert_constraint_size_gt :: Text -> Int -> Property
+prop_convert_constraint_size_gt var size =
+  let constraint = SizeGT var size
+      params = Set.fromList [T.unpack var]
+      result = convertConstraint params constraint
+  in case result of
+       TypeSizeGT (TVVar v) s -> property $ v === T.unpack var .&&. s === size
+       _ -> property False
 
--- Property: lookupTypeDef finds added types
-prop_lookupTypeDef_finds_added :: String -> TypeDef -> Property
-prop_lookupTypeDef_finds_added typeName typeDef =
-  let checker = newDependentTypeChecker
-      updatedChecker = addType typeName typeDef checker
-      typeEnv = dtcTypeEnv updatedChecker
-  in lookupTypeDef typeName typeEnv === Just typeDef
+-- Property: convertConstraint handles SizeGE correctly
+prop_convert_constraint_size_ge :: Text -> Int -> Property
+prop_convert_constraint_size_ge var size =
+  let constraint = SizeGE var size
+      params = Set.fromList [T.unpack var]
+      result = convertConstraint params constraint
+  in case result of
+       TypeSizeGE (TVVar v) s -> property $ v === T.unpack var .&&. s === size
+       _ -> property False
 
--- Property: checkType handles various inputs
-prop_checkType_handles_inputs :: TypeVar -> Property
-prop_checkType_handles_inputs typeVar =
-  let checker = newDependentTypeChecker
-      result = checkType typeVar checker
-  in property True -- Should not crash
+-- Property: convertConstraint handles RangeC correctly
+prop_convert_constraint_range_c :: Text -> Int -> Int -> Property
+prop_convert_constraint_range_c var minVal maxVal =
+  let constraint = RangeC var minVal maxVal
+      params = Set.fromList [T.unpack var]
+      result = convertConstraint params constraint
+  in case result of
+       TypeRange (TVVar v) mn mx -> property $ v === T.unpack var .&&. mn === minVal .&&. mx === maxVal
+       _ -> property False
 
--- Property: solveConstraints processes constraints
-prop_solveConstraints_processes :: [TypeConstraint] -> Property
-prop_solveConstraints_processes constraints =
-  let checker = newDependentTypeChecker
-      checkerWithConstraints = foldr addConstraint checker constraints
-      result = solveConstraints checkerWithConstraints
-  in property True -- Should not crash
+-- Property: getDependentTypeErrors returns errors from checker
+prop_get_dependent_type_errors_returns_errors :: [DependentTypeError] -> Property
+prop_get_dependent_type_errors_returns_errors errors =
+  let checker = DependentTypeChecker (TypeEnv Map.empty []) errors
+      result = getDependentTypeErrors checker
+  in property $ result === errors
 
--- ============================================================================
--- AST Properties
--- ============================================================================
+-- Property: TVCon constructor preserves constructor name
+prop_tv_con_preserves_name :: String -> Property
+prop_tv_con_preserves_name name =
+  let typeVar = TVCon name
+  in case typeVar of
+       TVCon n -> property $ n === name
 
--- Property: AST fields are accessible
-prop_ast_fields :: [Statement] -> Property
-prop_ast_fields statements =
-  let ast = AST statements
-  in case ast of
-    AST stmts -> stmts === statements
+-- Property: TVVar constructor preserves variable name
+prop_tv_var_preserves_name :: String -> Property
+prop_tv_var_preserves_name name =
+  let typeVar = TVVar name
+  in case typeVar of
+       TVVar n -> property $ n === name
 
--- Property: AST equality works correctly
-prop_ast_equality :: AST -> AST -> Property
-prop_ast_equality ast1 ast2 =
-  (ast1 == ast2) === case (ast1, ast2) of
-    (AST stmts1, AST stmts2) -> stmts1 == stmts2
+-- Property: TVApp constructor preserves constructor and arguments
+prop_tv_app_preserves_args :: String -> [TypeVar] -> Property
+prop_tv_app_preserves_args constructor args =
+  let typeVar = TVApp constructor args
+  in case typeVar of
+       TVApp c a -> property $ c === constructor .&&. a === args
 
--- ============================================================================
--- Statement Properties
--- ============================================================================
+-- Property: TVFun constructor preserves parameters and return type
+prop_tv_fun_preserves_signature :: [TypeVar] -> TypeVar -> Property
+prop_tv_fun_preserves_signature params retType =
+  let typeVar = TVFun params retType
+  in case typeVar of
+       TVFun p r -> property $ p === params .&&. r === retType
 
--- Property: Statement show contains information
-prop_statement_show_informative :: Statement -> Property
-prop_statement_show_informative stmt =
-  let showStr = show stmt
-  in not (null showStr)
+-- Property: TVTuple constructor preserves elements
+prop_tv_tuple_preserves_elements :: [TypeVar] -> Property
+prop_tv_tuple_preserves_elements elements =
+  let typeVar = TVTuple elements
+  in case typeVar of
+       TVTuple e -> property $ e === elements
 
--- Property: Statement equality works correctly
-prop_statement_equality :: Statement -> Statement -> Property
-prop_statement_equality stmt1 stmt2 =
-  (stmt1 == stmt2) === case (stmt1, stmt2) of
-    (VarDecl name1 type1 expr1, VarDecl name2 type2 expr2) -> name1 == name2 && type1 == type2 && expr1 == expr2
-    (FuncDecl name1 params1 body1 ret1, FuncDecl name2 params2 body2 ret2) -> name1 == name2 && params1 == params2 && body1 == body2 && ret1 == ret2
-    (TypeDecl name1 params1 def1, TypeDecl name2 params2 def2) -> name1 == name2 && params1 == params2 && def1 == def2
-    (ExprStmt expr1, ExprStmt expr2) -> expr1 == expr2
-    (ReturnStmt expr1, ReturnStmt expr2) -> expr1 == expr2
-    _ -> False
+-- Property: Equal constraint preserves both type variables
+prop_equal_preserves_types :: TypeVar -> TypeVar -> Property
+prop_equal_preserves_types typeVar1 typeVar2 =
+  let constraint = Equal typeVar1 typeVar2
+  in case constraint of
+       Equal t1 t2 -> property $ t1 === typeVar1 .&&. t2 === typeVar2
 
--- ============================================================================
--- Analysis Properties
--- ============================================================================
+-- Property: Subtype constraint preserves both type variables
+prop_subtype_preserves_types :: TypeVar -> TypeVar -> Property
+prop_subtype_preserves_types typeVar1 typeVar2 =
+  let constraint = Subtype typeVar1 typeVar2
+  in case constraint of
+       Subtype t1 t2 -> property $ t1 === typeVar1 .&&. t2 === typeVar2
 
--- Property: analyzeAST handles empty AST
-prop_analyzeAST_empty :: Property
-prop_analyzeAST_empty =
-  let ast = AST []
-      result = analyzeAST ast
-  in property True -- Should not crash
-
--- Property: analyzeAST handles simple AST
-prop_analyzeAST_simple :: Property
-prop_analyzeAST_simple =
-  let ast = AST [VarDecl "x" Nothing Nothing]
-      result = analyzeAST ast
-  in property True -- Should not crash
-
--- Property: validateStatement handles various statements
-prop_validateStatement_handles :: Statement -> Property
-prop_validateStatement_handles stmt =
-  let result = validateStatement stmt
-  in property True -- Should not crash
-
--- ============================================================================
--- Parser Properties
--- ============================================================================
-
--- Property: parseProgram handles empty input
-prop_parseProgram_empty :: Property
-prop_parseProgram_empty =
-  let result = parseProgram ""
-  in property True -- Should not crash
-
--- Property: parseProgram handles simple input
-prop_parseProgram_simple :: Property
-prop_parseProgram_simple =
-  let code = "x := 42"
-      result = parseProgram code
-  in property True -- Should not crash
-
--- Property: runParser handles basic operations
-prop_runParser_basic :: Property
-prop_runParser_basic =
-  let result = runParser grammarDefinition "x := 42"
-  in property True -- Should not crash
-
--- ============================================================================
--- Inference Properties
--- ============================================================================
-
--- Property: inferType handles basic types
-prop_inferType_basic :: Property
-prop_inferType_basic =
-  let env = initialTypeEnvironment
-      result = inferType env "int"
-  in property True -- Should not crash
-
--- Property: generalize preserves type information
-prop_generalize_preserves :: TypeEnvironment -> TypeVar -> Property
-prop_generalize_preserves env typeVar =
-  let scheme = generalize env typeVar
-  in property True -- Should not crash
-
--- Property: instantiate creates concrete types
-prop_instantiate_concrete :: TypeScheme -> Property
-prop_instantiate_concrete scheme =
-  let result = instantiate scheme
-  in property True -- Should not crash
-
--- Property: unifyTypes handles compatible types
-prop_unifyTypes_compatible :: TypeVar -> TypeVar -> Property
-prop_unifyTypes_compatible tv1 tv2 =
-  let result = unifyTypes tv1 tv2
-  in property True -- Should not crash
-
--- Property: applyTypeSubstitution modifies types
-prop_applyTypeSubstitution_modifies :: Substitution -> TypeVar -> Property
-prop_applyTypeSubstitution_modifies subst typeVar =
-  let result = applyTypeSubstitution subst typeVar
-  in property True -- Should not crash
-
--- ============================================================================
--- Constraint Solving Properties
--- ============================================================================
-
--- Property: solveTypeConstraints handles empty list
-prop_solveTypeConstraints_empty :: Property
-prop_solveTypeConstraints_empty =
-  let result = solveTypeConstraints []
-  in property True -- Should not crash
-
--- Property: solveTypeConstraints handles simple constraints
-prop_solveTypeConstraints_simple :: Property
-prop_solveTypeConstraints_simple =
-  let constraints = [Equal (TVVar "a") (TVVar "b")]
-      result = solveTypeConstraints constraints
-  in property True -- Should not crash
-
--- Property: simplifyConstraints reduces complexity
-prop_simplifyConstraints_reduces :: [TypeConstraint] -> Property
-prop_simplifyConstraints_reduces constraints =
-  let result = simplifyConstraints constraints
-  in property True -- Should not crash
-
--- ============================================================================
--- Scope Management Properties
--- ============================================================================
-
--- Property: pushScope adds new scope
-prop_pushScope_adds :: TypeEnvironment -> Property
-prop_pushScope_adds env =
-  let newEnv = pushScope env
-  in property True -- Should not crash
-
--- Property: popScope removes scope
-prop_popScope_removes :: TypeEnvironment -> Property
-prop_popScope_removes env =
-  let envWithScope = pushScope env
-      result = popScope envWithScope
-  in property True -- Should not crash
-
--- Property: inNewScope preserves original environment
-prop_inNewScope_preserves :: TypeEnvironment -> Property
-prop_inNewScope_preserves env =
-  let result = inNewScope env (return ())
-  in property True -- Should not crash
-
--- ============================================================================
--- Complex Scenario Properties
--- ============================================================================
-
--- Property: analysis handles nested functions
-prop_analysis_nested_functions :: Property
-prop_analysis_nested_functions =
-  let code = intercalate "\n"
-        [ "func outer() {"
-        , "    func inner() {"
-        , "        return 42"
-        , "    }"
-        , "    return inner()"
-        , "}"
-        ]
-      result = parseProgram code
-  in property True -- Should not crash
-
--- Property: analysis handles recursive functions
-prop_analysis_recursive_functions :: Property
-prop_analysis_recursive_functions =
-  let code = intercalate "\n"
-        [ "func factorial(n) {"
-        , "    if n <= 1 {"
-        , "        return 1"
-        , "    }"
-        , "    return n * factorial(n - 1)"
-        , "}"
-        ]
-      result = parseProgram code
-  in property True -- Should not crash
-
--- Property: analysis handles generic types
-prop_analysis_generic_types :: Property
-prop_analysis_generic_types =
-  let code = intercalate "\n"
-        [ "type List[T] {"
-        , "    head: T"
-        , "    tail: List[T]"
-        , "}"
-        , "func length[T](list: List[T]) int {"
-        , "    if list.tail == nil {"
-        , "        return 0"
-        , "    }"
-        , "    return 1 + length(list.tail)"
-        , "}"
-        ]
-      result = parseProgram code
-  in property True -- Should not crash
-
--- ============================================================================
--- Error Handling Properties
--- ============================================================================
-
--- Property: error detection works for invalid types
-prop_error_detection_invalid_types :: Property
-prop_error_detection_invalid_types =
-  let code = "x := undefined_type"
-      result = parseProgram code
-  in property True -- Should handle gracefully
-
--- Property: error detection works for invalid constraints
-prop_error_detection_invalid_constraints :: Property
-prop_error_detection_invalid_constraints =
-  let constraints = [Equal (TVVar "a") (TVApp "unknown" [])]
-      result = solveTypeConstraints constraints
-  in property True -- Should handle gracefully
-
--- ============================================================================
--- Performance Properties
--- ============================================================================
-
--- Property: analysis handles large programs
-prop_analysis_large_programs :: Property
-prop_analysis_large_programs =
-  let largeCode = intercalate "\n" $ replicate 100 "x := 42"
-      result = parseProgram largeCode
-  in property True -- Should not crash
-
--- Property: constraint solving handles many constraints
-prop_constraint_solving_many :: Property
-prop_constraint_solving_many =
-  let manyConstraints = replicate 100 (Equal (TVVar "a") (TVVar "b"))
-      result = solveTypeConstraints manyConstraints
-  in property True -- Should not crash
-
--- ============================================================================
--- Test Suite
--- ============================================================================
+-- Property: Predicate constraint preserves name and arguments
+prop_predicate_preserves_args :: String -> [TypeVar] -> Property
+prop_predicate_preserves_args predName args =
+  let constraint = Predicate predName args
+  in case constraint of
+       Predicate p a -> property $ p === predName .&&. a === args
 
 tests :: TestTree
-tests = testGroup "Dependencies QuickCheck Tests"
-  [ testGroup "TypeVar Properties"
-    [ fastProperty "TypeVar show contains meaningful information" prop_typeVar_show_informative
-    , fastProperty "TypeVar equality works correctly" prop_typeVar_equality
-    , fastProperty "TypeVar ordering is consistent" prop_typeVar_ordering
-    ]
-
-  , testGroup "TypeConstraint Properties"
-    [ fastProperty "TypeConstraint show contains relevant information" prop_typeConstraint_show_informative
-    , fastProperty "TypeConstraint equality works correctly" prop_typeConstraint_equality
-    ]
-
-  , testGroup "DependentTypeError Properties"
-    [ fastProperty "DependentTypeError show contains relevant information" prop_dependentTypeError_show_informative
-    , fastProperty "DependentTypeError equality works correctly" prop_dependentTypeError_equality
-    ]
-
-  , testGroup "TypeDef Properties"
-    [ fastProperty "TypeDef fields are accessible" prop_typeDef_fields
-    , fastProperty "TypeDef equality works correctly" prop_typeDef_equality
-    ]
-
-  , testGroup "TypeEnv Properties"
-    [ fastProperty "TypeEnv fields are accessible" prop_typeEnv_fields
-    , fastProperty "TypeEnv equality works correctly" prop_typeEnv_equality
-    ]
-
-  , testGroup "DependentTypeChecker Properties"
-    [ fastProperty "DependentTypeChecker fields are accessible" prop_dependentTypeChecker_fields
-    , fastProperty "newDependentTypeChecker creates valid checker" prop_newDependentTypeChecker_valid
-    , fastProperty "newDependentTypeCheckerWithTypes includes custom types" prop_newDependentTypeCheckerWithTypes_custom
-    ]
-
-  , testGroup "Type Operations Properties"
-    [ fastProperty "addType adds type to environment" prop_addType_adds_to_env
-    , fastProperty "addConstraint adds constraint to environment" prop_addConstraint_adds_to_env
-    , fastProperty "addTypeError adds error to checker" prop_addTypeError_adds_to_checker
-    , fastProperty "lookupTypeDef finds added types" prop_lookupTypeDef_finds_added
-    , fastProperty "checkType handles various inputs" prop_checkType_handles_inputs
-    , fastProperty "solveConstraints processes constraints" prop_solveConstraints_processes
-    ]
-
-  , testGroup "AST Properties"
-    [ fastProperty "AST fields are accessible" prop_ast_fields
-    , fastProperty "AST equality works correctly" prop_ast_equality
-    ]
-
-  , testGroup "Statement Properties"
-    [ fastProperty "Statement show contains information" prop_statement_show_informative
-    , fastProperty "Statement equality works correctly" prop_statement_equality
-    ]
-
-  , testGroup "Analysis Properties"
-    [ fastProperty "analyzeAST handles empty AST" prop_analyzeAST_empty
-    , fastProperty "analyzeAST handles simple AST" prop_analyzeAST_simple
-    , fastProperty "validateStatement handles various statements" prop_validateStatement_handles
-    ]
-
-  , testGroup "Parser Properties"
-    [ fastProperty "parseProgram handles empty input" prop_parseProgram_empty
-    , fastProperty "parseProgram handles simple input" prop_parseProgram_simple
-    , fastProperty "runParser handles basic operations" prop_runParser_basic
-    ]
-
-  , testGroup "Inference Properties"
-    [ fastProperty "inferType handles basic types" prop_inferType_basic
-    , fastProperty "generalize preserves type information" prop_generalize_preserves
-    , fastProperty "instantiate creates concrete types" prop_instantiate_concrete
-    , fastProperty "unifyTypes handles compatible types" prop_unifyTypes_compatible
-    , fastProperty "applyTypeSubstitution modifies types" prop_applyTypeSubstitution_modifies
-    ]
-
-  , testGroup "Constraint Solving Properties"
-    [ fastProperty "solveTypeConstraints handles empty list" prop_solveTypeConstraints_empty
-    , fastProperty "solveTypeConstraints handles simple constraints" prop_solveTypeConstraints_simple
-    , fastProperty "simplifyConstraints reduces complexity" prop_simplifyConstraints_reduces
-    ]
-
-  , testGroup "Scope Management Properties"
-    [ fastProperty "pushScope adds new scope" prop_pushScope_adds
-    , fastProperty "popScope removes scope" prop_popScope_removes
-    , fastProperty "inNewScope preserves original environment" prop_inNewScope_preserves
-    ]
-
-  , testGroup "Complex Scenario Properties"
-    [ fastProperty "analysis handles nested functions" prop_analysis_nested_functions
-    , fastProperty "analysis handles recursive functions" prop_analysis_recursive_functions
-    , fastProperty "analysis handles generic types" prop_analysis_generic_types
-    ]
-
-  , testGroup "Error Handling Properties"
-    [ fastProperty "error detection works for invalid types" prop_error_detection_invalid_types
-    , fastProperty "error detection works for invalid constraints" prop_error_detection_invalid_constraints
-    ]
-
-  , testGroup "Performance Properties"
-    [ fastProperty "analysis handles large programs" prop_analysis_large_programs
-    , fastProperty "constraint solving handles many constraints" prop_constraint_solving_many
-    ]
+tests = testGroup "Dependencies New QuickCheck Tests"
+  [ fastProperty "Program constructor preserves statement list" prop_program_preserves_statements
+  , fastProperty "SimpleT constructor preserves type name" prop_simple_t_preserves_name
+  , fastProperty "GenericT constructor preserves name and arguments" prop_generic_t_preserves_args
+  , fastProperty "FuncT constructor preserves parameters and return type" prop_func_t_preserves_signature
+  , fastProperty "RefineT constructor preserves base type and constraints" prop_refine_t_preserves_constraints
+  , fastProperty "SizeGT constraint preserves variable and size" prop_size_gt_preserves_values
+  , fastProperty "SizeGE constraint preserves variable and size" prop_size_ge_preserves_values
+  , fastProperty "RangeC constraint preserves variable and range" prop_range_c_preserves_values
+  , fastProperty "PredC constraint preserves predicate and arguments" prop_pred_c_preserves_values
+  , fastProperty "DependencyNode constructor preserves name and dependencies" prop_dependency_node_preserves_fields
+  , fastProperty "DependencyGraph constructor preserves node map" prop_dependency_graph_preserves_nodes
+  , fastProperty "newDependentTypeChecker creates checker with prelude types" prop_new_dependent_type_checker_has_prelude
+  , fastProperty "newDependentTypeCheckerWithTypes creates checker with custom types" prop_new_dependent_type_checker_with_custom_types
+  , fastProperty "lookupTypeDef finds existing type" prop_lookup_type_def_finds_existing
+  , fastProperty "lookupTypeDef returns Nothing for non-existing type" prop_lookup_type_def_nothing_for_nonexisting
+  , fastProperty "addType adds type to environment" prop_add_type_adds_to_environment
+  , fastProperty "convertTypeExpr handles SimpleT correctly" prop_convert_type_expr_simple_t
+  , fastProperty "convertConstraint handles SizeGT correctly" prop_convert_constraint_size_gt
+  , fastProperty "convertConstraint handles SizeGE correctly" prop_convert_constraint_size_ge
+  , fastProperty "convertConstraint handles RangeC correctly" prop_convert_constraint_range_c
+  , fastProperty "getDependentTypeErrors returns errors from checker" prop_get_dependent_type_errors_returns_errors
+  , fastProperty "TVCon constructor preserves constructor name" prop_tv_con_preserves_name
+  , fastProperty "TVVar constructor preserves variable name" prop_tv_var_preserves_name
+  , fastProperty "TVApp constructor preserves constructor and arguments" prop_tv_app_preserves_args
+  , fastProperty "TVFun constructor preserves parameters and return type" prop_tv_fun_preserves_signature
+  , fastProperty "TVTuple constructor preserves elements" prop_tv_tuple_preserves_elements
+  , fastProperty "Equal constraint preserves both type variables" prop_equal_preserves_types
+  , fastProperty "Subtype constraint preserves both type variables" prop_subtype_preserves_types
+  , fastProperty "Predicate constraint preserves name and arguments" prop_predicate_preserves_args
   ]

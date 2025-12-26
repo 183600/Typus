@@ -601,7 +601,15 @@ test-suite typus-test
         Test.Unit.CompilerCoreQuickCheckTests,
         Test.Unit.ErrorHandlerCoreQuickCheckTests,
         Test.Unit.DependentTypesCoreQuickCheckTests,
-        Test.Unit.NewCoreQuickCheckTestSpec
+        Test.Unit.NewCoreQuickCheckTestSpec,
+        
+        -- New QuickCheck Test Modules (2025)
+        Test.Unit.SourceLocationNewQuickCheckSpec,
+        Test.Unit.ParserNewQuickCheckSpec,
+        Test.Unit.ErrorHandlerNewQuickCheckSpec,
+        Test.Unit.DependenciesNewQuickCheckSpec,
+        Test.Unit.OwnershipNewQuickCheckSpec,
+        Test.Unit.UtilsNewQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
