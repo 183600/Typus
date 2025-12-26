@@ -43,6 +43,12 @@ import qualified Test.Unit.NewAdditionalTestSpec
 -- New Comprehensive Tests Module
 import qualified Test.Unit.NewComprehensiveTestsSpec
 
+-- New Cabal Integration Test Module
+import qualified Test.Unit.NewCabalIntegrationSpec
+
+-- New Simple Cabal Test Module
+import qualified Test.Unit.SimpleCabalTestSpec
+
 -- New Test Modules Added for Enhanced Coverage
 import qualified Test.Unit.NewErrorHandlingSpec
 import qualified Test.Unit.NewParserSpec
@@ -753,6 +759,8 @@ tests =
         ]
     , Test.Unit.NewAdditionalTestSpec.tests
     , Test.Unit.NewComprehensiveTestsSpec.tests
+    , Test.Unit.NewCabalIntegrationSpec.tests
+    , Test.Unit.SimpleCabalTestSpec.tests
     , testGroup "New Comprehensive QuickCheck Test Modules (2025)"
         [ Test.Unit.TextProcessingBoundaryQuickCheckSpec.tests
         , Test.Unit.SourceLocationMathQuickCheckSpec.tests
