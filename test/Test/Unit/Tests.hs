@@ -53,6 +53,15 @@ import qualified Test.Unit.PerformanceRegressionCabalsSpec
 import qualified Test.Unit.SecurityValidationCabalsSpec
 
 -- New Core QuickCheck Test Modules
+import qualified Test.Unit.SourceLocationCoreQuickCheckSpec
+import qualified Test.Unit.ErrorHandlerCoreQuickCheckSpec
+import qualified Test.Unit.ParserCoreQuickCheckSpec
+import qualified Test.Unit.UtilsCoreQuickCheckSpec
+import qualified Test.Unit.CompilerIRCoreQuickCheckSpec
+import qualified Test.Unit.OwnershipTransferCoreQuickCheckSpec
+import qualified Test.Unit.DependencyAnalysisCoreQuickCheckSpec
+
+-- New Core QuickCheck Test Modules
 import qualified Test.Unit.DebugCoreQuickCheckSpec
 import qualified Test.Unit.EnhancedDebugCoreQuickCheckSpec
 import qualified Test.Unit.CompilerUtilsCoreQuickCheckSpec
@@ -1436,4 +1445,15 @@ tests =
     , Test.Unit.IntegrationEndToEndCabalsSpec.tests
     , Test.Unit.PerformanceRegressionCabalsSpec.tests
     , Test.Unit.SecurityValidationCabalsSpec.tests
+    ]
+
+  -- New Core QuickCheck Test Modules
+  , testGroup "New Core QuickCheck Test Modules"
+    [ Test.Unit.SourceLocationCoreQuickCheckSpec.tests
+    , Test.Unit.ErrorHandlerCoreQuickCheckSpec.tests
+    , Test.Unit.ParserCoreQuickCheckSpec.tests
+    , Test.Unit.UtilsCoreQuickCheckSpec.tests
+    , Test.Unit.CompilerIRCoreQuickCheckSpec.tests
+    , Test.Unit.OwnershipTransferCoreQuickCheckSpec.tests
+    , Test.Unit.DependencyAnalysisCoreQuickCheckSpec.tests
     ]
