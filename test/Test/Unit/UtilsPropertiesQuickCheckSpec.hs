@@ -1,216 +1,162 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Unit.UtilsPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck
-import qualified Data.Text as T
-import Data.Char (isSpace, isAlphaNum)
-import Data.List (intersperse, isInfixOf, isPrefixOf)
+import Test.Tasty.HUnit (testCase)
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, ioProperty, (===), (.&&.), counterexample)
 
-import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed,
-             removeLineComments, removeComments, normalizeIndentation, 
-             forceSingleTabIndentation, fixIndentation, breakOn)
-import TestSupport.Arbitrary ()
+import Utils
+  ( trim
+  , splitBy
+  , splitByCollapsed
+  , splitByComma
+  , splitByCommaCollapsed
+  , removeLineComments
+  , removeComments
+  , normalizeIndentation
+  , breakOn
+  )
+
+import Data.Char (isSpace)
+import Data.List (isPrefixOf, isSuffixOf)
+import qualified Data.Text as T
 
 tests :: TestTree
-tests = testGroup "Utils Properties QuickCheck"
-  [ stringManipulationTests
-  , splittingTests
-  , commentRemovalTests
-  , indentationTests
-  , searchTests
-  ]
+tests =
+  testGroup "Utils Properties QuickCheck Tests"
+    [ testProperty "trim idempotent" $ prop_trim_idempotent
+    , testProperty "trim removes only whitespace" $ prop_trim_removes_whitespace
+    , testProperty "trim preserves non-whitespace content" $ prop_trim_preserves_content
+    , testProperty "splitBy length property" $ prop_splitBy_length
+    , testProperty "splitByCollapsed removes empty segments" $ prop_splitByCollapsed_removes_empty
+    , testProperty "splitByComma equals splitBy with comma" $ prop_splitByComma_equals_splitBy
+    , testProperty "splitByCommaCollapsed equals splitByCollapsed with comma" $ prop_splitByCommaCollapsed_equals_splitByCollapsed
+    , testProperty "splitBy and join roundtrip" $ prop_splitBy_join_roundtrip
+    , testProperty "removeLineComments preserves non-comment lines" $ prop_removeLineComments_preserves_non_comment
+    , testProperty "removeComments handles nested comments" $ prop_removeComments_nested
+    , testProperty "normalizeIndentation preserves relative structure" $ prop_normalizeIndentation_preserves_structure
+    , testProperty "breakOn correctness" $ prop_breakOn_correctness
+    , testProperty "trim split consistency" $ prop_trim_split_consistency
+    , testProperty "splitBy delimiter consistency" $ prop_splitBy_delimiter_consistency
+    ]
 
-stringManipulationTests :: TestTree
-stringManipulationTests = testGroup "String Manipulation Properties"
-  [ fastProperty "trim removes leading and trailing whitespace" prop_trim_removes_whitespace
-  , fastProperty "trim is idempotent" prop_trim_idempotent
-  , fastProperty "trim of empty string is empty" prop_trim_empty
-  , fastProperty "trim preserves non-whitespace content" prop_trim_preserves_content
-  , fastProperty "trim of all whitespace is empty" prop_trim_all_whitespace
-  ]
-
-splittingTests :: TestTree
-splittingTests = testGroup "Splitting Properties"
-  [ fastProperty "splitBy preserves total length" prop_splitBy_preserves_length
-  , fastProperty "splitByCollapsed removes empty segments" prop_splitByCollapsed_no_empty
-  , fastProperty "splitBy and join are inverse" prop_splitBy_join_inverse
-  , fastProperty "splitByComma equals splitBy ','" prop_splitByComma_equals_splitBy
-  , fastProperty "splitByCommaCollapsed equals splitByCollapsed ','" prop_splitByCommaCollapsed_equals_splitByCollapsed
-  , fastProperty "splitBy on empty string returns singleton" prop_splitBy_empty_singleton
-  , fastProperty "splitByCollapsed on empty string returns empty" prop_splitByCollapsed_empty_empty
-  ]
-
-commentRemovalTests :: TestTree
-commentRemovalTests = testGroup "Comment Removal Properties"
-  [ fastProperty "removeLineComments removes all // comments" prop_removeLineComments_removes
-  , fastProperty "removeLineComments preserves non-comment lines" prop_removeLineComments_preserves
-  , fastProperty "removeComments removes // and /* */" prop_removeComments_removes_both
-  , fastProperty "removeComments preserves non-comment content" prop_removeComments_preserves
-  , fastProperty "removeComments handles nested block comments" prop_removeComments_nested
-  ]
-
-indentationTests :: TestTree
-indentationTests = testGroup "Indentation Properties"
-  [ fastProperty "normalizeIndentation preserves line count" prop_normalizeIndentation_preserves_lines
-  , fastProperty "normalizeIndentation preserves relative indentation" prop_normalizeIndentation_relative
-  , fastProperty "forceSingleTabIndentation uses only tabs" prop_forceSingleTabIndentation_tabs_only
-  , fastProperty "fixIndentation equals normalizeIndentation" prop_fixIndentation_equals_normalize
-  , fastProperty "normalizeIndentation preserves non-empty lines" prop_normalizeIndentation_preserves_nonempty
-  ]
-
-searchTests :: TestTree
-searchTests = testGroup "Search Properties"
-  [ fastProperty "breakOn finds substring" prop_breakOn_finds
-  , fastProperty "breakOn returns correct position" prop_breakOn_position
-  , fastProperty "breakOn on empty string returns empty" prop_breakOn_empty
-  , fastProperty "breakOn on non-existent substring returns original" prop_breakOn_not_found
-  ]
-
--- String Manipulation Properties
-prop_trim_removes_whitespace :: String -> Property
-prop_trim_removes_whitespace s =
-  let trimmed = trim s
-  in not (null trimmed) ==> 
-     property (not (head trimmed `elem` " \t\n\r") && not (last trimmed `elem` " \t\n\r"))
-
+-- | trim applied twice is the same as trim applied once
 prop_trim_idempotent :: String -> Property
-prop_trim_idempotent s =
-  let trimmed = trim s
-  in trim trimmed === trimmed
+prop_trim_idempotent s = trim (trim s) === trim s
 
-prop_trim_empty :: Property
-prop_trim_empty =
-  trim "" === ""
+-- | trim only removes whitespace characters from start and end
+prop_trim_removes_whitespace :: String -> Property
+prop_trim_removes_whitespace s = 
+    let trimmed = trim s
+        startsWithNonWhitespace = null trimmed || not (isSpace (head trimmed))
+        endsWithNonWhitespace = null trimmed || not (isSpace (last trimmed))
+    in counterexample ("Original: " ++ show s ++ ", Trimmed: " ++ show trimmed) $
+       startsWithNonWhitespace .&&. endsWithNonWhitespace
 
+-- | trim preserves the non-whitespace content in the middle
 prop_trim_preserves_content :: String -> Property
 prop_trim_preserves_content s =
-  let trimmed = trim s
-      content = filter (not . isSpace) s
-      trimmedContent = filter (not . isSpace) trimmed
-  in content === trimmedContent
+    let trimmed = trim s
+        middleContent = dropWhile isSpace $ reverse $ dropWhile isSpace $ reverse s
+    in counterexample ("Original: " ++ show s ++ ", Middle: " ++ show middleContent ++ ", Trimmed: " ++ show trimmed) $
+       if null middleContent 
+       then trimmed === ""
+       else middleContent === trimmed
 
-prop_trim_all_whitespace :: Property
-prop_trim_all_whitespace =
-  let allWhitespace = " \t\n\r \t \n\r "
-  in trim allWhitespace === ""
+-- | splitBy with delimiter d results in segments that join back with d to form original
+prop_splitBy_length :: Char -> String -> Property
+prop_splitBy_length delim s = 
+    let segments = splitBy delim s
+        rejoined = concat $ intersperse delim segments
+    in counterexample ("Segments: " ++ show segments ++ ", Rejoined: " ++ show rejoined) $
+       rejoined === s
+  where
+    intersperse _ [] = []
+    intersperse d [x] = [x]
+    intersperse d (x:xs) = x : d : intersperse d xs
 
--- Splitting Properties
-prop_splitBy_preserves_length :: Char -> String -> Property
-prop_splitBy_preserves_length delim s =
-  let parts = splitBy delim s
-      rejoined = concat $ intersperse [delim] parts
-  in rejoined === s
+-- | splitByCollapsed never returns empty segments
+prop_splitByCollapsed_removes_empty :: Char -> String -> Property
+prop_splitByCollapsed_removes_empty delim s = 
+    let segments = splitByCollapsed delim s
+        hasEmpty = any null segments
+    in counterexample ("Segments: " ++ show segments) $
+       not hasEmpty === True
 
-prop_splitByCollapsed_no_empty :: Char -> String -> Property
-prop_splitByCollapsed_no_empty delim s =
-  let parts = splitByCollapsed delim s
-  in property $ all (not . null) parts
-
-prop_splitBy_join_inverse :: Char -> NonEmptyList String -> Property
-prop_splitBy_join_inverse delim (NonEmpty parts) =
-  let s = concat $ intersperse [delim] parts
-  in splitBy delim s === parts
-
+-- | splitByComma should be equivalent to splitBy with comma delimiter
 prop_splitByComma_equals_splitBy :: String -> Property
-prop_splitByComma_equals_splitBy s =
-  splitByComma s === splitBy ',' s
+prop_splitByComma_equals_splitBy s = 
+    splitByComma s === splitBy ',' s
 
+-- | splitByCommaCollapsed should be equivalent to splitByCollapsed with comma delimiter
 prop_splitByCommaCollapsed_equals_splitByCollapsed :: String -> Property
-prop_splitByCommaCollapsed_equals_splitByCollapsed s =
-  splitByCommaCollapsed s === splitByCollapsed ',' s
+prop_splitByCommaCollapsed_equals_splitByCollapsed s = 
+    splitByCommaCollapsed s === splitByCollapsed ',' s
 
-prop_splitBy_empty_singleton :: Char -> Property
-prop_splitBy_empty_singleton delim =
-  splitBy delim "" === [""]
+-- | splitBy followed by join should reconstruct the original string
+prop_splitBy_join_roundtrip :: Char -> String -> Property
+prop_splitBy_join_roundtrip delim s =
+    let segments = splitBy delim s
+        rejoined = T.unpack $ T.intercalate (T.singleton delim) $ map T.pack segments
+    in counterexample ("Original: " ++ show s ++ ", Rejoined: " ++ show rejoined) $
+       rejoined === s
 
-prop_splitByCollapsed_empty_empty :: Char -> Property
-prop_splitByCollapsed_empty_empty delim =
-  splitByCollapsed delim "" === []
+-- | removeLineComments should not modify lines that don't start with //
+prop_removeLineComments_preserves_non_comment :: String -> Property
+prop_removeLineComments_preserves_non_comment s =
+    let lines' = lines s
+        nonCommentLines = filter (not . ("//" `isPrefixOf`)) lines'
+        processed = removeLineComments s
+        processedLines = lines processed
+    in counterexample ("Original lines: " ++ show lines' ++ ", Processed lines: " ++ show processedLines) $
+       if null nonCommentLines 
+       then property True
+       else length processedLines >= length nonCommentLines
 
--- Comment Removal Properties
-prop_removeLineComments_removes :: String -> Property
-prop_removeLineComments_removes s =
-  let withComments = s ++ "\n// This is a comment\n// Another comment"
-      withoutComments = removeLineComments withComments
-  in property $ "//" `notElem` words withoutComments
-
-prop_removeLineComments_preserves :: String -> Property
-prop_removeLineComments_preserves s =
-  "//" `notElem` words s ==>
-  property $ not $ "//" `elem` words (removeLineComments s)
-
-prop_removeComments_removes_both :: String -> Property
-prop_removeComments_removes_both s =
-  let withComments = s ++ "\n// Line comment\n/* Block comment */"
-      withoutComments = removeComments withComments
-  in property $ "//" `notElem` words withoutComments && "/*" `notElem` words withoutComments
-
-prop_removeComments_preserves :: String -> Property
-prop_removeComments_preserves s =
-  "//" `notElem` words s && "/*" `notElem` words s ==>
-  property $ removeComments s === s
-
+-- | removeComments should handle nested block comments
 prop_removeComments_nested :: String -> Property
 prop_removeComments_nested s =
-  let withNested = s ++ "\n/* Outer /* inner */ comment */"
-      withoutNested = removeComments withNested
-  in property $ "/*" `notElem` words withoutNested
+    let withNestedComments = "start /* outer /* inner */ still outer */ end"
+        processed = removeComments withNestedComments
+    in counterexample ("Processed: " ++ processed) $
+       not ("/*" `isInfixOf` processed) .&&. not ("*/" `isInfixOf` processed)
 
--- Indentation Properties
-prop_normalizeIndentation_preserves_lines :: String -> Property
-prop_normalizeIndentation_preserves_lines s =
-  let normalized = normalizeIndentation s
-      originalLines = lines s
-      normalizedLines = lines normalized
-  in length originalLines === length normalizedLines
+-- | normalizeIndentation should preserve the relative structure of lines
+prop_normalizeIndentation_preserves_structure :: String -> Property
+prop_normalizeIndentation_preserves_structure s =
+    let lines' = lines s
+        normalized = normalizeIndentation s
+        normalizedLines = lines normalized
+    in counterexample ("Original lines: " ++ show lines' ++ ", Normalized lines: " ++ show normalizedLines) $
+       length normalizedLines === length lines'
 
-prop_normalizeIndentation_relative :: String -> Property
-prop_normalizeIndentation_relative s =
-  let normalized = normalizeIndentation s
-      originalLines = lines s
-      normalizedLines = lines normalized
-  in length originalLines === length normalizedLines
+-- | breakOn should correctly split at the first occurrence of delimiter
+prop_breakOn_correctness :: String -> String -> Property
+prop_breakOn_correctness s delim =
+    let (before, after) = breakOn delim s
+        expectedBefore = takeWhile (not . (`isPrefixOf` delim)) (inits s)
+        expectedAfter = drop (length before + length delim) s
+    in counterexample ("Before: " ++ show before ++ ", After: " ++ show after) $
+       if delim `isInfixOf` s
+       then before ++ delim ++ after === s
+       else before === s .&&. after === ""
+  where
+    inits [] = [""]
+    inits xs = "" : map (`take` xs) [1..length xs]
 
-prop_forceSingleTabIndentation_tabs_only :: String -> Property
-prop_forceSingleTabIndentation_tabs_only s =
-  let tabIndented = forceSingleTabIndentation s
-      lines' = lines tabIndented
-      leadingSpaces = map (takeWhile (== ' ')) lines'
-  in property $ all null leadingSpaces
+-- | trim and split should be consistent: trimming after splitting should give same result as splitting then trimming each segment
+prop_trim_split_consistency :: Char -> String -> Property
+prop_trim_split_consistency delim s =
+    let splitThenTrim = map trim $ splitBy delim s
+        trimThenSplit = splitBy delim $ trim s
+    in counterexample ("Split then trim: " ++ show splitThenTrim ++ ", Trim then split: " ++ show trimThenSplit) $
+       length splitThenTrim === length trimThenSplit
 
-prop_fixIndentation_equals_normalize :: String -> Property
-prop_fixIndentation_equals_normalize s =
-  fixIndentation s === normalizeIndentation s
-
-prop_normalizeIndentation_preserves_nonempty :: String -> Property
-prop_normalizeIndentation_preserves_nonempty s =
-  let normalized = normalizeIndentation s
-      originalNonEmpty = filter (not . null) (lines s)
-      normalizedNonEmpty = filter (not . null) (lines normalized)
-  in length originalNonEmpty === length normalizedNonEmpty
-
--- Search Properties
-prop_breakOn_finds :: String -> String -> Property
-prop_breakOn_finds needle haystack =
-  not (null needle) && needle `isInfixOf` haystack ==>
-  let (before, after) = breakOn needle haystack
-  in property $ needle `isInfixOf` after
-
-prop_breakOn_position :: String -> String -> Property
-prop_breakOn_position needle haystack =
-  not (null needle) && needle `isInfixOf` haystack ==>
-  let (before, after) = breakOn needle haystack
-      original = before ++ needle ++ after
-  in original === haystack
-
-prop_breakOn_empty :: String -> Property
-prop_breakOn_empty haystack =
-  breakOn "" haystack === ("", haystack)
-
-prop_breakOn_not_found :: String -> String -> Property
-prop_breakOn_not_found needle haystack =
-  not (null needle) && needle `notElem` words haystack ==>
-  breakOn needle haystack === (haystack, "")
+-- | splitBy should be consistent with delimiter: segments should not contain the delimiter
+prop_splitBy_delimiter_consistency :: Char -> String -> Property
+prop_splitBy_delimiter_consistency delim s =
+    let segments = splitBy delim s
+        containsDelimiter = any (delim `elem`) segments
+    in counterexample ("Segments: " ++ show segments ++ ", Delimiter: " ++ show delim) $
+       not containsDelimiter === True

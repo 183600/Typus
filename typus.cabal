@@ -547,7 +547,13 @@ test-suite typus-test
         Test.Unit.SourcePositionPrecisionSpec,
         Test.Unit.TextProcessingRobustnessSpec,
         Test.Unit.CompilerOptimizationSpec,
-        Test.Unit.IntegrationEndToEndSpec
+        Test.Unit.IntegrationEndToEndSpec,
+
+        -- New Additional Test Modules
+        Test.Unit.EnhancedParserTestSpec,
+        Test.Unit.EnhancedCompilerTestSpec,
+        Test.Unit.UtilsPropertiesQuickCheckSpec,
+        Test.Unit.ParserCompilerPropertiesQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
