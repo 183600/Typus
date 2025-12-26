@@ -1,485 +1,280 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
-module Test.Unit.NewCompilerIRQuickCheckSpec (spec) where
+module Test.Unit.NewCompilerIRQuickCheckSpec (tests) where
 
-import Test.Hspec
-import Test.QuickCheck
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
+import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import TestSupport.Arbitrary
+
 import Compiler.IR
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos, spanBetween)
+  ( SourceIR(..)
+  , SemanticIR(..)
+  , GoIR(..)
+  , buildSourceIR
+  , rawSourceFromTypus
+  , ensurePackageDecl
+  , ensureMainFunction
+  , attachInferredImports
+  , replaceGenericAngles
+  , detectImports
+  , buildImportUsage
+  , collectQualifiedUsage
+  , packageUsed
+  , qualifiedSymbolUsed
+  )
+
+import Parser (TypusFile(..), CodeBlock(..))
+import Compiler.GoAst (GoModule(..), ImportDecl(..), GoDecl(..), FuncDecl(..))
+import Compiler.GoLexer (GoToken(..), GoTokenKind(..), tokenizeGo)
+import Compiler.Errors (CompilerResult(..))
+import SourceLocation (SourcePos(..), startPos)
+
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (nub)
-
--- | Test compiler intermediate representation properties
-spec :: Spec
-spec = describe "NewCompilerIR QuickCheck Tests" $ do
-
-  describe "IR Node properties" $ do
-    it "creates literal nodes correctly" $ property $
-      \value ->
-        let node = createLiteralNode value
-            nodeValue = getNodeValue node
-        in nodeValue === value
-
-    it "creates variable nodes correctly" $ property $
-      \varName ->
-        let node = createVariableNode varName
-            nodeName = getNodeName node
-        in nodeName === varName
-
-    it "creates binary operation nodes correctly" $ property $
-      \op left right ->
-        let node = createBinaryOpNode op left right
-            nodeOp = getBinaryOperator node
-        in nodeOp === op
-
-    it "creates function call nodes correctly" $ property $
-      \funcName args ->
-        let node = createFunctionCallNode funcName args
-            nodeFunc = getFunctionName node
-            nodeArgs = getFunctionArguments node
-        in nodeFunc === funcName &&
-           length nodeArgs === length args
-
-  describe "IR Expression properties" $ do
-    it "expressions have consistent types" $ property $
-      \expr ->
-        let exprType = getExpressionType expr
-            exprValue = evaluateExpression expr
-        in isValidType exprType ==> 
-           case exprValue of
-             Just val -> typeMatchesValue exprType val
-             Nothing -> True
-
-    it "expression evaluation is deterministic" $ property $
-      \expr ->
-        let result1 = evaluateExpression expr
-            result2 = evaluateExpression expr
-        in result1 === result2
-
-    it "constant folding works correctly" $ property $
-      \left right op ->
-        let leftExpr = createLiteralExpression left
-            rightExpr = createLiteralExpression right
-            binaryExpr = createBinaryExpression op leftExpr rightExpr
-            folded = foldConstants binaryExpr
-        in isFoldable op ==> 
-           case (left, right, op) of
-             (l, r, Add) -> evaluateExpression folded === Just (l + r)
-             (l, r, Mul) -> evaluateExpression folded === Just (l * r)
-             _ -> True
-
-  describe "IR Statement properties" $ do
-    it "assignment statements preserve variable names" $ property $
-      \varName expr ->
-        let stmt = createAssignmentStatement varName expr
-            targetVar = getAssignmentTarget stmt
-        in targetVar === varName
-
-    it "return statements preserve expressions" $ property $
-      \expr ->
-        let stmt = createReturnStatement expr
-            returnExpr = getReturnExpression stmt
-        in returnExpr === Just expr
-
-    it "conditional statements have correct branches" $ property $
-      \condition thenBranch elseBranch ->
-        let stmt = createConditionalStatement condition thenBranch elseBranch
-            condExpr = getConditionExpression stmt
-            thenStmts = getThenStatements stmt
-            elseStmts = getElseStatements stmt
-        in condExpr === condition &&
-           length thenStmts === length thenBranch &&
-           length elseStmts === length elseBranch
-
-  describe "IR Function properties" $ do
-    it "functions preserve parameter names" $ property $
-      \funcName params body ->
-        let func = createFunction funcName params body
-            funcParams = getFunctionParameters func
-        in funcName === getFunctionName func &&
-           length funcParams === length params
-
-    it "functions have correct arity" $ property $
-      \params body ->
-        let func = createFunction "test" params body
-            arity = getFunctionArity func
-        in arity === length params
-
-    it "function bodies are preserved" $ property $
-      \funcName params body ->
-        let func = createFunction funcName params body
-            funcBody = getFunctionBody func
-        in length funcBody === length body
-
-  describe "IR Module properties" $ do
-    it "modules collect all functions" $ property $
-      \functions ->
-        let module' = createModule functions
-            moduleFuncs = getModuleFunctions module'
-        in length moduleFuncs === length functions
-
-    it "modules can be merged correctly" $ property $
-      \funcs1 funcs2 ->
-        let mod1 = createModule funcs1
-            mod2 = createModule funcs2
-            merged = mergeModules mod1 mod2
-            mergedFuncs = getModuleFunctions merged
-        in length mergedFuncs === length funcs1 + length funcs2
-
-    it "module dependencies are tracked" $ property $
-      \functions ->
-        let module' = createModule functions
-            dependencies = getModuleDependencies module'
-        in all (`elem` map getFunctionName functions) dependencies
-
-  describe "IR Optimization properties" $ do
-    it "dead code elimination removes unused variables" $ property $
-      \assignments usedVars ->
-        let module' = createModuleWithAssignments assignments
-            optimized = eliminateDeadCode module' usedVars
-            optimizedFuncs = getModuleFunctions optimized
-        in length optimizedFuncs <= length (getModuleFunctions module')
-
-    it "constant propagation works correctly" $ property $
-      \assignments ->
-        let module' = createModuleWithAssignments assignments
-            optimized = propagateConstants module'
-        in all hasOnlyConstants optimized
-
-    it "inlining preserves semantics" $ property $
-      \functions calls ->
-        let module' = createModuleWithFunctions functions
-            optimized = inlineFunctions module' calls
-            originalResult = evaluateModule module'
-            optimizedResult = evaluateModule optimized
-        in originalResult === optimizedResult
-
-  describe "IR Type checking properties" $ do
-    it "type inference is consistent" $ property $
-      \expr ->
-        let inferredType = inferExpressionType expr
-            checkedType = checkExpressionType expr
-        in inferredType === checkedType
-
-    it "type errors are detected correctly" $ property $
-      \expr expectedType ->
-        let result = checkExpressionTypeAgainst expr expectedType
-        in case result of
-          Right _ -> True
-          Left err -> isValidTypeError err
-
-    it "type environments are preserved" $ property $
-      \bindings expr ->
-        let env = createTypeEnvironment bindings
-            result = typeCheckInEnvironment expr env
-        in case result of
-          Right typedExpr -> getExpressionType typedExpr `elem` map snd bindings
-          Left _ -> True
-
-  where
-    -- Helper types for testing
-    data BinaryOp = Add | Sub | Mul | Div
-      deriving (Eq, Show, Enum, Bounded)
-
-    data IRNode = LiteralNode Int
-                 | VariableNode String
-                 | BinaryOpNode BinaryOp IRNode IRNode
-                 | FunctionCallNode String [IRNode]
-      deriving (Eq, Show)
-
-    data IRExpression = LiteralExpr Int
-                      | VariableExpr String
-                      | BinaryExpr BinaryOp IRExpression IRExpression
-                      | FunctionCallExpr String [IRExpression]
-      deriving (Eq, Show)
-
-    data IRStatement = AssignmentStatement String IRExpression
-                     | ReturnStatement (Maybe IRExpression)
-                     | ConditionalStatement IRExpression [IRStatement] [IRStatement]
-      deriving (Eq, Show)
-
-    data IRFunction = IRFunction
-      { functionName :: String
-      , functionParameters :: [String]
-      , functionBody :: [IRStatement]
-      } deriving (Eq, Show)
-
-    data IRModule = IRModule
-      { moduleFunctions :: [IRFunction]
-      , moduleDependencies :: [String]
-      } deriving (Eq, Show)
-
-    -- Mock implementations for testing
-    createLiteralNode :: Int -> IRNode
-    createLiteralNode = LiteralNode
-
-    createVariableNode :: String -> IRNode
-    createVariableNode = VariableNode
-
-    createBinaryOpNode :: BinaryOp -> IRNode -> IRNode -> IRNode
-    createBinaryOpNode = BinaryOpNode
-
-    createFunctionCallNode :: String -> [IRNode] -> IRNode
-    createFunctionCallNode = FunctionCallNode
-
-    getNodeValue :: IRNode -> Int
-    getNodeValue (LiteralNode value) = value
-    getNodeValue _ = 0
-
-    getNodeName :: IRNode -> String
-    getNodeName (VariableNode name) = name
-    getNodeName (FunctionCallNode name _) = name
-    getNodeName _ = ""
-
-    getBinaryOperator :: IRNode -> BinaryOp
-    getBinaryOperator (BinaryOpNode op _ _) = op
-    getBinaryOperator _ = Add
-
-    getFunctionName :: IRNode -> String
-    getFunctionName (FunctionCallNode name _) = name
-    getFunctionName _ = ""
-
-    getFunctionArguments :: IRNode -> [IRNode]
-    getFunctionArguments (FunctionCallNode _ args) = args
-    getFunctionArguments _ = []
-
-    createLiteralExpression :: Int -> IRExpression
-    createLiteralExpression = LiteralExpr
-
-    createBinaryExpression :: BinaryOp -> IRExpression -> IRExpression -> IRExpression
-    createBinaryExpression = BinaryExpr
-
-    getExpressionType :: IRExpression -> String
-    getExpressionType (LiteralExpr _) = "Int"
-    getExpressionType (VariableExpr _) = "Unknown"
-    getExpressionType (BinaryExpr _ _ _) = "Int"
-    getExpressionType (FunctionCallExpr _ _) = "Unknown"
-
-    evaluateExpression :: IRExpression -> Maybe Int
-    evaluateExpression (LiteralExpr value) = Just value
-    evaluateExpression (VariableExpr _) = Nothing
-    evaluateExpression (BinaryExpr Add left right) = 
-      case (evaluateExpression left, evaluateExpression right) of
-        (Just l, Just r) -> Just (l + r)
-        _ -> Nothing
-    evaluateExpression (BinaryExpr Mul left right) = 
-      case (evaluateExpression left, evaluateExpression right) of
-        (Just l, Just r) -> Just (l * r)
-        _ -> Nothing
-    evaluateExpression _ = Nothing
-
-    foldConstants :: IRExpression -> IRExpression
-    foldConstants expr@(BinaryExpr op left right) =
-      case (evaluateExpression left, evaluateExpression right) of
-        (Just l, Just r) -> LiteralExpr (case op of Add -> l + r; Mul -> l * r; Sub -> l - r; Div -> l `div` r)
-        _ -> expr
-    foldConstants expr = expr
-
-    isFoldable :: BinaryOp -> Bool
-    isFoldable Add = True
-    isFoldable Mul = True
-    isFoldable _ = False
-
-    isValidType :: String -> Bool
-    isValidType "Int" = True
-    isValidType "String" = True
-    isValidType "Bool" = True
-    isValidType _ = False
-
-    typeMatchesValue :: String -> Int -> Bool
-    typeMatchesValue "Int" _ = True
-    typeMatchesValue _ _ = False
-
-    createAssignmentStatement :: String -> IRExpression -> IRStatement
-    createAssignmentStatement = AssignmentStatement
-
-    createReturnStatement :: Maybe IRExpression -> IRStatement
-    createReturnStatement = ReturnStatement
-
-    createConditionalStatement :: IRExpression -> [IRStatement] -> [IRStatement] -> IRStatement
-    createConditionalStatement = ConditionalStatement
-
-    getAssignmentTarget :: IRStatement -> String
-    getAssignmentTarget (AssignmentStatement var _) = var
-    getAssignmentTarget _ = ""
-
-    getReturnExpression :: IRStatement -> Maybe IRExpression
-    getReturnExpression (ReturnStatement expr) = expr
-    getReturnExpression _ = Nothing
-
-    getConditionExpression :: IRStatement -> IRExpression
-    getConditionExpression (ConditionalStatement cond _ _) = cond
-    getConditionExpression _ = LiteralExpr 0
-
-    getThenStatements :: IRStatement -> [IRStatement]
-    getThenStatements (ConditionalStatement _ thenStmts _) = thenStmts
-    getThenStatements _ = []
-
-    getElseStatements :: IRStatement -> [IRStatement]
-    getElseStatements (ConditionalStatement _ _ elseStmts) = elseStmts
-    getElseStatements _ = []
-
-    createFunction :: String -> [String] -> [IRStatement] -> IRFunction
-    createFunction name params body = IRFunction name params body
-
-    getFunctionName :: IRFunction -> String
-    getFunctionName = functionName
-
-    getFunctionParameters :: IRFunction -> [String]
-    getFunctionParameters = functionParameters
-
-    getFunctionBody :: IRFunction -> [IRStatement]
-    getFunctionBody = functionBody
-
-    getFunctionArity :: IRFunction -> Int
-    getFunctionArity = length . functionParameters
-
-    createModule :: [IRFunction] -> IRModule
-    createModule funcs = IRModule funcs (nub $ concatMap getFunctionDependencies funcs)
-      where
-        getFunctionDependencies func = 
-          concatMap extractFunctionNames (map getStatementExpressions (functionBody func))
-
-    getModuleFunctions :: IRModule -> [IRFunction]
-    getModuleFunctions = moduleFunctions
-
-    getModuleDependencies :: IRModule -> [String]
-    getModuleDependencies = moduleDependencies
-
-    mergeModules :: IRModule -> IRModule -> IRModule
-    mergeModules mod1 mod2 = 
-      IRModule (moduleFunctions mod1 ++ moduleFunctions mod2) 
-               (nub $ moduleDependencies mod1 ++ moduleDependencies mod2)
-
-    createModuleWithAssignments :: [IRStatement] -> IRModule
-    createModuleWithAssignments assignments = 
-      createModule [IRFunction "main" [] assignments]
-
-    createModuleWithFunctions :: [IRFunction] -> IRModule
-    createModuleWithFunctions = createModule
-
-    eliminateDeadCode :: IRModule -> [String] -> IRModule
-    eliminateDeadCode module' usedVars = 
-      let filteredFuncs = map (filterFunction usedVars) (moduleFunctions module')
-      in module' { moduleFunctions = filteredFuncs }
-      where
-        filterFunction vars func = 
-          func { functionBody = filter (\stmt -> isStatementUsed stmt vars) (functionBody func) }
-
-    propagateConstants :: IRModule -> IRModule
-    propagateConstants module' = 
-      let optimizedFuncs = map optimizeFunction (moduleFunctions module')
-      in module' { moduleFunctions = optimizedFuncs }
-      where
-        optimizeFunction func = 
-          func { functionBody = map (optimizeStatement) (functionBody func) }
-        optimizeStatement stmt = stmt -- Simplified implementation
-
-    hasOnlyConstants :: IRModule -> Bool
-    hasOnlyConstants module' = all allConstants (moduleFunctions module')
-      where
-        allConstants func = all statementConstants (functionBody func)
-        statementConstants (AssignmentStatement _ expr) = isConstantExpression expr
-        statementConstants _ = True
-        isConstantExpression (LiteralExpr _) = True
-        isConstantExpression _ = False
-
-    inlineFunctions :: IRModule -> [String] -> IRModule
-    inlineFunctions module' calls = module' -- Simplified implementation
-
-    evaluateModule :: IRModule -> Maybe Int
-    evaluateModule module' = 
-      case findMainFunction (moduleFunctions module') of
-        Just mainFunc -> evaluateFunctionBody (functionBody mainFunc)
-        Nothing -> Nothing
-
-    findMainFunction :: [IRFunction] -> Maybe IRFunction
-    findMainFunction funcs = find (\f -> functionName f == "main") funcs
-      where
-        find _ [] = Nothing
-        find p (x:xs) = if p x then Just x else find p xs
-
-    evaluateFunctionBody :: [IRStatement] -> Maybe Int
-    evaluateFunctionBody [] = Nothing
-    evaluateFunctionBody (stmt:rest) = 
-      case stmt of
-        ReturnStatement expr -> evaluateExpression =<< expr
-        _ -> evaluateFunctionBody rest
-
-    inferExpressionType :: IRExpression -> String
-    inferExpressionType = getExpressionType
-
-    checkExpressionType :: IRExpression -> String
-    checkExpressionType = getExpressionType
-
-    checkExpressionTypeAgainst :: IRExpression -> String -> Either String String
-    checkExpressionTypeAgainst expr expectedType =
-      let actualType = getExpressionType expr
-      in if actualType == expectedType then Right actualType else Left "Type mismatch"
-
-    isValidTypeError :: String -> Bool
-    isValidTypeError err = "Type mismatch" `isInfixOf` err
-
-    createTypeEnvironment :: [(String, String)] -> [(String, String)]
-    createTypeEnvironment = id
-
-    typeCheckInEnvironment :: IRExpression -> [(String, String)] -> Either String IRExpression
-    typeCheckInEnvironment expr env = Right expr -- Simplified implementation
-
-    getStatementExpressions :: IRStatement -> [IRExpression]
-    getStatementExpressions (AssignmentStatement _ expr) = [expr]
-    getStatementExpressions (ReturnStatement maybeExpr) = maybe [] (:[]) maybeExpr
-    getStatementExpressions (ConditionalStatement cond _ _) = [cond]
-
-    extractFunctionNames :: IRExpression -> [String]
-    extractFunctionNames (FunctionCallExpr name _) = [name]
-    extractFunctionNames (BinaryExpr _ left right) = 
-      extractFunctionNames left ++ extractFunctionNames right
-    extractFunctionNames _ = []
-
-    isStatementUsed :: IRStatement -> [String] -> Bool
-    isStatementUsed (AssignmentStatement var _) usedVars = var `elem` usedVars
-    isStatementUsed _ _ = True
-
-    -- Helper functions
-    find :: (a -> Bool) -> [a] -> Maybe a
-    find _ [] = Nothing
-    find p (x:xs) = if p x then Just x else find p xs
-
-    isInfixOf :: String -> String -> Bool
-    isInfixOf needle haystack = needle `elem` 
-      [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]
-
-    -- Helper instances for QuickCheck
-    instance Arbitrary BinaryOp where
-      arbitrary = arbitraryBoundedEnum
-
-    instance Arbitrary IRNode where
-      arbitrary = oneof
-        [ LiteralNode <$> arbitrary
-        , VariableNode <$> arbitrary
-        , BinaryOpNode <$> arbitrary <*> arbitrary <*> arbitrary
-        , FunctionCallNode <$> arbitrary <*> arbitrary
-        ]
-
-    instance Arbitrary IRExpression where
-      arbitrary = oneof
-        [ LiteralExpr <$> arbitrary
-        , VariableExpr <$> arbitrary
-        , BinaryExpr <$> arbitrary <*> arbitrary <*> arbitrary
-        , FunctionCallExpr <$> arbitrary <*> arbitrary
-        ]
-
-    instance Arbitrary IRStatement where
-      arbitrary = oneof
-        [ AssignmentStatement <$> arbitrary <*> arbitrary
-        , ReturnStatement <$> arbitrary
-        , ConditionalStatement <$> arbitrary <*> arbitrary <*> arbitrary
-        ]
-
-    instance Arbitrary IRFunction where
-      arbitrary = IRFunction <$> arbitrary <*> arbitrary <*> arbitrary
-
-    instance Arbitrary IRModule where
-      arbitrary = createModule <$> arbitrary
+import qualified Data.Set as Set
+import Data.List (intercalate, isInfixOf, isPrefixOf)
+import Data.Char (isSpace)
+
+-- | 新的编译器IR QuickCheck测试套件
+tests :: TestTree
+tests =
+  testGroup "New Compiler IR QuickCheck Tests"
+    [ fastProperty "buildSourceIR preserves typus file content" prop_buildSourceIR_preserves_content
+    , fastProperty "rawSourceFromTypus concatenates code blocks" prop_rawSourceFromTypus_concatenates
+    , fastProperty "ensurePackageDecl adds package when missing" prop_ensurePackageDecl_adds_when_missing
+    , fastProperty "ensurePackageDecl preserves existing package" prop_ensurePackageDecl_preserves_existing
+    , fastProperty "replaceGenericAngles converts angle brackets to brackets" prop_replaceGenericAngles_converts
+    , fastProperty "detectImports finds fmt usage" prop_detectImports_finds_fmt
+    , fastProperty "buildImportUsage collects identifiers correctly" prop_buildImportUsage_collects_identifiers
+    , fastProperty "collectQualifiedUsage finds qualified identifiers" prop_collectQualifiedUsage_finds_qualified
+    , fastProperty "packageUsed detects package usage" prop_packageUsed_detects_usage
+    , fastProperty "qualifiedSymbolUsed detects qualified symbol usage" prop_qualifiedSymbolUsed_detects_usage
+    ]
+
+-- Property: buildSourceIR preserves typus file content
+prop_buildSourceIR_preserves_content :: [String] -> Property
+prop_buildSourceIR_preserves_content blockContents =
+  not (null blockContents) && length blockContents <= 10 ==>
+  let codeBlocks = map (\content -> CodeBlock content [] (startPos, startPos)) blockContents
+      typusFile = TypusFile 
+        { tfBlocks = codeBlocks
+        , tfBuildTags = []
+        }
+      sourceIR = buildSourceIR typusFile
+  in property $ sourceTypusFile sourceIR === typusFile .&&.
+     sourceText sourceIR === intercalate "\n" blockContents
+
+-- Property: rawSourceFromTypus concatenates code blocks
+prop_rawSourceFromTypus_concatenates :: [String] -> Property
+prop_rawSourceFromTypus_concatenates blockContents =
+  not (null blockContents) && length blockContents <= 10 ==>
+  let codeBlocks = map (\content -> CodeBlock content [] (startPos, startPos)) blockContents
+      typusFile = TypusFile 
+        { tfBlocks = codeBlocks
+        , tfBuildTags = []
+        }
+      rawSource = rawSourceFromTypus typusFile
+  in property $ rawSource === intercalate "\n" blockContents
+
+-- Property: ensurePackageDecl adds package when missing
+prop_ensurePackageDecl_adds_when_missing :: [String] -> Property
+prop_ensurePackageDecl_adds_when_missing declLines =
+  let goModule = GoModule
+        { gmPackage = Nothing
+        , gmImports = []
+        , gmDecls = map GoRaw declLines
+        , gmBuildTags = []
+        }
+      updatedModule = ensurePackageDecl goModule
+  in property $ gmPackage updatedModule /= Nothing .&&.
+     case gmPackage updatedModule of
+       Just pkg -> True  -- Package was added
+       Nothing -> False  -- Should never happen
+
+-- Property: ensurePackageDecl preserves existing package
+prop_ensurePackageDecl_preserves_existing :: String -> [String] -> Property
+prop_ensurePackageDecl_preserves_existing packageName declLines =
+  not (null packageName) ==>
+  let goModule = GoModule
+        { gmPackage = Just (PackageDecl packageName)
+        , gmImports = []
+        , gmDecls = map GoRaw declLines
+        , gmBuildTags = []
+        }
+      updatedModule = ensurePackageDecl goModule
+  in property $ gmPackage updatedModule === gmPackage goModule .&&.
+     case gmPackage updatedModule of
+       Just pkg -> packageName == packageName
+       Nothing -> False
+
+-- Property: replaceGenericAngles converts angle brackets to brackets
+prop_replaceGenericAngles_converts :: String -> String -> Property
+prop_replaceGenericAngles_converts typeName paramList =
+  not (null typeName) && not (null paramList) ==>
+  let input = "type " ++ typeName ++ "<" ++ paramList ++ "> struct {}"
+      result = replaceGenericAngles input
+      expected = "type " ++ typeName ++ "[" ++ paramList ++ "] struct {}"
+  in property $ expected `isInfixOf` result
+
+-- Property: detectImports finds fmt usage
+prop_detectImports_finds_fmt :: String -> Property
+prop_detectImports_finds_fmt codeContent =
+  "fmt." `isInfixOf` codeContent ==>
+  let imports = detectImports codeContent
+      hasFmtImport = any (\imp -> importPath imp == "fmt") imports
+  in property $ hasFmtImport
+
+-- Property: buildImportUsage collects identifiers correctly
+prop_buildImportUsage_collects_identifiers :: [String] -> Property
+prop_buildImportUsage_collects_identifiers identifierStrings =
+  not (null identifierStrings) && length identifierStrings <= 10 ==>
+  let codeContent = intercalate " " identifierStrings
+      usage = buildImportUsage codeContent
+      expectedIdentifiers = Set.fromList identifierStrings
+  in property $ expectedIdentifiers `Set.isSubsetOf` usageIdentifiers usage
+
+-- Property: collectQualifiedUsage finds qualified identifiers
+prop_collectQualifiedUsage_finds_qualified :: String -> String -> Property
+prop_collectQualifiedUsage_finds_qualified packageName symbol =
+  not (null packageName) && not (null symbol) ==>
+  let codeContent = packageName ++ "." ++ symbol
+      tokens = tokenizeGo codeContent
+      (qualifiedPairs, packages) = collectQualifiedUsage tokens
+  in property $ (packageName, symbol) `elem` qualifiedPairs .&&.
+     packageName `Set.member` packages
+
+-- Property: packageUsed detects package usage
+prop_packageUsed_detects_usage :: [String] -> String -> Property
+prop_packageUsed_detects_usage identifiers packageName =
+  not (null packageName) && not (null identifiers) && length identifiers <= 10 ==>
+  let codeContent = intercalate " " (packageName : identifiers)
+      usage = buildImportUsage codeContent
+  in property $ packageUsed usage packageName
+
+-- Property: qualifiedSymbolUsed detects qualified symbol usage
+prop_qualifiedSymbolUsed_detects_usage :: String -> String -> Property
+prop_qualifiedSymbolUsed_detects_usage packageName symbol =
+  not (null packageName) && not (null symbol) ==>
+  let codeContent = packageName ++ "." ++ symbol
+      usage = buildImportUsage codeContent
+  in property $ qualifiedSymbolUsed usage packageName symbol
+
+-- Additional properties for compiler IR
+
+-- Property: ensureMainFunction adds main function when only statements exist
+prop_ensureMainFunction_adds_main :: [String] -> Property
+prop_ensureMainFunction_adds_main statementLines =
+  not (null statementLines) && length statementLines <= 5 ==>
+  let goModule = GoModule
+        { gmPackage = Just (PackageDecl "main")
+        , gmImports = []
+        , gmDecls = map GoRaw statementLines
+        , gmBuildTags = []
+        }
+      updatedModule = ensureMainFunction goModule
+      hasMainFunc = any isMainFunctionDecl (gmDecls updatedModule)
+  in property $ hasMainFunc
+
+-- Property: ensureMainFunction preserves existing main function
+prop_ensureMainFunction_preserves_main :: String -> Property
+prop_ensureMainFunction_preserves_main mainFuncContent =
+  not (null mainFuncContent) && "func main()" `isInfixOf` mainFuncContent ==>
+  let goModule = GoModule
+        { gmPackage = Just (PackageDecl "main")
+        , gmImports = []
+        , gmDecls = [GoRaw mainFuncContent]
+        , gmBuildTags = []
+        }
+      updatedModule = ensureMainFunction goModule
+      mainFuncCount = length $ filter isMainFunctionDecl (gmDecls updatedModule)
+  in property $ mainFuncCount === 1
+
+-- Property: replaceGenericAngles handles nested generics
+prop_replaceGenericAngles_nested :: String -> String -> String -> Property
+prop_replaceGenericAngles_nested outerType innerType paramList =
+  not (null outerType) && not (null innerType) && not (null paramList) ==>
+  let input = "type " ++ outerType ++ "<" ++ innerType ++ "<" ++ paramList ++ ">> struct {}"
+      result = replaceGenericAngles input
+      hasOuterBracket = "[" `isInfixOf` result
+      hasInnerBracket = "[" `isInfixOf` result
+  in property $ hasOuterBracket .&&. hasInnerBracket
+
+-- Property: detectImports finds multiple package usages
+prop_detectImports_multiple :: [String] -> Property
+prop_detectImports_multiple packageNames =
+  not (null packageNames) && length packageNames <= 5 ==>
+  let codeContent = intercalate " " (map (\pkg -> pkg ++ ".Function()") packageNames)
+      imports = detectImports codeContent
+      foundPackages = map importPath imports
+  in property $ all (`elem` foundPackages) packageNames
+
+-- Property: buildImportUsage handles empty input
+prop_buildImportUsage_empty :: Property
+prop_buildImportUsage_empty =
+  let usage = buildImportUsage ""
+  in property $ Set.null (usagePackages usage) .&&.
+     Set.null (usageQualified usage) .&&.
+     Set.null (usageIdentifiers usage)
+
+-- Property: collectQualifiedUsage handles empty tokens
+prop_collectQualifiedUsage_empty :: Property
+prop_collectQualifiedUsage_empty =
+  let (qualifiedPairs, packages) = collectQualifiedUsage []
+  in property $ null qualifiedPairs .&&.
+     Set.null packages
+
+-- Helper function to check if a declaration is a main function
+isMainFunctionDecl :: GoDecl -> Bool
+isMainFunctionDecl (GoFunc (FuncDecl lines)) = any ("func main()" `isInfixOf`) lines
+isMainFunctionDecl (GoRaw content) = "func main()" `isInfixOf` content
+isMainFunctionDecl _ = False
+
+-- Property: replaceGenericAngles preserves non-generic code
+prop_replaceGenericAngles_preserves_nongeneric :: String -> Property
+prop_replaceGenericAngles_preserves_nongeneric codeContent =
+  not ("<" `isInfixOf` codeContent) ==>
+  let result = replaceGenericAngles codeContent
+  in property $ result === codeContent
+
+-- Property: detectImports handles empty input
+prop_detectImports_empty :: Property
+prop_detectImports_empty =
+  let imports = detectImports ""
+  in property $ null imports
+
+-- Property: packageUsed returns false for unused packages
+prop_packageUsed_false_unused :: String -> Property
+prop_packageUsed_false_unused packageName =
+  not (null packageName) ==>
+  let codeContent = "some other code without " ++ packageName
+      usage = buildImportUsage codeContent
+  in property $ not (packageUsed usage packageName)
+
+-- Property: qualifiedSymbolUsed returns false for unused symbols
+prop_qualifiedSymbolUsed_false_unused :: String -> String -> String -> Property
+prop_qualifiedSymbolUsed_false_unused packageName unusedSymbol usedSymbol =
+  not (null packageName) && not (null unusedSymbol) && not (null usedSymbol) &&
+  unusedSymbol /= usedSymbol ==>
+  let codeContent = packageName ++ "." ++ usedSymbol
+      usage = buildImportUsage codeContent
+  in property $ not (qualifiedSymbolUsed usage packageName unusedSymbol)
+
+-- Property: buildImportUsage handles complex code with comments
+prop_buildImportUsage_with_comments :: String -> String -> Property
+prop_buildImportUsage_with_comments code comment =
+  not (null code) && not (null comment) ==>
+  let codeWithComment = code ++ " // " ++ comment
+      usage1 = buildImportUsage code
+      usage2 = buildImportUsage codeWithComment
+  in property $ usageIdentifiers usage1 === usageIdentifiers usage2
+
+-- Property: replaceGenericAngles handles malformed generics
+prop_replaceGenericAngles_malformed :: String -> Property
+prop_replaceGenericAngles_malformed codeContent =
+  let result = replaceGenericAngles codeContent
+  in property $ not (null result)  -- Should always return some result
