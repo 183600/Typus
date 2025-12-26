@@ -107,6 +107,14 @@ import qualified Test.Unit.UtilsCoreQuickCheckSpec
 import qualified Test.Unit.CompilerIRCoreQuickCheckSpec
 import qualified Test.Unit.OwnershipTransferCoreQuickCheckSpec
 import qualified Test.Unit.DependencyAnalysisCoreQuickCheckSpec
+import qualified Test.Unit.NewErrorHandlerCoreQuickCheckSpec
+import qualified Test.Unit.NewSourceLocationMathQuickCheckSpec
+import qualified Test.Unit.NewParserCoreQuickCheckSpec
+import qualified Test.Unit.NewUtilsCoreQuickCheckSpec
+import qualified Test.Unit.NewCompilerIRCoreQuickCheckSpec
+import qualified Test.Unit.NewOwnershipTransferCoreQuickCheckSpec
+import qualified Test.Unit.NewDependencyAnalysisCoreQuickCheckSpec
+import qualified Test.Unit.NewGoToolchainCoreQuickCheckSpec
 
 -- New Core QuickCheck Test Modules
 import qualified Test.Unit.DebugCoreQuickCheckSpec
@@ -1510,6 +1518,14 @@ tests =
     , Test.Unit.CompilerIRCoreQuickCheckSpec.tests
     , Test.Unit.OwnershipTransferCoreQuickCheckSpec.tests
     , Test.Unit.DependencyAnalysisCoreQuickCheckSpec.tests
+    , Test.Unit.NewErrorHandlerCoreQuickCheckSpec.tests
+    , Test.Unit.NewSourceLocationMathQuickCheckSpec.tests
+    , Test.Unit.NewParserCoreQuickCheckSpec.tests
+    , Test.Unit.NewUtilsCoreQuickCheckSpec.tests
+    , Test.Unit.NewCompilerIRCoreQuickCheckSpec.tests
+    , Test.Unit.NewOwnershipTransferCoreQuickCheckSpec.tests
+    , Test.Unit.NewDependencyAnalysisCoreQuickCheckSpec.tests
+    , Test.Unit.NewGoToolchainCoreQuickCheckSpec.tests
     ]
 
   -- Enhanced QuickCheck Test Modules (New)

@@ -691,6 +691,12 @@ test-suite typus-test
         Test.Unit.NewSourceLocationMathQuickCheckSpec,
         Test.Unit.NewParserBoundaryQuickCheckSpec,
         Test.Unit.NewErrorHandlerCoreQuickCheckSpec,
+        Test.Unit.NewParserCoreQuickCheckSpec,
+        Test.Unit.NewUtilsCoreQuickCheckSpec,
+        Test.Unit.NewCompilerIRCoreQuickCheckSpec,
+        Test.Unit.NewOwnershipTransferCoreQuickCheckSpec,
+        Test.Unit.NewDependencyAnalysisCoreQuickCheckSpec,
+        Test.Unit.NewGoToolchainCoreQuickCheckSpec,
         Test.Unit.NewComprehensiveCabalQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
