@@ -89,6 +89,9 @@ import qualified Test.Unit.NewAdditionalTestSpec
 -- New Comprehensive Tests Module
 import qualified Test.Unit.NewComprehensiveTestsSpec
 
+-- Additional Cabal Test Module
+import qualified Test.Unit.AdditionalCabalTestSpec
+
 -- New Cabal Integration Test Module
 import qualified Test.Unit.NewCabalIntegrationSpec
 
@@ -1215,4 +1218,5 @@ tests =
         , Test.Unit.DebugIntegrationFlowSpec.tests
         , Test.Unit.IntegratedCompilerPropertiesSpec.tests
         ]
+    , Test.Unit.AdditionalCabalTestSpec.tests
     ]
