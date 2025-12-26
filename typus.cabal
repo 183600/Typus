@@ -503,7 +503,8 @@ test-suite typus-test
         Test.Unit.CompilerIRSpec,
         Test.Unit.IntegrationQuickCheckSpec,
         Test.Unit.NewCabalIntegrationSpec,
-        Test.Unit.SimpleCabalTestSpec
+        Test.Unit.SimpleCabalTestSpec,
+        Test.Unit.NewComprehensiveQuickCheckTestSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

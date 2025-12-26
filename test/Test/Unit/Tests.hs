@@ -438,6 +438,9 @@ import qualified Test.Unit.NewEnhancedCabalQuickCheckSpec
 import qualified Test.Unit.NewCoreFunctionalitySpec
 import qualified Test.Unit.NewCoreQuickCheckSpec
 
+-- New comprehensive QuickCheck test module
+import qualified Test.Unit.NewComprehensiveQuickCheckTestSpec
+
 -- New QuickCheck test modules created for enhanced testing
 import qualified Test.Unit.NewUtilsPropertiesQuickCheckSpec
 import qualified Test.Unit.NewSourceLocationMathQuickCheckSpec
@@ -607,6 +610,7 @@ tests =
         , Test.Unit.SymbolTableManagementSpec.tests
         ]
     , Test.Unit.AdditionalCabalQuickCheckTestSpec.tests
+    , Test.Unit.NewComprehensiveQuickCheckTestSpec.tests
     , testGroup "New QuickCheck Test Modules"
         [ Test.Unit.BasicParsingQuickCheckSpec.tests
         , Test.Unit.CompilerOptimizationsQuickCheckSpec.tests
