@@ -356,6 +356,9 @@ import qualified Test.Unit.NewParserQuickCheckSpec
 -- New Cabal Test Cases Module
 import qualified Test.Unit.NewCabalTestCasesSpec
 
+-- New Enhanced Cabal QuickCheck Test Module
+import qualified Test.Unit.NewEnhancedCabalQuickCheckSpec
+
 -- New core functionality test modules
 import qualified Test.Unit.NewCoreFunctionalitySpec
 import qualified Test.Unit.NewCoreQuickCheckSpec
@@ -613,6 +616,6 @@ tests =
         , Test.Unit.NewDependencySpec.tests
         , Test.Unit.NewIntegrationSpec.tests
         , Test.Unit.NewPerformanceSpec.tests
-        , Test.Unit.NewQuickCheckSpec.tests
-        ]
-    ]
+            , Test.Unit.NewQuickCheckSpec.tests
+            , Test.Unit.NewEnhancedCabalQuickCheckSpec.tests
+            ]    ]

@@ -474,7 +474,8 @@ test-suite typus-test
         Test.Unit.EnhancedCompilerIRPropertiesQuickCheckSpec,
         Test.Unit.EnhancedOwnershipBoundaryQuickCheckSpec,
         Test.Unit.EnhancedDependentTypeSystemBoundaryQuickCheckSpec,
-        Test.Unit.NewCabalTestCasesSpec
+        Test.Unit.NewCabalTestCasesSpec,
+        Test.Unit.NewEnhancedCabalQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
