@@ -69,6 +69,16 @@ import qualified Test.Unit.NewCabalIntegrationSpec
 -- New Simple Cabal Test Module
 import qualified Test.Unit.SimpleCabalTestSpec
 
+-- New Enhanced QuickCheck Test Modules
+import qualified Test.Unit.EnhancedUtilsQuickCheckSpec
+import qualified Test.Unit.EnhancedSourceLocationQuickCheckSpec
+import qualified Test.Unit.EnhancedParserQuickCheckSpec
+import qualified Test.Unit.EnhancedCompilerQuickCheckSpec
+import qualified Test.Unit.EnhancedOwnershipQuickCheckSpec
+import qualified Test.Unit.EnhancedErrorHandlerQuickCheckSpec
+import qualified Test.Unit.EnhancedDependenciesQuickCheckSpec
+import qualified Test.Unit.EnhancedSyntaxValidatorQuickCheckSpec
+
 -- New Cabal Test Suite Module
 import qualified Test.Unit.NewCabalTestSuiteSpec
 
@@ -922,6 +932,14 @@ tests =
     , Test.Unit.NewComprehensiveTestsSpec.tests
     , Test.Unit.NewCabalIntegrationSpec.tests
     , Test.Unit.SimpleCabalTestSpec.tests
+    , Test.Unit.EnhancedUtilsQuickCheckSpec.tests
+    , Test.Unit.EnhancedSourceLocationQuickCheckSpec.tests
+    , Test.Unit.EnhancedParserQuickCheckSpec.tests
+    , Test.Unit.EnhancedCompilerQuickCheckSpec.tests
+    , Test.Unit.EnhancedOwnershipQuickCheckSpec.tests
+    , Test.Unit.EnhancedErrorHandlerQuickCheckSpec.tests
+    , Test.Unit.EnhancedDependenciesQuickCheckSpec.tests
+    , Test.Unit.EnhancedSyntaxValidatorQuickCheckSpec.tests
     , testGroup "New Comprehensive QuickCheck Test Modules (2025)"
         [ Test.Unit.TextProcessingBoundaryQuickCheckSpec.tests
         , Test.Unit.SourceLocationMathQuickCheckSpec.tests
@@ -1058,4 +1076,14 @@ tests =
         [ Test.Unit.NewCabalEnhancedTestSpec.tests
         ]
     , Test.Unit.NewCoreFunctionalitySpec.tests
+    , testGroup "New Enhanced QuickCheck Test Suite (2025)"
+        [ Test.Unit.EnhancedUtilsQuickCheckSpec.tests
+        , Test.Unit.EnhancedSourceLocationQuickCheckSpec.tests
+        , Test.Unit.EnhancedParserQuickCheckSpec.tests
+        , Test.Unit.EnhancedCompilerQuickCheckSpec.tests
+        , Test.Unit.EnhancedOwnershipQuickCheckSpec.tests
+        , Test.Unit.EnhancedErrorHandlerQuickCheckSpec.tests
+        , Test.Unit.EnhancedDependenciesQuickCheckSpec.tests
+        , Test.Unit.EnhancedSyntaxValidatorQuickCheckSpec.tests
+        ]
     ]
