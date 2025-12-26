@@ -568,7 +568,7 @@ test-suite typus-test
         Test.Unit.NewEnhancedTestSpec,
         Test.Unit.SimpleNewTestSpec,
         
-        -- New Advanced Test Suite (2025)
+-- New Comprehensive Test Modules (2025)
         Test.Unit.CompilerErrorRecoverySpec,
         Test.Unit.TypeInferenceAdvancedSpec,
         Test.Unit.OwnershipMemorySafetySpec,
@@ -577,6 +577,14 @@ test-suite typus-test
         Test.Unit.TextProcessingRobustnessSpec,
         Test.Unit.CompilerOptimizationSpec,
         Test.Unit.IntegrationEndToEndSpec,
+
+        -- New Comprehensive Test Suite (2025)
+        Test.Unit.SourceLocationBoundarySpec,
+        Test.Unit.ParserErrorRecoverySpec,
+        Test.Unit.UtilsPerformanceBoundarySpec,
+        Test.Unit.ErrorHandlerConsistencySpec,
+        Test.Unit.OwnershipAnalysisBoundarySpec,
+        Test.Unit.EndToEndCompilationSpec,
 
         -- New Additional Test Modules
         Test.Unit.EnhancedParserTestSpec,

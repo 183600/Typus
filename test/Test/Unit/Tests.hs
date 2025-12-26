@@ -38,6 +38,14 @@ import qualified Test.Unit.CompilerIntegrationEnhancedQuickCheckSpec
 import qualified Test.Unit.OwnershipBoundaryEnhancedQuickCheckSpec
 import qualified Test.Unit.DependentTypesValidationEnhancedQuickCheckSpec
 
+-- New Comprehensive Test Suite (2025)
+import qualified Test.Unit.SourceLocationBoundarySpec
+import qualified Test.Unit.ParserErrorRecoverySpec
+import qualified Test.Unit.UtilsPerformanceBoundarySpec
+import qualified Test.Unit.ErrorHandlerConsistencySpec
+import qualified Test.Unit.OwnershipAnalysisBoundarySpec
+import qualified Test.Unit.EndToEndCompilationSpec
+
 -- New test modules added for enhanced coverage
 import qualified Test.Unit.ParserBoundarySpec
 import qualified Test.Unit.CompilerErrorBoundarySpec
@@ -1476,4 +1484,14 @@ tests =
     , Test.Unit.CompilerIntegrationEnhancedQuickCheckSpec.tests
     , Test.Unit.OwnershipBoundaryEnhancedQuickCheckSpec.tests
     , Test.Unit.DependentTypesValidationEnhancedQuickCheckSpec.tests
+    ]
+
+  -- New Comprehensive Test Suite (2025)
+  , testGroup "New Comprehensive Test Suite 2025"
+    [ Test.Unit.SourceLocationBoundarySpec.tests
+    , Test.Unit.ParserErrorRecoverySpec.tests
+    , Test.Unit.UtilsPerformanceBoundarySpec.tests
+    , Test.Unit.ErrorHandlerConsistencySpec.tests
+    , Test.Unit.OwnershipAnalysisBoundarySpec.tests
+    , Test.Unit.EndToEndCompilationSpec.tests
     ]
