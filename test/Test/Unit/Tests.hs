@@ -198,6 +198,18 @@ import qualified Test.Unit.EnhancedIntegrationQuickCheckSpec
 import qualified Test.Unit.TextProcessingBoundaryQuickCheckSpec
 import qualified Test.Unit.SourceLocationMathQuickCheckSpec
 import qualified Test.Unit.ParserErrorRecoveryQuickCheckSpec
+
+-- New Test Modules Added for Enhanced Cabal Testing (10 new modules)
+import qualified Test.Unit.SourceLocationAdvancedPropertiesSpec
+import qualified Test.Unit.ErrorHandlerBoundarySpec
+import qualified Test.Unit.OwnershipTransferComplexSpec
+import qualified Test.Unit.DependentTypeConstraintSpec
+import qualified Test.Unit.CompilerIREdgeCaseSpec
+import qualified Test.Unit.SyntaxValidatorBoundarySpec
+import qualified Test.Unit.GoToolchainIntegrationSpec
+import qualified Test.Unit.EmbedAssetsConsistencySpec
+import qualified Test.Unit.DebugIntegrationFlowSpec
+import qualified Test.Unit.IntegratedCompilerPropertiesSpec
 import qualified Test.Unit.DependentTypeBoundaryQuickCheckSpec
 import qualified Test.Unit.OwnershipTransferComplexQuickCheckSpec
 import qualified Test.Unit.CompilerOptimizationInvariantQuickCheckSpec
@@ -1191,4 +1203,16 @@ tests =
         , Test.Unit.UtilsNewQuickCheckSpec.tests
         ]
     , Test.Unit.NewCoreFunctionalitySpec.tests
+    , testGroup "Enhanced Cabal Test Suite (2025 - 10 New Modules)"
+        [ Test.Unit.SourceLocationAdvancedPropertiesSpec.tests
+        , Test.Unit.ErrorHandlerBoundarySpec.tests
+        , Test.Unit.OwnershipTransferComplexSpec.tests
+        , Test.Unit.DependentTypeConstraintSpec.tests
+        , Test.Unit.CompilerIREdgeCaseSpec.tests
+        , Test.Unit.SyntaxValidatorBoundarySpec.tests
+        , Test.Unit.GoToolchainIntegrationSpec.tests
+        , Test.Unit.EmbedAssetsConsistencySpec.tests
+        , Test.Unit.DebugIntegrationFlowSpec.tests
+        , Test.Unit.IntegratedCompilerPropertiesSpec.tests
+        ]
     ]
