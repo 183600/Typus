@@ -48,6 +48,16 @@ import qualified Test.Unit.NewErrorHandlingSpec
 import qualified Test.Unit.NewParserSpec
 import qualified Test.Unit.NewCompilerSpec
 import qualified Test.Unit.NewOwnershipSpec
+
+-- New Comprehensive QuickCheck Test Modules
+import qualified Test.Unit.TextProcessingBoundaryQuickCheckSpec
+import qualified Test.Unit.SourceLocationMathQuickCheckSpec
+import qualified Test.Unit.ParserErrorRecoveryQuickCheckSpec
+import qualified Test.Unit.DependentTypeBoundaryQuickCheckSpec
+import qualified Test.Unit.OwnershipTransferComplexQuickCheckSpec
+import qualified Test.Unit.CompilerOptimizationInvariantQuickCheckSpec
+import qualified Test.Unit.ErrorHandlingConsistencyQuickCheckSpec
+import qualified Test.Unit.ToolchainRobustnessQuickCheckSpec
 import qualified Test.Unit.NewTypeSystemSpec
 import qualified Test.Unit.NewSourceLocationSpec
 import qualified Test.Unit.NewDependencySpec
@@ -733,4 +743,14 @@ tests =
         ]
     , Test.Unit.NewAdditionalTestSpec.tests
     , Test.Unit.NewComprehensiveTestsSpec.tests
+    , testGroup "New Comprehensive QuickCheck Test Modules (2025)"
+        [ Test.Unit.TextProcessingBoundaryQuickCheckSpec.tests
+        , Test.Unit.SourceLocationMathQuickCheckSpec.tests
+        , Test.Unit.ParserErrorRecoveryQuickCheckSpec.tests
+        , Test.Unit.DependentTypeBoundaryQuickCheckSpec.tests
+        , Test.Unit.OwnershipTransferComplexQuickCheckSpec.tests
+        , Test.Unit.CompilerOptimizationInvariantQuickCheckSpec.tests
+        , Test.Unit.ErrorHandlingConsistencyQuickCheckSpec.tests
+        , Test.Unit.ToolchainRobustnessQuickCheckSpec.tests
+        ]
     ]
