@@ -669,6 +669,16 @@ import qualified Test.Unit.NewErrorRecoveryQuickCheckSpec
 import qualified Test.Unit.NewTypeSystemSubstitutionQuickCheckSpec
 import qualified Test.Unit.NewSymbolTableCommutativeQuickCheckSpec
 
+-- New Comprehensive Test Modules (2025)
+import qualified Test.Unit.CoreModulesIntegrationSpec
+import qualified Test.Unit.ErrorHandlingBoundaryConditionsSpec
+import qualified Test.Unit.TextProcessingPropertiesExtendedSpec
+import qualified Test.Unit.SourceLocationTrackingComprehensiveSpec
+import qualified Test.Unit.ParserErrorRecoveryAdvancedSpec
+import qualified Test.Unit.CompilerEndToEndIntegrationSpec
+import qualified Test.Unit.DependenciesOwnershipInteractionSpec
+import qualified Test.Unit.PerformanceRegressionExtendedSpec
+
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
 --
@@ -1219,4 +1229,14 @@ tests =
         , Test.Unit.IntegratedCompilerPropertiesSpec.tests
         ]
     , Test.Unit.AdditionalCabalTestSpec.tests
+    , testGroup "New Comprehensive Test Suite (2025 - Additional Modules)"
+        [ Test.Unit.CoreModulesIntegrationSpec.tests
+        , Test.Unit.ErrorHandlingBoundaryConditionsSpec.tests
+        , Test.Unit.TextProcessingPropertiesExtendedSpec.tests
+        , Test.Unit.SourceLocationTrackingComprehensiveSpec.tests
+        , Test.Unit.ParserErrorRecoveryAdvancedSpec.tests
+        , Test.Unit.CompilerEndToEndIntegrationSpec.tests
+        , Test.Unit.DependenciesOwnershipInteractionSpec.tests
+        , Test.Unit.PerformanceRegressionExtendedSpec.tests
+        ]
     ]
