@@ -611,6 +611,14 @@ import qualified Test.Unit.SourceLocationTrackingSpec
 
 -- New Advanced Test Modules
 import qualified Test.Unit.SourceLocationAdvancedSpec
+import qualified Test.Unit.SourceLocationAdvancedQuickCheckSpec
+import qualified Test.Unit.ErrorHandlerAdvancedQuickCheckSpec
+import qualified Test.Unit.ParserAdvancedQuickCheckSpec
+import qualified Test.Unit.UtilsAdvancedQuickCheckSpec
+import qualified Test.Unit.CompilerAdvancedQuickCheckSpec
+import qualified Test.Unit.DependenciesAdvancedQuickCheckSpec
+import qualified Test.Unit.OwnershipAdvancedQuickCheckSpec
+import qualified Test.Unit.IntegrationAdvancedQuickCheckSpec
 import qualified Test.Unit.ParserErrorRecoverySpec
 import qualified Test.Unit.OwnershipTransitivitySpec
 import qualified Test.Unit.DependentTypeBoundarySpec
@@ -1310,4 +1318,16 @@ tests =
     , Test.Unit.UtilsRobustnessQuickCheckSpec.tests
     , Test.Unit.DependencyAnalysisQuickCheckSpec.tests
     , Test.Unit.CompilerIntegrationQuickCheckSpec.tests
+    ]
+
+  -- New Advanced QuickCheck Test Modules (2025)
+  , testGroup "Advanced QuickCheck Test Suite 2025"
+    [ Test.Unit.SourceLocationAdvancedQuickCheckSpec.tests
+    , Test.Unit.ErrorHandlerAdvancedQuickCheckSpec.tests
+    , Test.Unit.ParserAdvancedQuickCheckSpec.tests
+    , Test.Unit.UtilsAdvancedQuickCheckSpec.tests
+    , Test.Unit.CompilerAdvancedQuickCheckSpec.tests
+    , Test.Unit.DependenciesAdvancedQuickCheckSpec.tests
+    , Test.Unit.OwnershipAdvancedQuickCheckSpec.tests
+    , Test.Unit.IntegrationAdvancedQuickCheckSpec.tests
     ]

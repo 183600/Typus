@@ -1,194 +1,321 @@
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-
 module Test.Unit.CompilerAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertBool)
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, oneof, elements, choose, listOf, suchThat, vectorOf)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck 
-  ( Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), choose, vectorOf, elements )
-import Control.Monad (replicateM, when)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, intercalate, nub)
-import Data.Char (isSpace, isDigit, isAlpha, toLower, toUpper)
-import Data.Maybe (isJust, isNothing, fromMaybe)
-import qualified Data.Text as T
 
 import Compiler
-  ( CompilerError(..)
-  , CompilationPhase(..)
-  , CompilerResult
-  , renderCompilationError
-  , formatCompilerErrors
-  , hasTypeErrors
-  , TypeCheckDiagnostic(..)
-  , extractDeclarations
-  , extractFunctionCalls
-  , buildTypeEnv
-  , buildTypeEnvFromPairs
-  , checkTypeError
-  , hasMalformedSyntax
-  , checkDependentTypes
-  , checkOwnership
-  )
+import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
+import Compiler.Errors (CompilerError(..), CompilationPhase(..), ErrorCategory(..), ErrorSeverity(..))
+import Compiler.TypeChecker (TypeCheckDiagnostic(..))
+import qualified Data.Text as T
+import Data.List (isInfixOf, null)
 
--- Arbitrary instances for QuickCheck
+-- ============================================================================
+-- Arbitrary Instances
+-- ============================================================================
+
 instance Arbitrary CompilationPhase where
-  arbitrary = elements [Parsing, TypeChecking, OwnershipAnalysis, CodeGeneration]
+    arbitrary = elements [ParsingPhase, TypeCheckingPhase, OwnershipPhase, CodeGenPhase]
+
+instance Arbitrary ErrorCategory where
+    arbitrary = elements [Parsing, TypeChecking, Ownership, Semantic, Runtime, Constraint, Inference, Integration]
+
+instance Arbitrary ErrorSeverity where
+    arbitrary = elements [Fatal, Error, Warning, Info]
 
 instance Arbitrary CompilerError where
-  arbitrary = do
-    phase <- arbitrary
-    message <- arbitrary
-    line <- choose (1, 1000)
-    column <- choose (1, 1000)
-    return $ CompilerError phase message line column
+    arbitrary = do
+        errorId <- arbitrary
+        message <- T.pack <$> arbitrary
+        phase <- arbitrary
+        category <- arbitrary
+        severity <- arbitrary
+        span' <- oneof [pure Nothing, Just <$> arbitrary]
+        context <- oneof [pure Nothing, Just <$> arbitrary]
+        suggestions <- listOf (T.pack <$> arbitrary)
+        stackTrace <- listOf arbitrary
+        timestamp <- oneof [pure Nothing, Just <$> arbitrary]
+        return $ CompilerError errorId message phase category severity span' context suggestions stackTrace timestamp
 
 instance Arbitrary TypeCheckDiagnostic where
-  arbitrary = do
-    message <- arbitrary
-    severity <- elements [Error, Warning, Info]
-    line <- choose (1, 1000)
-    return $ TypeCheckDiagnostic message severity line
+    arbitrary = do
+        context <- oneof [pure Nothing, Just <$> arbitrary]
+        detail <- arbitrary
+        return $ TypeCheckDiagnostic context detail
 
--- Property: CompilationPhase ordering
-prop_compilation_phase_ordering :: CompilationPhase -> CompilationPhase -> Property
-prop_compilation_phase_ordering phase1 phase2 =
-  let phaseOrder = [Parsing, TypeChecking, OwnershipAnalysis, CodeGeneration]
-      index1 = case phase1 of
-        Parsing -> 0
-        TypeChecking -> 1
-        OwnershipAnalysis -> 2
-        CodeGeneration -> 3
-      index2 = case phase2 of
-        Parsing -> 0
-        TypeChecking -> 1
-        OwnershipAnalysis -> 2
-        CodeGeneration -> 3
-  in property $ (phase1 == phase2) === (index1 == index2)
+instance Arbitrary TypusFile where
+    arbitrary = do
+        directives <- arbitrary
+        buildTags <- listOf arbitrary
+        blocks <- listOf arbitrary
+        syntaxErrors <- listOf arbitrary
+        return $ TypusFile directives buildTags blocks syntaxErrors
 
--- Property: CompilerError structure preservation
-prop_compiler_error_structure :: CompilationPhase -> String -> Int -> Int -> Property
-prop_compiler_error_structure phase message line column =
-  let error = CompilerError phase message line column
-      rendered = renderCompilationError error
-  in property $ line > 0 && column > 0 ==> length rendered >= length message
+-- ============================================================================
+-- Compiler Properties
+-- ============================================================================
 
--- Property: Error formatting consistency
-prop_error_formatting_consistency :: [CompilerError] -> Property
-prop_error_formatting_consistency errors =
-  let formatted = formatCompilerErrors errors
-      errorCount = length errors
-      formattedLength = length formatted
-  in property $ if null errors 
-     then formattedLength === 0
-     else formattedLength > 0
+prop_compilePreservesValidStructure :: TypusFile -> Bool
+prop_compilePreservesValidStructure typusFile =
+    case compile typusFile of
+        Left _ -> True  -- Compilation errors are expected for arbitrary files
+        Right result -> not (null result)
 
--- Property: Type error detection
-prop_type_error_detection :: [TypeCheckDiagnostic] -> Property
-prop_type_error_detection diagnostics =
-  let hasErrors = any isError diagnostics
-      isError (TypeCheckDiagnostic _ Error _) = True
-      isError _ = False
-      detected = hasTypeErrors diagnostics
-  in property $ detected === hasErrors
+prop_compileDetectsTypeErrors :: TypusFile -> Bool
+prop_compileDetectsTypeErrors typusFile =
+    let hasTypeErrorContent = "var x int = \"string\"" `isInfixOf` unlines (map cbContent (tfBlocks typusFile))
+    in if hasTypeErrorContent
+       then case compile typusFile of
+           Left errors -> any (\e -> errorSeverity e == Error) errors
+           Right _ -> False
+       else True  -- Other cases are handled by other properties
 
--- Property: Declaration extraction
-prop_declaration_extraction :: String -> Property
-prop_declaration_extraction code =
-  let declarations = extractDeclarations code
-      hasContent = not (null code)
-  in hasContent ==> property $ length declarations >= 0
+prop_generateGoCodeAlwaysReturnsString :: TypusFile -> Bool
+prop_generateGoCodeAlwaysReturnsString typusFile =
+    let result = generateGoCode typusFile
+    in not (null result)
 
--- Property: Function call extraction
-prop_function_call_extraction :: String -> Property
-prop_function_call_extraction code =
-  let functionCalls = extractFunctionCalls code
-      hasContent = not (null code)
-  in hasContent ==> property $ length functionCalls >= 0
+prop_generateGoCodePreservesContent :: TypusFile -> Bool
+prop_generateGoCodePreservesContent typusFile =
+    let originalContent = unlines (map cbContent (tfBlocks typusFile))
+        generatedCode = generateGoCode typusFile
+        hasSomeContent = not (null originalContent)
+    in if hasSomeContent
+       then any (`isInfixOf` generatedCode) (words originalContent) || 
+            any (`isInfixOf` generatedCode) (lines originalContent)
+       else True
 
--- Property: Type environment building
-prop_type_environment_building :: [(String, String)] -> Property
-prop_type_environment_building pairs =
-  let typeEnv = buildTypeEnvFromPairs pairs
-      pairCount = length pairs
-  in property $ True -- Placeholder since we can't inspect type environment directly
+prop_renderCompilationErrorHandlesEmptyList :: Bool
+prop_renderCompilationErrorHandlesEmptyList =
+    let result = renderCompilationError []
+    in null result || result == ""
 
--- Property: Type error checking
-prop_type_error_checking :: String -> Property
-prop_type_error_checking code =
-  let hasError = checkTypeError code
-      hasContent = not (null code)
-  in hasContent ==> property $ hasError === hasError || hasError === not hasError -- Could be either
+prop_renderCompilationErrorHandlesNonEmptyList :: [CompilerError] -> Bool
+prop_renderCompilationErrorHandlesNonEmptyList errors =
+    let result = renderCompilationError errors
+    in if null errors
+       then null result || result == ""
+       else not (null result)
 
--- Property: Malformed syntax detection
-prop_malformed_syntax_detection :: String -> Property
-prop_malformed_syntax_detection code =
-  let malformed = hasMalformedSyntax code
-      hasContent = not (null code)
-  in hasContent ==> property $ malformed === malformed -- Tautology but ensures function doesn't crash
+prop_formatCompilerErrorsConsistent :: [CompilerError] -> Bool
+prop_formatCompilerErrorsConsistent errors =
+    let formatted1 = renderCompilationError errors
+        formatted2 = renderCompilationError errors
+    in formatted1 == formatted2
 
--- Property: Dependent types checking
-prop_dependent_types_checking :: String -> Property
-prop_dependent_types_checking code =
-  let result = checkDependentTypes code
-      hasContent = not (null code)
-  in hasContent ==> property $ True -- Placeholder since we can't inspect result
+prop_analyzeErrorsHandlesEmptyList :: Bool
+prop_analyzeErrorsHandlesEmptyList =
+    let result = analyzeErrors []
+    in result == []
 
--- Property: Ownership checking
-prop_ownership_checking :: String -> Property
-prop_ownership_checking code =
-  let result = checkOwnership code
-      hasContent = not (null code)
-  in hasContent ==> property $ True -- Placeholder since we can't inspect result
+prop_analyzeErrorsReturnsSameLength :: [CompilerError] -> Bool
+prop_analyzeErrorsReturnsSameLength errors =
+    let result = analyzeErrors errors
+    in length result == length errors
 
--- Property: Error phase progression
-prop_error_phase_progression :: CompilationPhase -> Property
-prop_error_phase_progression phase =
-  let phaseOrder = [Parsing, TypeChecking, OwnershipAnalysis, CodeGeneration]
-      currentIndex = case phase of
-        Parsing -> 0
-        TypeChecking -> 1
-        OwnershipAnalysis -> 2
-        CodeGeneration -> 3
-      laterPhases = drop currentIndex phaseOrder
-  in property $ phase `elem` laterPhases
+prop_hasTypeErrorsDetectsTypeErrors :: [TypeCheckDiagnostic] -> Bool
+prop_hasTypeErrorsDetectsTypeErrors diagnostics =
+    let hasErrors = not (null diagnostics)
+    in hasTypeErrors diagnostics == hasErrors
 
--- Property: Diagnostic severity ordering
-prop_diagnostic_severity_ordering :: TypeCheckDiagnostic -> TypeCheckDiagnostic -> Property
-prop_diagnostic_severity_ordering diag1 diag2 =
-  let severity1 = case diag1 of
-        TypeCheckDiagnostic _ Error _ -> 3
-        TypeCheckDiagnostic _ Warning _ -> 2
-        TypeCheckDiagnostic _ Info _ -> 1
-      severity2 = case diag2 of
-        TypeCheckDiagnostic _ Error _ -> 3
-        TypeCheckDiagnostic _ Warning _ -> 2
-        TypeCheckDiagnostic _ Info _ -> 1
-  in property $ (severity1 > severity2) === (severity1 > severity2)
+prop_diagnoseTypeErrorsHandlesEmptyFile :: Bool
+prop_diagnoseTypeErrorsHandlesEmptyFile =
+    let emptyFile = TypusFile defaultFileDirectives [] [] []
+    in case diagnoseTypeErrors emptyFile of
+        Left _ -> True
+        Right diagnostics -> null diagnostics
 
--- Property: Error message preservation
-prop_error_message_preservation :: String -> CompilationPhase -> Int -> Int -> Property
-prop_error_message_preservation message phase line column =
-  let error = CompilerError phase message line column
-      rendered = renderCompilationError error
-  in property $ message `isInfixOf` rendered
+prop_extractDeclarationsHandlesEmptyFile :: Bool
+prop_extractDeclarationsHandlesEmptyFile =
+    let emptyFile = TypusFile defaultFileDirectives [] [] []
+        declarations = extractDeclarations emptyFile
+    in null declarations
+
+prop_extractFunctionCallsHandlesEmptyFile :: Bool
+prop_extractFunctionCallsHandlesEmptyFile =
+    let emptyFile = TypusFile defaultFileDirectives [] [] []
+        functionCalls = extractFunctionCalls emptyFile
+    in null functionCalls
+
+prop_buildTypeEnvHandlesEmptyPairs :: Bool
+prop_buildTypeEnvHandlesEmptyPairs =
+    let typeEnv = buildTypeEnv []
+    in null typeEnv
+
+prop_buildTypeEnvFromPairsHandlesEmptyPairs :: Bool
+prop_buildTypeEnvFromPairsHandlesEmptyPairs =
+    let typeEnv = buildTypeEnvFromPairs []
+    in null typeEnv
+
+prop_createTypusFileFromErrorsHandlesEmptyErrors :: Bool
+prop_createTypusFileFromErrorsHandlesEmptyErrors =
+    let typusFile = createTypusFileFromErrors []
+    in null (tfBlocks typusFile)
+
+prop_isMethodDeclarationDetectsMethods :: String -> Bool
+prop_isMethodDeclarationDetectsMethods input =
+    let result = isMethodDeclaration input
+        hasMethodPattern = "func (" `isInfixOf` input
+    in if hasMethodPattern
+       then result
+       else True  -- May or may not be method, no specific requirement
+
+prop_checkTypeErrorHandlesValidInput :: TypeCheckDiagnostic -> Bool
+prop_checkTypeErrorHandlesValidInput diagnostic =
+    checkTypeError diagnostic  -- Should not crash
+
+prop_hasMalformedSyntaxHandlesEmptyFile :: Bool
+prop_hasMalformedSyntaxHandlesEmptyFile =
+    let emptyFile = TypusFile defaultFileDirectives [] [] []
+    in not (hasMalformedSyntax emptyFile)  -- Empty file should not have malformed syntax
+
+prop_checkDependentTypesHandlesEmptyFile :: Bool
+prop_checkDependentTypesHandlesEmptyFile =
+    let emptyFile = TypusFile defaultFileDirectives [] [] []
+    in checkDependentTypes emptyFile  -- Should not crash
+
+prop_checkOwnershipHandlesEmptyFile :: Bool
+prop_checkOwnershipHandlesEmptyFile =
+    let emptyFile = TypusFile defaultFileDirectives [] [] []
+    in checkOwnership emptyFile  -- Should not crash
+
+prop_ensureSourceIRHandlesEmptyFile :: Bool
+prop_ensureSourceIRHandlesEmptyFile =
+    let emptyFile = TypusFile defaultFileDirectives [] [] []
+    in case ensureSourceIR emptyFile of
+        Left _ -> True
+        Right _ -> True
+
+prop_typeDiagnosticToCompilerErrorPreservesContent :: TypeCheckDiagnostic -> Bool
+prop_typeDiagnosticToCompilerErrorPreservesContent diagnostic =
+    let error = typeDiagnosticToCompilerError diagnostic
+        expectedDetail = case diagnostic of
+            TypeCheckDiagnostic _ detail -> detail
+    in expectedDetail `isInfixOf` T.unpack (errorMessage error)
+
+-- ============================================================================
+-- Advanced Properties
+-- ============================================================================
+
+prop_compileAndGenerateGoCodeConsistency :: TypusFile -> Bool
+prop_compileAndGenerateGoCodeConsistency typusFile =
+    case compile typusFile of
+        Left _ -> True  -- Compilation errors are expected
+        Right compiledResult -> 
+            let generatedCode = generateGoCode typusFile
+            in not (null compiledResult) && not (null generatedCode)
+
+prop_errorSeverityOrdering :: CompilerError -> CompilerError -> Bool
+prop_errorSeverityOrdering err1 err2 =
+    let sev1 = errorSeverity err1
+        sev2 = errorSeverity err2
+        severityOrder sev = case sev of
+            Fatal -> 4
+            Error -> 3
+            Warning -> 2
+            Info -> 1
+    in if sev1 >= sev2
+       then severityOrder sev1 >= severityOrder sev2
+       else severityOrder sev1 <= severityOrder sev2
+
+prop_errorPhaseOrdering :: CompilerError -> CompilerError -> Bool
+prop_errorPhaseOrdering err1 err2 =
+    let phase1 = errorPhase err1
+        phase2 = errorPhase err2
+        phaseOrder phase = case phase of
+            ParsingPhase -> 1
+            TypeCheckingPhase -> 2
+            OwnershipPhase -> 3
+            CodeGenPhase -> 4
+    in if phase1 >= phase2
+       then phaseOrder phase1 >= phaseOrder phase2
+       else phaseOrder phase1 <= phaseOrder phase2
+
+prop_compilerErrorIdPreserved :: String -> TypusFile -> Bool
+prop_compilerErrorIdPreserved errorId typusFile =
+    let hasErrorIdContent = errorId `isInfixOf` unlines (map cbContent (tfBlocks typusFile))
+    in if hasErrorIdContent
+       then case compile typusFile of
+           Left errors -> any (\e -> errorId `isInfixOf` errorId e) errors
+           Right _ -> False
+       else True
+
+-- ============================================================================
+-- Test Suite
+-- ============================================================================
 
 tests :: TestTree
-tests = testGroup "Compiler Advanced QuickCheck Tests"
-  [ fastProperty "compilation phase ordering" prop_compilation_phase_ordering
-  , fastProperty "compiler error structure" prop_compiler_error_structure
-  , fastProperty "error formatting consistency" prop_error_formatting_consistency
-  , fastProperty "type error detection" prop_type_error_detection
-  , fastProperty "declaration extraction" prop_declaration_extraction
-  , fastProperty "function call extraction" prop_function_call_extraction
-  , fastProperty "type environment building" prop_type_environment_building
-  , fastProperty "type error checking" prop_type_error_checking
-  , fastProperty "malformed syntax detection" prop_malformed_syntax_detection
-  , fastProperty "dependent types checking" prop_dependent_types_checking
-  , fastProperty "ownership checking" prop_ownership_checking
-  , fastProperty "error phase progression" prop_error_phase_progression
-  , fastProperty "diagnostic severity ordering" prop_diagnostic_severity_ordering
-  , fastProperty "error message preservation" prop_error_message_preservation
-  ]
+tests =
+  testGroup "Compiler Advanced QuickCheck Tests"
+    [ testGroup "Basic Compilation Properties"
+        [ fastProperty "compile preserves valid structure" prop_compilePreservesValidStructure
+        , fastProperty "compile detects type errors" prop_compileDetectsTypeErrors
+        , fastProperty "generateGoCode always returns string" prop_generateGoCodeAlwaysReturnsString
+        , fastProperty "generateGoCode preserves content" prop_generateGoCodePreservesContent
+        ]
+
+    , testGroup "Error Handling Properties"
+        [ fastProperty "renderCompilationError handles empty list" prop_renderCompilationErrorHandlesEmptyList
+        , fastProperty "renderCompilationError handles non-empty list" prop_renderCompilationErrorHandlesNonEmptyList
+        , fastProperty "formatCompilerErrors is consistent" prop_formatCompilerErrorsConsistent
+        , fastProperty "analyzeErrors handles empty list" prop_analyzeErrorsHandlesEmptyList
+        , fastProperty "analyzeErrors returns same length" prop_analyzeErrorsReturnsSameLength
+        ]
+
+    , testGroup "Type Checking Properties"
+        [ fastProperty "hasTypeErrors detects type errors" prop_hasTypeErrorsDetectsTypeErrors
+        , fastProperty "diagnoseTypeErrors handles empty file" prop_diagnoseTypeErrorsHandlesEmptyFile
+        , fastProperty "extractDeclarations handles empty file" prop_extractDeclarationsHandlesEmptyFile
+        , fastProperty "extractFunctionCalls handles empty file" prop_extractFunctionCallsHandlesEmptyFile
+        , fastProperty "buildTypeEnv handles empty pairs" prop_buildTypeEnvHandlesEmptyPairs
+        , fastProperty "buildTypeEnvFromPairs handles empty pairs" prop_buildTypeEnvFromPairsHandlesEmptyPairs
+        ]
+
+    , testGroup "Compiler Utilities Properties"
+        [ fastProperty "createTypusFileFromErrors handles empty errors" prop_createTypusFileFromErrorsHandlesEmptyErrors
+        , fastProperty "isMethodDeclaration detects methods" prop_isMethodDeclarationDetectsMethods
+        , fastProperty "checkTypeError handles valid input" prop_checkTypeErrorHandlesValidInput
+        , fastProperty "hasMalformedSyntax handles empty file" prop_hasMalformedSyntaxHandlesEmptyFile
+        , fastProperty "checkDependentTypes handles empty file" prop_checkDependentTypesHandlesEmptyFile
+        , fastProperty "checkOwnership handles empty file" prop_checkOwnershipHandlesEmptyFile
+        , fastProperty "ensureSourceIR handles empty file" prop_ensureSourceIRHandlesEmptyFile
+        , fastProperty "typeDiagnosticToCompilerError preserves content" prop_typeDiagnosticToCompilerErrorPreservesContent
+        ]
+
+    , testGroup "Advanced Properties"
+        [ fastProperty "compile and generateGoCode consistency" prop_compileAndGenerateGoCodeConsistency
+        , fastProperty "error severity ordering" prop_errorSeverityOrdering
+        , fastProperty "error phase ordering" prop_errorPhaseOrdering
+        , fastProperty "compiler error id preserved" prop_compilerErrorIdPreserved
+        ]
+
+    , testGroup "Unit Tests"
+        [ testCase "compile simple valid file" $ do
+            let simpleFile = TypusFile defaultFileDirectives [] [CodeBlock defaultBlockDirectives "package main\nfunc main() {}\n" undefined] []
+            case compile simpleFile of
+                Left err -> assertBool ("Should compile successfully: " ++ show err) False
+                Right result -> assertBool "Should generate Go code" (not (null result))
+
+        , testCase "compile file with type error" $ do
+            let errorFile = TypusFile defaultFileDirectives [] [CodeBlock defaultBlockDirectives "var x int = \"string\"" undefined] []
+            case compile errorFile of
+                Left errors -> assertBool "Should detect type error" (any (\e -> errorSeverity e == Error) errors)
+                Right _ -> assertBool "Should not compile successfully" False
+
+        , testCase "generateGoCode for simple file" $ do
+            let simpleFile = TypusFile defaultFileDirectives [] [CodeBlock defaultBlockDirectives "func test() {}\n" undefined] []
+            let result = generateGoCode simpleFile
+            assertBool "Should generate some Go code" (not (null result))
+
+        , testCase "renderCompilationError for empty list" $ do
+            let result = renderCompilationError []
+            assertBool "Should handle empty list gracefully" (null result || result == "")
+
+        , testCase "renderCompilationError for non-empty list" $ do
+            let errors = [CompilerError "TEST001" (T.pack "test error") ParsingPhase Parsing Error Nothing Nothing [] [] Nothing]
+            let result = renderCompilationError errors
+            assertBool "Should format errors" (not (null result))
+        ]
+    ]

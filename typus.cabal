@@ -482,6 +482,13 @@ test-suite typus-test
         
         -- New Enhanced Test Modules (2025)
         Test.Unit.SourceLocationAdvancedQuickCheckSpec,
+        Test.Unit.ErrorHandlerAdvancedQuickCheckSpec,
+        Test.Unit.ParserAdvancedQuickCheckSpec,
+        Test.Unit.UtilsAdvancedQuickCheckSpec,
+        Test.Unit.CompilerAdvancedQuickCheckSpec,
+        Test.Unit.DependenciesAdvancedQuickCheckSpec,
+        Test.Unit.OwnershipAdvancedQuickCheckSpec,
+        Test.Unit.IntegrationAdvancedQuickCheckSpec,
         
         Test.Unit.ErrorHandlerBoundaryQuickCheckSpec,
         Test.Unit.ParserEdgeCaseQuickCheckSpec,

@@ -1,173 +1,360 @@
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-
 module Test.Unit.ParserAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertBool)
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, oneof, elements, choose, listOf, suchThat, vectorOf)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck 
-  ( Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), choose, vectorOf, elements )
-import Control.Monad (replicateM, when)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, intercalate, nub)
-import Data.Char (isSpace, isDigit, isAlpha, toLower, toUpper)
-import Data.Maybe (isJust, isNothing, fromMaybe)
-import qualified Data.Text as T
 
 import Parser
-  ( FileDirectives(..)
-  , BlockDirectives(..)
-  , CodeBlock(..)
-  , TypusFile(..)
-  , defaultFileDirectives
-  , defaultBlockDirectives
-  , parseTypus
-  )
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedWithSpan, spanStart, spanEnd)
+import qualified Data.Text as T
+import Data.List (isPrefixOf, isInfixOf)
+import Data.Char (isSpace)
 
--- Arbitrary instances for QuickCheck
+-- ============================================================================
+-- Arbitrary Instances
+-- ============================================================================
+
 instance Arbitrary FileDirectives where
-  arbitrary = do
-    ownership <- arbitrary
-    dependentTypes <- arbitrary
-    constraints <- arbitrary
-    return $ FileDirectives ownership dependentTypes constraints
+    arbitrary = do
+        ownership <- oneof [pure Nothing, Just <$> arbitrary]
+        dependentTypes <- oneof [pure Nothing, Just <$> arbitrary]
+        constraints <- oneof [pure Nothing, Just <$> arbitrary]
+        return $ FileDirectives ownership dependentTypes constraints
 
 instance Arbitrary BlockDirectives where
-  arbitrary = do
-    ownership <- arbitrary
-    dependentTypes <- arbitrary
-    constraints <- arbitrary
-    return $ BlockDirectives ownership dependentTypes constraints
+    arbitrary = do
+        ownership <- oneof [pure Nothing, Just <$> arbitrary]
+        dependentTypes <- oneof [pure Nothing, Just <$> arbitrary]
+        constraints <- oneof [pure Nothing, Just <$> arbitrary]
+        return $ BlockDirectives ownership dependentTypes constraints
 
 instance Arbitrary CodeBlock where
-  arbitrary = do
-    directives <- arbitrary
-    content <- arbitrary
-    return $ CodeBlock directives content
+    arbitrary = do
+        directives <- arbitrary
+        content <- arbitrary
+        span <- arbitrary
+        return $ CodeBlock directives content span
 
--- Property: Default file directives properties
-prop_default_file_directives_properties :: Property
-prop_default_file_directives_properties =
-  let defaults = defaultFileDirectives
-  in property $ fdOwnership defaults === Nothing .&&.
-     fdDependentTypes defaults === Nothing .&&.
-     fdConstraints defaults === Nothing
+instance Arbitrary TypusFile where
+    arbitrary = do
+        directives <- arbitrary
+        buildTags <- listOf arbitrary
+        blocks <- listOf arbitrary
+        syntaxErrors <- listOf arbitrary
+        return $ TypusFile directives buildTags blocks syntaxErrors
 
--- Property: Default block directives properties
-prop_default_block_directives_properties :: Property
-prop_default_block_directives_properties =
-  let defaults = defaultBlockDirectives
-  in property $ bdOwnership defaults === Nothing .&&.
-     bdDependentTypes defaults === Nothing .&&.
-     bdConstraints defaults === Nothing
+-- Generate valid boolean directive values
+validBoolValue :: Gen String
+validBoolValue = elements ["on", "off", "true", "false"]
 
--- Property: File directives field independence
-prop_file_directives_field_independence :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Property
-prop_file_directives_field_independence ownership1 depTypes1 constraints1 ownership2 depTypes2 constraints2 =
-  let directives1 = FileDirectives ownership1 depTypes1 constraints1
-      directives2 = FileDirectives ownership2 depTypes2 constraints2
-      different = ownership1 /= ownership2 || depTypes1 /= depTypes2 || constraints1 /= constraints2
-  in different ==> property $ directives1 /= directives2
+-- Generate valid directive keys
+validDirectiveKey :: Gen String
+validDirectiveKey = elements ["ownership", "dependent_types", "constraints"]
 
--- Property: Block directives field independence
-prop_block_directives_field_independence :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Property
-prop_block_directives_field_independence ownership1 depTypes1 constraints1 ownership2 depTypes2 constraints2 =
-  let directives1 = BlockDirectives ownership1 depTypes1 constraints1
-      directives2 = BlockDirectives ownership2 depTypes2 constraints2
-      different = ownership1 /= ownership2 || depTypes1 /= depTypes2 || constraints1 /= constraints2
-  in different ==> property $ directives1 /= directives2
+-- Generate valid file directive lines
+fileDirectiveLine :: Gen String
+fileDirectiveLine = do
+    key <- validDirectiveKey
+    value <- validBoolValue
+    return $ "//! " ++ key ++ ": " ++ value
 
--- Property: CodeBlock content preservation
-prop_codeblock_content_preservation :: BlockDirectives -> String -> Property
-prop_codeblock_content_preservation directives content =
-  let block = CodeBlock directives content
-      retrievedContent = case block of
-        CodeBlock _ c -> c
-  in property $ retrievedContent === content
+-- Generate valid block directive lines
+blockDirectiveLine :: Gen String
+blockDirectiveLine = do
+    key <- validDirectiveKey
+    value <- validBoolValue
+    return $ "{//! " ++ key ++ ": " ++ value ++ "}"
 
--- Property: CodeBlock directives preservation
-prop_codeblock_directives_preservation :: BlockDirectives -> String -> Property
-prop_codeblock_directives_preservation directives content =
-  let block = CodeBlock directives content
-      retrievedDirectives = case block of
-        CodeBlock d _ -> d
-  in property $ retrievedDirectives === directives
+-- Generate simple code content
+simpleCodeContent :: Gen String
+simpleCodeContent = do
+    lines' <- listOf $ elements [
+        "func main() {",
+        "    fmt.Println(\"hello\")",
+        "}",
+        "",
+        "package main",
+        "import \"fmt\"",
+        "if condition {",
+        "    // do something",
+        "}"
+        ]
+    return $ unlines lines'
 
--- Property: TypusFile structure consistency
-prop_typus_file_structure_consistency :: FileDirectives -> [CodeBlock] -> Property
-prop_typus_file_structure_consistency directives blocks =
-  let file = TypusFile directives blocks
-      retrievedDirectives = case file of
-        TypusFile d _ -> d
-      retrievedBlocks = case file of
-        TypusFile _ b -> b
-  in property $ retrievedDirectives === directives .&&. retrievedBlocks === blocks
+-- Generate build tag lines
+buildTagLine :: Gen String
+buildTagLine = oneof [
+    pure "//go:build linux",
+    pure "// +build darwin",
+    pure "//go:build windows && amd64",
+    pure "// +build !prod"
+    ]
 
--- Property: Parser handles empty input
-prop_parser_empty_input :: Property
-prop_parser_empty_input =
-  let result = parseTypus ""
-  in property $ True -- Placeholder since we can't easily inspect parser result
+-- ============================================================================
+-- Parser Properties
+-- ============================================================================
 
--- Property: Parser handles whitespace-only input
-prop_parser_whitespace_input :: String -> Property
-prop_parser_whitespace_input ws =
-  let allWhitespace = all isSpace ws
-      input = if allWhitespace then ws else "   \t\n  "
-      result = parseTypus input
-  in property $ True -- Placeholder since we can't easily inspect parser result
+prop_parseEmptyFile :: Bool
+prop_parseEmptyFile =
+    case parseTypus "" of
+        Left _ -> False
+        Right file -> null (tfBlocks file) && null (tfBuildTags file)
 
--- Property: Parser handles basic directives
-prop_parser_basic_directives :: String -> Property
-prop_parser_basic_directives directive =
-  let validDirectives = ["@ownership", "@dependent-types", "@constraints"]
-      isValidDirective = any (`isPrefixOf` directive) validDirectives
-      input = if isValidDirective then directive else "@ownership"
-      result = parseTypus input
-  in property $ True -- Placeholder since we can't easily inspect parser result
+prop_parseSimpleFile :: Bool
+prop_parseSimpleFile =
+    let content = "package main\n\nfunc main() {\n    fmt.Println(\"hello\")\n}\n"
+    in case parseTypus content of
+        Left _ -> False
+        Right file -> not (null (tfBlocks file))
 
--- Property: Parser handles code blocks
-prop_parser_code_blocks :: String -> Property
-prop_parser_code_blocks content =
-  let input = "func test() {\n" ++ content ++ "\n}"
-      result = parseTypus input
-  in property $ True -- Placeholder since we can't easily inspect parser result
+prop_parseFileDirective :: String -> String -> Bool
+prop_parseFileDirective key value =
+    let content = "//! " ++ key ++ ": " ++ value ++ "\npackage main\n"
+    in case parseTypus content of
+        Left _ -> False
+        Right file -> 
+            let dirs = tfDirectives file
+            in case key of
+                "ownership" -> case fdOwnership dirs of
+                    Just (Located val _) -> val == (value `elem` ["on", "true"])
+                    Nothing -> False
+                "dependent_types" -> case fdDependentTypes dirs of
+                    Just (Located val _) -> val == (value `elem` ["on", "true"])
+                    Nothing -> False
+                "constraints" -> case fdConstraints dirs of
+                    Just (Located val _) -> val == (value `elem` ["on", "true"])
+                    Nothing -> False
+                _ -> True  -- Unknown directive should be handled gracefully
 
--- Property: Parser handles mixed content
-prop_parser_mixed_content :: String -> String -> Property
-prop_parser_mixed_content directives content =
-  let input = directives ++ "\n\nfunc test() {\n" ++ content ++ "\n}"
-      result = parseTypus input
-  in property $ True -- Placeholder since we can't easily inspect parser result
+prop_parseBlockDirective :: String -> String -> Bool
+prop_parseBlockDirective key value =
+    let content = "package main\n\n{//! " ++ key ++ ": " ++ value ++ "}\nfunc test() {}\n"
+    in case parseTypus content of
+        Left _ -> False
+        Right file -> 
+            let blocks = tfBlocks file
+            in case blocks of
+                (block:_) -> 
+                    let dirs = cbDirectives block
+                    in case key of
+                        "ownership" -> case bdOwnership dirs of
+                            Just (Located val _) -> val == (value `elem` ["on", "true"])
+                            Nothing -> False
+                        "dependent_types" -> case bdDependentTypes dirs of
+                            Just (Located val _) -> val == (value `elem` ["on", "true"])
+                            Nothing -> False
+                        "constraints" -> case bdConstraints dirs of
+                            Just (Located val _) -> val == (value `elem` ["on", "true"])
+                            Nothing -> False
+                        _ -> True
+                [] -> False
 
--- Property: Parser error handling
-prop_parser_error_handling :: String -> Property
-prop_parser_error_handling malformed =
-  let result = parseTypus malformed
-  in property $ True -- Placeholder since we can't easily inspect parser result
+prop_parseBuildTags :: Bool
+prop_parseBuildTags =
+    let content = "//go:build linux\n// +build darwin\npackage main\n"
+    in case parseTypus content of
+        Left _ -> False
+        Right file -> length (tfBuildTags file) >= 2
 
--- Property: Parser idempotency on valid input
-prop_parser_idempotency :: String -> Property
-prop_parser_idempotency input =
-  let result1 = parseTypus input
-      result2 = parseTypus input
-  in property $ True -- Placeholder since we can't easily inspect parser result
+prop_parseMultipleBlocks :: Bool
+prop_parseMultipleBlocks =
+    let content = unlines [
+            "package main",
+            "",
+            "func first() {",
+            "    fmt.Println(\"first\")",
+            "}",
+            "",
+            "{//! ownership: on}",
+            "func second() {",
+            "    fmt.Println(\"second\")",
+            "}",
+            "",
+            "{//! dependent_types: true}",
+            "func third() {",
+            "    fmt.Println(\"third\")",
+            "}"
+            ]
+    in case parseTypus content of
+        Left _ -> False
+        Right file -> length (tfBlocks file) >= 3
+
+prop_parsePreservesContent :: String -> Bool
+prop_parsePreservesContent originalContent =
+    case parseTypus originalContent of
+        Left _ -> True  -- Parse errors are expected for arbitrary content
+        Right file -> 
+            let reconstructed = concatMap cbContent (tfBlocks file)
+            in not (null originalContent) ==> 
+               (originalContent `isInfixOf` reconstructed || 
+                any (`isInfixOf` originalContent) (lines reconstructed))
+
+prop_parseHandlesComments :: Bool
+prop_parseHandlesComments =
+    let content = unlines [
+            "package main",
+            "// This is a comment",
+            "/* This is a block comment */",
+            "func main() {",
+            "    // Another comment",
+            "    fmt.Println(\"hello\")",
+            "}",
+            "// End of file comment"
+            ]
+    in case parseTypus content of
+        Left _ -> False
+        Right file -> not (null (tfBlocks file))
+
+prop_parseHandlesIndentation :: Bool
+prop_parseHandlesIndentation =
+    let content = unlines [
+            "package main",
+            "",
+            "func main() {",
+            "\tfmt.Println(\"tabbed\")",
+            "    fmt.Println(\"spaced\")",
+            "\t\tfmt.Println(\"double tabbed\")",
+            "}"
+            ]
+    in case parseTypus content of
+        Left _ -> False
+        Right file -> not (null (tfBlocks file))
+
+prop_parseHandlesEmptyLines :: Bool
+prop_parseHandlesEmptyLines =
+    let content = unlines [
+            "package main",
+            "",
+            "",
+            "func main() {",
+            "",
+            "    fmt.Println(\"hello\")",
+            "",
+            "}",
+            ""
+            ]
+    in case parseTypus content of
+        Left _ -> False
+        Right file -> not (null (tfBlocks file))
+
+prop_parseHandlesMultipleDirectives :: Bool
+prop_parseHandlesMultipleDirectives =
+    let content = "//! ownership: on, dependent_types: true\npackage main\n"
+    in case parseTypus content of
+        Left _ -> False
+        Right file -> 
+            let dirs = tfDirectives file
+            in case (fdOwnership dirs, fdDependentTypes dirs) of
+                (Just (Located True _), Just (Located True _)) -> True
+                _ -> False
+
+prop_parseHandlesNestedBlocks :: Bool
+prop_parseHandlesNestedBlocks =
+    let content = unlines [
+            "package main",
+            "",
+            "{//! ownership: on}",
+            "func outer() {",
+            "    {//! dependent_types: true}",
+            "    func inner() {",
+            "        fmt.Println(\"nested\")",
+            "    }",
+            "}",
+            "",
+            "func separate() {",
+            "    fmt.Println(\"separate\")",
+            "}"
+            ]
+    in case parseTypus content of
+        Left _ -> False
+        Right file -> length (tfBlocks file) >= 2
+
+-- Helper function for implication
+(==>) :: Bool -> Bool -> Bool
+True ==> x = x
+False ==> _ = True
+
+-- ============================================================================
+-- Test Suite
+-- ============================================================================
 
 tests :: TestTree
-tests = testGroup "Parser Advanced QuickCheck Tests"
-  [ fastProperty "default file directives properties" prop_default_file_directives_properties
-  , fastProperty "default block directives properties" prop_default_block_directives_properties
-  , fastProperty "file directives field independence" prop_file_directives_field_independence
-  , fastProperty "block directives field independence" prop_block_directives_field_independence
-  , fastProperty "codeblock content preservation" prop_codeblock_content_preservation
-  , fastProperty "codeblock directives preservation" prop_codeblock_directives_preservation
-  , fastProperty "typus file structure consistency" prop_typus_file_structure_consistency
-  , fastProperty "parser empty input" prop_parser_empty_input
-  , fastProperty "parser whitespace input" prop_parser_whitespace_input
-  , fastProperty "parser basic directives" prop_parser_basic_directives
-  , fastProperty "parser code blocks" prop_parser_code_blocks
-  , fastProperty "parser mixed content" prop_parser_mixed_content
-  , fastProperty "parser error handling" prop_parser_error_handling
-  , fastProperty "parser idempotency" prop_parser_idempotency
-  ]
+tests =
+  testGroup "Parser Advanced QuickCheck Tests"
+    [ testGroup "Basic Parsing Properties"
+        [ fastProperty "parse empty file" prop_parseEmptyFile
+        , fastProperty "parse simple file" prop_parseSimpleFile
+        , fastProperty "parse file directive" prop_parseFileDirective
+        , fastProperty "parse block directive" prop_parseBlockDirective
+        , fastProperty "parse build tags" prop_parseBuildTags
+        ]
+
+    , testGroup "Complex Parsing Properties"
+        [ fastProperty "parse multiple blocks" prop_parseMultipleBlocks
+        , fastProperty "parse preserves content" prop_parsePreservesContent
+        , fastProperty "parse handles comments" prop_parseHandlesComments
+        , fastProperty "parse handles indentation" prop_parseHandlesIndentation
+        , fastProperty "parse handles empty lines" prop_parseHandlesEmptyLines
+        ]
+
+    , testGroup "Directive Parsing Properties"
+        [ fastProperty "parse handles multiple directives" prop_parseHandlesMultipleDirectives
+        , fastProperty "parse handles nested blocks" prop_parseHandlesNestedBlocks
+        ]
+
+    , testGroup "Unit Tests"
+        [ testCase "parse file with ownership directive" $ do
+            let content = "//! ownership: on\npackage main\n"
+            case parseTypus content of
+                Left err -> assertBool ("Should parse successfully: " ++ err) False
+                Right file -> 
+                    let dirs = tfDirectives file
+                    in case fdOwnership dirs of
+                        Just (Located True _) -> pure ()
+                        _ -> assertBool "Should have ownership enabled" False
+
+        , testCase "parse file with dependent_types directive" $ do
+            let content = "//! dependent_types: true\npackage main\n"
+            case parseTypus content of
+                Left err -> assertBool ("Should parse successfully: " ++ err) False
+                Right file -> 
+                    let dirs = tfDirectives file
+                    in case fdDependentTypes dirs of
+                        Just (Located True _) -> pure ()
+                        _ -> assertBool "Should have dependent_types enabled" False
+
+        , testCase "parse file with constraints directive" $ do
+            let content = "//! constraints: on\npackage main\n"
+            case parseTypus content of
+                Left err -> assertBool ("Should parse successfully: " ++ err) False
+                Right file -> 
+                    let dirs = tfDirectives file
+                    in case (fdConstraints dirs, fdDependentTypes dirs) of
+                        (Just (Located True _), Just (Located True _)) -> pure ()
+                        _ -> assertBool "Should have constraints and dependent_types enabled" False
+
+        , testCase "parse file with block directive" $ do
+            let content = "{//! ownership: off}\nfunc test() {}\n"
+            case parseTypus content of
+                Left err -> assertBool ("Should parse successfully: " ++ err) False
+                Right file -> 
+                    case tfBlocks file of
+                        (block:_) -> 
+                            let dirs = cbDirectives block
+                            in case bdOwnership dirs of
+                                Just (Located False _) -> pure ()
+                                _ -> assertBool "Should have ownership disabled" False
+                        [] -> assertBool "Should have at least one block" False
+
+        , testCase "parse file with build tags" $ do
+            let content = "//go:build linux\npackage main\n"
+            case parseTypus content of
+                Left err -> assertBool ("Should parse successfully: " ++ err) False
+                Right file -> 
+                    let tags = tfBuildTags file
+                    in if null tags
+                       then assertBool "Should have build tags" False
+                       else pure ()
+        ]
+    ]
