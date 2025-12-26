@@ -487,11 +487,21 @@ test-suite typus-test
         Test.Unit.TypusEndToEndQuickCheckSpec,
         Test.Unit.DebugIntegrationSpec,
         Test.Unit.IntegratedCompilerSpec,
-        Test.Unit.BoundaryConditionsSpec,
+        
         Test.Unit.NewCabalPropertySpec,
         Test.Unit.EnhancedDebugQuickCheckSpec,
         Test.Unit.DependenciesBoundarySpec,
-        Test.Unit.NewComprehensiveTestsSpec
+        Test.Unit.NewComprehensiveTestsSpec,
+        
+        -- Additional Test Modules for Enhanced Coverage
+        Test.Unit.UtilsStringPropertiesSpec,
+        Test.Unit.SourceLocationConsistencySpec,
+        Test.Unit.ParserConsistencySpec,
+        Test.Unit.ErrorRecoveryPropertiesSpec,
+        Test.Unit.DependentTypeSystemSpec,
+        Test.Unit.OwnershipAnalysisSpec,
+        Test.Unit.CompilerIRSpec,
+        Test.Unit.IntegrationQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

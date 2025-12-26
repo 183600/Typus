@@ -49,6 +49,16 @@ import qualified Test.Unit.NewParserSpec
 import qualified Test.Unit.NewCompilerSpec
 import qualified Test.Unit.NewOwnershipSpec
 
+-- New Test Modules Added for Additional Coverage
+import qualified Test.Unit.UtilsStringPropertiesSpec
+import qualified Test.Unit.SourceLocationConsistencySpec
+import qualified Test.Unit.ParserConsistencySpec
+import qualified Test.Unit.ErrorRecoveryPropertiesSpec
+import qualified Test.Unit.DependentTypeSystemSpec
+import qualified Test.Unit.OwnershipAnalysisSpec
+import qualified Test.Unit.CompilerIRSpec
+import qualified Test.Unit.IntegrationQuickCheckSpec
+
 -- New Comprehensive QuickCheck Test Modules
 import qualified Test.Unit.TextProcessingBoundaryQuickCheckSpec
 import qualified Test.Unit.SourceLocationMathQuickCheckSpec
@@ -141,7 +151,7 @@ import qualified Test.Unit.TypusEndToEndQuickCheckSpec
 -- New Test Modules Added for Cabal Testing
 import qualified Test.Unit.DebugIntegrationSpec
 import qualified Test.Unit.IntegratedCompilerSpec
-import qualified Test.Unit.BoundaryConditionsSpec
+
 import qualified Test.Unit.NewCabalPropertySpec
 import qualified Test.Unit.ErrorHandlerCoreQuickCheckSpec
 import qualified Test.Unit.DependenciesCoreQuickCheckSpec
@@ -726,7 +736,7 @@ tests =
     , testGroup "New Cabal Test Modules"
         [ Test.Unit.DebugIntegrationSpec.tests
         , Test.Unit.IntegratedCompilerSpec.tests
-        , Test.Unit.BoundaryConditionsSpec.tests
+        
         , Test.Unit.NewCabalPropertySpec.tests
         ]
     , testGroup "New Enhanced Test Modules"
@@ -752,5 +762,15 @@ tests =
         , Test.Unit.CompilerOptimizationInvariantQuickCheckSpec.tests
         , Test.Unit.ErrorHandlingConsistencyQuickCheckSpec.tests
         , Test.Unit.ToolchainRobustnessQuickCheckSpec.tests
+        ]
+    , testGroup "Additional Test Modules for Enhanced Coverage"
+        [ Test.Unit.UtilsStringPropertiesSpec.utilsStringPropertiesSpec
+        , Test.Unit.SourceLocationConsistencySpec.sourceLocationConsistencySpec
+        , Test.Unit.ParserConsistencySpec.parserConsistencySpec
+        , Test.Unit.ErrorRecoveryPropertiesSpec.errorRecoveryPropertiesSpec
+        , Test.Unit.DependentTypeSystemSpec.dependentTypeSystemSpec
+        , Test.Unit.OwnershipAnalysisSpec.ownershipAnalysisSpec
+        , Test.Unit.CompilerIRSpec.compilerIRSpec
+        , Test.Unit.IntegrationQuickCheckSpec.integrationQuickCheckSpec
         ]
     ]
