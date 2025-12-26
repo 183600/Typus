@@ -364,6 +364,16 @@ import qualified Test.Unit.CodeGenerationQuickCheckTestSpec
 import qualified Test.Unit.ParserBoundaryConditionsQuickCheckTestSpec
 import qualified Test.Unit.IntegrationQuickCheckTestSpec
 
+-- New Advanced QuickCheck Test Modules (2025)
+import qualified Test.Unit.SourceLocationAdvancedQuickCheckSpec
+import qualified Test.Unit.UtilsAdvancedQuickCheckSpec
+import qualified Test.Unit.ParserAdvancedQuickCheckSpec
+import qualified Test.Unit.ErrorHandlerAdvancedQuickCheckSpec
+import qualified Test.Unit.CompilerAdvancedQuickCheckSpec
+import qualified Test.Unit.OwnershipAdvancedQuickCheckSpec
+import qualified Test.Unit.DependenciesAdvancedQuickCheckSpec
+import qualified Test.Unit.IntegrationAdvancedQuickCheckSpec
+
 -- New comprehensive QuickCheck test modules
 import qualified Test.Unit.CompilerErrorHandlingQuickCheckSpec
 import qualified Test.Unit.DependentTypesSystemQuickCheckSpec
@@ -1594,4 +1604,16 @@ tests =
     , Test.Unit.NewParserBoundaryQuickCheckSpec.tests
     , Test.Unit.NewErrorHandlerCoreQuickCheckSpec.tests
     , Test.Unit.NewComprehensiveCabalQuickCheckSpec.tests
+    ]
+
+  -- New Advanced QuickCheck Test Modules (2025)
+  , testGroup "Advanced QuickCheck Test Modules 2025"
+    [ Test.Unit.SourceLocationAdvancedQuickCheckSpec.tests
+    , Test.Unit.UtilsAdvancedQuickCheckSpec.tests
+    , Test.Unit.ParserAdvancedQuickCheckSpec.tests
+    , Test.Unit.ErrorHandlerAdvancedQuickCheckSpec.tests
+    , Test.Unit.CompilerAdvancedQuickCheckSpec.tests
+    , Test.Unit.OwnershipAdvancedQuickCheckSpec.tests
+    , Test.Unit.DependenciesAdvancedQuickCheckSpec.tests
+    , Test.Unit.IntegrationAdvancedQuickCheckSpec.tests
     ]
