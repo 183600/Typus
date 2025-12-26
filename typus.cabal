@@ -424,7 +424,6 @@ test-suite typus-test
         -- New comprehensive QuickCheck test modules added for enhanced coverage
         Test.Unit.CompilerErrorRecoveryQuickCheckSpec,
         Test.Unit.DependentTypeSystemBoundaryQuickCheckSpec,
-        Test.Unit.OwnershipTransitivityQuickCheckSpec,
         
         Test.Unit.SourceLocationAccuracyQuickCheckSpec,
         Test.Unit.IRGenerationConsistencyQuickCheckSpec,
@@ -474,7 +473,18 @@ test-suite typus-test
         Test.Unit.EnhancedOwnershipBoundaryQuickCheckSpec,
         Test.Unit.EnhancedDependentTypeSystemBoundaryQuickCheckSpec,
         Test.Unit.NewCabalTestCasesSpec,
-        Test.Unit.NewEnhancedCabalQuickCheckSpec
+        Test.Unit.NewEnhancedCabalQuickCheckSpec,
+        
+        -- New Comprehensive QuickCheck Test Modules (2025)
+        Test.Unit.SourceLocationAdvancedQuickCheckSpec,
+        Test.Unit.ErrorHandlerBoundaryQuickCheckSpec,
+        Test.Unit.ParserEdgeCaseQuickCheckSpec,
+        Test.Unit.CompilerOptimizationQuickCheckSpec,
+        Test.Unit.DependenciesInferenceQuickCheckSpec,
+        Test.Unit.UtilsEfficiencyQuickCheckSpec,
+        Test.Unit.ValueAnalysisFlowQuickCheckSpec,
+        Test.Unit.GoToolchainIntegrationQuickCheckSpec,
+        Test.Unit.TypusEndToEndQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

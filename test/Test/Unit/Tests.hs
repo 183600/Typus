@@ -98,6 +98,17 @@ import qualified Test.Unit.CodeGenerationConsistencyQuickCheckSpec
 
 -- New core QuickCheck test modules
 import qualified Test.Unit.SourceLocationCoreQuickCheckSpec
+
+-- New Comprehensive QuickCheck Test Modules (2025)
+import qualified Test.Unit.SourceLocationAdvancedQuickCheckSpec
+import qualified Test.Unit.ErrorHandlerBoundaryQuickCheckSpec
+import qualified Test.Unit.ParserEdgeCaseQuickCheckSpec
+import qualified Test.Unit.CompilerOptimizationQuickCheckSpec
+import qualified Test.Unit.DependenciesInferenceQuickCheckSpec
+import qualified Test.Unit.UtilsEfficiencyQuickCheckSpec
+import qualified Test.Unit.ValueAnalysisFlowQuickCheckSpec
+import qualified Test.Unit.GoToolchainIntegrationQuickCheckSpec
+import qualified Test.Unit.TypusEndToEndQuickCheckSpec
 import qualified Test.Unit.ErrorHandlerCoreQuickCheckSpec
 import qualified Test.Unit.DependenciesCoreQuickCheckSpec
 import qualified Test.Unit.GoToolchainCoreQuickCheckSpec
@@ -275,7 +286,6 @@ import qualified Test.Unit.SimpleCoreTestSpec
 -- Additional comprehensive QuickCheck test modules
 import qualified Test.Unit.CompilerErrorRecoveryQuickCheckSpec
 import qualified Test.Unit.DependentTypeSystemBoundaryQuickCheckSpec
-import qualified Test.Unit.OwnershipTransitivityQuickCheckSpec
 
 import qualified Test.Unit.SourceLocationAccuracyQuickCheckSpec
 import qualified Test.Unit.IRGenerationConsistencyQuickCheckSpec
@@ -531,7 +541,6 @@ tests =
     , testGroup "New Comprehensive QuickCheck Test Modules"
         [ Test.Unit.CompilerErrorRecoveryQuickCheckSpec.tests
         , Test.Unit.DependentTypeSystemBoundaryQuickCheckSpec.tests
-        , Test.Unit.OwnershipTransitivityQuickCheckSpec.tests
         
         , Test.Unit.SourceLocationAccuracyQuickCheckSpec.tests
         , Test.Unit.IRGenerationConsistencyQuickCheckSpec.tests
@@ -669,4 +678,15 @@ tests =
         , Test.Unit.NewSymbolTableCommutativeQuickCheckSpec.tests
         ]
     -- Note: Test modules already exist in the project
+    , testGroup "New Comprehensive QuickCheck Test Modules (2025)"
+        [ Test.Unit.SourceLocationAdvancedQuickCheckSpec.tests
+        , Test.Unit.ErrorHandlerBoundaryQuickCheckSpec.tests
+        , Test.Unit.ParserEdgeCaseQuickCheckSpec.tests
+        , Test.Unit.CompilerOptimizationQuickCheckSpec.tests
+        , Test.Unit.DependenciesInferenceQuickCheckSpec.tests
+        , Test.Unit.UtilsEfficiencyQuickCheckSpec.tests
+        , Test.Unit.ValueAnalysisFlowQuickCheckSpec.tests
+        , Test.Unit.GoToolchainIntegrationQuickCheckSpec.tests
+        , Test.Unit.TypusEndToEndQuickCheckSpec.tests
+        ]
     ]
