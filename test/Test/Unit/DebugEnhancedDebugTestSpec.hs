@@ -99,9 +99,9 @@ test_debug_with_location = do
 test_performance_debugging :: IO ()
 test_performance_debugging = do
     let operation = "test operation"
-        result <- debugPerformance operation $ do
-            -- Simulate some work
-            return "result"
+    result <- debugPerformance operation $ do
+        -- Simulate some work
+        return "result"
     case result of
         Right (value, perfInfo) -> do
             assertEqual "Operation should return correct value" "result" value

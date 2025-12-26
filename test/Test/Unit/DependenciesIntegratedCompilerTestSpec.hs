@@ -89,7 +89,7 @@ test_project_compilation :: IO ()
 test_project_compilation = do
     let settings = defaultSettings
         files = []  -- Empty project for basic test
-        result <- compileProject settings files
+    result <- compileProject settings files
     case result of
         Right compilationResult -> do
             assertBool "Compilation should succeed" (compilationSuccess compilationResult)

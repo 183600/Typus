@@ -25,7 +25,7 @@ test_embed_asset :: IO ()
 test_embed_asset = do
     let content = "Hello, World!"
         assetType = TextAsset
-        result <- embedAsset content assetType
+    result <- embedAsset content assetType
     case result of
         Right asset -> do
             assertEqual "Asset content should match" content (getAssetContent asset)
