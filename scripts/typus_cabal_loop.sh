@@ -66,7 +66,7 @@ run_with_heartbeat() {
   else
     "$@" 2>&1 | awk -v hb="$HEARTBEAT_FILE" '{ print; fflush(); system("touch " hb) }'
   fi
-  
+
   # 在 set -u 下安全读取 PIPESTATUS
   set +u
   local status=${PIPESTATUS[0]:-127}
@@ -126,8 +126,7 @@ while true; do
   if [[ $CABAL_STATUS -eq 0 ]]; then
     # 使用冒号 : 代替 true，避免 "command not found" 错误
     run_with_heartbeat iflow "给这个项目增加一些cabal test测试用例，不要超过10个，如果需要使用QuickCheck就使用QuickCheck think:high" --yolo || :
-    echo "✅ 未发现任何问题（包括 warning）——进行提交"
-
+    
     git add .
     if git diff --cached --quiet; then
       echo "ℹ️ 没有文件变化可提交"
@@ -135,9 +134,9 @@ while true; do
       git commit -m "测试通过" || :
     fi
   else
-    echo "⚠️ 发现问题或 warning（退出码=$CABAL_STATUS），调用 iflow 修复..."
+    echo "调用 iflow 修复..."
     # 使用冒号 : 代替 true
-    run_with_heartbeat iflow '解决cabal test --flags="-fast production" --test-show-details=direct显示的所有问题（包括warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点，尽量不要消耗大量CPU/内存资源 think:high' --yolo || :
+    run_with_heartbeat iflow '解决cabal test --flags="-fast production" --test-show-details=direct显示的所有问题（除了warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点，尽量不要消耗大量CPU/内存资源 think:high' --yolo || :
   fi
 
   echo "🔁 回到第 1 步..."
