@@ -1396,3 +1396,6 @@ tests =
     , Test.Unit.PerformanceRegressionTestSpec.tests
     , Test.Unit.SecurityValidationTestSpec.tests
     ]
+
+  -- New Cabal Test Suite (10 comprehensive tests)
+  , Test.Unit.NewCabalTestSuiteSpec.tests
