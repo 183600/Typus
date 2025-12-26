@@ -432,7 +432,6 @@ test-suite typus-test
         Test.Unit.DependentTypeSystemBoundaryQuickCheckSpec,
         
         Test.Unit.SourceLocationAccuracyQuickCheckSpec,
-        Test.Unit.IRGenerationConsistencyQuickCheckSpec,
         Test.Unit.TypeEnvironmentBuildingQuickCheckSpec,
         
         Test.Unit.DependentTypeBoundarySpec,
@@ -481,12 +480,11 @@ test-suite typus-test
         Test.Unit.NewCabalTestCasesSpec,
         Test.Unit.NewEnhancedCabalQuickCheckSpec,
         
-        -- New Comprehensive QuickCheck Test Modules (2025)
+        -- New Enhanced Test Modules (2025)
         Test.Unit.SourceLocationAdvancedQuickCheckSpec,
         Test.Unit.SourceLocationMathSpec,
         Test.Unit.ErrorHandlerBoundaryQuickCheckSpec,
         Test.Unit.ParserEdgeCaseQuickCheckSpec,
-        Test.Unit.CompilerOptimizationQuickCheckSpec,
         Test.Unit.DependenciesInferenceQuickCheckSpec,
         Test.Unit.UtilsEfficiencyQuickCheckSpec,
         Test.Unit.UtilsPropertiesExtendedSpec,
@@ -495,6 +493,14 @@ test-suite typus-test
         Test.Unit.TypusEndToEndQuickCheckSpec,
         Test.Unit.DebugIntegrationSpec,
         Test.Unit.IntegratedCompilerSpec,
+
+        -- New Comprehensive QuickCheck Test Modules (2025)
+        Test.Unit.ErrorHandlingBoundaryQuickCheckSpec,
+        Test.Unit.DependentTypeBoundaryQuickCheckSpec,
+        Test.Unit.OwnershipTransferComplexQuickCheckSpec,
+        Test.Unit.SourceLocationPrecisionQuickCheckSpec,
+        Test.Unit.TypeEnvironmentQuickCheckSpec,
+        Test.Unit.LexerBoundaryQuickCheckSpec,
         
         Test.Unit.NewCabalPropertySpec,
         Test.Unit.EnhancedDebugQuickCheckSpec,

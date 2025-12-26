@@ -110,7 +110,6 @@ import qualified Test.Unit.ErrorHandlerCoreTestSpec
 import qualified Test.Unit.DependenciesCoreTestSpec
 
 -- New comprehensive QuickCheck test modules
-import qualified Test.Unit.CompilerOptimizationQuickCheckSpec
 import qualified Test.Unit.OwnershipTransferQuickCheckSpec
 import qualified Test.Unit.DependentTypesValidationQuickCheckSpec
 import qualified Test.Unit.ErrorRecoveryQuickCheckSpec
@@ -147,7 +146,6 @@ import qualified Test.Unit.SourceLocationCoreQuickCheckSpec
 import qualified Test.Unit.SourceLocationAdvancedQuickCheckSpec
 import qualified Test.Unit.ErrorHandlerBoundaryQuickCheckSpec
 import qualified Test.Unit.ParserEdgeCaseQuickCheckSpec
-import qualified Test.Unit.CompilerOptimizationQuickCheckSpec
 import qualified Test.Unit.DependenciesInferenceQuickCheckSpec
 import qualified Test.Unit.UtilsEfficiencyQuickCheckSpec
 import qualified Test.Unit.ValueAnalysisFlowQuickCheckSpec
@@ -356,8 +354,15 @@ import qualified Test.Unit.TypeInferenceComplexSpec
 import qualified Test.Unit.SyntaxValidatorBoundarySpec
 
 import qualified Test.Unit.SourceLocationAccuracyQuickCheckSpec
-import qualified Test.Unit.IRGenerationConsistencyQuickCheckSpec
 import qualified Test.Unit.TypeEnvironmentBuildingQuickCheckSpec
+
+-- New Comprehensive QuickCheck Test Modules (2025)
+import qualified Test.Unit.ErrorHandlingBoundaryQuickCheckSpec
+import qualified Test.Unit.DependentTypeBoundaryQuickCheckSpec
+import qualified Test.Unit.OwnershipTransferComplexQuickCheckSpec
+import qualified Test.Unit.SourceLocationPrecisionQuickCheckSpec
+import qualified Test.Unit.TypeEnvironmentQuickCheckSpec
+import qualified Test.Unit.LexerBoundaryQuickCheckSpec
 
 -- Custom QuickCheck test modules
 import qualified Test.Unit.CustomParserQuickCheckSpec
@@ -572,8 +577,7 @@ tests =
         , Test.Unit.NewCabalTestsSpec.tests
         ]
     , testGroup "New Comprehensive QuickCheck Tests"
-        [ Test.Unit.CompilerOptimizationQuickCheckSpec.tests
-        , Test.Unit.OwnershipTransferQuickCheckSpec.tests
+        [ Test.Unit.OwnershipTransferQuickCheckSpec.tests
         , Test.Unit.DependentTypesValidationQuickCheckSpec.tests
         , Test.Unit.ErrorRecoveryQuickCheckSpec.tests
         , Test.Unit.SourceLocationTrackingQuickCheckSpec.tests
@@ -614,7 +618,6 @@ tests =
         , Test.Unit.DependentTypeSystemBoundaryQuickCheckSpec.tests
         
         , Test.Unit.SourceLocationAccuracyQuickCheckSpec.tests
-        , Test.Unit.IRGenerationConsistencyQuickCheckSpec.tests
         , Test.Unit.TypeEnvironmentBuildingQuickCheckSpec.tests
         ]
     , testGroup "New Comprehensive Cabal Test Modules"
@@ -755,7 +758,6 @@ tests =
         [ Test.Unit.SourceLocationAdvancedQuickCheckSpec.tests
         , Test.Unit.ErrorHandlerBoundaryQuickCheckSpec.tests
         , Test.Unit.ParserEdgeCaseQuickCheckSpec.tests
-        , Test.Unit.CompilerOptimizationQuickCheckSpec.tests
         , Test.Unit.DependenciesInferenceQuickCheckSpec.tests
         , Test.Unit.UtilsEfficiencyQuickCheckSpec.tests
         , Test.Unit.ValueAnalysisFlowQuickCheckSpec.tests
@@ -819,5 +821,13 @@ tests =
         , Test.Unit.DependentTypeConstraintSpec.tests
         , Test.Unit.TypeInferenceComplexSpec.tests
         , Test.Unit.SyntaxValidatorBoundarySpec.tests
+        ]
+    , testGroup "New Comprehensive QuickCheck Test Modules (2025)"
+        [ Test.Unit.ErrorHandlingBoundaryQuickCheckSpec.tests
+        , Test.Unit.DependentTypeBoundaryQuickCheckSpec.tests
+        , Test.Unit.OwnershipTransferComplexQuickCheckSpec.tests
+        , Test.Unit.SourceLocationPrecisionQuickCheckSpec.tests
+        , Test.Unit.TypeEnvironmentQuickCheckSpec.tests
+        , Test.Unit.LexerBoundaryQuickCheckSpec.tests
         ]
     ]

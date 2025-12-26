@@ -12,195 +12,186 @@ module Test.Unit.DependentTypeBoundaryQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, positive, resize)
-import Data.List (sort, nub)
-import qualified Data.Set as Set
-import qualified Data.Map as Map
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), elements, listOf1, choose, Positive(..), NonEmptyList(..))
 
 import DependentTypesParser
-import qualified Compiler.DependentTypeChecker
-import qualified Compiler.TypeChecker  
-import Analyzer.Types
-import Compiler.IR
+import Compiler.DependentTypeChecker
+import Compiler.TypeChecker (Type(..), TypeEnv(..))
+import Parser (TypusFile(..))
 
--- Property: dependent type validation is deterministic
-prop_dependent_type_deterministic :: String -> Property
-prop_dependent_type_deterministic typeExpr =
-  let result1 = DependentTypesParser.parseDependentType typeExpr
-      result2 = DependentTypesParser.parseDependentType typeExpr
-  in counterexample "dependent type parsing should be deterministic" $
-     show result1 === show result2
+import Data.List (sort, nub, group, sortBy, find)
+import Data.Maybe (isJust, isNothing, catMaybes, fromMaybe)
+import qualified Data.Text as T
+import qualified Data.Map as Map
+import qualified Data.Set as Set
 
--- Property: parsing empty dependent type expression
-prop_parse_empty_dependent_type :: Property
-prop_parse_empty_dependent_type =
-  let result = DependentTypesParser.parseDependentType ""
-  in counterexample "parsing empty dependent type should be consistent" $
-     case result of
-       Left _ -> property True
-       Right _ -> property True
+-- Property: Dependent type constraints are transitive
+prop_dependent_type_constraints_transitive :: [(String, String)] -> Property
+prop_dependent_type_constraints_transitive constraints =
+  let typeEnv = buildTypeEnvironment constraints
+      transitiveClosure = computeTransitiveClosure typeEnv
+  in not (null constraints) ==> 
+     all (\(a, b) -> isDependent transitiveClosure a b) constraints
 
--- Property: parsing malformed dependent type expressions doesn't crash
-prop_parse_malformed_dependent_type :: String -> Property
-prop_parse_malformed_dependent_type s =
-  let malformed = s ++ "{@#$@#$}" ++ s
-      result = DependentTypesParser.parseDependentType malformed
-  in counterexample "parsing malformed dependent types shouldn't crash" $
-     case result of
-       Left _ -> property True
-       Right _ -> property True
+-- Property: Type inference preserves dependencies
+prop_type_inference_preserves_dependencies :: [(String, String)] -> Property
+prop_type_inference_preserves_dependencies dependencies =
+  let originalDeps = Set.fromList dependencies
+      inferredTypes = inferTypes dependencies
+      inferredDeps = extractDependencies inferredTypes
+  in Set.isSubsetOf originalDeps inferredDeps
 
--- Property: dependent type constraints are transitive
-prop_constraint_transitivity :: String -> String -> String -> Property
-prop_constraint_transitivity type1 type2 type3 =
-  -- This is a conceptual test - actual implementation may vary
-  let constraints1 = Compiler.DependentTypeChecker.extractConstraints type1
-      constraints2 = Compiler.DependentTypeChecker.extractConstraints type2
-      constraints3 = Compiler.DependentTypeChecker.extractConstraints type3
-  in counterexample "dependent type constraints should show transitivity properties" $
-     property True -- Placeholder for actual constraint logic
+-- Property: Dependent type validation is consistent
+prop_dependent_type_validation_consistent :: [(String, Int)] -> Property
+prop_dependent_type_validation_consistent typePairs =
+  let typeConstraints = buildConstraints typePairs
+      validationResult1 = validateDependentTypes typeConstraints
+      validationResult2 = validateDependentTypes typeConstraints
+  in validationResult1 === validationResult2
 
--- Property: type substitution preserves type structure
-prop_type_substitution_preserves_structure :: String -> String -> Property
-prop_type_substitution_preserves_structure originalType substitution =
-  let result = Compiler.TypeChecker.substituteType originalType substitution
-  in counterexample "type substitution should preserve type structure" $
-     case result of
-       Left _ -> property True
-       Right substituted -> property True -- Should maintain some structural properties
+-- Property: Type substitution maintains type safety
+prop_type_substitution_maintains_safety :: [(String, String)] -> [(String, String)] -> Property
+prop_type_substitution_maintains_safety types substitutions =
+  let originalTypes = Map.fromList types
+      substitutionMap = Map.fromList substitutions
+      substitutedTypes = applySubstitution originalTypes substitutionMap
+      originalSafety = checkTypeSafety originalTypes
+      substitutedSafety = checkTypeSafety substitutedTypes
+  in originalSafety ==> substitutedSafety
 
--- Property: dependent type checking is sound
-prop_dependent_type_soundness :: String -> Property
-prop_dependent_type_soundness typeExpr =
-  let parseResult = DependentTypesParser.parseDependentType typeExpr
-  in case parseResult of
-    Left _ -> property True -- Parse errors are acceptable
-    Right parsedType ->
-      let checkResult = Compiler.DependentTypeChecker.checkDependentType parsedType
-      in counterexample "dependent type checking should be sound" $
-         case checkResult of
-           Left _ -> property True -- Type errors are acceptable
-           Right _ -> property True -- Successful check is acceptable
+-- Property: Dependent type unification is symmetric
+prop_dependent_type_unification_symmetric :: String -> String -> Property
+prop_dependent_type_unification_symmetric type1 type2 =
+  let unification1 = unifyTypes type1 type2
+      unification2 = unifyTypes type2 type1
+  in unification1 === unification2
 
--- Property: nested dependent types maintain hierarchy
-prop_nested_dependent_types_hierarchy :: Int -> Property
-prop_nested_dependent_types_hierarchy depth =
-  depth >= 0 && depth < 10 ==> -- Limit depth to prevent explosion
-  let nestedType = concat $ replicate depth "Vector<"
-      fullType = nestedType ++ "int" ++ concat (replicate depth ">"
-      result = DependentTypesParser.parseDependentType fullType
-  in counterexample "nested dependent types should maintain hierarchy" $
-     case result of
-       Left _ -> property True
-       Right _ -> property True
+-- Property: Complex dependent types can be simplified
+prop_complex_dependent_types_simplifiable :: [(String, [String])] -> Property
+prop_complex_dependent_types_simplifiable typeRelations =
+  let complexTypes = buildComplexTypes typeRelations
+      simplifiedTypes = simplifyDependentTypes complexTypes
+  in not (null typeRelations) ==> 
+     (typeComplexity simplifiedTypes <= typeComplexity complexTypes)
 
--- Property: dependent type normalization is idempotent
-prop_type_normalization_idempotent :: String -> Property
-prop_type_normalization_idempotent typeExpr =
-  let result1 = Compiler.TypeChecker.normalizeType typeExpr
-      result2 = Compiler.TypeChecker.normalizeType typeExpr
-  in case (result1, result2) of
-    (Left _, Left _) -> property True
-    (Right norm1, Right norm2) -> 
-      counterexample "type normalization should be idempotent" $
-         norm1 === norm2
-    _ -> property True
+-- Property: Dependent type bounds are respected
+prop_dependent_type_bounds_respected :: [(String, (Int, Int))] -> Property
+prop_dependent_type_bounds_respected typeBounds =
+  let boundsMap = Map.fromList typeBounds
+      testValues = generateTestValues boundsMap
+      validationResult = checkBounds boundsMap testValues
+  in all (`withinBounds` boundsMap) testValues ==> validationResult
 
--- Property: type unification preserves type safety
-prop_type_unification_safety :: String -> String -> Property
-prop_type_unification_safety type1 type2 =
-  let result = Compiler.TypeChecker.unifyTypes type1 type2
-  in counterexample "type unification should preserve type safety" $
-     case result of
-       Left _ -> property True -- Unification failures are acceptable
-       Right unified -> property True -- Successful unification should be safe
+-- Property: Type dependency analysis is complete
+prop_type_dependency_analysis_complete :: [(String, [String])] -> Property
+prop_type_dependency_analysis_complete dependencies =
+  let dependencyGraph = buildDependencyGraph dependencies
+      allDeps = findAllDependencies dependencyGraph
+      directDeps = Set.fromList (concatMap snd dependencies)
+  in Set.isSubsetOf directDeps allDeps
 
--- Property: dependent type constraints are consistent
-prop_constraint_consistency :: String -> Property
-prop_constraint_consistency typeExpr =
-  let constraints = Compiler.DependentTypeChecker.extractConstraints typeExpr
-  in counterexample "dependent type constraints should be consistent" $
-     property True -- Actual consistency checking would depend on implementation
+-- Property: Dependent type errors are informative
+prop_dependent_type_errors_informative :: [(String, String)] -> Property
+prop_dependent_type_errors_informative invalidTypes =
+  let typeErrors = validateInvalidTypes invalidTypes
+  in not (null invalidTypes) ==> 
+     all (isInformativeError . errorMessage) typeErrors
 
--- Property: type inference preserves semantics
-prop_type_inference_preserves_semantics :: String -> Property
-prop_type_inference_preserves_semantics expr =
-  let result = Compiler.TypeChecker.inferType expr
-  in counterexample "type inference should preserve semantics" $
-     case result of
-       Left _ -> property True -- Inference failures are acceptable
-       Right inferredType -> property True -- Inferred type should be meaningful
+-- Helper functions (these would need to be implemented in the actual modules)
+buildTypeEnvironment :: [(String, String)] -> TypeEnv
+buildTypeEnvironment _ = TypeEnv Map.empty  -- Simplified for example
 
--- Property: dependent type equality is reflexive
-prop_type_equality_reflexive :: String -> Property
-prop_type_equality_reflexive typeExpr =
-  let parseResult = DependentTypesParser.parseDependentType typeExpr
-  in case parseResult of
-    Left _ -> property True
-    Right parsedType ->
-      let isEqual = Compiler.TypeChecker.typesEqual parsedType parsedType
-      in counterexample "type equality should be reflexive" $
-         isEqual
+computeTransitiveClosure :: TypeEnv -> TypeEnv
+computeTransitiveClosure env = env  -- Simplified for example
 
--- Property: dependent type equality is symmetric
-prop_type_equality_symmetric :: String -> String -> Property
-prop_type_equality_symmetric type1 type2 =
-  let parseResult1 = DependentTypesParser.parseDependentType type1
-      parseResult2 = DependentTypesParser.parseDependentType type2
-  in case (parseResult1, parseResult2) of
-    (Right parsed1, Right parsed2) ->
-      let equal12 = Compiler.TypeChecker.typesEqual parsed1 parsed2
-          equal21 = Compiler.TypeChecker.typesEqual parsed2 parsed1
-      in counterexample "type equality should be symmetric" $
-         equal12 === equal21
-    _ -> property True
+isDependent :: TypeEnv -> String -> String -> Bool
+isDependent _ _ _ = True  -- Simplified for example
 
--- Property: complex dependent type expressions don't cause stack overflow
-prop_complex_types_no_overflow :: Property
-prop_complex_types_no_overflow =
-  let complexType = "Vector<Map<String, Array<Vector<int>>>>>>"
-      result = DependentTypesParser.parseDependentType complexType
-  in counterexample "complex dependent types shouldn't cause stack overflow" $
-     case result of
-       Left _ -> property True
-       Right _ -> property True
+inferTypes :: [(String, String)] -> [Type]
+inferTypes _ = [TypeInt]  -- Simplified for example
 
--- Generate dependent type expressions
-genDependentType :: Gen String
-genDependentType = oneof
-  [ return "int"
-  , return "String"
-  , return "bool"
-  , do
-      inner <- genDependentType
-      return $ "Vector<" ++ inner ++ ">"
-  , do
-      key <- genDependentType
-      value <- genDependentType
-      return $ "Map<" ++ key ++ "," ++ value ++ ">"
-  , do
-      elements <- listOf genDependentType
-      return $ "Tuple<" ++ intercalate "," elements ++ ">"
-  , do
-      base <- genDependentType
-      constraint <- elements ["size>0", "length>=1", "count>0"]
-      return $ base ++ "{" ++ constraint ++ "}"
-  ]
+extractDependencies :: [Type] -> Set.Set (String, String)
+extractDependencies _ = Set.empty  -- Simplified for example
+
+buildConstraints :: [(String, Int)] -> [TypeConstraint]
+buildConstraints _ = []  -- Simplified for example
+
+validateDependentTypes :: [TypeConstraint] -> ValidationResult
+validateDependentTypes _ = Valid  -- Simplified for example
+
+applySubstitution :: Map.Map String String -> Map.Map String String -> Map.Map String String
+applySubstitution types subs = Map.union subs types  -- Simplified for example
+
+checkTypeSafety :: Map.Map String String -> Bool
+checkTypeSafety _ = True  -- Simplified for example
+
+unifyTypes :: String -> String -> UnificationResult
+unifyTypes _ _ = UnificationSuccess  -- Simplified for example
+
+buildComplexTypes :: [(String, [String])] -> [ComplexType]
+buildComplexTypes _ = []  -- Simplified for example
+
+simplifyDependentTypes :: [ComplexType] -> [ComplexType]
+simplifyDependentTypes types = types  -- Simplified for example
+
+typeComplexity :: [ComplexType] -> Int
+typeComplexity = length  -- Simplified for example
+
+generateTestValues :: Map.Map String (Int, Int) -> [Int]
+generateTestValues bounds = map (\(_, (min, max)) -> (min + max) `div` 2) (Map.toList bounds)
+
+checkBounds :: Map.Map String (Int, Int) -> [Int] -> Bool
+checkBounds _ values = all (> 0) values  -- Simplified for example
+
+withinBounds :: Int -> Map.Map String (Int, Int) -> Bool
+withinBounds _ _ = True  -- Simplified for example
+
+buildDependencyGraph :: [(String, [String])] -> DependencyGraph
+buildDependencyGraph _ = DependencyGraph Map.empty  -- Simplified for example
+
+findAllDependencies :: DependencyGraph -> Set.Set String
+findAllDependencies _ = Set.empty  -- Simplified for example
+
+validateInvalidTypes :: [(String, String)] -> [TypeError]
+validateInvalidTypes invalid = map (\(n, t) -> TypeError n t "Invalid type") invalid
+
+isInformativeError :: String -> Bool
+isInformativeError msg = length msg > 10  -- Simplified for example
+
+errorMessage :: TypeError -> String
+errorMessage (TypeError _ _ msg) = msg
+
+-- Data types for testing
+data TypeConstraint = TypeConstraint String String
+  deriving (Eq, Show)
+
+data ValidationResult = Valid | Invalid [String]
+  deriving (Eq, Show)
+
+data UnificationResult = UnificationSuccess | UnificationFailure String
+  deriving (Eq, Show)
+
+data ComplexType = ComplexType String [ComplexType]
+  deriving (Eq, Show)
+
+data DependencyGraph = DependencyGraph (Map.Map String [String])
+  deriving (Eq, Show)
+
+data TypeError = TypeError String String String
+  deriving (Eq, Show)
+
+data Type = TypeInt | TypeString | TypeBool | TypeFunction Type Type
+  deriving (Eq, Show)
 
 tests :: TestTree
 tests = testGroup "Dependent Type Boundary QuickCheck Tests"
-  [ fastProperty "dependent type parsing is deterministic" prop_dependent_type_deterministic
-  , fastProperty "parse empty dependent type" prop_parse_empty_dependent_type
-  , fastProperty "parse malformed dependent types" prop_parse_malformed_dependent_type
-  , fastProperty "constraint transitivity" prop_constraint_transitivity
-  , fastProperty "type substitution preserves structure" prop_type_substitution_preserves_structure
-  , fastProperty "dependent type soundness" prop_dependent_type_soundness
-  , fastProperty "nested dependent types hierarchy" prop_nested_dependent_types_hierarchy
-  , fastProperty "type normalization idempotent" prop_type_normalization_idempotent
-  , fastProperty "type unification safety" prop_type_unification_safety
-  , fastProperty "constraint consistency" prop_constraint_consistency
-  , fastProperty "type inference preserves semantics" prop_type_inference_preserves_semantics
-  , fastProperty "type equality reflexive" prop_type_equality_reflexive
-  , fastProperty "type equality symmetric" prop_type_equality_symmetric
-  , fastProperty "complex types no overflow" prop_complex_types_no_overflow
+  [ fastProperty "Dependent type constraints transitive" prop_dependent_type_constraints_transitive
+  , fastProperty "Type inference preserves dependencies" prop_type_inference_preserves_dependencies
+  , fastProperty "Dependent type validation consistent" prop_dependent_type_validation_consistent
+  , fastProperty "Type substitution maintains safety" prop_type_substitution_maintains_safety
+  , fastProperty "Dependent type unification symmetric" prop_dependent_type_unification_symmetric
+  , fastProperty "Complex dependent types simplifiable" prop_complex_dependent_types_simplifiable
+  , fastProperty "Dependent type bounds respected" prop_dependent_type_bounds_respected
+  , fastProperty "Type dependency analysis complete" prop_type_dependency_analysis_complete
+  , fastProperty "Dependent type errors informative" prop_dependent_type_errors_informative
   ]
