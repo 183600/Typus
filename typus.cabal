@@ -535,7 +535,9 @@ test-suite typus-test
         Test.Unit.CoreQuickCheckPropertiesSpec,
         Test.Unit.ParserPropertySpec,
         Test.Unit.ErrorHandlingPropertySpec,
-        Test.Unit.NewComprehensivePropertySpec
+        Test.Unit.NewComprehensivePropertySpec,
+        Test.Unit.NewEnhancedTestSpec,
+        Test.Unit.SimpleNewTestSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

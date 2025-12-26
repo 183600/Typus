@@ -59,6 +59,8 @@ import qualified Test.Unit.CoreQuickCheckPropertiesSpec
 import qualified Test.Unit.ParserPropertySpec
 import qualified Test.Unit.ErrorHandlingPropertySpec
 import qualified Test.Unit.NewComprehensivePropertySpec
+import qualified Test.Unit.NewEnhancedTestSpec
+import qualified Test.Unit.SimpleNewTestSpec
 
 -- New Comprehensive Cabal Test Modules (2025)
 import qualified Test.Unit.NewComprehensiveCabalTestsSpec
@@ -917,5 +919,11 @@ tests =
         , Test.Unit.ErrorHandlerRecoveryQuickCheckSpec.tests
         , Test.Unit.CompilerIRConsistencyQuickCheckSpec.tests
         , Test.Unit.TypeSystemInferenceQuickCheckSpec.tests
+        ]
+    , testGroup "New Enhanced Test Suite"
+        [ Test.Unit.NewEnhancedTestSpec.tests
+        ]
+    , testGroup "Simple New Test Suite"
+        [ Test.Unit.SimpleNewTestSpec.tests
         ]
     ]
