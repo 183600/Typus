@@ -98,6 +98,17 @@ import qualified Test.Unit.CompilerErrorHandlingQuickCheckSpec
 import qualified Test.Unit.DependentTypesSystemQuickCheckSpec
 import qualified Test.Unit.OwnershipAnalysisComprehensiveQuickCheckSpec
 import qualified Test.Unit.ParserBoundaryConditionsQuickCheckSpec
+
+-- New Enhanced QuickCheck Test Modules (2025)
+import qualified Test.Unit.EndToEndCompilationQuickCheckSpec
+import qualified Test.Unit.ErrorRecoveryAdvancedQuickCheckSpec
+import qualified Test.Unit.TypeInferenceBoundaryQuickCheckSpec
+import qualified Test.Unit.SourceLocationPrecisionQuickCheckSpec
+import qualified Test.Unit.CompilerOptimizationConsistencyQuickCheckSpec
+import qualified Test.Unit.DependentTypeConstraintQuickCheckSpec
+import qualified Test.Unit.ParserErrorRecoveryAdvancedQuickCheckSpec
+import qualified Test.Unit.ConcurrentSafetyQuickCheckSpec
+import qualified Test.Unit.PerformanceRegressionQuickCheckSpec
 import qualified Test.Unit.IntegrationFeaturesQuickCheckSpec
 -- New Cabal QuickCheck test modules
 import qualified Test.Unit.NewCabalQuickCheckTestSpec
@@ -829,5 +840,16 @@ tests =
         , Test.Unit.SourceLocationPrecisionQuickCheckSpec.tests
         , Test.Unit.TypeEnvironmentQuickCheckSpec.tests
         , Test.Unit.LexerBoundaryQuickCheckSpec.tests
+        ]
+    , testGroup "Enhanced QuickCheck Test Modules (2025)"
+        [ Test.Unit.EndToEndCompilationQuickCheckSpec.tests
+        , Test.Unit.ErrorRecoveryAdvancedQuickCheckSpec.tests
+        , Test.Unit.TypeInferenceBoundaryQuickCheckSpec.tests
+        , Test.Unit.SourceLocationPrecisionQuickCheckSpec.tests
+        , Test.Unit.CompilerOptimizationConsistencyQuickCheckSpec.tests
+        , Test.Unit.DependentTypeConstraintQuickCheckSpec.tests
+        , Test.Unit.ParserErrorRecoveryAdvancedQuickCheckSpec.tests
+        , Test.Unit.ConcurrentSafetyQuickCheckSpec.tests
+        , Test.Unit.PerformanceRegressionQuickCheckSpec.tests
         ]
     ]
