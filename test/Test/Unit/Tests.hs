@@ -340,6 +340,16 @@ import qualified Test.Unit.GoToolchainIntegrationSpec
 import qualified Test.Unit.EmbedAssetsConsistencySpec
 import qualified Test.Unit.DebugIntegrationFlowSpec
 import qualified Test.Unit.IntegratedCompilerPropertiesSpec
+
+-- New Enhanced Test Modules (2025) - Additional
+import qualified Test.Unit.SourceLocationAdvancedFeaturesSpec
+import qualified Test.Unit.ParserBoundaryConditionsSpec
+import qualified Test.Unit.UtilsStringProcessingEnhancedSpec
+import qualified Test.Unit.ErrorHandlerErrorHandlingSpec
+import qualified Test.Unit.CompilerCompilationLogicSpec
+import qualified Test.Unit.OwnershipOwnershipAnalysisSpec
+import qualified Test.Unit.DependenciesDependencyAnalysisSpec
+import qualified Test.Unit.SyntaxValidatorValidationSpec
 import qualified Test.Unit.DependentTypeBoundaryQuickCheckSpec
 import qualified Test.Unit.OwnershipTransferComplexQuickCheckSpec
 import qualified Test.Unit.CompilerOptimizationInvariantQuickCheckSpec
@@ -1642,4 +1652,16 @@ tests =
     , Test.Unit.NewTypeSystemQuickCheckSpec.tests
     , Test.Unit.NewIntegrationQuickCheckSpec.tests
     , Test.Unit.NewPerformanceQuickCheckSpec.tests
+    ]
+
+  -- New Enhanced Test Modules (2025)
+  , testGroup "Enhanced Test Modules 2025"
+    [ Test.Unit.SourceLocationAdvancedFeaturesSpec.tests
+    , Test.Unit.ParserBoundaryConditionsSpec.tests
+    , Test.Unit.UtilsStringProcessingEnhancedSpec.tests
+    , Test.Unit.ErrorHandlerErrorHandlingSpec.tests
+    , Test.Unit.CompilerCompilationLogicSpec.tests
+    , Test.Unit.OwnershipOwnershipAnalysisSpec.tests
+    , Test.Unit.DependenciesDependencyAnalysisSpec.tests
+    , Test.Unit.SyntaxValidatorValidationSpec.tests
     ]

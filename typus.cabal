@@ -709,7 +709,17 @@ test-suite typus-test
         Test.Unit.NewDependenciesQuickCheckSpec,
         Test.Unit.NewTypeSystemQuickCheckSpec,
         Test.Unit.NewIntegrationQuickCheckSpec,
-        Test.Unit.NewPerformanceQuickCheckSpec
+        Test.Unit.NewPerformanceQuickCheckSpec,
+
+        -- New Enhanced Test Modules (2025) - Additional
+        Test.Unit.SourceLocationAdvancedFeaturesSpec,
+        Test.Unit.ParserBoundaryConditionsSpec,
+        Test.Unit.UtilsStringProcessingEnhancedSpec,
+        Test.Unit.ErrorHandlerErrorHandlingSpec,
+        Test.Unit.CompilerCompilationLogicSpec,
+        Test.Unit.OwnershipOwnershipAnalysisSpec,
+        Test.Unit.DependenciesDependencyAnalysisSpec,
+        Test.Unit.SyntaxValidatorValidationSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
