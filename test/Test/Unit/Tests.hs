@@ -48,6 +48,13 @@ import qualified Test.Unit.IntegrationCoreQuickCheckSpec
 -- Additional Core Tests Module
 import qualified Test.Unit.AdditionalCoreTestsSpec
 
+-- New Comprehensive Test Modules (2025)
+import qualified Test.Unit.NewParserComprehensiveSpec
+import qualified Test.Unit.NewCompilerComprehensiveSpec
+import qualified Test.Unit.NewUtilsComprehensiveSpec
+import qualified Test.Unit.NewSourceLocationComprehensiveSpec
+import qualified Test.Unit.NewErrorHandlerComprehensiveSpec
+
 -- New Advanced Test Modules for Enhanced Coverage
 import qualified Test.Unit.ParserBoundaryConditionsSpec
 import qualified Test.Unit.SourceLocationMathPropertiesSpec
@@ -1152,5 +1159,12 @@ tests =
         , Test.Unit.DependentTypeConstraintValidationSpec.tests
         , Test.Unit.UtilsStringProcessingAdvancedSpec.tests
         , Test.Unit.CompilerOptimizationConsistencySpec.tests
+        ]
+    , testGroup "New Comprehensive Test Suite (2025 - Enhanced)"
+        [ Test.Unit.NewParserComprehensiveSpec.tests
+        , Test.Unit.NewCompilerComprehensiveSpec.tests
+        , Test.Unit.NewUtilsComprehensiveSpec.tests
+        , Test.Unit.NewSourceLocationComprehensiveSpec.tests
+        , Test.Unit.NewErrorHandlerComprehensiveSpec.tests
         ]
     ]
