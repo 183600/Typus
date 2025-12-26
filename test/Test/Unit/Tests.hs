@@ -54,11 +54,21 @@ import qualified Test.Unit.CoreParserSpec
 import qualified Test.Unit.CoreSourceLocationSpec
 import qualified Test.Unit.UtilsStringProcessingSpec
 
--- New QuickCheck Property Test Modules
+-- New QuickCheck Property Tests
 import qualified Test.Unit.CoreQuickCheckPropertiesSpec
 import qualified Test.Unit.ParserPropertySpec
 import qualified Test.Unit.ErrorHandlingPropertySpec
 import qualified Test.Unit.NewComprehensivePropertySpec
+
+-- New Comprehensive Cabal Test Modules (2025)
+import qualified Test.Unit.NewComprehensiveCabalTestsSpec
+import qualified Test.Unit.UtilsEnhancedQuickCheckSpec
+import qualified Test.Unit.ParserBoundaryConditionsQuickCheckSpec
+import qualified Test.Unit.OwnershipPropertiesQuickCheckSpec
+import qualified Test.Unit.SourceLocationMathQuickCheckSpec
+import qualified Test.Unit.ErrorHandlerRecoveryQuickCheckSpec
+import qualified Test.Unit.CompilerIRConsistencyQuickCheckSpec
+import qualified Test.Unit.TypeSystemInferenceQuickCheckSpec
 
 -- New Test Modules Added for Enhanced Coverage
 import qualified Test.Unit.NewErrorHandlingSpec
@@ -873,5 +883,15 @@ tests =
         , Test.Unit.ParserPropertySpec.tests
         , Test.Unit.ErrorHandlingPropertySpec.tests
         , Test.Unit.NewComprehensivePropertySpec.tests
+        ]
+    , testGroup "New Comprehensive Cabal Test Modules (2025)"
+        [ Test.Unit.NewComprehensiveCabalTestsSpec.tests
+        , Test.Unit.UtilsEnhancedQuickCheckSpec.tests
+        , Test.Unit.ParserBoundaryConditionsQuickCheckSpec.tests
+        , Test.Unit.OwnershipPropertiesQuickCheckSpec.tests
+        , Test.Unit.SourceLocationMathQuickCheckSpec.tests
+        , Test.Unit.ErrorHandlerRecoveryQuickCheckSpec.tests
+        , Test.Unit.CompilerIRConsistencyQuickCheckSpec.tests
+        , Test.Unit.TypeSystemInferenceQuickCheckSpec.tests
         ]
     ]
