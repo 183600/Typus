@@ -617,6 +617,14 @@ import qualified Test.Unit.SourceLocationQuickCheckSpec
 import qualified Test.Unit.ErrorHandlerQuickCheckSpec
 import qualified Test.Unit.ParserBasicPropertiesSpec
 import qualified Test.Unit.OwnershipCoreSpec
+
+-- New Cabal Test Modules (6 comprehensive tests)
+import qualified Test.Unit.SourceLocationCoreFunctionsSpec
+import qualified Test.Unit.ParserErrorBoundarySpec
+import qualified Test.Unit.CompilerIRConsistencySpec
+import qualified Test.Unit.OwnershipBoundaryConditionsSpec
+import qualified Test.Unit.DependentTypeValidationSpec
+import qualified Test.Unit.UtilsStringPropertiesSpec
 import qualified Test.Unit.TypeSystemPropertiesSpec
 import qualified Test.Unit.CompilerIRSpec
 import qualified Test.Unit.IntegrationBasicSpec
@@ -1685,3 +1693,14 @@ tests =
     , Test.Unit.NewOwnershipAnalysisQuickCheckSpec.tests
     , Test.Unit.NewParserQuickCheckSpec.tests
     ]
+
+  -- New Cabal Test Modules (6 comprehensive tests)
+  , testGroup "New Comprehensive Test Modules 2025"
+    [ Test.Unit.SourceLocationCoreFunctionsSpec.tests
+    , Test.Unit.ParserErrorBoundarySpec.tests
+    , Test.Unit.CompilerIRConsistencySpec.tests
+    , Test.Unit.OwnershipBoundaryConditionsSpec.tests
+    , Test.Unit.DependentTypeValidationSpec.tests
+    , Test.Unit.UtilsStringPropertiesSpec.tests
+    ]
+  ]

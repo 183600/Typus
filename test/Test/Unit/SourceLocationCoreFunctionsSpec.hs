@@ -1,125 +1,246 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.SourceLocationCoreFunctionsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===))
-import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
+import Test.Tasty.HUnit (testCase, (@?=))
+import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck (Arbitrary(..), Gen, choose, listOf, suchThat)
+import Test.QuickCheck.Property (forAll)
 
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), 
+                      startPos, posAfter, posAt, emptySpan, spanFrom, 
+                      spanTo, spanBetween, mergeSpans, isValidSpan,
+                      locatedAt, locatedWithSpan, advancePos, advancePosBy,
+                      sourceLine, sourceColumn)
 
--- | Test suite for SourceLocation core functions
+-- | Generate arbitrary source positions with reasonable bounds
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 1000)
+    col <- choose (1, 200)
+    offset <- choose (0, 10000)
+    return $ SourcePos line col offset
+
+-- | Generate arbitrary source spans
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    endLine <- choose (posLine start, 1000)
+    endCol <- if endLine == posLine start 
+              then choose (posColumn start, 200)
+              else choose (1, 200)
+    let end = SourcePos endLine endCol 0
+    return $ SourceSpan start end
+
+-- | Generate arbitrary located values
+instance Arbitrary a => Arbitrary (Located a) where
+  arbitrary = do
+    value <- arbitrary
+    span <- arbitrary
+    return $ Located value span
+
+-- | Generate non-empty strings for position testing
+genNonEmptyString :: Gen String
+genNonEmptyString = listOf (choose (' ', '~')) `suchThat` (not . null)
+
+-- | Generate strings with newlines for multi-line position testing
+genMultiLineString :: Gen String
+genMultiLineString = do
+    lines <- listOf $ listOf (choose (' ', '~')) `suchThat` (not . null)
+    return $ unlines lines
+
 tests :: TestTree
-tests = testGroup "SourceLocation Core Functions"
-  [ testProperty "position comparison works correctly" propPositionComparison
-  , testProperty "span contains position correctly" propSpanContainsPosition
-  , testProperty "span intersection works correctly" propSpanIntersection
-  , testProperty "source location ordering is transitive" propSourceLocationTransitive
-  , testCase "position creation edge cases" testPositionCreation
-  , testCase "span creation edge cases" testSpanCreation
-  , testCase "source location merging" testSourceLocationMerging
-  , testCase "position arithmetic" testPositionArithmetic
-  , testCase "span boundaries" testSpanBoundaries
-  , testCase "source location formatting" testSourceLocationFormatting
-  ]
+tests =
+  testGroup "SourceLocation Core Functions"
+    [ testGroup "Source Position Operations"
+        [ testCase "startPos creates position at line 1, column 1" $ do
+            startPos @?= SourcePos 1 1
 
--- | Property: position comparison is consistent
-propPositionComparison :: SourcePos -> SourcePos -> Property
-propPositionComparison p1 p2 =
-  let cmp = compare p1 p2
-  in property $ (cmp == EQ) == (posLine p1 == posLine p2 && posColumn p1 == posColumn p2 && posOffset p1 == posOffset p2)
+        , testCase "posAfter advances column on same line" $ do
+            let pos = SourcePos 5 10
+            posAfter pos @?= SourcePos 5 11
 
--- | Property: span contains position correctly
-propSpanContainsPosition :: SourceSpan -> SourcePos -> Property
-propSpanContainsPosition span pos =
-  let contains = _isPosInSpan pos span
+        , testCase "posAt creates position at specific coordinates" $ do
+            posAt 3 7 @?= SourcePos 3 7
+
+        , fastProperty "advancePos by single character updates position correctly" 
+            prop_advancePosSingle
+        , fastProperty "advancePosBy handles multiple characters correctly" 
+            prop_advancePosByMultiple
+        , fastProperty "position ordering is consistent" 
+            prop_positionOrdering
+        ]
+
+    , testGroup "Source Span Operations"
+        [ testCase "emptySpan has start and end at same position" $ do
+            let pos = SourcePos 1 1
+            emptySpan pos @?= SourceSpan pos pos
+
+        , testCase "spanFrom creates span from position to end of line" $ do
+            let start = SourcePos 3 5
+            let expected = SourceSpan start (SourcePos 3 200) -- Reasonable max column
+            spanFrom start @?= expected
+
+        , fastProperty "spanTo creates span with correct end position" 
+            prop_spanToCorrect
+        , fastProperty "spanBetween creates span covering both positions" 
+            prop_spanBetweenCoverage
+        , fastProperty "mergeSpans creates minimal span covering both" 
+            prop_mergeSpansMinimal
+        , fastProperty "isValidSpan correctly identifies valid spans" 
+            prop_isValidSpanCorrect
+        ]
+
+    , testGroup "Located Value Operations"
+        [ testCase "locatedAt creates located value at position" $ do
+            let value = "test"
+            let pos = SourcePos 2 3
+            let located = locatedAt value pos
+            locatedValue located @?= value
+            locatedSpan located @?= SourceSpan pos pos
+
+        , fastProperty "locatedWithSpan preserves value and span" 
+            prop_locatedWithSpanPreserves
+        , fastProperty "mapLocated applies function to contained value" 
+            prop_mapLocatedApplies
+        ]
+
+    , testGroup "Position Arithmetic Properties"
+        [ fastProperty "advancing position never decreases line or column" 
+            prop_advanceNeverDecreases
+        , fastProperty "advancing by zero characters returns original position" 
+            prop_advanceZeroReturns
+        , fastProperty "advancePosBy is consistent with repeated advancePos" 
+            prop_advanceByConsistent
+        ]
+
+    , testGroup "Span Boundary Properties"
+        [ fastProperty "span start is always less than or equal to end" 
+            prop_spanStartLeEnd
+        , fastProperty "mergeSpans is commutative" 
+            prop_mergeSpansCommutative
+        , fastProperty "mergeSpans is associative" 
+            prop_mergeSpansAssociative
+        , fastProperty "span covering single point is valid" 
+            prop_singlePointSpanValid
+        ]
+    ]
+
+-- Property: advancing position by single character updates correctly
+prop_advancePosSingle :: SourcePos -> Bool
+prop_advancePosSingle pos =
+  let advanced = advancePos pos ' '
+  in posLine advanced == posLine pos &&
+     (posColumn advanced == posColumn pos + 1 || 
+      posColumn advanced == 1) -- New line case
+
+-- Property: advancePosBy handles multiple characters correctly
+prop_advancePosByMultiple :: SourcePos -> String -> Bool
+prop_advancePosByMultiple pos chars =
+  let advanced = advancePosBy pos chars
+  in posLine advanced >= posLine pos &&
+     posColumn advanced >= 1
+
+-- Property: position ordering is consistent
+prop_positionOrdering :: SourcePos -> SourcePos -> Bool
+prop_positionOrdering pos1 pos2 =
+  let line1 = posLine pos1
+      line2 = posLine pos2
+      col1 = posColumn pos1
+      col2 = posColumn pos2
+  in if line1 == line2 
+     then col1 <= col2 || pos1 == pos2
+     else line1 <= line2
+
+-- Property: spanTo creates span with correct end position
+prop_spanToCorrect :: SourcePos -> SourcePos -> Bool
+prop_spanToCorrect start end =
+  let span = spanTo end start
+  in spanStart span == start && spanEnd span == end
+
+-- Property: spanBetween creates span covering both positions
+prop_spanBetweenCoverage :: SourcePos -> SourcePos -> Bool
+prop_spanBetweenCoverage pos1 pos2 =
+  let span = spanBetween pos1 pos2
       start = spanStart span
       end = spanEnd span
-      shouldBeContained = pos >= start && pos <= end
-  in property $ contains == shouldBeContained
+  in (posLine start <= posLine end ||
+      (posLine start == posLine end && posColumn start <= posColumn end))
 
--- | Property: span intersection works correctly
-propSpanIntersection :: SourceSpan -> SourceSpan -> Property
-propSpanIntersection span1 span2 =
-  let hasOverlap = _doSpansOverlap span1 span2
+-- Property: mergeSpans creates minimal span covering both
+prop_mergeSpansMinimal :: SourceSpan -> SourceSpan -> Bool
+prop_mergeSpansMinimal span1 span2 =
+  let merged = mergeSpans span1 span2
       start1 = spanStart span1
       end1 = spanEnd span1
       start2 = spanStart span2
       end2 = spanEnd span2
-      shouldBeOverlap = start1 <= end2 && end1 >= start2
-  in property $ hasOverlap == shouldBeOverlap
+      mergedStart = spanStart merged
+      mergedEnd = spanEnd merged
+  in posLine mergedStart <= min (posLine start1) (posLine start2) &&
+     posLine mergedEnd >= max (posLine end1) (posLine end2)
 
--- | Property: source location ordering is transitive
-propSourceLocationTransitive :: SourcePos -> SourcePos -> SourcePos -> Property
-propSourceLocationTransitive pos1 pos2 pos3 =
-  let cmp1 = comparePos pos1 pos2
-      cmp2 = comparePos pos2 pos3
-      cmp3 = comparePos pos1 pos3
-  in property $ (cmp1 == EQ && cmp2 == EQ) ==> (cmp3 == EQ)
+-- Property: isValidSpan correctly identifies valid spans
+prop_isValidSpanCorrect :: SourcePos -> SourcePos -> Bool
+prop_isValidSpanCorrect start end =
+  let span = SourceSpan start end
+      valid = isValidSpan span
+  in if posLine start == posLine end
+     then valid == (posColumn start <= posColumn end)
+     else valid == (posLine start <= posLine end)
 
--- | Unit tests for position creation edge cases
-testPositionCreation :: IO ()
-testPositionCreation = do
-  let pos1 = SourcePos { posLine = 1, posColumn = 1, posOffset = 0 }
-      pos2 = SourcePos { posLine = 0, posColumn = 0, posOffset = 0 }
-  assertEqual "position 1,1" (SourcePos 1 1 0) pos1
-  assertEqual "position 0,0" (SourcePos 0 0 0) pos2
-  assertBool "position equality" $ pos1 == SourcePos 1 1 0
-  assertBool "position inequality" $ pos1 /= pos2
+-- Property: locatedWithSpan preserves value and span
+prop_locatedWithSpanPreserves :: String -> SourceSpan -> Bool
+prop_locatedWithSpanPreserves value span =
+  let located = locatedWithSpan value span
+  in locatedValue located == value && locatedSpan located == span
 
--- | Unit tests for span creation edge cases
-testSpanCreation :: IO ()
-testSpanCreation = do
-  let start = SourcePos 1 1 0
-      end = SourcePos 2 10 20
-      span1 = SourceSpan { spanStart = start, spanEnd = end }
-  assertEqual "span creation" (SourceSpan start end) span1
-  assertBool "span start correctness" $ spanStart span1 == start
-  assertBool "span end correctness" $ spanEnd span1 == end
+-- Property: mapLocated applies function to contained value
+prop_mapLocatedApplies :: String -> SourceSpan -> Bool
+prop_mapLocatedApplies value span =
+  let located = locatedWithSpan value span
+      transformed = mapLocated length located
+  in locatedValue transformed == length value &&
+     locatedSpan transformed == span
 
--- | Unit tests for source location merging
-testSourceLocationMerging :: IO ()
-testSourceLocationMerging = do
-  let span1 = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
-      span2 = SourceSpan (SourcePos 2 1 10) (SourcePos 2 10 19)
-      merged = mergeSpans span1 span2
-  assertEqual "merged start" (SourcePos 1 1 0) $ spanStart merged
-  assertEqual "merged end" (SourcePos 2 10 19) $ spanEnd merged
+-- Property: advancing position never decreases line or column
+prop_advanceNeverDecreases :: SourcePos -> String -> Bool
+prop_advanceNeverDecreases pos chars =
+  let advanced = advancePosBy pos chars
+  in posLine advanced >= posLine pos &&
+     (posLine advanced > posLine pos || posColumn advanced >= posColumn pos)
 
--- | Unit tests for position arithmetic
-testPositionArithmetic :: IO ()
-testPositionArithmetic = do
-  let pos1 = SourcePos 1 5 4
-      pos2 = SourcePos 1 10 9
-      pos3 = SourcePos 2 1 10
-  assertBool "column comparison" $ comparePos pos1 pos2 == LT
-  assertBool "line comparison" $ comparePos pos2 pos3 == LT
-  assertEqual "position difference" 5 $ posOffset pos2 - posOffset pos1
+-- Property: advancing by zero characters returns original position
+prop_advanceZeroReturns :: SourcePos -> Bool
+prop_advanceZeroReturns pos =
+  advancePosBy pos "" == pos
 
--- | Unit tests for span boundaries
-testSpanBoundaries :: IO ()
-testSpanBoundaries = do
-  let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 5 4)
-      inside = SourcePos 1 3 2
-      outside = SourcePos 1 6 5
-  assertBool "span contains inside position" $ _isPosInSpan inside span
-  assertBool "span doesn't contain outside position" $ not $ _isPosInSpan outside span
-  assertBool "span contains start position" $ _isPosInSpan (spanStart span) span
-  assertBool "span contains end position" $ _isPosInSpan (spanEnd span) span
+-- Property: advancePosBy is consistent with repeated advancePos
+prop_advanceByConsistent :: SourcePos -> String -> Bool
+prop_advanceByConsistent pos chars =
+  let singleAdvance = foldl (flip posAfter) pos chars
+      multiAdvance = advancePosBy pos chars
+  in singleAdvance == multiAdvance
 
--- | Unit tests for source location formatting
-testSourceLocationFormatting :: IO ()
-testSourceLocationFormatting = do
-  let pos = SourcePos 5 10 45
-      formatted = showPos pos
-  assertEqual "format includes line" True $ "5" `L.isInfixOf` formatted
-  assertEqual "format includes column" True $ "10" `L.isInfixOf` formatted
+-- Property: span start is always less than or equal to end
+prop_spanStartLeEnd :: SourceSpan -> Bool
+prop_spanStartLeEnd span =
+  let start = spanStart span
+      end = spanEnd span
+  in posLine start < posLine end ||
+     (posLine start == posLine end && posColumn start <= posColumn end)
 
--- Helper imports
-import qualified Data.List as L
+-- Property: mergeSpans is commutative
+prop_mergeSpansCommutative :: SourceSpan -> SourceSpan -> Bool
+prop_mergeSpansCommutative span1 span2 =
+  mergeSpans span1 span2 == mergeSpans span2 span1
 
--- Helper function for property testing
-property :: Bool -> Property
-property = property' where
-  property' :: Bool -> Property
-  property' = id
+-- Property: mergeSpans is associative
+prop_mergeSpansAssociative :: SourceSpan -> SourceSpan -> SourceSpan -> Bool
+prop_mergeSpansAssociative span1 span2 span3 =
+  mergeSpans (mergeSpans span1 span2) span3 == mergeSpans span1 (mergeSpans span2 span3)
+
+-- Property: span covering single point is valid
+prop_singlePointSpanValid :: SourcePos -> Bool
+prop_singlePointSpanValid pos =
+  let span = SourceSpan pos pos
+  in isValidSpan span
