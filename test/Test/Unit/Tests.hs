@@ -96,6 +96,18 @@ import qualified Test.Unit.CompilerIntegrationQuickCheckSpec
 import qualified Test.Unit.FileDirectiveProcessingQuickCheckSpec
 import qualified Test.Unit.CodeGenerationConsistencyQuickCheckSpec
 
+-- New Test Modules for Enhanced Coverage
+import qualified Test.Unit.CoreParserFunctionsSpec
+import qualified Test.Unit.TextProcessingSpec
+import qualified Test.Unit.IndentionSpec
+import qualified Test.Unit.CommentRemovalSpec
+import qualified Test.Unit.SourcePositionSpec
+import qualified Test.Unit.DirectiveProcessingSpec
+import qualified Test.Unit.ErrorLocationSpec
+import qualified Test.Unit.StringSplittingSpec
+import qualified Test.Unit.SpanOperationsSpec
+import qualified Test.Unit.LocationTrackingSpec
+
 -- New core QuickCheck test modules
 import qualified Test.Unit.SourceLocationCoreQuickCheckSpec
 
@@ -700,5 +712,17 @@ tests =
         , Test.Unit.IntegratedCompilerSpec.tests
         , Test.Unit.BoundaryConditionsSpec.tests
         , Test.Unit.NewCabalPropertySpec.tests
+        ]
+    , testGroup "New Enhanced Test Modules"
+        [ Test.Unit.CoreParserFunctionsSpec.tests
+        , Test.Unit.TextProcessingSpec.tests
+        , Test.Unit.IndentionSpec.tests
+        , Test.Unit.CommentRemovalSpec.tests
+        , Test.Unit.SourcePositionSpec.tests
+        , Test.Unit.DirectiveProcessingSpec.tests
+        , Test.Unit.ErrorLocationSpec.tests
+        , Test.Unit.StringSplittingSpec.tests
+        , Test.Unit.SpanOperationsSpec.tests
+        , Test.Unit.LocationTrackingSpec.tests
         ]
     ]

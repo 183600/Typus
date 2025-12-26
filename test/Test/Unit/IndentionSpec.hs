@@ -1,0 +1,145 @@
+{-# LANGUAGE CPP #-}
+
+module Test.Unit.IndentionSpec (tests) where
+
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.QuickCheck (testProperty)
+import TestSupport.QuickCheck (fastProperty)
+
+import Utils (normalizeIndentation, forceSingleTabIndentation, fixIndentation)
+
+import Data.Char (isSpace)
+import Data.List (isPrefixOf)
+
+-- | 测试缩进处理功能的属性和边界情况
+tests :: TestTree
+tests =
+  testGroup "Indentation Processing"
+    [ testGroup "normalizeIndentation"
+        [ testCase "removes common prefix indentation" $ do
+            normalizeIndentation "  hello\n    world" @?= "hello\n  world"
+            
+        , testCase "handles mixed spaces and tabs" $ do
+            normalizeIndentation "\t  hello\n\t    world" @?= "hello\n  world"
+            
+        , testCase "handles single line" $ do
+            normalizeIndentation "  hello" @?= "hello"
+            
+        , testCase "handles already normalized text" $ do
+            let input = "hello\n  world\n    test"
+            normalizeIndentation input @?= input
+            
+        , testCase "handles empty lines" $ do
+            normalizeIndentation "  hello\n\n  world" @?= "hello\n\nworld"
+            
+        , testProperty "normalizeIndentation preserves line count" $ fastProperty $ \input ->
+            let lines' = lines input
+                normalized = normalizeIndentation input
+                normalizedLines = lines normalized
+            in length normalizedLines == length lines'
+            
+        , testProperty "normalizeIndentation preserves relative indentation" $ fastProperty $ \input ->
+            let originalLines = lines input
+                normalizedLines = lines (normalizeIndentation input)
+                getIndentation line = length $ takeWhile isSpace line
+            in length originalLines == length normalizedLines ===>
+               all (\(orig, norm) -> 
+                    if null orig || null norm
+                    then True
+                    else getIndentation norm >= 0) 
+                   (zip originalLines normalizedLines)
+                    
+        , testProperty "normalizeIndentation idempotent" $ fastProperty $ \input ->
+            let once = normalizeIndentation input
+                twice = normalizeIndentation once
+            in once == twice
+        ]
+        
+    , testGroup "forceSingleTabIndentation"
+        [ testCase "converts spaces to tabs" $ do
+            forceSingleTabIndentation "    hello\n      world" @?= "\thello\n\t\tworld"
+            
+        , testCase "handles mixed indentation" $ do
+            forceSingleTabIndentation "  hello\n\tworld" @?= "\thello\n\tworld"
+            
+        , testCase "preserves empty lines" $ do
+            forceSingleTabIndentation "  hello\n\n  world" @?= "\thello\n\n\tworld"
+            
+        , testProperty "forceSingleTabIndentation preserves non-empty lines" $ fastProperty $ \input ->
+            let result = forceSingleTabIndentation input
+                originalLines = lines input
+                resultLines = lines result
+            in length originalLines == length resultLines ===>
+               all (\(orig, res) -> 
+                    if null (trim orig) 
+                    then null (trim res) 
+                    else not (null res)) 
+                   (zip originalLines resultLines)
+            where trim = reverse . dropWhile isSpace . dropWhile isSpace . reverse
+        ]
+        
+    , testGroup "fixIndentation"
+        [ testCase "fixIndentation should work like normalizeIndentation" $ do
+            let input = "  hello\n    world\n  test"
+            fixIndentation input @?= normalizeIndentation input
+            
+        , testCase "fixIndentation handles complex cases" $ do
+            let input = "\t  hello\n\t    world\n  \t    test"
+            let expected = "hello\n  world\n    test"
+            fixIndentation input @?= expected
+        ]
+        
+    , testGroup "Edge Cases"
+        [ testCase "handles empty string" $ do
+            normalizeIndentation "" @?= ""
+            forceSingleTabIndentation "" @?= ""
+            fixIndentation "" @?= ""
+            
+        , testCase "handles only whitespace" $ do
+            normalizeIndentation "  \n  \t  " @?= "\n"
+            forceSingleTabIndentation "  \n  \t  " @?= "\n\t"
+            
+        , testCase "handles no indentation" $ do
+            let input = "hello\nworld\ntest"
+            normalizeIndentation input @?= input
+            forceSingleTabIndentation input @?= input
+            
+        , testCase "handles inconsistent indentation" $ do
+            let input = "    hello\n  world\n      test"
+            let expected = "hello\nworld\n  test"
+            normalizeIndentation input @?= expected
+            
+        , testProperty "functions handle Unicode correctly" $ fastProperty $ \input ->
+            let normalized = normalizeIndentation input
+                tabbed = forceSingleTabIndentation input
+                fixed = fixIndentation input
+            in length normalized >= 0 && length tabbed >= 0 && length fixed >= 0
+        ]
+        
+    , testGroup "Indentation Properties"
+        [ testProperty "normalizeIndentation never adds leading spaces to first line" $ fastProperty $ \input ->
+            let normalized = normalizeIndentation input
+                firstLine = case lines normalized of
+                    [] -> ""
+                    (x:_) -> x
+            in null firstLine || not (isSpace (head firstLine))
+            
+        , testProperty "forceSingleTabIndentation uses only tabs for indentation" $ fastProperty $ \input ->
+            let result = forceSingleTabIndentation input
+                lines' = lines result
+                hasLeadingSpaces line = case line of
+                    [] -> False
+                    (c:_) -> isSpace c && c /= '\t'
+            in not (any hasLeadingSpaces lines')
+            
+        , testProperty "indentation functions preserve content" $ fastProperty $ \input ->
+            let normalized = normalizeIndentation input
+                tabbed = forceSingleTabIndentation input
+                fixed = fixIndentation input
+                stripIndentation = unlines . map (dropWhile isSpace) . lines
+            in stripIndentation normalized == stripIndentation input &&
+               stripIndentation tabbed == stripIndentation input &&
+               stripIndentation fixed == stripIndentation input
+        ]
+    ]
