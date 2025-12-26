@@ -81,6 +81,9 @@ import qualified Test.Unit.SourceLocationMathQuickCheckSpec
 import qualified Test.Unit.ErrorHandlerRecoveryQuickCheckSpec
 import qualified Test.Unit.CompilerIRConsistencyQuickCheckSpec
 import qualified Test.Unit.TypeSystemInferenceQuickCheckSpec
+import qualified Test.Unit.NewComprehensiveCabalQuickCheckSpec
+import qualified Test.Unit.EnhancedCabalQuickCheckTestSpec
+import qualified Test.Unit.ErrorBoundaryQuickCheckSpec
 
 -- New Test Modules Added for Enhanced Coverage
 import qualified Test.Unit.NewErrorHandlingSpec
@@ -930,6 +933,9 @@ tests =
         , Test.Unit.CompilerIRConsistencyQuickCheckSpec.tests
         , Test.Unit.TypeSystemInferenceQuickCheckSpec.tests
         ]
+    , Test.Unit.NewComprehensiveCabalQuickCheckSpec.tests
+    , Test.Unit.EnhancedCabalQuickCheckTestSpec.tests
+    , Test.Unit.ErrorBoundaryQuickCheckSpec.tests
     , testGroup "New Enhanced Test Suite"
         [ Test.Unit.NewEnhancedTestSpec.tests
         ]
