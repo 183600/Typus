@@ -484,7 +484,12 @@ test-suite typus-test
         Test.Unit.UtilsEfficiencyQuickCheckSpec,
         Test.Unit.ValueAnalysisFlowQuickCheckSpec,
         Test.Unit.GoToolchainIntegrationQuickCheckSpec,
-        Test.Unit.TypusEndToEndQuickCheckSpec
+        Test.Unit.TypusEndToEndQuickCheckSpec,
+        Test.Unit.DebugIntegrationSpec,
+        Test.Unit.EnhancedDebugQuickCheckSpec,
+        Test.Unit.CommandLineDebugSpec,
+        Test.Unit.ErrorHandlerQuickCheckSpec,
+        Test.Unit.DependenciesBoundarySpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
