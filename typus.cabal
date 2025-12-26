@@ -591,7 +591,16 @@ test-suite typus-test
         Test.Unit.CompilerPipelineIntegrationSpec,
         Test.Unit.DependentTypesOwnershipInteractionSpec,
         Test.Unit.ToolchainIntegrationSpec,
-        Test.Unit.PerformanceRegressionQuickCheckSpec
+        Test.Unit.PerformanceRegressionQuickCheckSpec,
+        
+        -- New Core QuickCheck Test Modules (2025)
+        Test.Unit.UtilsCoreQuickCheckTests,
+        Test.Unit.SourceLocationCoreQuickCheckTests,
+        Test.Unit.ParserCoreQuickCheckTests,
+        Test.Unit.OwnershipCoreQuickCheckTests,
+        Test.Unit.CompilerCoreQuickCheckTests,
+        Test.Unit.ErrorHandlerCoreQuickCheckTests,
+        Test.Unit.DependentTypesCoreQuickCheckTests
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

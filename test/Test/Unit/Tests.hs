@@ -437,6 +437,15 @@ import qualified Test.Unit.OwnershipReporterSpec
 import qualified Test.Unit.AnalyzerCrossAnalysisSpec
 import qualified Test.Unit.CoreDataStructuresQuickCheckSpec
 
+-- New Core QuickCheck Test Modules (2025)
+import qualified Test.Unit.UtilsCoreQuickCheckTests
+import qualified Test.Unit.SourceLocationCoreQuickCheckTests
+import qualified Test.Unit.ParserCoreQuickCheckTests
+import qualified Test.Unit.OwnershipCoreQuickCheckTests
+import qualified Test.Unit.CompilerCoreQuickCheckTests
+import qualified Test.Unit.ErrorHandlerCoreQuickCheckTests
+import qualified Test.Unit.DependentTypesCoreQuickCheckTests
+
 -- New comprehensive QuickCheck test modules
 import qualified Test.Unit.NewDependentTypesQuickCheckSpec
 import qualified Test.Unit.NewOwnershipQuickCheckSpec
@@ -638,6 +647,15 @@ tests =
         [ Test.Unit.NewParserValidationSpec.tests
         , Test.Unit.NewCompilerOptimizationSpec.tests
         , Test.Unit.NewOwnershipTransferSpec.tests
+        , testGroup "New Core QuickCheck Tests (2025)"
+            [ Test.Unit.UtilsCoreQuickCheckTests.tests
+            , Test.Unit.SourceLocationCoreQuickCheckTests.tests
+            , Test.Unit.ParserCoreQuickCheckTests.tests
+            , Test.Unit.OwnershipCoreQuickCheckTests.tests
+            , Test.Unit.CompilerCoreQuickCheckTests.tests
+            , Test.Unit.ErrorHandlerCoreQuickCheckTests.tests
+            , Test.Unit.DependentTypesCoreQuickCheckTests.tests
+            ]
         , Test.Unit.NewSourceLocationTrackingSpec.tests
         , Test.Unit.NewTypeSystemValidationSpec.tests
         , Test.Unit.NewErrorRecoverySpec.tests
