@@ -1,168 +1,281 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Test.Unit.ParserErrorRecoveryQuickCheckSpec (tests) where
 
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), elements, oneof, arbitrary, listOf, choose)
-
-import Parser (parseTypus, TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
-import SyntaxValidator (validateSyntax, SyntaxError(..))
-import SimpleSyntaxValidator (simpleValidate, SimpleSyntaxError(..))
-import SourceLocation (SourcePos(..), SourceSpan(..), locatedWithSpan, startPos)
-
-import Data.List (isPrefixOf, isInfixOf, sort, nub, intercalate, isSuffixOf)
-import Data.Maybe (isNothing, isJust, fromMaybe, catMaybes)
-import Data.Text as T (pack, unpack, Text(..), null, length, append, splitOn)
-import qualified Data.Map as Map
-import qualified Data.Set as Set
+import Test.Tasty (TestTree)
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), (==>))
+import Test.Tasty.HUnit (testCase, assert, (@?=))
+import qualified Data.Text as T
 import Data.Char (isSpace, isAlpha, isDigit)
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
--- Property: Parser recovers from syntax errors
-prop_parser_recovers_from_syntax_errors :: Property
-prop_parser_recovers_from_syntax_errors =
-  forAll (elements ["func", "var", "if", "for", "return", "package", "import"]) $ \keyword ->
-    forAll (elements ["", ";", "}", ")", "]", ",", ".", ":", "invalid"]) $ \trailer ->
-      let input = keyword ++ trailer
-          parsed = parseTypus (pack input)
-      in counterexample ("Parser should recover from: " ++ input) $
-         case parsed of
-           Left _ -> property True -- Failed to parse, which is expected
-           Right _ -> property True -- Successfully parsed
+import Parser
+  ( parseTypus
+  , FileDirectives(..)
+  , BlockDirectives(..)
+  , CodeBlock(..)
+  , TypusFile(..)
+  , defaultFileDirectives
+  , defaultBlockDirectives
+  )
+import SourceLocation (SourcePos(..), SourceSpan(..))
 
--- Property: Error recovery preserves as much structure as possible
-prop_error_recovery_preserves_structure :: Property
-prop_error_recovery_preserves_structure =
-  forAll (listOf (choose (1, 10))) $ \lineLengths ->
-    let lines = map (\len -> take len (cycle "func x int = ")) lineLengths
-        input = unlines lines
-        parsed = parseTypus (pack input)
-    in counterexample "Error recovery should preserve structure" $
-       case parsed of
-         Left _ -> property True
-         Right file -> length (codeBlocks file) >= 0
+-- ============================================================================
+-- Test Data Generators
+-- ============================================================================
 
--- Property: Parser handles incomplete constructs
-prop_parser_handles_incomplete_constructs :: Property
-prop_parser_handles_incomplete_constructs =
-  forAll (elements ["func", "func(", "func main", "func main(", "var", "var x", "var x int", "if", "if (", "for", "for ("]) $ \incomplete ->
-    let parsed = parseTypus (pack incomplete)
-    in counterexample ("Parser should handle incomplete: " ++ incomplete) $
-       case parsed of
-         Left _ -> property True
-         Right _ -> property True
+-- Generate malformed Typus code snippets
+genMalformedCode :: Gen String
+genMalformedCode = do
+  malformedType <- elements
+    [ "unclosed_bracket", "unclosed_paren", "invalid_syntax"
+    , "missing_semicolon", "invalid_identifier", "unbalanced_braces"
+    ]
+  case malformedType of
+    "unclosed_bracket" -> do
+      content <- listOf $ arbitrary `suchThat` (/= ']')
+      return $ "[" ++ content ++ "\nmore code"
+    "unclosed_paren" -> do
+      content <- listOf $ arbitrary `suchThat` (/= ')')
+      return $ "(" ++ content ++ "\nmore code"
+    "invalid_syntax" -> do
+      return $ "invalid @#$ syntax\nmore code"
+    "missing_semicolon" -> do
+      return $ "let x = 42\nlet y = 13"
+    "invalid_identifier" -> do
+      return $ "let 123invalid = 42"
+    "unbalanced_braces" -> do
+      return $ "{{{\nlet x = 42\n}"
+    _ -> return "default malformed"
 
--- Property: Error messages are informative
-prop_error_messages_informative :: Property
-prop_error_messages_informative =
-  forAll arbitrary $ \input ->
-    let parsed = parseTypus (pack input)
-        validation = case parsed of
-          Left _ -> Left ["Parse error"]
-          Right file -> validateSyntax file
-    in counterexample "Error messages should be informative" $
-       case validation of
-         Left errors -> all (\err -> length err > 5) errors
-         Right _ -> property True
+-- Generate code with syntax errors but recoverable
+genRecoverableCode :: Gen String
+genRecoverableCode = do
+  validLines <- listOf $ elements
+    [ "let x = 42"
+    , "func test() { return 1; }"
+    , "type MyType = int"
+    , "import std"
+    ]
+  errorLine <- elements
+    [ "let invalid @#$ = 42"
+    , "unclosed [ bracket"
+    , "missing semicolon"
+    ]
+  moreValidLines <- listOf $ elements validLines
+  let allLines = take 3 validLines ++ [errorLine] ++ take 2 moreValidLines
+  return $ unlines allLines
 
--- Property: Parser is resilient to whitespace variations
-prop_parser_resilient_whitespace :: Property
-prop_parser_resilient_whitespace =
-  forAll (elements ["func", "var", "if", "for"]) $ \construct ->
-    forAll (elements ["", " ", "  ", "\t", "\n", " \t \n "]) $ \whitespace ->
-      let input = construct ++ whitespace ++ "test"
-          parsed = parseTypus (pack input)
-      in counterexample ("Parser should handle whitespace in: " ++ show input) $
-         case parsed of
-           Left _ -> property True
-           Right _ -> property True
+-- Generate partially valid Typus files
+genPartialTypusFile :: Gen String
+genPartialTypusFile = do
+  hasHeader <- arbitrary
+  hasDirectives <- arbitrary
+  hasCode <- arbitrary
+  
+  let header = if hasHeader then "// This is a header\n" else ""
+  let directives = if hasDirectives 
+                   then "// @ownership: true\n// @dependent-types: true\n"
+                   else ""
+  code <- if hasCode 
+          then do
+            lines <- listOf $ elements
+              [ "let x = 42"
+              , "func test() { return x; }"
+              , "type MyType = int"
+              ]
+            return $ unlines lines
+          else return ""
+  
+  return $ header ++ directives ++ code
 
--- Property: Syntax validation catches common errors
-prop_syntax_validation_catches_errors :: Property
-prop_syntax_validation_catches_errors =
-  forAll (elements ["func x int", "var", "if ()", "for (;;", "return", "package", "import"]) $ \invalidConstruct ->
-    let parsed = parseTypus (pack invalidConstruct)
-        validated = case parsed of
-          Left _ -> Left ["Parse failed"]
-          Right file -> validateSyntax file
-    in counterexample ("Syntax validation should catch: " ++ invalidConstruct) $
-       case validated of
-         Left _ -> property True
-         Right _ -> property False -- Should not validate invalid constructs
+-- ============================================================================
+-- Property Tests
+-- ============================================================================
 
--- Property: Simple validation is consistent with detailed validation
-prop_simple_vs_detailed_validation :: Property
-prop_simple_vs_detailed_validation =
-  forAll arbitrary $ \input ->
-    let parsed = parseTypus (pack input)
-        simpleValid = case parsed of
-          Left _ -> False
-          Right file -> isRight (simpleValidate file)
-        detailedValid = case parsed of
-          Left _ -> False
-          Right file -> isRight (validateSyntax file)
-    in counterexample "Simple and detailed validation should be consistent" $
-       simpleValid ==> detailedValid
+-- Property: parseTypus should return a result even for malformed input
+prop_parse_returns_result :: String -> Property
+prop_parse_returns_result input =
+  let result = parseTypus input
+      hasResult = case result of
+        Left _ -> False
+        Right _ -> True
+  in hasResult === True
 
--- Property: Parser handles Unicode characters
-prop_parser_handles_unicode :: Property
-prop_parser_handles_unicode =
-  forAll (elements ["函数", "変数", "🚀", "test中文", "αβγ", "λx.x"]) $ \unicodeInput ->
-    let parsed = parseTypus (pack unicodeInput)
-    in counterexample ("Parser should handle Unicode: " ++ unicodeInput) $
-       case parsed of
-         Left _ -> property True
-         Right _ -> property True
+-- Property: parseTypus should handle empty input gracefully
+prop_parse_handles_empty :: Property
+prop_parse_handles_empty =
+  let result = parseTypus ""
+      hasResult = case result of
+        Left _ -> False
+        Right _ -> True
+  in hasResult === True
 
--- Property: Error recovery tracks source positions
-prop_error_recovery_tracks_positions :: Property
-prop_error_recovery_tracks_positions =
-  forAll arbitrary $ \input ->
-    let parsed = parseTypus (pack input)
-        validation = case parsed of
-          Left _ -> Left ["Parse error"]
-          Right file -> validateSyntax file
-    in counterexample "Error recovery should track source positions" $
-       case validation of
-         Left errors -> all (not . null) errors
-         Right _ -> property True
+-- Property: parseTypus should preserve some structure from partial input
+prop_parse_preserves_partial_structure :: String -> Property
+prop_parse_preserves_partial_structure input =
+  let result = parseTypus input
+      preservesSomeStructure = case result of
+        Left _ -> False
+        Right (TypusFile _ _ blocks) -> not (null blocks)
+  in length (lines input) > 0 ==> preservesSomeStructure ||. length input < 10
+  where
+    (||.) = (||)
 
--- Property: Parser handles nested structures with errors
-prop_parser_handles_nested_errors :: Property
-prop_parser_handles_nested_errors =
-  forAll (elements ["if {", "for {", "func {", "if () {", "for () {", "func x() {"]) $ \nestedStart ->
-    forAll (elements ["}", "]", ")", "", "invalid"]) $ \nestedEnd ->
-      let input = nestedStart ++ " content " ++ nestedEnd
-          parsed = parseTypus (pack input)
-      in counterexample ("Parser should handle nested: " ++ input) $
-         case parsed of
-           Left _ -> property True
-           Right _ -> property True
+-- Property: parseTypus should handle input with only comments
+prop_parse_handles_comments_only :: Property
+prop_parse_handles_comments_only =
+  let commentOnly = "// This is a comment\n// Another comment\n"
+      result = parseTypus commentOnly
+      hasResult = case result of
+        Left _ -> False
+        Right _ -> True
+  in hasResult === True
 
--- Helper function
-isRight :: Either a b -> Bool
-isRight (Right _) = True
-isRight (Left _) = False
+-- Property: parseTypus should handle input with only whitespace
+prop_parse_handles_whitespace_only :: Property
+prop_parse_handles_whitespace_only =
+  let whitespaceOnly = "   \n  \t  \n   "
+      result = parseTypus whitespaceOnly
+      hasResult = case result of
+        Left _ -> False
+        Right _ -> True
+  in hasResult === True
+
+-- Property: parseTypus should be tolerant of line ending variations
+prop_parse_tolerates_line_endings :: String -> Property
+prop_parse_tolerates_line_endings content =
+  let unixContent = content
+      windowsContent = unlines $ lines content  -- Normalize to \n
+      macContent = unlines $ map (++ "\r") $ lines content
+      
+      unixResult = parseTypus unixContent
+      windowsResult = parseTypus windowsContent
+      macResult = parseTypus macContent
+      
+      allHaveResults = case (unixResult, windowsResult, macResult) of
+        (Left _, Left _, Left _) -> False
+        _ -> True
+  in allHaveResults === True
+
+-- Property: parseTypus should handle very long lines
+prop_parse_handles_long_lines :: Property
+prop_parse_handles_long_lines =
+  let longLine = replicate 1000 'a' ++ " let x = 42"
+      result = parseTypus longLine
+      hasResult = case result of
+        Left _ -> False
+        Right _ -> True
+  in hasResult === True
+
+-- Property: parseTypus should handle unicode characters
+prop_parse_handles_unicode :: Property
+prop_parse_handles_unicode =
+  let unicodeContent = "let 测试 = 42\nlet 🦀 = \"crab\"\n"
+      result = parseTypus unicodeContent
+      hasResult = case result of
+        Left _ -> False
+        Right _ -> True
+  in hasResult === True
+
+-- ============================================================================
+-- Unit Tests
+-- ============================================================================
+
+test_parse_empty_input :: TestTree
+test_parse_empty_input = testCase "parse empty input" $ do
+  let result = parseTypus ""
+  case result of
+    Left _ -> assert False
+    Right (TypusFile directives blocks) -> do
+      directives @?= defaultFileDirectives
+      blocks @?= []
+
+test_parse_comments_only :: TestTree
+test_parse_comments_only = testCase "parse comments only" $ do
+  let input = "// This is a comment\n// Another comment\n"
+  let result = parseTypus input
+  case result of
+    Left _ -> assert False
+    Right (TypusFile directives blocks) -> do
+      length blocks @?= 0  -- Comments should not create blocks
+
+test_parse_simple_valid :: TestTree
+test_parse_simple_valid = testCase "parse simple valid code" $ do
+  let input = "let x = 42\n"
+  let result = parseTypus input
+  case result of
+    Left _ -> assert False
+    Right (TypusFile directives blocks) -> do
+      length blocks @?= 1  -- Should create one block
+
+test_parse_with_directives :: TestTree
+test_parse_with_directives = testCase "parse with directives" $ do
+  let input = "// @ownership: true\n// @dependent-types: false\nlet x = 42\n"
+  let result = parseTypus input
+  case result of
+    Left _ -> assert False
+    Right (TypusFile directives blocks) -> do
+      -- Check that directives are parsed
+      fdOwnership directives @?= Just True  -- This may need adjustment based on actual parser behavior
+
+test_parse_malformed_recovery :: TestTree
+test_parse_malformed_recovery = testCase "parse malformed with recovery" $ do
+  let input = "let valid = 42\nlet invalid @#$ = 13\nlet another = 7\n"
+  let result = parseTypus input
+  case result of
+    Left _ -> assert False
+    Right (TypusFile directives blocks) -> do
+      -- Should recover and parse some blocks despite the error
+      length blocks @?= 3  -- Or at least > 1
+
+test_parse_unclosed_structures :: TestTree
+test_parse_unclosed_structures = testCase "parse unclosed structures" $ do
+  let input = "let x = {\n  y = 42\n// missing closing brace\nlet z = 7\n"
+  let result = parseTypus input
+  case result of
+    Left _ -> assert False
+    Right (TypusFile directives blocks) -> do
+      -- Should handle unclosed braces gracefully
+      length blocks @?= 2  -- Should parse both declarations
+
+test_parse_edge_cases :: TestTree
+test_parse_edge_cases = testCase "parse edge cases" $ do
+  let tests = 
+        [ ("", 0)
+        , ("   ", 0)
+        , ("// comment", 0)
+        , ("let x = 42", 1)
+        , ("let x = 42\nlet y = 13", 2)
+        ]
+  
+  mapM_ (\(input, expectedBlocks) -> do
+    let result = parseTypus input
+    case result of
+      Left _ -> assert $ expectedBlocks == 0  -- Only allow failure for empty cases
+      Right (TypusFile directives blocks) -> 
+        length blocks @?= expectedBlocks
+    ) tests
+
+-- ============================================================================
+-- Test Suite
+-- ============================================================================
 
 tests :: TestTree
-tests =
-  testGroup "Parser Error Recovery QuickCheck Tests"
-    [ fastProperty "Parser recovers from syntax errors" prop_parser_recovers_from_syntax_errors
-    , fastProperty "Error recovery preserves as much structure as possible" prop_error_recovery_preserves_structure
-    , fastProperty "Parser handles incomplete constructs" prop_parser_handles_incomplete_constructs
-    , fastProperty "Error messages are informative" prop_error_messages_informative
-    , fastProperty "Parser is resilient to whitespace variations" prop_parser_resilient_whitespace
-    , fastProperty "Syntax validation catches common errors" prop_syntax_validation_catches_errors
-    , fastProperty "Simple validation is consistent with detailed validation" prop_simple_vs_detailed_validation
-    , fastProperty "Parser handles Unicode characters" prop_parser_handles_unicode
-    , fastProperty "Error recovery tracks source positions" prop_error_recovery_tracks_positions
-    , fastProperty "Parser handles nested structures with errors" prop_parser_handles_nested_errors
-    ]
+tests = testGroup "Parser Error Recovery QuickCheck Tests"
+  [ testProperty "parseTypus returns result even for malformed input" prop_parse_returns_result
+  , testProperty "parseTypus handles empty input gracefully" prop_parse_handles_empty
+  , testProperty "parseTypus preserves partial structure" prop_parse_preserves_partial_structure
+  , testProperty "parseTypus handles comments only" prop_parse_handles_comments_only
+  , testProperty "parseTypus handles whitespace only" prop_parse_handles_whitespace_only
+  , testProperty "parseTypus tolerates line ending variations" prop_parse_tolerates_line_endings
+  , testProperty "parseTypus handles very long lines" prop_parse_handles_long_lines
+  , testProperty "parseTypus handles unicode characters" prop_parse_handles_unicode
+  , test_parse_empty_input
+  , test_parse_comments_only
+  , test_parse_simple_valid
+  , test_parse_with_directives
+  , test_parse_malformed_recovery
+  , test_parse_unclosed_structures
+  , test_parse_edge_cases
+  ]

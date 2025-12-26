@@ -84,6 +84,18 @@ import qualified Test.Unit.DependentTypesValidationQuickCheckSpec
 import qualified Test.Unit.ErrorRecoveryQuickCheckSpec
 import qualified Test.Unit.SourceLocationTrackingQuickCheckSpec
 
+-- New Additional QuickCheck Test Modules (10 new comprehensive tests)
+import qualified Test.Unit.TextProcessingQuickCheckSpec
+import qualified Test.Unit.CommentHandlingQuickCheckSpec
+import qualified Test.Unit.IndentationNormalizationQuickCheckSpec
+import qualified Test.Unit.SourcePositionTrackingQuickCheckSpec
+import qualified Test.Unit.ParserErrorRecoveryQuickCheckSpec
+import qualified Test.Unit.OwnershipTransferEdgeCasesQuickCheckSpec
+import qualified Test.Unit.DependentTypeValidationQuickCheckSpec
+import qualified Test.Unit.CompilerIntegrationQuickCheckSpec
+import qualified Test.Unit.FileDirectiveProcessingQuickCheckSpec
+import qualified Test.Unit.CodeGenerationConsistencyQuickCheckSpec
+
 -- New core QuickCheck test modules
 import qualified Test.Unit.SourceLocationCoreQuickCheckSpec
 import qualified Test.Unit.ErrorHandlerCoreQuickCheckSpec
@@ -618,4 +630,16 @@ tests =
         , Test.Unit.NewPerformanceSpec.tests
             , Test.Unit.NewQuickCheckSpec.tests
             , Test.Unit.NewEnhancedCabalQuickCheckSpec.tests
-            ]    ]
+            ]
+    , testGroup "New Additional QuickCheck Test Modules"
+        [ Test.Unit.TextProcessingQuickCheckSpec.tests
+        , Test.Unit.CommentHandlingQuickCheckSpec.tests
+        , Test.Unit.IndentationNormalizationQuickCheckSpec.tests
+        , Test.Unit.SourcePositionTrackingQuickCheckSpec.tests
+        , Test.Unit.ParserErrorRecoveryQuickCheckSpec.tests
+        , Test.Unit.OwnershipTransferEdgeCasesQuickCheckSpec.tests
+        , Test.Unit.DependentTypeValidationQuickCheckSpec.tests
+        , Test.Unit.CompilerIntegrationQuickCheckSpec.tests
+        , Test.Unit.FileDirectiveProcessingQuickCheckSpec.tests
+        , Test.Unit.CodeGenerationConsistencyQuickCheckSpec.tests
+        ]    ]
