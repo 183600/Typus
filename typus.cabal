@@ -716,12 +716,22 @@ test-suite typus-test
         Test.Unit.ParserBoundaryConditionsSpec,
         Test.Unit.UtilsStringProcessingEnhancedSpec,
         Test.Unit.ErrorHandlerErrorHandlingSpec,
-        Test.Unit.CompilerCompilationLogicSpec,
-        Test.Unit.OwnershipOwnershipAnalysisSpec,
-        Test.Unit.DependenciesDependencyAnalysisSpec,
-        Test.Unit.SyntaxValidatorValidationSpec
-    if flag(full) || flag(production)
-        other-modules:
+        Test.Unit.CompilerCompilationLogicSpec
+            , Test.Unit.OwnershipOwnershipAnalysisSpec
+            , Test.Unit.DependenciesDependencyAnalysisSpec
+            , Test.Unit.SyntaxValidatorValidationSpec
+        
+                -- New Core QuickCheck Test Modules (2025)
+            , Test.Unit.CoreSourceLocationQuickCheckSpec
+            , Test.Unit.CoreErrorHandlerQuickCheckSpec
+            , Test.Unit.CoreParserQuickCheckSpec
+            , Test.Unit.CoreOwnershipQuickCheckSpec
+            , Test.Unit.CoreDependenciesQuickCheckSpec
+            , Test.Unit.CoreUtilsQuickCheckSpec
+            , Test.Unit.CoreSyntaxValidatorQuickCheckSpec
+            , Test.Unit.CoreGoToolchainQuickCheckSpec
+            , Test.Unit.CoreIntegratedCompilerQuickCheckSpec
+    other-modules:
             Test.Dependencies.Arbitrary
     build-depends:
         base >=4.7 && <5,

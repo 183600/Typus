@@ -371,6 +371,18 @@ import qualified Test.Unit.NewIntegrationSpec
 import qualified Test.Unit.NewPerformanceSpec
 import qualified Test.Unit.NewQuickCheckSpec
 
+-- New Core QuickCheck Test Modules (2025)
+import qualified Test.Unit.CoreSourceLocationQuickCheckSpec
+import qualified Test.Unit.CoreErrorHandlerQuickCheckSpec
+import qualified Test.Unit.CoreParserQuickCheckSpec
+import qualified Test.Unit.CoreOwnershipQuickCheckSpec
+import qualified Test.Unit.CoreDependenciesQuickCheckSpec
+import qualified Test.Unit.CoreCompilerQuickCheckSpec
+import qualified Test.Unit.CoreUtilsQuickCheckSpec
+import qualified Test.Unit.CoreSyntaxValidatorQuickCheckSpec
+import qualified Test.Unit.CoreGoToolchainQuickCheckSpec
+import qualified Test.Unit.CoreIntegratedCompilerQuickCheckSpec
+
 -- New Comprehensive QuickCheck Test Modules
 import qualified Test.Unit.ParserConsistencyQuickCheckSpec
 import qualified Test.Unit.StringUtilsQuickCheckTestSpec
@@ -1702,5 +1714,19 @@ tests =
     , Test.Unit.OwnershipBoundaryConditionsSpec.tests
     , Test.Unit.DependentTypeValidationSpec.tests
     , Test.Unit.UtilsStringPropertiesSpec.tests
+    ]
+
+  -- New Core QuickCheck Test Modules (2025)
+  , testGroup "Core QuickCheck Test Modules 2025"
+    [ Test.Unit.CoreSourceLocationQuickCheckSpec.tests
+    , Test.Unit.CoreErrorHandlerQuickCheckSpec.tests
+    , Test.Unit.CoreParserQuickCheckSpec.tests
+    , Test.Unit.CoreOwnershipQuickCheckSpec.tests
+    , Test.Unit.CoreDependenciesQuickCheckSpec.tests
+    , Test.Unit.CoreCompilerQuickCheckSpec.tests
+    , Test.Unit.CoreUtilsQuickCheckSpec.tests
+    , Test.Unit.CoreSyntaxValidatorQuickCheckSpec.tests
+    , Test.Unit.CoreGoToolchainQuickCheckSpec.tests
+    , Test.Unit.CoreIntegratedCompilerQuickCheckSpec.tests
     ]
   ]
