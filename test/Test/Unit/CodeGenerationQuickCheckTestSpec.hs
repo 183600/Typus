@@ -166,7 +166,7 @@ prop_parse_render_consistency =
       Left _ -> property True -- 解析失败时跳过
       Right parsedModule ->
         let renderedLines = lines $ renderGoModule parsedModule
-        in length renderedLines >= 0 -- 至少应该生成一些行
+        in property $ length renderedLines >= 0 -- 至少应该生成一些行
 
 -- 属性：PackageDecl应该包含有效的包名
 prop_packageDecl_valid_name :: Property

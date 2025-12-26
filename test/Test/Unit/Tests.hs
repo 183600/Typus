@@ -94,6 +94,7 @@ import qualified Test.Unit.ErrorHandlingPropertySpec
 import qualified Test.Unit.NewComprehensivePropertySpec
 import qualified Test.Unit.NewEnhancedTestSpec
 import qualified Test.Unit.SimpleNewTestSpec
+import qualified Test.Unit.NewCoreQuickCheckPropertiesSpec
 
 -- New Advanced Test Suite (2025)
 import qualified Test.Unit.CompilerErrorRecoverySpec
@@ -636,6 +637,7 @@ tests =
     , Test.Unit.EnhancedCompilerTestSpec.tests
     , Test.Unit.UtilsPropertiesQuickCheckSpec.tests
     , Test.Unit.ParserCompilerPropertiesQuickCheckSpec.tests
+    , Test.Unit.NewCoreQuickCheckPropertiesSpec.tests
     , Test.Unit.AdditionalCabalTestsSpec.tests
     , Test.Unit.AdditionalUtilsSpec.tests
     , Test.Unit.AdditionalUtilsQuickCheckSpec.tests
