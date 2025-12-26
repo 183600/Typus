@@ -63,6 +63,9 @@ import qualified Test.Unit.NewCabalIntegrationSpec
 -- New Simple Cabal Test Module
 import qualified Test.Unit.SimpleCabalTestSpec
 
+-- New Cabal Test Suite Module
+import qualified Test.Unit.NewCabalTestSuiteSpec
+
 -- New Core Functionality Test Modules
 import qualified Test.Unit.CoreParserSpec
 import qualified Test.Unit.CoreSourceLocationSpec
@@ -977,5 +980,8 @@ tests =
         , Test.Unit.TextProcessingRobustnessSpec.tests
         , Test.Unit.CompilerOptimizationSpec.tests
         , Test.Unit.IntegrationEndToEndSpec.tests
+        ]
+    , testGroup "New Cabal Test Suite"
+        [ Test.Unit.NewCabalTestSuiteSpec.tests
         ]
     ]
