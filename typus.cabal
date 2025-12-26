@@ -612,7 +612,10 @@ test-suite typus-test
         Test.Unit.UtilsNewQuickCheckSpec,
         
         -- Enhanced Cabal QuickCheck Test Module
-        Test.Unit.EnhancedCabalQuickCheckTestSpec
+        Test.Unit.EnhancedCabalQuickCheckTestSpec,
+        
+        -- New Additional QuickCheck Test Module
+        Test.Unit.NewAdditionalQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary

@@ -101,6 +101,9 @@ import qualified Test.Unit.SimpleCabalTestSpec
 -- Enhanced Cabal QuickCheck Test Module
 import qualified Test.Unit.EnhancedCabalQuickCheckTestSpec
 
+-- New Additional QuickCheck Test Module
+import qualified Test.Unit.NewAdditionalQuickCheckSpec
+
 -- New Enhanced QuickCheck Test Modules
 import qualified Test.Unit.EnhancedUtilsQuickCheckSpec
 import qualified Test.Unit.EnhancedSourceLocationQuickCheckSpec
@@ -1243,4 +1246,9 @@ tests =
         , Test.Unit.PerformanceRegressionExtendedSpec.tests
         ]
     , Test.Unit.EnhancedCabalQuickCheckTestSpec.tests
+    ]
+    
+    -- New Additional QuickCheck Test Suite
+  , testGroup "New Additional QuickCheck Tests"
+    [ Test.Unit.NewAdditionalQuickCheckSpec.tests
     ]
