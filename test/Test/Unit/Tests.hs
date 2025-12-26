@@ -324,6 +324,15 @@ import qualified Test.Unit.SemanticAnalysisQuickCheckSpec
 
 import qualified Test.Unit.ToolchainIntegrationQuickCheckSpec
 
+-- New test modules added for enhanced cabal testing
+import qualified Test.Unit.ToolingErrorSpec
+import qualified Test.Unit.CommandLineDebugSpec
+import qualified Test.Unit.EmbedAssetsSpec
+import qualified Test.Unit.DependenciesCoreSpec
+import qualified Test.Unit.OwnershipReporterSpec
+import qualified Test.Unit.AnalyzerCrossAnalysisSpec
+import qualified Test.Unit.CoreDataStructuresQuickCheckSpec
+
 -- New comprehensive QuickCheck test modules
 import qualified Test.Unit.NewDependentTypesQuickCheckSpec
 import qualified Test.Unit.NewOwnershipQuickCheckSpec
@@ -789,5 +798,14 @@ tests =
         , Test.Unit.OwnershipAnalysisSpec.ownershipAnalysisSpec
         , Test.Unit.CompilerIRSpec.compilerIRSpec
         , Test.Unit.IntegrationQuickCheckSpec.integrationQuickCheckSpec
+        ]
+    , testGroup "New Enhanced Cabal Test Modules"
+        [ Test.Unit.ToolingErrorSpec.tests
+        , Test.Unit.CommandLineDebugSpec.tests
+        , Test.Unit.EmbedAssetsSpec.tests
+        , Test.Unit.DependenciesCoreSpec.tests
+        , Test.Unit.OwnershipReporterSpec.tests
+        , Test.Unit.AnalyzerCrossAnalysisSpec.tests
+        , Test.Unit.CoreDataStructuresQuickCheckSpec.tests
         ]
     ]

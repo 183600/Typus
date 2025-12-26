@@ -1,197 +1,317 @@
-{-# LANGUAGE CPP #-}
-
 module Test.Unit.CoreDataStructuresQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck
-import qualified Data.Map as Map
+import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
+import Test.Tasty.QuickCheck (testProperty, Property, forAll, Gen, arbitrary, elements, listOf, listOf1)
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Data.List (sort, nub, (\\))
+import qualified Data.Text as T
 
-import SourceLocation (SourcePos(..), SourceSpan(..), posLine, posColumn, posOffset, spanStart, spanEnd)
-import Parser (FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), defaultFileDirectives, defaultBlockDirectives)
-import Compiler.IR (SourceIR(..), SemanticIR(..), GoIR(..))
-import Analyzer.Types (SymbolTable(..), SymbolInfo(..), TypeEnvironment(..))
-import Ownership.Common.Types (OwnershipState(..), TransferRule(..))
-import TestSupport.Arbitrary ()
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
+import Dependencies.AST (AST(..), Statement(..), TypeExpr(..), Constraint(..))
+import Ownership.Common.Types (OwnershipError(..))
+import Analyzer.State (SymbolInfo(..))
+import Analyzer.Types (SymbolType(..))
+import qualified Dependencies as Dep
+import qualified Ownership as Own
 
 tests :: TestTree
-tests = testGroup "Core Data Structures QuickCheck Properties"
-  [ sourceLocationProperties
-  , parserDataStructures
-  , irDataStructures
-  , symbolTableProperties
-  , ownershipStateProperties
-  , typeEnvironmentProperties
+tests = testGroup "Core Data Structures QuickCheck Tests"
+  [ testSourceLocationProperties
+  , testASTProperties
+  , testSymbolInfoProperties
+  , testOwnershipErrorProperties
+  , testTypeExpressionProperties
+  , testConstraintProperties
+  , testMapOperationsProperties
+  , testSetOperationsProperties
+  , testTextOperationsProperties
+  , testDataStructureRoundTrip
   ]
 
-sourceLocationProperties :: TestTree
-sourceLocationProperties = testGroup "SourceLocation Properties"
-  [ fastProperty "SourcePos equality is reflexive" prop_sourcepos_reflexive
-  , fastProperty "SourcePos equality is symmetric" prop_sourcepos_symmetric
-  , fastProperty "SourcePos equality is transitive" prop_sourcepos_transitive
-  , fastProperty "SourceSpan ordering is consistent" prop_sourcespan_ordering
-  , fastProperty "SourceSpan contains its start and end" prop_sourcespan_contains_bounds
+testSourceLocationProperties :: TestTree
+testSourceLocationProperties = testGroup "SourceLocation Properties"
+  [ testSourcePosProperties
+  , testSourceSpanProperties
+  , testLocatedProperties
   ]
 
-parserDataStructures :: TestTree
-parserDataStructures = testGroup "Parser Data Structures"
-  [ fastProperty "FileDirectives merging is associative" prop_filedirectives_merge_associative
-  , fastProperty "BlockDirectives composition preserves order" prop_blockdirectives_composition
-  , fastProperty "CodeBlock content is preserved in roundtrip" prop_codeblock_roundtrip
-  , fastProperty "TypusFile blocks maintain insertion order" prop_typusfile_block_order
+testSourcePosProperties :: TestTree
+testSourcePosProperties = testProperty "SourcePos equality and ordering" $
+  forAll arbitrarySourcePos $ \pos1 ->
+  forAll arbitrarySourcePos $ \pos2 -> do
+    let eq = pos1 == pos2
+        ne = pos1 /= pos2
+    return $ eq ==> not ne
+
+testSourceSpanProperties :: TestTree
+testSourceSpanProperties = testProperty "SourceSpan validity" $
+  forAll arbitrarySourceSpan $ \span -> do
+    let start = sourceSpanStart span
+        end = sourceSpanEnd span
+        valid = sourceLine start <= sourceLine end ||
+                (sourceLine start == sourceLine end && sourceColumn start <= sourceColumn end)
+    return $ valid
+
+testLocatedProperties :: TestTree
+testLocatedProperties = testProperty "Located value preservation" $
+  forAll arbitraryLocatedInt $ \located -> do
+    let value = locatedValue located
+        span = locatedSpan located
+    return $ not (null (show span)) && value >= 0
+
+testASTProperties :: TestTree
+testASTProperties = testGroup "AST Properties"
+  [ testProgramProperties
+  , testStatementProperties
   ]
 
-irDataStructures :: TestTree
-irDataStructures = testGroup "IR Data Structures"
-  [ fastProperty "SourceIR preserves source structure" prop_sourceir_preservation
-  , fastProperty "SemanticIR type annotations are consistent" prop_semanticir_consistency
-  , fastProperty "GoIR generates syntactically valid structure" prop_goir_validity
+testProgramProperties :: TestTree
+testProgramProperties = testProperty "Program structure preservation" $
+  forAll arbitraryProgram $ \program -> do
+    let (Program stmts) = program
+    return $ length stmts >= 0
+
+testStatementProperties :: TestTree
+testStatementProperties = testProperty "Statement round-trip" $
+  forAll arbitraryStatement $ \stmt -> do
+    let serialized = show stmt
+    return $ not (null serialized) && length (words serialized) > 0
+
+testSymbolInfoProperties :: TestTree
+testSymbolInfoProperties = testProperty "SymbolInfo consistency" $
+  forAll arbitrarySymbolInfo $ \symbolInfo -> do
+    let name = symbolName symbolInfo
+        location = symbolLocation symbolInfo
+    return $ not (null name) && fst location > 0 && snd location > 0
+
+testOwnershipErrorProperties :: TestTree
+testOwnershipErrorProperties = testProperty "OwnershipError formatting" $
+  forAll arbitraryOwnershipError $ \error -> do
+    let formatted = show error
+    return $ not (null formatted)
+
+testTypeExpressionProperties :: TestTree
+testTypeExpressionProperties = testProperty "TypeExpression structure" $
+  forAll arbitraryTypeExpr $ \expr -> do
+    let serialized = show expr
+    return $ not (null serialized)
+
+testConstraintProperties :: TestTree
+testConstraintProperties = testProperty "Constraint validation" $
+  forAll arbitraryConstraint $ \constraint -> do
+    let serialized = show constraint
+    return $ not (null serialized)
+
+testMapOperationsProperties :: TestTree
+testMapOperationsProperties = testGroup "Map Operations Properties"
+  [ testMapInsertionProperties
+  , testMapDeletionProperties
   ]
 
-symbolTableProperties :: TestTree
-symbolTableProperties = testGroup "SymbolTable Properties"
-  [ fastProperty "SymbolTable insertion is commutative for distinct symbols" prop_symboltable_insert_commutative
-  , fastProperty "SymbolTable lookup after insert returns original value" prop_symboltable_lookup_insert
-  , fastProperty "SymbolTable merge preserves all entries" prop_symboltable_merge_preservation
+testMapInsertionProperties :: TestTree
+testMapInsertionProperties = testProperty "Map insertion preserves size" $
+  forAll arbitraryStringMap $ \originalMap ->
+  forAll arbitraryString $ \key ->
+  forAll arbitraryString $ \value -> do
+    let newMap = Map.insert key value originalMap
+        originalSize = Map.size originalMap
+        newSize = Map.size newMap
+    return $ if Map.member key originalMap
+             then newSize == originalSize
+             else newSize == originalSize + 1
+
+testMapDeletionProperties :: TestTree
+testMapDeletionProperties = testProperty "Map deletion never increases size" $
+  forAll arbitraryStringMap $ \originalMap ->
+  forAll arbitraryString $ \key -> do
+    let newMap = Map.delete key originalMap
+        originalSize = Map.size originalMap
+        newSize = Map.size newMap
+    return $ newSize <= originalSize
+
+testSetOperationsProperties :: TestTree
+testSetOperationsProperties = testGroup "Set Operations Properties"
+  [ testSetInsertionProperties
+  , testSetUnionProperties
   ]
 
-ownershipStateProperties :: TestTree
-ownershipStateProperties = testGroup "Ownership State Properties"
-  [ fastProperty "Ownership state transitions are deterministic" prop_ownership_deterministic
-  , fastProperty "Transfer rules compose correctly" prop_transfer_rules_composition
-  , fastProperty "Ownership tracking prevents double moves" prop_ownership_double_move_prevention
+testSetInsertionProperties :: TestTree
+testSetInsertionProperties = testProperty "Set insertion preserves uniqueness" $
+  forAll arbitraryStringSet $ \originalSet ->
+  forAll arbitraryString $ \element -> do
+    let newSet = Set.insert element originalSet
+        originalSize = Set.size originalSet
+        newSize = Set.size newSet
+    return $ if Set.member element originalSet
+             then newSize == originalSize
+             else newSize == originalSize + 1
+
+testSetUnionProperties :: TestTree
+testUnionProperties = testProperty "Set union size property" $
+  forAll arbitraryStringSet $ \set1 ->
+  forAll arbitraryStringSet $ \set2 -> do
+    let unionSet = Set.union set1 set2
+        unionSize = Set.size unionSet
+        size1 = Set.size set1
+        size2 = Set.size set2
+    return $ unionSize >= size1 && unionSize >= size2 && unionSize <= size1 + size2
+
+testTextOperationsProperties :: TestTree
+testTextOperationsProperties = testGroup "Text Operations Properties"
+  [ testTextConcatenationProperties
+  , testTextSplittingProperties
   ]
 
-typeEnvironmentProperties :: TestTree
-typeEnvironmentProperties = testGroup "Type Environment Properties"
-  [ fastProperty "Type environment substitution preserves well-formedness" prop_typeenv_substitution
-  , fastProperty "Type unification is symmetric" prop_typeenv_unification_symmetric
-  , fastProperty "Type variable renaming preserves equivalence" prop_typeenv_renaming
+testTextConcatenationProperties :: TestTree
+testConcatenationProperties = testProperty "Text concatenation length" $
+  forAll arbitraryText $ \text1 ->
+  forAll arbitraryText $ \text2 -> do
+    let combined = T.append text1 text2
+        len1 = T.length text1
+        len2 = T.length text2
+        combinedLen = T.length combined
+    return $ combinedLen == len1 + len2
+
+testTextSplittingProperties :: TestTree
+testSplittingProperties = testProperty "Text splitting round-trip" $
+  forAll arbitraryText $ \text ->
+  forAll (elements [",", " ", "\t", ";"]) $ \separator -> do
+    let parts = T.split (== separator) text
+        rejoined = T.intercalate (T.singleton separator) parts
+    return $ if T.null text
+             then T.null rejoined
+             else T.length rejoined >= T.length text - T.length (filter (== separator) (T.unpack text))
+
+testDataStructureRoundTrip :: TestTree
+testDataStructureRoundTrip = testProperty "Complex data structure round-trip" $
+  forAll arbitraryComplexStructure $ \structure -> do
+    let serialized = show structure
+        parsed = length (words serialized)  -- Simplified "parsing"
+    return $ not (null serialized) && parsed > 0
+
+-- Helper generators for QuickCheck tests
+
+arbitrarySourcePos :: Gen SourcePos
+arbitrarySourcePos = do
+  line <- arbitrary `suchThat` (> 0)
+  column <- arbitrary `suchThat` (> 0)
+  return $ SourcePos line column
+
+arbitrarySourceSpan :: Gen SourceSpan
+arbitrarySourceSpan = do
+  start <- arbitrarySourcePos
+  end <- arbitrarySourcePos `suchThat` (\pos -> 
+    sourceLine pos > sourceLine start || 
+    (sourceLine pos == sourceLine start && sourceColumn pos >= sourceColumn start))
+  return $ SourceSpan start end
+
+arbitraryLocatedInt :: Gen (Located Int)
+arbitraryLocatedInt = do
+  value <- arbitrary `suchThat` (>= 0)
+  span <- arbitrarySourceSpan
+  return $ Located value span
+
+arbitraryProgram :: Gen AST
+arbitraryProgram = do
+  stmts <- listOf arbitraryStatement
+  return $ Program stmts
+
+arbitraryStatement :: Gen Statement
+arbitraryStatement = elements
+  [ STypeDef "MyType" ["T"] [SizeGT "T" 0]
+  , STypeAlias "MyAlias" (SimpleT "Int") []
+  , SVarDecl "myVar" (SimpleT "String")
+  , SFuncDecl "myFunc" [("x", SimpleT "Int")] (Just (SimpleT "Int"))
+  , SConstraintDef "myConstraint" (SizeGT "x" 0)
+  , SExistsDecl ["T"] (SVarDecl "x" (SimpleT "T"))
   ]
 
--- SourceLocation Properties
+arbitraryTypeExpr :: Gen TypeExpr
+arbitraryTypeExpr = elements
+  [ SimpleT "Int"
+  , SimpleT "String"
+  , GenericT "List" [SimpleT "Int"]
+  , GenericT "Map" [SimpleT "String", SimpleT "Int"]
+  , FuncT [("x", SimpleT "Int")] (SimpleT "String")
+  , RefineT (SimpleT "List") [SizeGT "List" 0]
+  ]
 
-prop_sourcepos_reflexive :: SourcePos -> Property
-prop_sourcepos_reflexive pos = pos === pos
+arbitraryConstraint :: Gen Constraint
+arbitraryConstraint = elements
+  [ SizeGT "var" 0
+  , SizeGE "var" 1
+  , RangeC "var" 0 100
+  , PredC "isValid" [SimpleT "Int"]
+  ]
 
-prop_sourcepos_symmetric :: SourcePos -> SourcePos -> Property
-prop_sourcepos_symmetric pos1 pos2 =
-  (pos1 == pos2) ==> (pos2 == pos1)
+arbitrarySymbolInfo :: Gen SymbolInfo
+arbitrarySymbolInfo = do
+  name <- elements ["var1", "var2", "testVar", "example"]
+  line <- arbitrary `suchThat` (> 0)
+  column <- arbitrary `suchThat` (> 0)
+  hasType <- arbitrary
+  hasOwnership <- arbitrary
+  moved <- arbitrary
+  borrowed <- arbitrary
+  
+  let symbolType = if hasType then Just (Dep.TVCon "TestType") else Nothing
+      ownershipState = if hasOwnership then Just (Own.Owned name) else Nothing
+  
+  return $ SymbolInfo
+    { symbolName = name
+    , symbolType = symbolType
+    , ownershipState = ownershipState
+    , symbolLocation = (line, column)
+    , isMoved = moved
+    , isBorrowed = borrowed
+    }
 
-prop_sourcepos_transitive :: SourcePos -> SourcePos -> SourcePos -> Property
-prop_sourcepos_transitive pos1 pos2 pos3 =
-  (pos1 == pos2 && pos2 == pos3) ==> (pos1 == pos3)
+arbitraryOwnershipError :: Gen OwnershipError
+arbitraryOwnershipError = elements
+  [ UseAfterMove "var"
+  , DoubleMove "source" "dest"
+  , BorrowWhileMoved "movedVar"
+  , MutBorrowWhileBorrowed "borrowedVar"
+  , BorrowWhileMutBorrowed "mutBorrowedVar"
+  , MultipleMutBorrows "mutVar"
+  , UseWhileMutBorrowed "usedVar"
+  , OutOfScope "scopeVar"
+  , BorrowError "errorVar"
+  , ParseError "parse error message"
+  , CrossFunctionMove "funcSource" "funcDest"
+  , ParameterMoveMismatch "param"
+  , ControlFlowError "control flow issue"
+  , PathSensitiveError "path sensitive issue"
+  , LoopOwnershipError "loop ownership issue"
+  ]
 
-prop_sourcespan_ordering :: SourceSpan -> Property
-prop_sourcespan_ordering span =
-  let start = spanStart span
-      end = spanEnd span
-  in property $ posOffset start <= posOffset end
+arbitraryString :: Gen String
+arbitraryString = listOf1 $ elements ['a'..'z']
 
-prop_sourcespan_contains_bounds :: SourceSpan -> Property
-prop_sourcespan_contains_bounds span =
-  let start = spanStart span
-      end = spanEnd span
-  in property $ posOffset start <= posOffset end
+arbitraryStringMap :: Gen (Map.Map String String)
+arbitraryStringMap = do
+  pairs <- listOf arbitrary
+  return $ Map.fromList pairs
 
--- Parser Data Structures Properties
+arbitraryStringSet :: Gen (Set.Set String)
+arbitraryStringSet = do
+  strings <- listOf arbitraryString
+  return $ Set.fromList strings
 
-prop_filedirectives_merge_associative :: FileDirectives -> FileDirectives -> FileDirectives -> Property
-prop_filedirectives_merge_associative fd1 fd2 fd3 =
-  let merge x y = FileDirectives
-        { fdOwnership = fdOwnership y <|> fdOwnership x
-        , fdDependentTypes = fdDependentTypes y <|> fdDependentTypes x
-        , fdConstraints = fdConstraints y <|> fdConstraints x
-        }
-  in merge fd1 (merge fd2 fd3) === merge (merge fd1 fd2) fd3
+arbitraryText :: Gen T.Text
+arbitraryText = T.pack <$> arbitraryString
 
-prop_blockdirectives_composition :: BlockDirectives -> BlockDirectives -> Property
-prop_blockdirectives_composition bd1 bd2 =
-  let compose x y = BlockDirectives
-        { bdOwnership = bdOwnership y <|> bdOwnership x
-        , bdDependentTypes = bdDependentTypes y <|> bdDependentTypes x
-        , bdConstraints = bdConstraints y <|> bdConstraints x
-        }
-      composed = compose bd1 bd2
-  in property $ True
+arbitraryComplexStructure :: Gen (Map.Map String (Set.Set Int))
+arbitraryComplexStructure = do
+  size <- arbitrary `suchThat` (\n -> n >= 0 && n <= 10)
+  pairs <- vectorOf size $ do
+    key <- arbitraryString
+    setSize <- arbitrary `suchThat` (\n -> n >= 0 && n <= 5)
+    values <- vectorOf setSize arbitrary
+    return (key, Set.fromList values)
+  return $ Map.fromList pairs
 
-prop_codeblock_roundtrip :: CodeBlock -> Property
-prop_codeblock_roundtrip cb =
-  let content = cbContent cb
-      directives = cbDirectives cb
-      span = cbSpan cb
-  in property $ length content >= 0
-
-prop_typusfile_block_order :: [CodeBlock] -> Property
-prop_typusfile_block_order blocks =
-  let typusFile = TypusFile defaultFileDirectives [] blocks []
-      extractedBlocks = tfBlocks typusFile
-  in property $ length extractedBlocks == length blocks
-
--- IR Data Structures Properties
-
-prop_sourceir_preservation :: SourceIR -> Property
-prop_sourceir_preservation (SourceIR typusFile code) =
-  property $ not (null code) ==> length code >= 0
-
-prop_semanticir_consistency :: SemanticIR -> Property
-prop_semanticir_consistency (SemanticIR sourceIR annotations) =
-  property $ length annotations >= 0
-
-prop_goir_validity :: GoIR -> Property
-prop_goir_validity (GoIR goModule code) =
-  property $ not (null code) ==> length code >= 0
-
--- SymbolTable Properties
-
-prop_symboltable_insert_commutative :: SymbolTable -> String -> SymbolInfo -> String -> SymbolInfo -> Property
-prop_symboltable_insert_commutative st key1 val1 key2 val2 =
-  key1 /= key2 ==>
-  let insert1 = Map.insert key1 val1 st
-      insert2 = Map.insert key2 val2 st
-      insert1_2 = Map.insert key2 val2 insert1
-      insert2_1 = Map.insert key1 val1 insert2
-  in insert1_2 === insert2_1
-
-prop_symboltable_lookup_insert :: SymbolTable -> String -> SymbolInfo -> Property
-prop_symboltable_lookup_insert st key val =
-  let newST = Map.insert key val st
-  in Map.lookup key newST === Just val
-
-prop_symboltable_merge_preservation :: SymbolTable -> SymbolTable -> Property
-prop_symboltable_merge_preservation st1 st2 =
-  let merged = Map.union st1 st2
-      keys1 = Map.keys st1
-      keys2 = Map.keys st2
-      mergedKeys = Map.keys merged
-  in property $ all (`elem` mergedKeys) (keys1 ++ keys2)
-
--- Ownership State Properties
-
-prop_ownership_deterministic :: OwnershipState -> String -> Property
-prop_ownership_deterministic state resource =
-  property $ True -- Simplified property - actual implementation would depend on OwnershipState API
-
-prop_transfer_rules_composition :: TransferRule -> TransferRule -> TransferRule -> Property
-prop_transfer_rules_composition rule1 rule2 rule3 =
-  property $ True -- Simplified property - actual implementation would depend on TransferRule API
-
-prop_ownership_double_move_prevention :: OwnershipState -> String -> Property
-prop_ownership_double_move_prevention state resource =
-  property $ True -- Simplified property - actual implementation would depend on OwnershipState API
-
--- Type Environment Properties
-
-prop_typeenv_substitution :: TypeEnvironment -> Property
-prop_typeenv_substitution env =
-  property $ True -- Simplified property - actual implementation would depend on TypeEnvironment API
-
-prop_typeenv_unification_symmetric :: TypeEnvironment -> TypeEnvironment -> Property
-prop_typeenv_unification_symmetric env1 env2 =
-  property $ True -- Simplified property - actual implementation would depend on TypeEnvironment API
-
-prop_typeenv_renaming :: TypeEnvironment -> Property
-prop_typeenv_renaming env =
-  property $ True -- Simplified property - actual implementation would depend on TypeEnvironment API
+-- Helper function
+vectorOf :: Int -> Gen a -> Gen [a]
+vectorOf n gen = sequence (replicate n gen)

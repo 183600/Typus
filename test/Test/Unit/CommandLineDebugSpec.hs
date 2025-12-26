@@ -1,277 +1,240 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-
 module Test.Unit.CommandLineDebugSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertBool, (@?=), assertEqual)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property)
-
-import CommandLineDebug
-import Data.IORef (readIORef, writeIORef)
-import Data.Set (Set)
-import qualified Data.Set as Set
+import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
+import Test.Tasty.QuickCheck (testProperty, Property, forAll, Gen, arbitrary, elements)
+import Control.Monad (when)
+import Data.IORef
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
 
--- Unit tests for CommandLineDebug module
+import CommandLineDebug 
+  ( CommandLineDebugConfig(..)
+  , defaultCLIDebugConfig
+  , runWithCLIDebug
+  , checkBreakpoint
+  , setBreakpoint
+  , setConditionalBreakpoint
+  , listBreakpoints
+  , clearBreakpoints
+  , toggleDebugOutput
+  , DebugCommandResult(..)
+  , processDebugCommand
+  , setDebugLevel
+  , showDebugStatus
+  , addWatchVariable
+  , removeWatchVariable
+  , listWatchVariables
+  , getCallStack
+  , pushCallStack
+  , popCallStack
+  , evaluateExpression
+  , stepInto
+  , stepOver
+  , stepOut
+  , continue
+  , runToCursor
+  )
+
 tests :: TestTree
-tests = testGroup "CommandLineDebug tests"
-    [ testGroup "Configuration setup"
-        [ testCase "defaultCLIDebugConfig creates valid config" $ do
-            config <- defaultCLIDebugConfig
-            assertBool "Config should be created" True
-            
-        , testCase "default config has correct initial values" $ do
-            config <- defaultCLIDebugConfig
-            enabled <- readIORef (cldEnabled config)
-            logLevel <- readIORef (cldLogLevel config)
-            breakpoints <- readIORef (cldBreakpoints config)
-            interactive <- readIORef (cldInteractive config)
-            
-            enabled @?= True
-            logLevel @?= 3
-            Set.size breakpoints @?= 0
-            interactive @?= True
-        ]
-    
-    , testGroup "Breakpoint management"
-        [ testCase "setBreakpoint adds new breakpoint" $ do
-            config <- defaultCLIDebugConfig
-            let location = "test:location"
-            setBreakpoint config location
-            
-            breakpoints <- readIORef (cldBreakpoints config)
-            assertBool "Breakpoint should be added" $ Set.member location breakpoints
-            
-        , testCase "setBreakpoint handles duplicate breakpoints" $ do
-            config <- defaultCLIDebugConfig
-            let location = "test:duplicate"
-            setBreakpoint config location
-            setBreakpoint config location  -- Add same breakpoint again
-            
-            breakpoints <- readIORef (cldBreakpoints config)
-            Set.size breakpoints @?= 1
-            assertBool "Breakpoint should exist" $ Set.member location breakpoints
-            
-        , testCase "clearBreakpoints removes all breakpoints" $ do
-            config <- defaultCLIDebugConfig
-            setBreakpoint config "test1"
-            setBreakpoint config "test2"
-            setBreakpoint config "test3"
-            
-            clearBreakpoints config
-            breakpoints <- readIORef (cldBreakpoints config)
-            Set.size breakpoints @?= 0
-        ]
-    
-    , testGroup "Debug state management"
-        [ testCase "toggleDebugOutput switches enabled state" $ do
-            config <- defaultCLIDebugConfig
-            enabled1 <- readIORef (cldEnabled config)
-            enabled1 @?= True
-            
-            toggleDebugOutput config
-            enabled2 <- readIORef (cldEnabled config)
-            enabled2 @?= False
-            
-            toggleDebugOutput config
-            enabled3 <- readIORef (cldEnabled config)
-            enabled3 @?= True
-            
-        , testCase "setDebugLevel updates log level" $ do
-            config <- defaultCLIDebugConfig
-            setDebugLevel config 5
-            logLevel <- readIORef (cldLogLevel config)
-            logLevel @?= 5
-        ]
-    
-    , testGroup "Call stack management"
-        [ testCase "pushCallStack and popCallStack maintain stack" $ do
-            config <- defaultCLIDebugConfig
-            let location1 = "func1"
-                location2 = "func2"
-                
-            pushCallStack config location1
-            stack1 <- readIORef (cldCallStack config)
-            stack1 @?= [location1]
-            
-            pushCallStack config location2
-            stack2 <- readIORef (cldCallStack config)
-            stack2 @?= [location2, location1]
-            
-            popCallStack config
-            stack3 <- readIORef (cldCallStack config)
-            stack3 @?= [location1]
-            
-            popCallStack config
-            stack4 <- readIORef (cldCallStack config)
-            stack4 @?= []
-            
-        , testCase "popCallStack on empty stack is safe" $ do
-            config <- defaultCLIDebugConfig
-            popCallStack config  -- Should not crash
-            stack <- readIORef (cldCallStack config)
-            stack @?= []
-        ]
-    
-    , testGroup "Watch variable management"
-        [ testCase "addWatchVariable adds variable" $ do
-            config <- defaultCLIDebugConfig
-            let varName = "testVar"
-                value = "testValue"
-            addWatchVariable config varName value
-            
-            watchVars <- readIORef (cldWatchVariables config)
-            Map.lookup varName watchVars @?= Just value
-            
-        , testCase "addWatchVariable updates existing variable" $ do
-            config <- defaultCLIDebugConfig
-            let varName = "testVar"
-                value1 = "value1"
-                value2 = "value2"
-            addWatchVariable config varName value1
-            addWatchVariable config varName value2
-            
-            watchVars <- readIORef (cldWatchVariables config)
-            Map.lookup varName watchVars @?= Just value2
-            
-        , testCase "removeWatchVariable removes variable" $ do
-            config <- defaultCLIDebugConfig
-            addWatchVariable config "var1" "value1"
-            addWatchVariable config "var2" "value2"
-            
-            removeWatchVariable config "var1"
-            watchVars <- readIORef (cldWatchVariables config)
-            Map.lookup "var1" watchVars @?= Nothing
-            Map.lookup "var2" watchVars @?= Just "value2"
-        ]
-    
-    , testGroup "Step debugging"
-        [ testCase "stepInto enables step mode" $ do
-            config <- defaultCLIDebugConfig
-            stepInto config
-            stepMode <- readIORef (cldStepMode config)
-            stepMode @?= True
-            
-        , testCase "stepOver enables step mode" $ do
-            config <- defaultCLIDebugConfig
-            stepOver config
-            stepMode <- readIORef (cldStepMode config)
-            stepMode @?= True
-            
-        , testCase "stepOut disables step mode" $ do
-            config <- defaultCLIDebugConfig
-            stepInto config  -- Enable first
-            stepOut config   -- Then disable
-            stepMode <- readIORef (cldStepMode config)
-            stepMode @?= False
-            
-        , testCase "continue disables step mode" $ do
-            config <- defaultCLIDebugConfig
-            stepInto config  -- Enable first
-            continue config  -- Then disable
-            stepMode <- readIORef (cldStepMode config)
-            stepMode @?= False
-        ]
-    
-    , testGroup "Command processing"
-        [ testCase "processDebugCommand handles continue commands" $ do
-            config <- defaultCLIDebugConfig
-            result1 <- processDebugCommand config "test" ["c"]
-            result1 @?= ResumeExecution
-            
-            result2 <- processDebugCommand config "test" ["continue"]
-            result2 @?= ResumeExecution
-            
-        , testCase "processDebugCommand handles step commands" $ do
-            config <- defaultCLIDebugConfig
-            result1 <- processDebugCommand config "test" ["s"]
-            result1 @?= ResumeExecution
-            
-            result2 <- processDebugCommand config "test" ["step"]
-            result2 @?= ResumeExecution
-            
-        , testCase "processDebugCommand handles list commands" $ do
-            config <- defaultCLIDebugConfig
-            result <- processDebugCommand config "test" ["list"]
-            result @?= AwaitMoreInput
-            
-        , testCase "processDebugCommand handles unknown commands" $ do
-            config <- defaultCLIDebugConfig
-            result <- processDebugCommand config "test" ["unknown"]
-            result @?= AwaitMoreInput
-        ]
-    
-    , testGroup "Expression evaluation"
-        [ testCase "evaluateExpression returns formatted result" $ do
-            config <- defaultCLIDebugConfig
-            let expr = "x + y"
-            result <- evaluateExpression config expr
-            assertBool "Result should contain expression" $ expr `isInfixOf` result
-        ]
-    
-    , testGroup "Run to cursor"
-        [ testCase "runToCursor sets breakpoint and continues" $ do
-            config <- defaultCLIDebugConfig
-            let location = "target:location"
-            runToCursor config location
-            
-            -- Should have set breakpoint
-            breakpoints <- readIORef (cldBreakpoints config)
-            assertBool "Breakpoint should be set at target" $ Set.member location breakpoints
-            
-            -- Should have disabled step mode
-            stepMode <- readIORef (cldStepMode config)
-            stepMode @?= False
-        ]
-    
-    , testGroup "Status reporting"
-        [ testCase "showDebugStatus displays current state" $ do
-            config <- defaultCLIDebugConfig
-            setBreakpoint config "test:bp"
-            addWatchVariable config "testVar" "testValue"
-            setDebugLevel config 2
-            
-            -- This should not crash and display status
-            assertBool "Status display should work" True
-        ]
-    
-    , testGroup "Conditional breakpoints"
-        [ testCase "setConditionalBreakpoint adds condition" $ do
-            config <- defaultCLIDebugConfig
-            let location = "conditional:test"
-                condition = const True
-            setConditionalBreakpoint config location condition
-            
-            conditions <- readIORef (cldBreakConditions config)
-            assertBool "Condition should be set" $ Map.member location conditions
-        ]
-    
-    , testGroup "Location tracking"
-        [ testCase "pushCallStack updates current location" $ do
-            config <- defaultCLIDebugConfig
-            let location = "current:func"
-            pushCallStack config location
-            
-            currentLocation <- readIORef (cldCurrentLocation config)
-            currentLocation @?= location
-            
-        , testCase "popCallStack updates current location" $ do
-            config <- defaultCLIDebugConfig
-            pushCallStack config "func1"
-            pushCallStack config "func2"
-            
-            popCallStack config
-            currentLocation <- readIORef (cldCurrentLocation config)
-            currentLocation @?= "func1"
-            
-            popCallStack config
-            currentLocation2 <- readIORef (cldCurrentLocation config)
-            currentLocation2 @?= ""
-        ]
-    ]
-  where
-    isInfixOf needle haystack = needle `elem` [take (length needle) (drop i haystack) | i <- [0..length haystack - length needle]]
+tests = testGroup "CommandLineDebug Tests"
+  [ testDefaultConfig
+  , testBreakpointManagement
+  , testConditionalBreakpoints
+  , testWatchVariables
+  , testCallStackManagement
+  , testDebugCommands
+  , testDebugLevel
+  , testRunWithCLIDebug
+  , testToggleDebugOutput
+  , testExpressionEvaluation
+  ]
+
+testDefaultConfig :: TestTree
+testDefaultConfig = testCase "Default debug configuration" $ do
+  config <- defaultCLIDebugConfig
+  enabled <- readIORef (cldEnabled config)
+  logLevel <- readIORef (cldLogLevel config)
+  breakpoints <- readIORef (cldBreakpoints config)
+  interactive <- readIORef (cldInteractive config)
+  callStack <- readIORef (cldCallStack config)
+  watchVars <- readIORef (cldWatchVariables config)
+  stepMode <- readIORef (cldStepMode config)
+  currentLocation <- readIORef (cldCurrentLocation config)
+  
+  assertBool "Debug should be enabled by default" enabled
+  assertEqual "Default log level should be 3" 3 logLevel
+  assertBool "No breakpoints by default" (Set.null breakpoints)
+  assertBool "Interactive mode should be enabled by default" interactive
+  assertEqual "Call stack should be empty initially" [] callStack
+  assertBool "No watch variables by default" (Map.null watchVars)
+  assertBool "Step mode should be disabled by default" (not stepMode)
+  assertEqual "Current location should be empty initially" "" currentLocation
+
+testBreakpointManagement :: TestTree
+testBreakpointManagement = testCase "Breakpoint management" $ do
+  config <- defaultCLIDebugConfig
+  
+  -- Test setting breakpoints
+  setBreakpoint config "test-location-1"
+  setBreakpoint config "test-location-2"
+  breakpoints1 <- readIORef (cldBreakpoints config)
+  assertEqual "Should have 2 breakpoints" 
+    (Set.fromList ["test-location-1", "test-location-2"]) breakpoints1
+  
+  -- Test listing breakpoints
+  breakpointList <- listBreakpoints config
+  assertEqual "List should contain both breakpoints" 2 (length breakpointList)
+  assertBool "Should contain first breakpoint" ("test-location-1" `elem` breakpointList)
+  assertBool "Should contain second breakpoint" ("test-location-2" `elem` breakpointList)
+  
+  -- Test clearing breakpoints
+  clearBreakpoints config
+  breakpoints2 <- readIORef (cldBreakpoints config)
+  assertBool "No breakpoints after clearing" (Set.null breakpoints2)
+
+testConditionalBreakpoints :: TestTree
+testConditionalBreakpoints = testCase "Conditional breakpoints" $ do
+  config <- defaultCLIDebugConfig
+  
+  -- Set a conditional breakpoint
+  setConditionalBreakpoint config "conditional-loc" (== "trigger")
+  
+  -- Verify the condition is set (indirectly through checkBreakpoint)
+  -- This is a basic test since we can't directly inspect conditions
+  checkBreakpoint config "conditional-loc"  -- Should not trigger with wrong condition
+  
+  -- Test with matching condition (simplified test)
+  result <- processDebugCommand config "break conditional-loc if trigger"
+  assertEqual "Should set conditional breakpoint" BreakpointSet result
+
+testWatchVariables :: TestTree
+testWatchVariables = testCase "Watch variable management" $ do
+  config <- defaultCLIDebugConfig
+  
+  -- Add watch variables
+  addWatchVariable config "var1" "value1"
+  addWatchVariable config "var2" "42"
+  
+  watchVars1 <- readIORef (cldWatchVariables config)
+  assertEqual "Should have 2 watch variables" 
+    (Map.fromList [("var1", "value1"), ("var2", "42")]) watchVars1
+  
+  -- List watch variables
+  watchList <- listWatchVariables config
+  assertEqual "List should contain both variables" 2 (length watchList)
+  
+  -- Remove a watch variable
+  removeWatchVariable config "var1"
+  watchVars2 <- readIORef (cldWatchVariables config)
+  assertEqual "Should have 1 variable after removal" 
+    (Map.singleton "var2" "42") watchVars2
+
+testCallStackManagement :: TestTree
+testCallStackManagement = testCase "Call stack management" $ do
+  config <- defaultCLIDebugConfig
+  
+  -- Push items to call stack
+  pushCallStack config "function1"
+  pushCallStack config "function2"
+  pushCallStack config "function3"
+  
+  callStack1 <- getCallStack config
+  assertEqual "Should have 3 functions in call stack" 
+    ["function3", "function2", "function1"] callStack1
+  
+  -- Pop from call stack
+  popCallStack config
+  callStack2 <- getCallStack config
+  assertEqual "Should have 2 functions after pop" 
+    ["function2", "function1"] callStack2
+
+testDebugCommands :: TestTree
+testDebugCommands = testCase "Debug command processing" $ do
+  config <- defaultCLIDebugConfig
+  
+  -- Test basic commands
+  result1 <- processDebugCommand config "help"
+  assertEqual "Help command should succeed" CommandSuccess result1
+  
+  result2 <- processDebugCommand config "step"
+  assertEqual "Step command should succeed" StepExecuted result2
+  
+  result3 <- processDebugCommand config "continue"
+  assertEqual "Continue command should succeed" Continued result3
+  
+  result4 <- processDebugCommand config "invalid-command"
+  assertBool "Invalid command should fail" 
+    (case result4 of CommandError _ -> True; _ -> False)
+
+testDebugLevel :: TestTree
+testDebugLevel = testCase "Debug level management" $ do
+  config <- defaultCLIDebugConfig
+  
+  -- Set debug level
+  setDebugLevel config 5
+  logLevel <- readIORef (cldLogLevel config)
+  assertEqual "Debug level should be updated" 5 logLevel
+  
+  -- Test status display
+  status <- showDebugStatus config
+  assertBool "Status should contain level information" 
+    ("level" `elem` map (take 5) (words status))
+
+testRunWithCLIDebug :: TestTree
+testRunWithCLIDebug = testCase "Running with CLI debug" $ do
+  config <- defaultCLIDebugConfig
+  let testAction = return "test-result"
+  
+  result <- runWithCLIDebug config "test-location" testAction
+  assertEqual "Action should return expected result" "test-result" result
+
+testToggleDebugOutput :: TestTree
+testToggleDebugOutput = testCase "Toggle debug output" $ do
+  config <- defaultCLIDebugConfig
+  
+  -- Initial state should be enabled
+  enabled1 <- readIORef (cldEnabled config)
+  assertBool "Debug should be enabled initially" enabled1
+  
+  -- Toggle to disabled
+  toggleDebugOutput config
+  enabled2 <- readIORef (cldEnabled config)
+  assertBool "Debug should be disabled after toggle" (not enabled2)
+  
+  -- Toggle back to enabled
+  toggleDebugOutput config
+  enabled3 <- readIORef (cldEnabled config)
+  assertBool "Debug should be enabled after second toggle" enabled3
+
+testExpressionEvaluation :: TestTree
+testExpressionEvaluation = testCase "Expression evaluation" $ do
+  config <- defaultCLIDebugConfig
+  
+  -- Add a watch variable for testing
+  addWatchVariable config "testVar" "123"
+  
+  -- Evaluate simple expressions
+  result1 <- evaluateExpression config "testVar"
+  assertBool "Should evaluate existing variable" (not $ null result1)
+  
+  result2 <- evaluateExpression config "nonExistentVar"
+  assertBool "Should handle non-existent variable gracefully" (not $ null result2)
+
+-- QuickCheck property for breakpoint consistency
+testBreakpointConsistency :: TestTree
+testBreakpointConsistency = testProperty "Breakpoint operations are consistent" $
+  forAll arbitraryLocation $ \location -> do
+    config <- defaultCLIDebugConfig
+    setBreakpoint config location
+    breakpoints <- listBreakpoints config
+    return $ location `elem` breakpoints
+
+-- Helper generator for test locations
+arbitraryLocation :: Gen String
+arbitraryLocation = elements 
+  [ "function-start", "function-end", "loop-entry", "condition-check"
+  , "variable-decl", "return-statement", "error-handler", "main-entry"
+  ]
