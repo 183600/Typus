@@ -48,6 +48,16 @@ import qualified Test.Unit.IntegrationCoreQuickCheckSpec
 -- Additional Core Tests Module
 import qualified Test.Unit.AdditionalCoreTestsSpec
 
+-- New QuickCheck Test Modules (2025)
+import qualified Test.Unit.SourceLocationNewQuickCheckSpec
+import qualified Test.Unit.ErrorHandlerNewQuickCheckSpec
+import qualified Test.Unit.ParserNewQuickCheckSpec
+import qualified Test.Unit.OwnershipNewQuickCheckSpec
+import qualified Test.Unit.DependenciesNewQuickCheckSpec
+import qualified Test.Unit.CompilerNewQuickCheckSpec
+import qualified Test.Unit.DependentTypesNewQuickCheckSpec
+import qualified Test.Unit.UtilsNewQuickCheckSpec
+
 -- New Comprehensive Test Modules (2025)
 import qualified Test.Unit.NewParserComprehensiveSpec
 import qualified Test.Unit.NewCompilerComprehensiveSpec
@@ -1166,5 +1176,15 @@ tests =
         , Test.Unit.NewUtilsComprehensiveSpec.tests
         , Test.Unit.NewSourceLocationComprehensiveSpec.tests
         , Test.Unit.NewErrorHandlerComprehensiveSpec.tests
+        ]
+    , testGroup "New QuickCheck Test Suite (2025 - Core Modules)"
+        [ Test.Unit.SourceLocationNewQuickCheckSpec.tests
+        , Test.Unit.ErrorHandlerNewQuickCheckSpec.tests
+        , Test.Unit.ParserNewQuickCheckSpec.tests
+        , Test.Unit.OwnershipNewQuickCheckSpec.tests
+        , Test.Unit.DependenciesNewQuickCheckSpec.tests
+        , Test.Unit.CompilerNewQuickCheckSpec.tests
+        , Test.Unit.DependentTypesNewQuickCheckSpec.tests
+        , Test.Unit.UtilsNewQuickCheckSpec.tests
         ]
     ]
