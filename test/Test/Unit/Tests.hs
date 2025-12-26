@@ -62,6 +62,16 @@ import qualified Test.Unit.NewComprehensivePropertySpec
 import qualified Test.Unit.NewEnhancedTestSpec
 import qualified Test.Unit.SimpleNewTestSpec
 
+-- New Advanced Test Suite (2025)
+import qualified Test.Unit.CompilerErrorRecoverySpec
+import qualified Test.Unit.TypeInferenceAdvancedSpec
+import qualified Test.Unit.OwnershipMemorySafetySpec
+import qualified Test.Unit.DependencyAnalysisAdvancedSpec
+import qualified Test.Unit.SourcePositionPrecisionSpec
+import qualified Test.Unit.TextProcessingRobustnessSpec
+import qualified Test.Unit.CompilerOptimizationSpec
+import qualified Test.Unit.IntegrationEndToEndSpec
+
 -- New Comprehensive Cabal Test Modules (2025)
 import qualified Test.Unit.NewComprehensiveCabalTestsSpec
 import qualified Test.Unit.UtilsEnhancedQuickCheckSpec
@@ -925,5 +935,15 @@ tests =
         ]
     , testGroup "Simple New Test Suite"
         [ Test.Unit.SimpleNewTestSpec.tests
+        ]
+    , testGroup "New Advanced Test Suite (2025)"
+        [ Test.Unit.CompilerErrorRecoverySpec.tests
+        , Test.Unit.TypeInferenceAdvancedSpec.tests
+        , Test.Unit.OwnershipMemorySafetySpec.tests
+        , Test.Unit.DependencyAnalysisAdvancedSpec.tests
+        , Test.Unit.SourcePositionPrecisionSpec.tests
+        , Test.Unit.TextProcessingRobustnessSpec.tests
+        , Test.Unit.CompilerOptimizationSpec.tests
+        , Test.Unit.IntegrationEndToEndSpec.tests
         ]
     ]

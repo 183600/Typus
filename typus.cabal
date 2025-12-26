@@ -537,7 +537,17 @@ test-suite typus-test
         Test.Unit.ErrorHandlingPropertySpec,
         Test.Unit.NewComprehensivePropertySpec,
         Test.Unit.NewEnhancedTestSpec,
-        Test.Unit.SimpleNewTestSpec
+        Test.Unit.SimpleNewTestSpec,
+        
+        -- New Advanced Test Suite (2025)
+        Test.Unit.CompilerErrorRecoverySpec,
+        Test.Unit.TypeInferenceAdvancedSpec,
+        Test.Unit.OwnershipMemorySafetySpec,
+        Test.Unit.DependencyAnalysisAdvancedSpec,
+        Test.Unit.SourcePositionPrecisionSpec,
+        Test.Unit.TextProcessingRobustnessSpec,
+        Test.Unit.CompilerOptimizationSpec,
+        Test.Unit.IntegrationEndToEndSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
