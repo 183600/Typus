@@ -375,6 +375,17 @@ import qualified Test.Unit.NewEnhancedCabalQuickCheckSpec
 import qualified Test.Unit.NewCoreFunctionalitySpec
 import qualified Test.Unit.NewCoreQuickCheckSpec
 
+-- New QuickCheck test modules created for enhanced testing
+import qualified Test.Unit.NewUtilsPropertiesQuickCheckSpec
+import qualified Test.Unit.NewSourceLocationMathQuickCheckSpec
+import qualified Test.Unit.NewParserBoundaryQuickCheckSpec
+import qualified Test.Unit.NewOwnershipConsistencyQuickCheckSpec
+import qualified Test.Unit.NewDependencyAssociativityQuickCheckSpec
+import qualified Test.Unit.NewCompilerIdempotentQuickCheckSpec
+import qualified Test.Unit.NewErrorRecoveryQuickCheckSpec
+import qualified Test.Unit.NewTypeSystemSubstitutionQuickCheckSpec
+import qualified Test.Unit.NewSymbolTableCommutativeQuickCheckSpec
+
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
 --
@@ -642,4 +653,16 @@ tests =
         , Test.Unit.CompilerIntegrationQuickCheckSpec.tests
         , Test.Unit.FileDirectiveProcessingQuickCheckSpec.tests
         , Test.Unit.CodeGenerationConsistencyQuickCheckSpec.tests
-        ]    ]
+        ]
+    , testGroup "New Enhanced QuickCheck Test Modules"
+        [ Test.Unit.NewUtilsPropertiesQuickCheckSpec.tests
+        , Test.Unit.NewSourceLocationMathQuickCheckSpec.tests
+        , Test.Unit.NewParserBoundaryQuickCheckSpec.tests
+        , Test.Unit.NewOwnershipConsistencyQuickCheckSpec.tests
+        , Test.Unit.NewDependencyAssociativityQuickCheckSpec.tests
+        , Test.Unit.NewCompilerIdempotentQuickCheckSpec.tests
+        , Test.Unit.NewErrorRecoveryQuickCheckSpec.tests
+        , Test.Unit.NewTypeSystemSubstitutionQuickCheckSpec.tests
+        , Test.Unit.NewSymbolTableCommutativeQuickCheckSpec.tests
+        ]
+    ]
