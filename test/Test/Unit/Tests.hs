@@ -389,6 +389,17 @@ import qualified Test.Unit.NewDependenciesAnalysisSpec
 import qualified Test.Unit.NewAnalyzerIntegrationSpec
 import qualified Test.Unit.NewCliIntegrationSpec
 
+-- New QuickCheck Test Suite 2025
+import qualified Test.Unit.NewQuickCheckTestSuiteSpec
+import qualified Test.Unit.NewParserPropertiesSpec
+import qualified Test.Unit.NewSourceLocationMathSpec
+import qualified Test.Unit.NewErrorHandlerCoreSpec
+import qualified Test.Unit.NewDependenciesCoreSpec
+import qualified Test.Unit.NewGoToolchainCoreSpec
+import qualified Test.Unit.NewParserCoreSpec
+import qualified Test.Unit.NewUtilsCoreSpec
+import qualified Test.Unit.EnhancedDebugCoreSpec
+
 -- Additional new test modules for enhanced coverage
 import qualified Test.Unit.EnhancedErrorHandlingQuickCheckSpec
 import qualified Test.Unit.CompilerIntegrationQuickCheckSpec
@@ -983,5 +994,16 @@ tests =
         ]
     , testGroup "New Cabal Test Suite"
         [ Test.Unit.NewCabalTestSuiteSpec.tests
+        ]
+    , testGroup "New QuickCheck Test Suite 2025"
+        [ Test.Unit.NewQuickCheckTestSuiteSpec.tests
+        , Test.Unit.NewParserPropertiesSpec.tests
+        , Test.Unit.NewSourceLocationMathSpec.tests
+        , Test.Unit.NewErrorHandlerCoreSpec.tests
+        , Test.Unit.NewDependenciesCoreSpec.tests
+        , Test.Unit.NewGoToolchainCoreSpec.tests
+        , Test.Unit.NewParserCoreSpec.tests
+        , Test.Unit.NewUtilsCoreSpec.tests
+        , Test.Unit.EnhancedDebugCoreSpec.tests
         ]
     ]
