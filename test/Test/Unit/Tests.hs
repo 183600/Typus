@@ -99,6 +99,15 @@ import qualified Test.Unit.CoreParserSpec
 import qualified Test.Unit.CoreSourceLocationSpec
 import qualified Test.Unit.UtilsStringProcessingSpec
 
+-- New Cabal QuickCheck Test Modules (2025)
+import qualified Test.Unit.NewCabalQuickCheckTestSpec
+import qualified Test.Unit.NewParserBoundaryQuickCheckTestSpec
+import qualified Test.Unit.NewSourceLocationPrecisionQuickCheckTestSpec
+import qualified Test.Unit.NewErrorHandlingRecoveryQuickCheckTestSpec
+import qualified Test.Unit.NewCompilerOptimizationQuickCheckTestSpec
+import qualified Test.Unit.NewOwnershipMemorySafetyQuickCheckTestSpec
+import qualified Test.Unit.NewDependentTypeValidationQuickCheckTestSpec
+
 -- New QuickCheck Property Tests
 import qualified Test.Unit.CoreQuickCheckPropertiesSpec
 import qualified Test.Unit.ParserPropertySpec
@@ -1111,5 +1120,14 @@ tests =
         , Test.Unit.NewSyntaxValidationComprehensiveSpec.tests
         , Test.Unit.NewTypeSystemInferenceSpec.tests
         , Test.Unit.NewCompilationOptimizationSpec.tests
+        ]
+    , testGroup "New Cabal QuickCheck Test Suite (2025)"
+        [ Test.Unit.NewCabalQuickCheckTestSpec.tests
+        , Test.Unit.NewParserBoundaryQuickCheckTestSpec.tests
+        , Test.Unit.NewSourceLocationPrecisionQuickCheckTestSpec.tests
+        , Test.Unit.NewErrorHandlingRecoveryQuickCheckTestSpec.tests
+        , Test.Unit.NewCompilerOptimizationQuickCheckTestSpec.tests
+        , Test.Unit.NewOwnershipMemorySafetyQuickCheckTestSpec.tests
+        , Test.Unit.NewDependentTypeValidationQuickCheckTestSpec.tests
         ]
     ]
