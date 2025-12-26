@@ -40,6 +40,9 @@ import qualified Test.Unit.NewCabalTestSpec
 -- New Additional Test Module
 import qualified Test.Unit.NewAdditionalTestSpec
 
+-- New Comprehensive Tests Module
+import qualified Test.Unit.NewComprehensiveTestsSpec
+
 -- New Test Modules Added for Enhanced Coverage
 import qualified Test.Unit.NewErrorHandlingSpec
 import qualified Test.Unit.NewParserSpec
@@ -729,4 +732,5 @@ tests =
         , Test.Unit.LocationTrackingSpec.tests
         ]
     , Test.Unit.NewAdditionalTestSpec.tests
+    , Test.Unit.NewComprehensiveTestsSpec.tests
     ]

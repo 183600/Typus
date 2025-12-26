@@ -490,7 +490,8 @@ test-suite typus-test
         Test.Unit.BoundaryConditionsSpec,
         Test.Unit.NewCabalPropertySpec,
         Test.Unit.EnhancedDebugQuickCheckSpec,
-        Test.Unit.DependenciesBoundarySpec
+        Test.Unit.DependenciesBoundarySpec,
+        Test.Unit.NewComprehensiveTestsSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
