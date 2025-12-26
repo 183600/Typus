@@ -29,6 +29,15 @@ import qualified Test.Unit.EnhancedCompilerTestSpec
 import qualified Test.Unit.UtilsPropertiesQuickCheckSpec
 import qualified Test.Unit.ParserCompilerPropertiesQuickCheckSpec
 
+-- Enhanced QuickCheck Test Modules (New)
+import qualified Test.Unit.UtilsEnhancedQuickCheckSpec
+import qualified Test.Unit.SourceLocationEnhancedQuickCheckSpec
+import qualified Test.Unit.ParserEnhancedQuickCheckSpec
+import qualified Test.Unit.ErrorHandlerEnhancedQuickCheckSpec
+import qualified Test.Unit.CompilerIntegrationEnhancedQuickCheckSpec
+import qualified Test.Unit.OwnershipBoundaryEnhancedQuickCheckSpec
+import qualified Test.Unit.DependentTypesValidationEnhancedQuickCheckSpec
+
 -- New test modules added for enhanced coverage
 import qualified Test.Unit.ParserBoundarySpec
 import qualified Test.Unit.CompilerErrorBoundarySpec
@@ -1456,4 +1465,15 @@ tests =
     , Test.Unit.CompilerIRCoreQuickCheckSpec.tests
     , Test.Unit.OwnershipTransferCoreQuickCheckSpec.tests
     , Test.Unit.DependencyAnalysisCoreQuickCheckSpec.tests
+    ]
+
+  -- Enhanced QuickCheck Test Modules (New)
+  , testGroup "Enhanced QuickCheck Test Modules"
+    [ Test.Unit.UtilsEnhancedQuickCheckSpec.tests
+    , Test.Unit.SourceLocationEnhancedQuickCheckSpec.tests
+    , Test.Unit.ParserEnhancedQuickCheckSpec.tests
+    , Test.Unit.ErrorHandlerEnhancedQuickCheckSpec.tests
+    , Test.Unit.CompilerIntegrationEnhancedQuickCheckSpec.tests
+    , Test.Unit.OwnershipBoundaryEnhancedQuickCheckSpec.tests
+    , Test.Unit.DependentTypesValidationEnhancedQuickCheckSpec.tests
     ]
