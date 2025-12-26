@@ -353,6 +353,9 @@ import qualified Test.Unit.NewSourceLocationQuickCheckSpec
 import qualified Test.Unit.NewErrorHandlerQuickCheckSpec
 import qualified Test.Unit.NewParserQuickCheckSpec
 
+-- New Cabal Test Cases Module
+import qualified Test.Unit.NewCabalTestCasesSpec
+
 -- New core functionality test modules
 import qualified Test.Unit.NewCoreFunctionalitySpec
 import qualified Test.Unit.NewCoreQuickCheckSpec
@@ -546,6 +549,7 @@ tests =
         , Test.Unit.NewErrorHandlerQuickCheckSpec.tests
         , Test.Unit.NewParserQuickCheckSpec.tests
         ]
+    , Test.Unit.NewCabalTestCasesSpec.tests
     , testGroup "Custom QuickCheck Test Modules"
         [ Test.Unit.CustomParserQuickCheckSpec.tests
         , Test.Unit.CustomUtilsQuickCheckSpec.tests
