@@ -629,6 +629,9 @@ import qualified Test.Unit.SymbolTableManagementSpec
 
 -- Additional comprehensive QuickCheck test modules
 import qualified Test.Unit.AdditionalCabalQuickCheckTestSpec
+
+-- New comprehensive test suite
+import qualified Test.Unit.NewCabalTestSuiteSpec
 import qualified Test.Unit.AdditionalCabalTestsSpec
 
 -- New QuickCheck test modules (10 new comprehensive tests)
@@ -1266,3 +1269,6 @@ tests =
     
     -- New Core Integration Test Suite
   , Test.Unit.NewCoreIntegrationSpec.tests
+  
+    -- New Comprehensive Cabal Test Suite
+  , Test.Unit.NewCabalTestSuiteSpec.tests
