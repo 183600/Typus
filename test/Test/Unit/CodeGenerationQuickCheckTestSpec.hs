@@ -14,7 +14,7 @@ import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
   ( Property, (===), (==>), forAll, counterexample, classify, property
-  , (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose
+  , (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, listOf1, choose
   , sized, resize, suchThat, vectorOf, arbitrary
   )
 
@@ -154,8 +154,8 @@ prop_parseGoModule_valid_code =
 -- 属性：renderGoModule应该生成有效的Go代码
 prop_renderGoModule_valid_code :: Property
 prop_renderGoModule_valid_code =
-  forAll genGoModule $ \module ->
-    let rendered = renderGoModule module
+  forAll genGoModule $ \goModule ->
+    let rendered = renderGoModule goModule
     in not (null rendered) === True
 
 -- 属性：parseGoModule和renderGoModule应该保持一致性
@@ -230,11 +230,11 @@ prop_rawBlock_has_lines =
 -- 属性：GoModule应该保持结构完整性
 prop_goModule_structure_integrity :: Property
 prop_goModule_structure_integrity =
-  forAll genGoModule $ \module ->
-    let buildTags = gmBuildTags module
-        package = gmPackage module
-        imports = gmImports module
-        decls = gmDecls module
+  forAll genGoModule $ \goModule ->
+    let buildTags = gmBuildTags goModule
+        package = gmPackage goModule
+        imports = gmImports goModule
+        decls = gmDecls goModule
     in all (not . null) buildTags || null buildTags
 
 -- 属性：isMainFunction应该正确识别main函数
@@ -242,7 +242,7 @@ prop_isMainFunction_identifies_main :: Property
 prop_isMainFunction_identifies_main =
   let mainFunc = FuncDecl ["func main() {"]
       otherFunc = FuncDecl ["func other() {"]
-  in isMainFunction mainFunc === True && isMainFunction otherFunc === False
+  in (isMainFunction mainFunc === True) .&&. (isMainFunction otherFunc === False)
 
 -- 属性：flattenDeclLines应该展平声明行
 prop_flattenDeclLines_flattens :: Property
@@ -267,14 +267,14 @@ prop_goDecl_show_informative =
 -- 属性：GoModule的Eq实例应该正确比较模块
 prop_goModule_equality :: Property
 prop_goModule_equality =
-  forAll genGoModule $ \module ->
-    module === module
+  forAll genGoModule $ \goModule ->
+    goModule === goModule
 
 -- 属性：GoModule的Show实例应该包含模块信息
 prop_goModule_show_informative :: Property
 prop_goModule_show_informative =
-  forAll genGoModule $ \module ->
-    let showStr = show module
+  forAll genGoModule $ \goModule ->
+    let showStr = show goModule
     in not (null showStr) === True
 
 -- 属性：ImportDecl的Eq实例应该正确比较导入

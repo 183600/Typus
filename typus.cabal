@@ -535,7 +535,6 @@ test-suite typus-test
         Test.Unit.OwnershipTransferBoundarySpec,
         Test.Unit.DependentTypeConstraintSpec,
         Test.Unit.TypeInferenceComplexSpec,
-        Test.Unit.SyntaxValidatorBoundarySpec,
 
         -- New Core Functionality Test Modules
         Test.Unit.CoreParserSpec,
@@ -577,7 +576,22 @@ test-suite typus-test
         Test.Unit.OwnershipComplexScenariosSpec,
         Test.Unit.ParserRecoverySpec,
         Test.Unit.SourceLocationPrecisionSpec,
-        Test.Unit.DependencyAnalysisSpec
+        Test.Unit.DependencyAnalysisSpec,
+        Test.Unit.NewEnhancedTestSuiteSpec,
+        Test.Unit.CompilerErrorHandlerTestSpec,
+        Test.Unit.ParserDependentTypesTestSpec,
+        Test.Unit.OwnershipGoToolchainTestSpec,
+        Test.Unit.DependenciesIntegratedCompilerTestSpec,
+        Test.Unit.SyntaxValidatorTestSpec,
+        Test.Unit.DebugEnhancedDebugTestSpec,
+        Test.Unit.EmbedAssetsCLITestSpec,
+
+        -- Additional New Test Modules (2025)
+        Test.Unit.ErrorHandlingComprehensiveSpec,
+        Test.Unit.CompilerPipelineIntegrationSpec,
+        Test.Unit.DependentTypesOwnershipInteractionSpec,
+        Test.Unit.ToolchainIntegrationSpec,
+        Test.Unit.PerformanceRegressionQuickCheckSpec
     if flag(full) || flag(production)
         other-modules:
             Test.Dependencies.Arbitrary
