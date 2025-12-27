@@ -13,9 +13,9 @@ import Data.List (sort, nub, isPrefixOf, isInfixOf)
 import Data.Char (isSpace, isAlphaNum)
 
 import Utils (trim, splitBy, splitByCollapsed, removeLineComments, removeComments, normalizeIndentation, breakOn)
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAfter, advancePos, advancePosBy, mergeSpans, isValidSpan)
+import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAfter, advancePosBy, mergeSpans, isValidSpan)
 import Parser (FileDirectives(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives)
-import Compiler.Errors.Core (ErrorSeverity(..), ErrorCategory(..), ErrorCollector, newErrorCollector, addError, hasErrors, TypeError)
+import Compiler.Errors.Core (ErrorSeverity(..), ErrorCategory(..))
 import TestSupport.Arbitrary ()
 
 tests :: TestTree
