@@ -852,6 +852,15 @@ test-suite typus-test
         , Test.Unit.NewDependentTypeValidationSpec
         , Test.Unit.NewEndToEndCompilationSpec
         
+        -- New Comprehensive Test Modules (2025)
+        , Test.Unit.AdvancedSourceLocationTestSpec
+        , Test.Unit.ParserErrorHandlingTestSpec
+        , Test.Unit.CompilerIRConsistencyTestSpec
+        , Test.Unit.OwnershipAnalysisTestSpec
+        , Test.Unit.UtilsStringProcessingTestSpec
+        , Test.Unit.DependencyAnalysisTestSpec
+        , Test.Unit.EndToEndIntegrationTestSpec
+        
         
     other-modules:
             Test.Dependencies.Arbitrary
