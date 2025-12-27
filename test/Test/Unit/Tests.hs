@@ -435,6 +435,9 @@ import qualified Test.Unit.NewComprehensiveCabalQuickCheckSpec
 import qualified Test.Unit.EnhancedCabalQuickCheckTestSpec
 import qualified Test.Unit.ErrorBoundaryQuickCheckSpec
 
+-- New Cabal QuickCheck Test Suite (10 comprehensive tests)
+import qualified Test.Unit.NewCabalQuickCheckTestSuiteSpec
+
 -- New Test Modules Added for Enhanced Coverage
 import qualified Test.Unit.NewErrorHandlingSpec
 import qualified Test.Unit.NewParserSpec
@@ -2224,4 +2227,9 @@ tests =
     , Test.Unit.ErrorLocationTrackingQuickCheckSpec.tests
     , Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec.tests
     ]
+
+  -- ============================================================================
+  -- New Cabal QuickCheck Test Suite - 10 comprehensive tests
+  -- ============================================================================
+  , Test.Unit.NewCabalQuickCheckTestSuiteSpec.tests
   ]
