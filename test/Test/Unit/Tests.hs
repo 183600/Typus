@@ -40,6 +40,11 @@ import qualified Test.Unit.EnhancedCompilerTestSpec
 import qualified Test.Unit.UtilsPropertiesQuickCheckSpec
 import qualified Test.Unit.ParserCompilerPropertiesQuickCheckSpec
 
+-- New Cabal Test Modules (2025)
+import qualified Test.Unit.NewCabalCoreFunctionalitySpec
+import qualified Test.Unit.NewCabalPropertyBasedSpec
+import qualified Test.Unit.NewCabalBoundaryConditionsSpec
+
 -- Enhanced QuickCheck Test Modules (New)
 import qualified Test.Unit.UtilsEnhancedQuickCheckSpec
 import qualified Test.Unit.SourceLocationEnhancedQuickCheckSpec
@@ -1972,5 +1977,12 @@ tests =
     , Test.Unit.DependentTypesValidationComprehensiveSpec.tests
     , Test.Unit.ErrorHandlerCoreComprehensiveSpec.tests
     , Test.Unit.UtilsStringProcessingComprehensiveSpec.tests
+    ]
+
+  -- New Cabal Test Modules (2025) - Core functionality, property-based, and boundary tests
+  , testGroup "New Cabal Test Modules 2025"
+    [ Test.Unit.NewCabalCoreFunctionalitySpec.tests
+    , Test.Unit.NewCabalPropertyBasedSpec.tests
+    , Test.Unit.NewCabalBoundaryConditionsSpec.tests
     ]
   ]
