@@ -180,6 +180,18 @@ import qualified Test.Unit.IntegrationCoreQuickCheckSpec
 -- Additional Core Tests Module
 import qualified Test.Unit.AdditionalCoreTestsSpec
 
+-- New Cabal Test Modules (10 comprehensive tests)
+import qualified Test.Unit.NewCabalTestSpec1
+import qualified Test.Unit.NewCabalTestSpec2
+import qualified Test.Unit.NewCabalTestSpec3
+import qualified Test.Unit.NewCabalTestSpec4
+import qualified Test.Unit.NewCabalTestSpec5
+import qualified Test.Unit.NewCabalTestSpec6
+import qualified Test.Unit.NewCabalTestSpec7
+import qualified Test.Unit.NewCabalTestSpec8
+import qualified Test.Unit.NewCabalTestSpec9
+import qualified Test.Unit.NewCabalTestSpec10
+
 -- New QuickCheck Test Modules (2025)
 import qualified Test.Unit.NewParserQuickCheckTestsSpec
 import qualified Test.Unit.NewSourceLocationQuickCheckTestsSpec
@@ -1984,5 +1996,19 @@ tests =
     [ Test.Unit.NewCabalCoreFunctionalitySpec.tests
     , Test.Unit.NewCabalPropertyBasedSpec.tests
     , Test.Unit.NewCabalBoundaryConditionsSpec.tests
+    ]
+
+  -- New Cabal Test Suite (10 comprehensive tests with QuickCheck)
+  , testGroup "New Cabal Test Suite"
+    [ Test.Unit.NewCabalTestSpec1.tests
+    , Test.Unit.NewCabalTestSpec2.tests
+    , Test.Unit.NewCabalTestSpec3.tests
+    , Test.Unit.NewCabalTestSpec4.tests
+    , Test.Unit.NewCabalTestSpec5.tests
+    , Test.Unit.NewCabalTestSpec6.tests
+    , Test.Unit.NewCabalTestSpec7.tests
+    , Test.Unit.NewCabalTestSpec8.tests
+    , Test.Unit.NewCabalTestSpec9.tests
+    , Test.Unit.NewCabalTestSpec10.tests
     ]
   ]

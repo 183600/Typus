@@ -687,7 +687,7 @@ test-suite typus-test
         Test.Unit.IntegrationEndToEndQuickCheckSpec,
         Test.Unit.PerformanceEnhancedQuickCheckSpec,
 
-        -- New Cabal Test Modules (5 comprehensive tests added)
+-- New Cabal Test Modules (10 comprehensive tests added)
         Test.Unit.NewStringProcessingQuickCheckSpec,
         Test.Unit.NewSourceLocationMathQuickCheckSpec,
         Test.Unit.NewParserBoundaryQuickCheckSpec,
@@ -699,6 +699,18 @@ test-suite typus-test
         Test.Unit.NewDependencyAnalysisCoreQuickCheckSpec,
         Test.Unit.NewGoToolchainCoreQuickCheckSpec,
         Test.Unit.NewComprehensiveCabalQuickCheckSpec,
+
+        -- New Cabal Test Suite (10 comprehensive tests with QuickCheck)
+        Test.Unit.NewCabalTestSpec1,
+        Test.Unit.NewCabalTestSpec2,
+        Test.Unit.NewCabalTestSpec3,
+        Test.Unit.NewCabalTestSpec4,
+        Test.Unit.NewCabalTestSpec5,
+        Test.Unit.NewCabalTestSpec6,
+        Test.Unit.NewCabalTestSpec7,
+        Test.Unit.NewCabalTestSpec8,
+        Test.Unit.NewCabalTestSpec9,
+        Test.Unit.NewCabalTestSpec10,
         
         -- New comprehensive QuickCheck test modules (2025)
         Test.Unit.NewEnhancedUtilsQuickCheckSpec,
