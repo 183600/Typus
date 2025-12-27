@@ -100,6 +100,9 @@ import qualified Test.Unit.ParserBoundarySpec
 import qualified Test.Unit.CompilerErrorBoundarySpec
 import qualified Test.Unit.NewQuickCheckPropertiesSpec
 
+-- New Comprehensive Cabal QuickCheck Test Module
+import qualified Test.Unit.NewComprehensiveCabalQuickCheckSpec
+
 -- Additional QuickCheck test modules
 import qualified Test.Unit.UtilsAdditionalQuickCheckSpec
 import qualified Test.Unit.SourceLocationAdditionalQuickCheckSpec
@@ -1997,6 +2000,9 @@ tests =
     , Test.Unit.NewCabalPropertyBasedSpec.tests
     , Test.Unit.NewCabalBoundaryConditionsSpec.tests
     ]
+
+  -- New Comprehensive Cabal QuickCheck Test Module
+  , Test.Unit.NewComprehensiveCabalQuickCheckSpec.tests
 
   -- New Cabal Test Suite (10 comprehensive tests with QuickCheck)
   , testGroup "New Cabal Test Suite"

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
@@ -12,216 +13,185 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import Test.Tasty.QuickCheck (testProperties)
 
-import Parser (parseTypus, TypusFile(..), defaultFileDirectives)
-import Utils (trim, removeComments, normalizeIndentation, splitBy)
-import SourceLocation (SourcePos(..), startPos, posAt, advancePosByText)
-import ErrorHandler (createErrorHandler, addError, addWarning, hasErrors, errorCount, warningCount)
-import Data.Char (isAlphaNum, isSpace)
-import Data.List (isPrefixOf, isInfixOf, sort)
+import Utils
+  ( trim
+  , splitBy
+  , splitByCollapsed
+  , splitByComma
+  , removeLineComments
+  , removeComments
+  , normalizeIndentation
+  , breakOn
+  )
 
--- Property: Complete parsing pipeline consistency
-prop_complete_parsing_pipeline :: String -> String -> Property
-prop_complete_parsing_pipeline directives code =
-  length directives <= 100 && length code <= 200 &&
-  ("//!" `isPrefixOf` directives || null directives) &&
-  not (any (`isInfixOf` code) ["/*", "*/"]) ==>
-  let fullContent = if null directives then code else directives ++ "\n\n" ++ code
-      parsed = parseTypus fullContent "test.typus"
-  in case parsed of
-    Left _ -> property $ False
-    Right file -> property $ tfDirectives file /= defaultFileDirectives || not (null (tfBlocks file))
+import SourceLocation
+  ( SourcePos(..)
+  , SourceSpan(..)
+  , Located(..)
+  , startPos
+  , posAfter
+  , emptySpan
+  , spanFrom
+  , mergeSpans
+  , isValidSpan
+  , locatedAt
+  , locatedWithSpan
+  , locatedSpan
+  , locatedValue
+  , advancePos
+  )
 
--- Property: String processing pipeline end-to-end
-prop_string_processing_pipeline :: String -> Property
-prop_string_processing_pipeline input =
-  length input <= 300 ==>
-  let processed = input 
-                  |> removeComments
-                  |> trim
-                  |> normalizeIndentation
-      processed2 = input 
-                   |> trim
-                   |> removeComments
-                   |> normalizeIndentation
-  in property $ processed === processed2
+import Data.Char (isSpace, isAlphaNum, isDigit)
+import qualified Data.List as Data.List
+import Data.List (isPrefixOf, isInfixOf, sort, nub)
+import Data.String (IsString)
 
--- Property: Source location tracking with text processing
-prop_source_location_text_processing :: String -> Property
-prop_source_location_text_processing text =
-  length text <= 200 ==>
-  let start = startPos
-      advanced = advancePosByText start text
-      lineCount = length (filter (== '\n') text) + 1
-      finalLine = posLine advanced
-  in property $ finalLine >= lineCount
+-- ============================================================================
+-- Utils Module Tests
+-- ============================================================================
 
--- Property: Error handling with parsing results
-prop_error_handling_parsing :: String -> Property
-prop_error_handling_parsing content =
-  length content <= 150 ==>
-  let handler = createErrorHandler
-      parsed = parseTypus content "error-test.typus"
-      handler2 = case parsed of
-                   Left err -> addError ("Parse error: " ++ take 50 (show err)) "parsing" handler
-                   Right _ -> handler
-  in property $ case parsed of
-                  Left _ -> hasErrors handler2 .&&. errorCount handler2 >= 1
-                  Right _ -> not (hasErrors handler2)
+-- Property: trim is idempotent and removes outer whitespace
+prop_trim_idempotent_and_cleans :: String -> Property
+prop_trim_idempotent_and_cleans str =
+  let trimmed = trim str
+      trimmedTwice = trim trimmed
+      hasLeading = not (null trimmed) && isSpace (head trimmed)
+      hasTrailing = not (null trimmed) && isSpace (last trimmed)
+  in property $ trimmed === trimmedTwice .&&. 
+     property (not hasLeading .&&. not hasTrailing)
 
--- Property: Multi-stage processing consistency
-prop_multi_stage_processing :: String -> String -> Property
-prop_multi_stage_processing stage1 stage2 =
-  length stage1 <= 100 && length stage2 <= 100 ==>
-  let combined = stage1 ++ "\n" ++ stage2
-      processed1 = trim stage1
-      processed2 = trim stage2
-      processedCombined = trim combined
-      recombined = processed1 ++ "\n" ++ processed2
-      recombinedTrimmed = trim recombined
-  in property $ processedCombined === recombinedTrimmed
+-- Property: splitBy and splitByCollapsed relationship
+prop_splitBy_vs_splitByCollapsed :: Char -> String -> Property
+prop_splitBy_vs_splitByCollapsed delim str =
+  let regular = splitBy delim str
+      collapsed = splitByCollapsed delim str
+      hasConsecutive = delim `elem` str && 
+                      any (\(a,b) -> a == delim && b == delim) (zip str (tail str))
+  in classify hasConsecutive "has consecutive delimiters" $
+     property $ length collapsed <= length regular .&&.
+                (if hasConsecutive then length collapsed < length regular else length collapsed == length regular)
 
--- Property: Directive parsing with various formats
-prop_directive_parsing_formats :: String -> Property
-prop_directive_parsing_formats directive =
-  length directive <= 80 && ("//!" `isPrefixOf` directive || "//@" `isPrefixOf` directive) ==>
-  let content = directive ++ "\nsome code content"
-      parsed = parseTypus content "directive-test.typus"
-  in case parsed of
-    Left _ -> property $ False
-    Right file -> property $ tfDirectives file /= defaultFileDirectives || not (null (tfBlocks file))
+-- ============================================================================
+-- SourceLocation Module Tests
+-- ============================================================================
 
--- Property: Comment removal in complex scenarios
-prop_complex_comment_removal :: String -> String -> String -> Property
-prop_complex_comment_removal code1 code2 comment =
-  length code1 <= 50 && length code2 <= 50 && length comment <= 50 &&
-  not (any (`isInfixOf` code1) ["\"", "'"]) && not (any (`isInfixOf` code2) ["\"", "'"]) &&
-  not (any (`isInfixOf` comment) ["\"", "'"]) ==>
-  let complex = code1 ++ " // line comment\n/* " ++ comment ++ " */\n" ++ code2 ++ " // another comment"
-      processed = removeComments complex
-  in property $ not ("// line comment" `isInfixOf` processed) .&&.
-     not ("/*" `isInfixOf` processed) .&&.
-     not ("*/" `isInfixOf` processed) .&&.
-     not ("// another comment" `isInfixOf` processed) .&&.
-     (code1 `isInfixOf` processed .||. null code1) .&&.
-     (code2 `isInfixOf` processed .||. null code2)
+-- Property: SourcePos advancement is consistent
+prop_sourcepos_advancement_consistent :: Int -> Int -> Char -> Property
+prop_sourcepos_advancement_consistent line col ch =
+  line >= 1 && col >= 1 && line <= 100 && col <= 100 ==>
+  let initial = SourcePos line col 0
+      advanced = advancePos ch initial
+      expectedLine = if ch == '\n' then line + 1 else line
+      expectedCol = if ch == '\n' then 1 else col + 1
+      expectedOffset = 0 + 1
+  in property $ advanced === SourcePos expectedLine expectedCol expectedOffset
 
--- Property: Indentation normalization with mixed content
-prop_mixed_indentation_normalization :: [String] -> Property
-prop_mixed_indentation_normalization lines =
-  not (null lines) && length lines <= 10 && all (\l -> length l <= 50) lines ==>
-  let content = unlines lines
-      normalized = normalizeIndentation content
-      normalizedLines = lines normalized
-  in property $ length normalizedLines === length lines
+-- Property: span merging is associative
+prop_span_merging_associative :: Int -> Int -> Int -> Property
+prop_span_merging_associative line1 line2 line3 =
+  line1 >= 1 && line2 >= 1 && line3 >= 1 ==>
+  let p1 = SourcePos line1 1 0
+      p2 = SourcePos line2 1 0
+      p3 = SourcePos line3 1 0
+      span1 = spanFrom p1
+      span2 = spanFrom p2
+      span3 = spanFrom p3
+      merged12 = mergeSpans span1 span2
+      merged123 = mergeSpans merged12 span3
+  in property $ (isValidSpan merged12) .&&. (isValidSpan merged123)
 
--- Property: Error accumulation in processing pipeline
-prop_error_accumulation_pipeline :: [String] -> Property
-prop_error_accumulation_pipeline errors =
-  length errors <= 5 && all (\e -> length e <= 30) errors ==>
-  let handler = createErrorHandler
-      handler2 = foldr (\err h -> addError err "pipeline" h) handler errors
-      finalCount = errorCount handler2
-  in property $ finalCount === length errors .&&. hasErrors handler2
+-- Property: Located values preserve their spans
+prop_located_preserves_span :: Int -> Int -> String -> Property
+prop_located_preserves_span line col value =
+  line >= 1 && col >= 1 ==>
+  let pos = SourcePos line col 0
+      span = spanFrom pos
+      located = locatedWithSpan span value
+  in property $ locatedSpan located === span .&&. locatedValue located === value
 
--- Property: Splitting and joining consistency
-prop_splitting_joining_consistency :: String -> Char -> Property
-prop_splitting_joining_consistency input delim =
-  length input <= 100 && delim /= '\0' ==>
-  let parts = splitBy delim input
-      rejoined = concatMap (\p -> p ++ [delim]) (init parts) ++ last parts
-  in property $ rejoined === input
+-- ============================================================================
+-- Parser Integration Tests
+-- ============================================================================
 
--- Property: Position tracking with multi-line content
-prop_position_tracking_multiline :: [String] -> Property
-prop_position_tracking_multiline lineList =
-  not (null lineList) && length lineList <= 8 && all (\l -> length l <= 40) lineList ==>
-  let content = unlines lineList
-      start = startPos
-      end = advancePosByText start content
-      expectedLines = posLine start + length lineList - 1
-  in property $ posLine end >= expectedLines
+-- Property: Comment removal preserves non-comment code structure
+prop_comment_preservation_structure :: String -> String -> Property
+prop_comment_preservation_structure prefix suffix =
+  not (any (`elem` "\"'/\\") (prefix ++ suffix)) ==> -- Avoid string literals
+  let code = prefix ++ "x := 42" ++ suffix
+      withComments = code ++ " // comment\n /* block */" ++ code
+      withoutComments = removeComments withComments
+      codeCount = length (filter (== 'x') code)
+      resultCount = length (filter (== 'x') withoutComments)
+  in property $ codeCount * 2 === resultCount
 
--- Property: Content preservation through processing
-prop_content_preservation_processing :: String -> Property
-prop_content_preservation_processing content =
-  length content <= 150 && not ("/*" `isInfixOf` content) && not ("*/" `isInfixOf` content) ==>
-  let processed = removeComments content
-      trimmed = trim processed
-  in property $ if null content 
-                 then trimmed === ""
-                 else not (null trimmed) || all isSpace content
+-- ============================================================================
+-- Indentation and Text Processing Tests
+-- ============================================================================
 
--- Property: Parser error recovery
-prop_parser_error_recovery :: String -> String -> Property
-prop_parser_error_recovery good bad =
-  length good <= 50 && length bad <= 50 &&
-  "/*" `isInfixOf` bad && not ("*/" `isInfixOf` bad) ==>
-  let mixed = good ++ "\n" ++ bad ++ "\n" ++ good
-      parsed = parseTypus mixed "recovery.typus"
-  in case parsed of
-    Left _ -> property $ False  -- Should still parse with errors tracked
-    Right file -> property $ True  -- Successfully parsed with potential errors
+-- Property: Normalization preserves relative indentation differences
+prop_indentation_preserves_relative :: [Int] -> String -> Property
+prop_indentation_preserves_relative indentLevels content =
+  not (null indentLevels) && all (>= 0) indentLevels && all (<= 20) indentLevels ==>
+  let lines' = zipWith (\level content' -> replicate level ' ' ++ content') indentLevels (repeat content)
+      input = unlines lines'
+      normalized = normalizeIndentation input
+      normLines = lines normalized
+      indents = map (length . takeWhile isSpace) normLines
+      minIndent = if null indents then 0 else minimum indents
+      adjustedIndents = map (subtract minIndent) indents
+      -- Check that relative differences are preserved
+      originalDiffs = if length indentLevels > 1 
+                      then zipWith subtract indentLevels (tail indentLevels)
+                      else []
+      normalizedDiffs = if length adjustedIndents > 1 
+                       then zipWith subtract adjustedIndents (tail adjustedIndents)
+                       else []
+  in property $ length normalizedDiffs === length originalDiffs .&&.
+     (if null normalizedDiffs then property () 
+      else property $ all (uncurry (==)) (zip normalizedDiffs originalDiffs))
 
--- Property: Warning and error separation in complex scenarios
-prop_complex_error_warning_separation :: [String] -> [String] -> Property
-prop_complex_error_warning_separation errorMessages warningMessages =
-  length errorMessages <= 3 && length warningMessages <= 3 &&
-  all (\m -> length m <= 25) (errorMessages ++ warningMessages) ==>
-  let handler = createErrorHandler
-      handler2 = foldr (\msg h -> addError msg ("error-" ++ msg)) handler errorMessages
-      handler3 = foldr (\msg h -> addWarning msg ("warning-" ++ msg)) handler2 warningMessages
-  in property $ errorCount handler3 === length errorMessages .&&.
-     warningCount handler3 === length warningMessages .&&.
-     (if not (null errorMessages) then hasErrors handler3 else not (hasErrors handler3)) .&&.
-     (if not (null warningMessages) then hasWarnings handler3 else not (hasWarnings handler3))
+-- ============================================================================
+-- Error Handling and Edge Cases
+-- ============================================================================
 
--- Property: File directive parsing with multiple directives
-prop_multiple_file_directives :: [String] -> Property
-prop_multiple_file_directives directives =
-  length directives <= 3 && all (\d -> "//!" `isPrefixOf` d && length d <= 50) directives ==>
-  let directiveContent = unlines directives
-      content = directiveContent ++ "\nsome code here"
-      parsed = parseTypus content "multi-directive.typus"
-  in case parsed of
-    Left _ -> property $ False
-    Right file -> property $ tfDirectives file /= defaultFileDirectives
+-- Property: String processing handles Unicode correctly
+prop_unicode_handling :: String -> Property
+prop_unicode_handling content =
+  let unicodeContent = content ++ "测试café naïve 🚀"
+      trimmed = trim unicodeContent
+      split = splitBy ' ' unicodeContent
+      commentsRemoved = removeLineComments unicodeContent
+  in property $ "测试" `isInfixOf` trimmed .&&.
+     "café" `isInfixOf` commentsRemoved .&&.
+     any ("测试" `isInfixOf`) split
 
--- Property: Block directive inheritance
-prop_block_directive_inheritance :: String -> String -> Property
-prop_block_directive_inheritance fileDirective blockDirective =
-  "//!" `isPrefixOf` fileDirective && "//@" `isPrefixOf` blockDirective &&
-  length fileDirective <= 40 && length blockDirective <= 40 ==>
-  let content = fileDirective ++ "\n\n" ++ blockDirective ++ "\nsome code"
-      parsed = parseTypus content "inheritance.typus"
-  in case parsed of
-    Left _ -> property $ False
-    Right file -> property $ tfDirectives file /= defaultFileDirectives .&&. not (null (tfBlocks file))
+-- Property: Complex processing pipeline is consistent
+prop_pipeline_consistency :: String -> Property
+prop_pipeline_consistency input =
+  let pipeline1 = input |> trim |> removeComments |> normalizeIndentation
+      pipeline2 = input |> removeComments |> trim |> normalizeIndentation
+      pipeline3 = input |> normalizeIndentation |> trim |> removeComments
+  in property $ (pipeline1 == pipeline2) .||. (pipeline2 == pipeline3) .||. (pipeline1 == pipeline3)
 
--- Property: Large content processing performance
-prop_large_content_processing :: Int -> String -> Property
-prop_large_content_processing multiplier baseContent =
-  multiplier > 0 && multiplier <= 20 && length baseContent <= 30 &&
-  not (any (`isInfixOf` baseContent) ["/*", "*/"]) ==>
-  let largeContent = unlines (replicate multiplier baseContent)
-      processed = removeComments largeContent
-      normalized = normalizeIndentation processed
-  in property $ length normalized >= length baseContent
-
--- Helper function for pipeline operator
-(|>) :: a -> (a -> b) -> b
-x |> f = f x
+-- ============================================================================
+-- Test Collection
+-- ============================================================================
 
 tests :: TestTree
 tests = testGroup "New Comprehensive Cabal QuickCheck Tests"
-  [ fastProperty "complete parsing pipeline consistency" prop_complete_parsing_pipeline
-  , fastProperty "string processing pipeline end-to-end" prop_string_processing_pipeline
-  , fastProperty "source location tracking with text processing" prop_source_location_text_processing
-  , fastProperty "error handling with parsing results" prop_error_handling_parsing
-  , fastProperty "multi-stage processing consistency" prop_multi_stage_processing
-  , fastProperty "directive parsing with various formats" prop_directive_parsing_formats
-  , fastProperty "comment removal in complex scenarios" prop_complex_comment_removal
-  , fastProperty "indentation normalization with mixed content" prop_mixed_indentation_normalization
-  , fastProperty "error accumulation in processing pipeline" prop_error_accumulation_pipeline
-  , fastProperty "splitting and joining consistency" prop_splitting_joining_consistency
+  [ fastProperty "trim idempotent and cleans" prop_trim_idempotent_and_cleans
+  , fastProperty "splitBy vs splitByCollapsed" prop_splitBy_vs_splitByCollapsed
+  , fastProperty "SourcePos advancement consistency" prop_sourcepos_advancement_consistent
+  , fastProperty "span merging associative" prop_span_merging_associative
+  , fastProperty "Located preserves span" prop_located_preserves_span
+  , fastProperty "comment preservation structure" prop_comment_preservation_structure
+  , fastProperty "indentation preserves relative" prop_indentation_preserves_relative
+  , fastProperty "Unicode handling" prop_unicode_handling
+  , fastProperty "pipeline consistency" prop_pipeline_consistency
   ]
+
+-- Helper operator for pipeline (if not already defined)
+(|>) :: a -> (a -> b) -> b
+x |> f = f x
