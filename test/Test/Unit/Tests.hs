@@ -183,7 +183,7 @@ import qualified Test.Unit.IntegrationCoreQuickCheckSpec
 -- Additional Core Tests Module
 import qualified Test.Unit.AdditionalCoreTestsSpec
 
--- New Cabal Test Modules (10 comprehensive tests)
+-- New Cabal Test Suite (10 comprehensive tests with QuickCheck)
 import qualified Test.Unit.NewCabalTestSpec1
 import qualified Test.Unit.NewCabalTestSpec2
 import qualified Test.Unit.NewCabalTestSpec3
@@ -194,6 +194,18 @@ import qualified Test.Unit.NewCabalTestSpec7
 import qualified Test.Unit.NewCabalTestSpec8
 import qualified Test.Unit.NewCabalTestSpec9
 import qualified Test.Unit.NewCabalTestSpec10
+
+-- New Comprehensive Cabal Test Modules (2025)
+import qualified Test.Unit.CompilerErrorRecoveryAdvancedSpec
+import qualified Test.Unit.ParserUnicodeHandlingSpec
+import qualified Test.Unit.OwnershipMemoryLeakPreventionSpec
+import qualified Test.Unit.TypeSystemInferenceBoundarySpec
+import qualified Test.Unit.SourceLocationPrecisionSpec
+import qualified Test.Unit.ErrorHandlerConsistencySpec
+import qualified Test.Unit.DependencyAnalysisCyclicSpec
+import qualified Test.Unit.IntegrationEndToEndSpec
+import qualified Test.Unit.PerformanceRegressionSpec
+import qualified Test.Unit.SecurityValidationSpec
 
 -- New QuickCheck Test Modules (2025)
 import qualified Test.Unit.NewParserQuickCheckTestsSpec
@@ -2034,5 +2046,19 @@ tests =
     , Test.Unit.NewCabalTestSpec8.tests
     , Test.Unit.NewCabalTestSpec9.tests
     , Test.Unit.NewCabalTestSpec10.tests
+    ]
+
+  -- New Comprehensive Cabal Test Modules (2025)
+  , testGroup "New Comprehensive Cabal Test Modules 2025"
+    [ Test.Unit.CompilerErrorRecoveryAdvancedSpec.tests
+    , Test.Unit.ParserUnicodeHandlingSpec.tests
+    , Test.Unit.OwnershipMemoryLeakPreventionSpec.tests
+    , Test.Unit.TypeSystemInferenceBoundarySpec.tests
+    , Test.Unit.SourceLocationPrecisionSpec.tests
+    , Test.Unit.ErrorHandlerConsistencySpec.tests
+    , Test.Unit.DependencyAnalysisCyclicSpec.tests
+    , Test.Unit.IntegrationEndToEndSpec.tests
+    , Test.Unit.PerformanceRegressionSpec.tests
+    , Test.Unit.SecurityValidationSpec.tests
     ]
   ]
