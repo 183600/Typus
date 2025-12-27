@@ -639,6 +639,14 @@ import qualified Test.Unit.IntegrationFeaturesQuickCheckSpec
 import qualified Test.Unit.SimpleCabalTestSpec
 import qualified Test.Unit.NewCabalTestSuiteSpec
 import qualified Test.Unit.SourceLocationCoreFunctionsSpec
+
+-- New Comprehensive QuickCheck Test Modules (2025)
+import qualified Test.Unit.NewParserQuickCheckTestsSpec
+import qualified Test.Unit.NewSourceLocationQuickCheckTestsSpec
+import qualified Test.Unit.NewErrorHandlerQuickCheckTestsSpec
+import qualified Test.Unit.NewCompilerQuickCheckTestsSpec
+import qualified Test.Unit.NewOwnershipQuickCheckTestsSpec
+import qualified Test.Unit.NewDependenciesQuickCheckTestsSpec
 import qualified Test.Unit.ParserBasicFunctionsSpec
 import qualified Test.Unit.CompilerErrorHandlingSpec
 import qualified Test.Unit.OwnershipTransferSpec
@@ -2374,5 +2382,17 @@ tests =
     , Test.Unit.NewCoreFunctionalityQuickCheckSpec.tests
     , Test.Unit.NewTextProcessingQuickCheckSpec.tests
     , Test.Unit.NewSourceLocationMathQuickCheckSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Comprehensive QuickCheck Test Modules (2025) - Core Module Testing
+  -- ============================================================================
+  , testGroup "New Comprehensive QuickCheck Test Modules - Core Module Testing"
+    [ Test.Unit.NewParserQuickCheckTestsSpec.tests
+    , Test.Unit.NewSourceLocationQuickCheckTestsSpec.tests
+    , Test.Unit.NewErrorHandlerQuickCheckTestsSpec.tests
+    , Test.Unit.NewCompilerQuickCheckTestsSpec.tests
+    , Test.Unit.NewOwnershipQuickCheckTestsSpec.tests
+    , Test.Unit.NewDependenciesQuickCheckTestsSpec.tests
     ]
   ]

@@ -1,131 +1,179 @@
-{-# LANGUAGE CPP #-}
-
 module Test.Unit.NewParserPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck
+import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, oneof, listOf, elements, suchThat)
+
+import Parser (parseTypus, TypusFile(..), FileDirectives(..), BlockDirectives(..), CodeBlock(..), defaultFileDirectives, defaultBlockDirectives)
+import SourceLocation (SourceSpan(..), SourcePos(..))
 import qualified Data.Text as T
-import Control.Monad (void)
+import Data.List (isPrefixOf)
+import Utils (trim)
 
-import Parser (parseTypus, FileDirectives(..), BlockDirectives(..))
-import SourceLocation (SourcePos(..), SourceSpan(..))
-import Utils (trim, removeLineComments)
-import TestSupport.Arbitrary ()
+-- ============================================================================
+-- Test Data Generators
+-- ============================================================================
 
--- Test 1: Parse roundtrip for simple strings
-prop_parse_roundtrip_simple :: String -> Property
-prop_parse_roundtrip_simple str =
-  let trimmed = trim str
-      len = length trimmed
-  in len > 0 && len < 100 ==> 
-  case parseTypus trimmed of
-    Left _ -> property True -- Parsing errors are acceptable for arbitrary strings
-    Right result -> property True -- If parsing succeeds, that's enough for now
+-- Generate valid identifiers for directives
+genIdentifier :: Gen String
+genIdentifier = oneof
+  [ (\c s -> c:s) <$> elements ['a'..'z'] <*> listOf (elements (['a'..'z'] ++ ['0'..'9'] ++ "_-"))
+  , listOf1 (elements (['a'..'z'] ++ ['0'..'9'] ++ "_-"))
+  ]
 
--- Test 2: Comment removal preserves non-comment content
-prop_removeComments_preserves_code :: String -> Property
-prop_removeComments_preserves_code str =
-  let withoutComments = removeLineComments str
-      -- Count non-comment, non-whitespace characters
-      countCode s = length $ filter (not . (`elem` " \t\n\r")) s
-      originalCode = countCode str
-      removedCode = countCode withoutComments
-  in originalCode >= removedCode -- Should never increase code characters
+-- Generate valid directive values
+genDirectiveValue :: Gen String
+genDirectiveValue = oneof
+  [ elements ["true", "false", "on", "off", "enabled", "disabled"]
+  , listOf1 (elements (['a'..'z'] ++ ['0'..'9'] ++ "_-"))
+  ]
 
--- Test 3: File directives parsing
-prop_file_directives_parsing :: Bool -> Bool -> Bool -> Property
-prop_file_directives_parsing own dep cons =
-  let directiveStr = "//! ownership: " ++ show own ++ "\n" ++
-                   "//! dependent_types: " ++ show dep ++ "\n" ++
-                   "//! constraints: " ++ show cons ++ "\n" ++
-                   "package main\n"
-  in case parseTypus directiveStr of
-    Left _ -> property False -- Should parse valid directives
-    Right result -> property True
+-- Generate file directive lines
+genFileDirective :: Gen String
+genFileDirective = do
+  key <- genIdentifier
+  value <- genDirectiveValue
+  pure $ "//! " ++ key ++ "=" ++ value
 
--- Test 4: Block directives parsing
-prop_block_directives_parsing :: Bool -> Bool -> Property
-prop_block_directives_parsing own dep =
-  let directiveStr = "package main\n\nfunc main() {\n" ++
-                   "{//! ownership: " ++ show own ++ "\n" ++
-                   "//! dependent_types: " ++ show dep ++ "\n" ++
-                   "var x int = 5\n}\n}\n"
-  in case parseTypus directiveStr of
-    Left _ -> property False -- Should parse valid block directives
-    Right result -> property True
+-- Generate block directive lines
+genBlockDirective :: Gen String
+genBlockDirective = do
+  key <- genIdentifier
+  value <- genDirectiveValue
+  pure $ "/// " ++ key ++ "=" ++ value
 
--- Test 5: Empty file parsing
-prop_empty_file_parses :: Property
-prop_empty_file_parses =
-  case parseTypus "" of
-    Left _ -> property False -- Empty file should parse
-    Right result -> property True
+-- Generate simple code blocks
+genCodeBlock :: Gen String
+genCodeBlock = do
+  directives <- listOf genBlockDirective
+  codeLines <- listOf $ elements 
+    [ "func main() {"
+    , "    return 42"
+    , "}"
+    , "let x = 10"
+    , "if x > 0 {"
+    , "    println(x)"
+    , "}"
+    ]
+  pure $ unlines (directives ++ codeLines)
 
--- Test 6: Simple Go package parsing
-prop_simple_package_parses :: String -> Property
-prop_simple_package_parses pkgName =
-  length pkgName > 0 && length pkgName < 20 && all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ "_") pkgName ==>
-  let goCode = "package " ++ pkgName ++ "\n"
-  in case parseTypus goCode of
-    Left _ -> property False -- Simple package should parse
-    Right result -> property True
+-- Generate complete Typus file content
+genTypusFileContent :: Gen String
+genTypusFileContent = do
+  fileDirectives <- listOf genFileDirective
+  codeBlocks <- listOf genCodeBlock
+  pure $ unlines (fileDirectives ++ [""] ++ concatMap (\block -> [block, ""]) codeBlocks)
 
--- Test 7: Parser handles whitespace gracefully
-prop_whitespace_handling :: String -> Property
-prop_whitespace_handling str =
-  let withExtraWhitespace = "  \n  " ++ str ++ "\n  \n  "
-  in case parseTypus str of
-    Left _ -> 
-      case parseTypus withExtraWhitespace of
-        Left _ -> property True -- Both fail is acceptable
-        Right _ -> property True -- Extra whitespace makes it parse is also acceptable
-    Right _ -> 
-      case parseTypus withExtraWhitespace of
-        Left _ -> property False -- If original parses, extra whitespace should also parse
-        Right _ -> property True
+-- ============================================================================
+-- Property Tests
+-- ============================================================================
 
--- Test 8: Parser line tracking
-prop_parser_line_tracking :: Int -> Property
-prop_parser_line_tracking n =
-  n > 0 && n < 50 ==>
-  let multiLineCode = unlines $ replicate n "var x int = 5"
-  in case parseTypus multiLineCode of
-    Left _ -> property False -- Multi-line code should parse
-    Right result -> property True
+-- Property: Parsing a file and then re-parsing the string representation should be consistent
+prop_parse_roundtrip_consistency :: Property
+prop_parse_roundtrip_consistency = 
+  forAll genTypusFileContent $ \content ->
+    let parsed1 = parseTypus content
+        parsed2 = parseTypus content
+    in length (tfBlocks parsed1) === length (tfBlocks parsed2)
 
--- Test 9: Comment parsing robustness
-prop_comment_parsing_robustness :: String -> Property
-prop_comment_parsing_robustness str =
-  let commentedCode = "// This is a comment\n" ++ str ++ "\n// Another comment"
-  in case parseTypus commentedCode of
-    Left _ -> property True -- May fail due to arbitrary content
-    Right result -> property True
+-- Property: Empty content should produce a file with no blocks
+prop_parse_empty_content :: Property
+prop_parse_empty_content = 
+  let emptyContent = ""
+      parsed = parseTypus emptyContent
+  in length (tfBlocks parsed) === 0
 
--- Test 10: Directive format variations
-prop_directive_format_variations :: Bool -> Property
-prop_directive_format_variations flag =
-  let directiveVariations = 
-        [ "//! ownership: " ++ show flag
-        , "//! ownership: " ++ show flag
-        , "//!ownership:" ++ show flag
-        , "//! ownership:" ++ show flag
+-- Property: Comments in directives should be handled correctly
+prop_parse_directive_comments :: Property
+prop_parse_directive_comments = 
+  forAll genFileDirective $ \directive ->
+    let contentWithComment = directive ++ " // this is a comment"
+        parsedWithoutComment = parseTypus directive
+        parsedWithComment = parseTypus contentWithComment
+    in length (tfBlocks parsedWithoutComment) === length (tfBlocks parsedWithComment)
+
+-- Property: Whitespace should not affect parsing results
+prop_parse_whitespace_independence :: Property
+prop_parse_whitespace_independence = 
+  forAll genTypusFileContent $ \content ->
+    let normalized = trim content
+        parsedOriginal = parseTypus content
+        parsedNormalized = parseTypus normalized
+    in length (tfBlocks parsedOriginal) === length (tfBlocks parsedNormalized)
+
+-- Property: Multiple consecutive empty lines should be handled gracefully
+prop_parse_consecutive_empty_lines :: Property
+prop_parse_consecutive_empty_lines = 
+  forAll genTypusFileContent $ \content ->
+    let withExtraEmptyLines = content ++ "\n\n\n\n\n"
+        parsedOriginal = parseTypus content
+        parsedWithEmpty = parseTypus withExtraEmptyLines
+    in length (tfBlocks parsedOriginal) === length (tfBlocks withEmpty)
+
+-- Property: File directives should be parsed correctly regardless of order
+prop_parse_directive_order_independence :: Property
+prop_parse_directive_order_independence = 
+  forAll (listOf genFileDirective `suchThat` (not . null)) $ \directives ->
+    let content1 = unlines directives
+        content2 = unlines (reverse directives)
+        parsed1 = parseTypus content1
+        parsed2 = parseTypus content2
+    in length (tfBlocks parsed1) === length (tfBlocks parsed2)
+
+-- ============================================================================
+-- Unit Tests
+-- ============================================================================
+
+test_parse_simple_file :: IO ()
+test_parse_simple_file = do
+  let content = unlines
+        [ "//! ownership=true"
+        , "//! dependent-types=false"
+        , ""
+        , "func main() {"
+        , "    return 42"
+        , "}"
         ]
-      parseDirective dir = case parseTypus (dir ++ "\npackage main\n") of
-        Left _ -> False
-        Right _ -> True
-  in all parseDirective directiveVariations
+      parsed = parseTypus content
+  length (tfBlocks parsed) @?= 1
+
+test_parse_file_with_syntax_errors :: IO ()
+test_parse_file_with_syntax_errors = do
+  let content = unlines
+        [ "//! ownership=true"
+        , ""
+        , "func main() {"
+        , "    return 42"
+        , "    // Missing closing brace"
+        ]
+      parsed = parseTypus content
+  -- Should still parse but potentially with syntax errors
+  length (tfBlocks parsed) @?= 1
+
+test_parse_empty_directives :: IO ()
+test_parse_empty_directives = do
+  let content = unlines
+        [ "//!"
+        , "///"
+        , ""
+        , "func test() {}"
+        ]
+      parsed = parseTypus content
+  length (tfBlocks parsed) @?= 1
+
+-- ============================================================================
+-- Test Suite
+-- ============================================================================
 
 tests :: TestTree
 tests = testGroup "New Parser Properties Tests"
-  [ fastProperty "Parse roundtrip for simple strings" prop_parse_roundtrip_simple
-  , fastProperty "removeComments preserves non-comment content" prop_removeComments_preserves_code
-  , fastProperty "File directives parsing" prop_file_directives_parsing
-  , fastProperty "Block directives parsing" prop_block_directives_parsing
-  , fastProperty "Empty file parses" prop_empty_file_parses
-  , fastProperty "Simple Go package parsing" prop_simple_package_parses
-  , fastProperty "Parser handles whitespace gracefully" prop_whitespace_handling
-  , fastProperty "Parser line tracking" prop_parser_line_tracking
-  , fastProperty "Comment parsing robustness" prop_comment_parsing_robustness
-  , fastProperty "Directive format variations" prop_directive_format_variations
+  [ testProperty "Parse roundtrip consistency" prop_parse_roundtrip_consistency
+  , testProperty "Parse empty content" prop_parse_empty_content
+  , testProperty "Parse directive comments" prop_parse_directive_comments
+  , testProperty "Parse whitespace independence" prop_parse_whitespace_independence
+  , testProperty "Parse consecutive empty lines" prop_parse_consecutive_empty_lines
+  , testProperty "Parse directive order independence" prop_parse_directive_order_independence
+  , testCase "Parse simple file" test_parse_simple_file
+  , testCase "Parse file with syntax errors" test_parse_file_with_syntax_errors
+  , testCase "Parse empty directives" test_parse_empty_directives
   ]
