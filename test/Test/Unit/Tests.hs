@@ -460,7 +460,7 @@ import qualified Test.Unit.ErrorRecoveryBasicSpec
 import qualified Test.Unit.IntegrationBasicSpec
 -- New Cabal QuickCheck test modules
 import qualified Test.Unit.NewCabalQuickCheckTestSpec
-import qualified Test.Unit.NewCabalTestsSpec
+import qualified Test.Unit.NewCabalQuickCheckTestSuite
 
 -- New core test modules
 import qualified Test.Unit.SourceLocationCoreTestSpec
@@ -615,7 +615,7 @@ import qualified Test.Unit.SourceLocationPropertiesQuickCheckSpec
 import qualified Test.Unit.NewCoreQuickCheckTests
 import qualified Test.Unit.SimpleCoreQuickCheckSpec
 import qualified Test.Unit.NewCabalQuickCheckSpec
-import qualified Test.Unit.NewCabalQuickCheckTests
+import qualified Test.Unit.NewCabalQuickCheckTestSuite
 import qualified Test.Unit.NewCabalQuickCheckTestSpec
 import qualified Test.Unit.NewCabalTestQuickCheckSpec
 import qualified Test.Unit.AdditionalCabalQuickCheckSpec
@@ -1738,6 +1738,9 @@ tests =
     , Test.Unit.DependentTypeValidationSpec.tests
     , Test.Unit.UtilsStringPropertiesSpec.tests
     ]
+
+  -- New Cabal QuickCheck Tests (10 comprehensive tests)
+  , Test.Unit.NewCabalQuickCheckTestSuite.tests
 
   -- New Core QuickCheck Test Modules (2025)
   , testGroup "Core QuickCheck Test Modules 2025"

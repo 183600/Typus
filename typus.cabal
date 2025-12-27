@@ -330,7 +330,7 @@ test-suite typus-test
         Test.Unit.SourceLocationPropertiesQuickCheckSpec,
         Test.Unit.CabalQuickCheckTestSpec,
         Test.Unit.CabalEnhancedQuickCheckSpec,
-        Test.Unit.NewCabalQuickCheckTests,
+        
         Test.Unit.NewCabslQuickCheckTests,
         Test.Unit.AdditionalQuickCheckTests,
         Test.Unit.AdditionalQuickCheckSpec,
@@ -661,6 +661,7 @@ test-suite typus-test
         Test.Unit.ParserBoundarySpec,
         Test.Unit.CompilerErrorBoundarySpec,
         Test.Unit.NewQuickCheckPropertiesSpec,
+        Test.Unit.NewCabalQuickCheckTestSuite,
         
         -- New Cabals Test Modules (10 comprehensive tests)
         Test.Unit.ParserErrorRecoveryCabalsSpec,
