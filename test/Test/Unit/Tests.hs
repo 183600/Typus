@@ -99,6 +99,9 @@ import qualified Test.Unit.IntegrationEndToEndCabalsSpec
 import qualified Test.Unit.PerformanceRegressionCabalsSpec
 import qualified Test.Unit.SecurityValidationCabalsSpec
 
+-- New Comprehensive Cabal Test Module
+import qualified Test.Unit.NewComprehensiveCabalTestSpec
+
 -- Additional Cabal Test Modules (2025)
 import qualified Test.Unit.NewCabalTestSuiteSpec
 import qualified Test.Unit.SourceLocationCabalTestsSpec
@@ -1818,5 +1821,6 @@ tests =
     , Test.Unit.ConcurrentSafetyAdvanced2025Spec.tests
     , Test.Unit.PerformanceOptimization2025Spec.tests
     , Test.Unit.BoundaryConditionsAdvanced2025Spec.tests
+    , Test.Unit.NewComprehensiveCabalTestSpec.tests
     ]
   ]

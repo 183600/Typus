@@ -769,6 +769,7 @@ test-suite typus-test
         , Test.Unit.IntegrationComplexWorkflowsSpec
         , Test.Unit.TextProcessingBoundarySpec
         , Test.Unit.NewCabalTestSpec
+        , Test.Unit.NewComprehensiveCabalTestSpec
     other-modules:
             Test.Dependencies.Arbitrary
     build-depends:
