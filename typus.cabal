@@ -768,6 +768,18 @@ test-suite typus-test
         , Test.Unit.TextProcessingBoundarySpec
         , Test.Unit.NewCabalTestSpec
         , Test.Unit.NewComprehensiveCabalTestSpec
+
+        -- New Cabal Test Modules (10 comprehensive tests)
+        , Test.Unit.CabalParserQuickCheckSpec
+        , Test.Unit.CabalCompilerQuickCheckSpec
+        , Test.Unit.CabalOwnershipQuickCheckSpec
+        , Test.Unit.CabalDependentTypesQuickCheckSpec
+        , Test.Unit.CabalSourceLocationQuickCheckSpec
+        , Test.Unit.CabalErrorHandlerQuickCheckSpec
+        , Test.Unit.CabalUtilsQuickCheckSpec
+        , Test.Unit.CabalSyntaxValidatorQuickCheckSpec
+        , Test.Unit.CabalAnalyzerQuickCheckSpec
+        , Test.Unit.CabalIntegrationQuickCheckSpec
     other-modules:
             Test.Dependencies.Arbitrary
     build-depends:

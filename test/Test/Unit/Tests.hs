@@ -105,6 +105,18 @@ import qualified Test.Unit.SecurityValidationCabalsSpec
 -- New Comprehensive Cabal Test Module
 import qualified Test.Unit.NewComprehensiveCabalTestSpec
 
+-- New Cabal Test Modules (10 comprehensive tests)
+import qualified Test.Unit.CabalParserQuickCheckSpec
+import qualified Test.Unit.CabalCompilerQuickCheckSpec
+import qualified Test.Unit.CabalOwnershipQuickCheckSpec
+import qualified Test.Unit.CabalDependentTypesQuickCheckSpec
+import qualified Test.Unit.CabalSourceLocationQuickCheckSpec
+import qualified Test.Unit.CabalErrorHandlerQuickCheckSpec
+import qualified Test.Unit.CabalUtilsQuickCheckSpec
+import qualified Test.Unit.CabalSyntaxValidatorQuickCheckSpec
+import qualified Test.Unit.CabalAnalyzerQuickCheckSpec
+import qualified Test.Unit.CabalIntegrationQuickCheckSpec
+
 -- Additional Cabal Test Modules (2025)
 import qualified Test.Unit.NewCabalTestSuiteSpec
 import qualified Test.Unit.SourceLocationCabalTestsSpec
@@ -1833,4 +1845,18 @@ tests =
 
   -- New Comprehensive Cabal Test Suite (2025)
   , Test.Unit.NewCabalTestSuiteSpec.tests
+
+  -- New Cabal Test Modules (10 comprehensive tests)
+  , testGroup "New Cabal Test Modules"
+    [ Test.Unit.CabalParserQuickCheckSpec.tests
+    , Test.Unit.CabalCompilerQuickCheckSpec.tests
+    , Test.Unit.CabalOwnershipQuickCheckSpec.tests
+    , Test.Unit.CabalDependentTypesQuickCheckSpec.tests
+    , Test.Unit.CabalSourceLocationQuickCheckSpec.tests
+    , Test.Unit.CabalErrorHandlerQuickCheckSpec.tests
+    , Test.Unit.CabalUtilsQuickCheckSpec.tests
+    , Test.Unit.CabalSyntaxValidatorQuickCheckSpec.tests
+    , Test.Unit.CabalAnalyzerQuickCheckSpec.tests
+    , Test.Unit.CabalIntegrationQuickCheckSpec.tests
+    ]
   ]
