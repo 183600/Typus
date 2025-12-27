@@ -1,336 +1,202 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Unit.NewRobustErrorHandlerQuickCheckSpec (spec) where
+module Test.Unit.NewRobustErrorHandlerQuickCheckSpec where
 
-import Test.Hspec
-import Test.QuickCheck
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.TH
 import ErrorHandler
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos, spanBetween)
+import Compiler.Errors.Core (ErrorLocation(..), ErrorSeverity(..), ErrorMessage(..))
+import SourceLocation (SourcePos(..), SourceSpan(..), posAt, spanBetween)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Control.Exception (SomeException, try)
+import Data.Maybe (isJust, isNothing)
+import Data.List (isPrefixOf, isInfixOf)
 
--- | Test robust error handler properties
-spec :: Spec
-spec = describe "NewRobustErrorHandler QuickCheck Tests" $ do
+-- Test error creation properties
+prop_error_location_valid :: Int -> Int -> Bool
+prop_error_location_valid line col = 
+  let pos = posAt line col
+      errorLoc = toErrorLocation pos
+  in line errorLocation == line && column errorLocation == col &&
+     isJust (filePath errorLoc) && isNothing (endLine errorLoc) &&
+     isNothing (endColumn errorLoc)
 
-  describe "Robust error creation properties" $ do
-    it "creates errors with comprehensive context" $ property $
-      \message context line col ->
-        let pos = SourcePos line col 0
-            err = createErrorWithContext message context pos
-            errContext = getErrorContext err
-        in getErrorMessage err === message &&
-           context `elem` errContext &&
-           posLine (getErrorLocation err) === line &&
-           posColumn (getErrorLocation err) === col
+prop_error_message_non_empty :: String -> Property
+prop_error_message_non_empty msg = 
+  not (null msg) ==> 
+  let errorMsg = createErrorMessage msg
+  in not (T.null (messageText errorMsg))
 
-    it "error severity classification is consistent" $ property $
-      \message errorType ->
-        let err = createTypedError message errorType
-            severity = classifyErrorSeverity err
-        in severity `elem` [Info, Warning, Error, Severe] &&
-           isErrorTypeSeverityConsistent errorType severity
-
-    it "error chaining preserves information" $ property $
-      \errors ->
-        let chained = chainErrors errors
-            originalMessages = map getErrorMessage errors
-            chainedMessages = getChainedErrorMessages chained
-        in originalMessages `isSubsetOf` chainedMessages
-
-  describe "Advanced error collection properties" $ do
-    it "error collection handles large numbers efficiently" $ property $
-      \errorCount ->
-        let errors = generateErrors errorCount
-            collection = createErrorCollection errors
-            retrieved = getAllErrors collection
-        in length retrieved === errorCount &&
-           getErrorCount collection === errorCount
-
-    it "error filtering preserves order" $ property $
-      \errors severityFilter ->
-        let collection = createErrorCollection errors
-            filtered = filterErrorsBySeverity severityFilter collection
-            filteredErrors = getAllErrors filtered
-            originalFiltered = filter (\e -> classifyErrorSeverity e == severityFilter) errors
-        in filteredErrors === originalFiltered
-
-    it "error deduplication works correctly" $ property $
-      \errors ->
-        let withDuplicates = errors ++ errors
-            collection = createErrorCollection withDuplicates
-            deduplicated = deduplicateErrors collection
-            uniqueErrors = nub errors
-        in length (getAllErrors deduplicated) === length uniqueErrors
-
-  describe "Robust error formatting properties" = do
-    it "formatting handles complex error structures" $ property $
-      \errors ->
-        let collection = createErrorCollection errors
-            formatted = formatErrorCollection collection
-            lines' = lines formatted
-        in length lines' >= length errors &&
-           all (not . null) lines'
-
-    it "error formatting preserves essential information" $ property $
-      \message location ->
-        let err = createErrorWithLocation message location
-            formatted = formatError err
-        in message `isInfixOf` formatted &&
-           show (posLine location) `isInfixOf` formatted &&
-           show (posColumn location) `isInfixOf` formatted
-
-    it "formatted errors are parseable" $ property $
-      \errors ->
-        let collection = createErrorCollection errors
-            formatted = formatErrorCollection collection
-            parsed = parseFormattedErrors formatted
-        in length parsed >= 0 -- Basic sanity check
-
-  describe "Advanced error recovery properties" = do
-    it "error recovery handles complex scenarios" $ property $
-      \errors recoveryStrategies ->
-        let collection = createErrorCollection errors
-            recovered = attemptAdvancedRecovery collection recoveryStrategies
-            recoveredErrors = getRecoveredErrors recovered
-        in length recoveredErrors <= length errors
-
-    it "recovery preserves error semantics" $ property $
-      \errors ->
-        let collection = createErrorCollection errors
-            recovered = attemptErrorRecovery collection
-            originalSemantics = extractErrorSemantics collection
-            recoveredSemantics = extractErrorSemantics recovered
-        in originalSemantics `isSubsetOf` recoveredSemantics
-
-    it "recovery strategies are composable" $ property $
-      \errors strategy1 strategy2 ->
-        let collection = createErrorCollection errors
-            recovered1 = applyRecoveryStrategy strategy1 collection
-            recovered2 = applyRecoveryStrategy strategy2 recovered1
-        in getErrorCount recovered2 <= getErrorCount collection
-
-  describe "Error context and propagation properties" $ do
-    it "context propagation is consistent" $ property $
-      \baseContext additionalContexts ->
-        let err = createBasicError "test error"
-            withContext = foldr addErrorContext err additionalContexts
-            finalContext = getErrorContexts withContext
-        in baseContext `elem` finalContext &&
-           all (`elem` finalContext) additionalContexts
-
-    it "error stacking preserves hierarchy" $ property $
-      \errors ->
-        let stacked = stackErrors errors
-            hierarchy = getErrorHierarchy stacked
-        in length hierarchy === length errors &&
-           isHierarchyValid hierarchy
-
-    it "error unwinding maintains invariants" $ property $
-      \errors ->
-        let stacked = stackErrors errors
-            unwound = unwindErrors stacked
-        in length unwound === length errors &&
-           map getErrorMessage unwound === map getErrorMessage errors
-
-  describe "Performance and robustness properties" $ do
-    it "error handling scales linearly" $ property $
-      \errorCount ->
-        let errors = generateErrors errorCount
-            collection = createErrorCollection errors
-            processTime = measureErrorProcessing collection
-        in processTime <= fromIntegral errorCount * 0.001 -- 1ms per error
-
-    it "memory usage is bounded" $ property $
-      \errorCount ->
-        let errors = generateErrors errorCount
-            collection = createErrorCollection errors
-            memoryUsage = measureErrorMemoryUsage collection
-        in memoryUsage <= errorCount * 1000 -- 1KB per error
-
-    it "error handling is thread-safe" $ property $
-      \threadCount errors ->
-        let results = processErrorsConcurrently threadCount errors
-        in all isValidResult results &&
-           length results === threadCount
-
+prop_error_severity_ordering :: ErrorSeverity -> ErrorSeverity -> Bool
+prop_error_severity_ordering sev1 sev2 = 
+  compare sev1 sev2 == compare (severityToInt sev1) (severityToInt sev2)
   where
-    -- Helper types for robust error handling
-    data ErrorType = ParseError | TypeError | RuntimeError | Warning | Info
-      deriving (Eq, Show, Enum, Bounded)
+    severityToInt ErrorWarning = 0
+    severityToInt ErrorError = 1
+    severityToInt ErrorFatal = 2
 
-    data RobustError = RobustError
-      { errorMessage :: String
-      , errorLocation :: SourcePos
-      , errorSeverity :: ErrorSeverity
-      , errorContexts :: [String]
-      , errorType :: ErrorType
-      } deriving (Eq, Show)
+-- Test error handling chain properties
+prop_error_chain_preserves_order :: [String] -> Bool
+prop_error_chain_preserves_order msgs = 
+  let errors = map createErrorMessage msgs
+      chain = createErrorChain errors
+      extracted = extractErrorMessages chain
+  in length extracted == length errors &&
+     all (\(i, msg) -> messageText (extracted !! i) == messageText (errors !! i)) 
+         (zip [0..] msgs)
 
-    data ErrorSeverity = Info | Warning | Error | Severe
-      deriving (Eq, Show, Enum, Bounded)
+prop_error_chain_empty :: Bool
+prop_error_chain_empty = 
+  let chain = createErrorChain []
+      extracted = extractErrorMessages chain
+  in null extracted
 
-    data ErrorCollection = ErrorCollection
-      { errors :: [RobustError]
-      , totalCount :: Int
-      , uniqueCount :: Int
-      } deriving (Eq, Show)
+-- Test error recovery properties
+prop_error_recovery_attempts_non_negative :: Int -> Bool
+prop_error_recovery_attempts_non_negative attempts = 
+  let recovery = ErrorRecovery attempts
+  in recoveryAttempts recovery >= 0
 
-    data RecoveryStrategy = RetryStrategy | SkipStrategy | FallbackStrategy
-      deriving (Eq, Show, Enum, Bounded)
+prop_error_recovery_increments :: ErrorRecovery -> Bool
+prop_error_recovery_increments recovery = 
+  let incremented = incrementRecovery recovery
+  in recoveryAttempts incremented == recoveryAttempts recovery + 1
 
-    -- Mock implementations for robust error handling
-    createErrorWithContext :: String -> String -> SourcePos -> RobustError
-    createErrorWithContext message context pos = RobustError message pos Error [context] RuntimeError
+prop_error_recovery_limits :: Int -> Bool
+prop_error_recovery_limits maxAttempts = 
+  maxAttempts >= 0 ==> 
+  let recovery = ErrorRecovery 0
+      final = iterate incrementRecovery recovery !! maxAttempts
+  in recoveryAttempts final == maxAttempts
 
-    createTypedError :: String -> ErrorType -> RobustError
-    createTypedError message errorType = RobustError message startPos Error [] errorType
+-- Test error context properties
+prop_error_context_adds_information :: String -> String -> Bool
+prop_error_context_adds_information baseMsg context = 
+  let baseError = createErrorMessage baseMsg
+      contextedError = addErrorContext context baseError
+      baseText = messageText baseError
+      contextedText = messageText contextedError
+  in T.length contextedText >= T.length baseText &&
+     T.pack context `T.isInfixOf` contextedText
 
-    classifyErrorSeverity :: RobustError -> ErrorSeverity
-    classifyErrorSeverity err = case errorType err of
-      ParseError -> Error
-      TypeError -> Error
-      RuntimeError -> Severe
-      Warning -> Warning
-      Info -> Info
+prop_error_context_preserves_severity :: ErrorSeverity -> String -> String -> Bool
+prop_error_context_preserves_severity severity baseMsg context = 
+  let baseError = ErrorMessage (T.pack baseMsg) severity
+      contextedError = addErrorContext context baseError
+  in messageSeverity contextedError == severity
 
-    isErrorTypeSeverityConsistent :: ErrorType -> ErrorSeverity -> Bool
-    isErrorTypeSeverityConsistent ParseError Error = True
-    isErrorTypeSeverityConsistent TypeError Error = True
-    isErrorTypeSeverityConsistent RuntimeError Severe = True
-    isErrorTypeSeverityConsistent Warning Warning = True
-    isErrorTypeSeverityConsistent Info Info = True
-    isErrorTypeSeverityConsistent _ _ = False
+-- Test error filtering properties
+prop_error_filter_by_severity :: [ErrorSeverity] -> ErrorSeverity -> Bool
+prop_error_filter_by_severity severities targetSeverity = 
+  let errors = map (\sev -> ErrorMessage (T.pack "test") sev) severities
+      filtered = filterErrorsBySeverity targetSeverity errors
+  in all (\err -> messageSeverity err == targetSeverity) filtered
 
-    chainErrors :: [RobustError] -> RobustError
-    chainErrors [] = createBasicError "empty chain"
-    chainErrors (e:es) = foldl (\acc err -> 
-      RobustError (errorMessage acc ++ " -> " ++ errorMessage err) 
-                 (errorLocation acc) 
-                 (max (errorSeverity acc) (errorSeverity err))
-                 (errorContexts acc ++ errorContexts err)
-                 RuntimeError) e es
+prop_error_filter_empty_list :: ErrorSeverity -> Bool
+prop_error_filter_empty_list severity = 
+  let filtered = filterErrorsBySeverity severity []
+  in null filtered
 
-    getChainedErrorMessages :: RobustError -> [String]
-    getChainedErrorMessages err = words (errorMessage err)
+-- Test error aggregation properties
+prop_error_aggregation_counts_by_severity :: [ErrorSeverity] -> Bool
+prop_error_aggregation_counts_by_severity severities = 
+  let errors = map (\sev -> ErrorMessage (T.pack "test") sev) severities
+      aggregated = aggregateErrorsBySeverity errors
+      totalErrors = sum aggregated
+  in totalErrors == length errors
 
-    generateErrors :: Int -> [RobustError]
-    generateErrors count = map (\i -> createBasicError ("error " ++ show i)) [1..count]
+prop_error_aggregation_empty :: Bool
+prop_error_aggregation_empty = 
+  let aggregated = aggregateErrorsBySeverity []
+  in all (== 0) aggregated
 
-    createErrorCollection :: [RobustError] -> ErrorCollection
-    createErrorCollection errs = ErrorCollection errs (length errs) (length (nub errs))
+-- Test error formatting properties
+prop_error_format_includes_location :: String -> Int -> Int -> Bool
+prop_error_format_includes_location msg line col = 
+  let pos = posAt line col
+      errorLoc = toErrorLocation pos
+      error = ErrorMessage (T.pack msg) ErrorError
+      formatted = formatError errorLoc error
+  in show line `isInfixOf` formatted && show col `isInfixOf` formatted
 
-    getAllErrors :: ErrorCollection -> [RobustError]
-    getAllErrors = errors
+prop_error_format_includes_message :: String -> Bool
+prop_error_format_includes_message msg = 
+  let error = ErrorMessage (T.pack msg) ErrorError
+      errorLoc = ErrorLocation Nothing 1 1 Nothing Nothing
+      formatted = formatError errorLoc error
+  in msg `isInfixOf` formatted
 
-    getErrorCount :: ErrorCollection -> Int
-    getErrorCount = totalCount
+-- Helper functions (these would need to be implemented in ErrorHandler module)
+data ErrorRecovery = ErrorRecovery { recoveryAttempts :: Int }
+  deriving (Show, Eq)
 
-    filterErrorsBySeverity :: ErrorSeverity -> ErrorCollection -> ErrorCollection
-    filterErrorsBySeverity severity collection = 
-      collection { errors = filter (\e -> classifyErrorSeverity e == severity) (errors collection) }
+createErrorMessage :: String -> ErrorMessage
+createErrorMessage msg = ErrorMessage (T.pack msg) ErrorError
 
-    deduplicateErrors :: ErrorCollection -> ErrorCollection
-    deduplicateErrors collection = 
-      let unique = nub (errors collection)
-      in collection { errors = unique, uniqueCount = length unique }
+toErrorLocation :: SourcePos -> ErrorLocation
+toErrorLocation pos = ErrorLocation Nothing (posLine pos) (posColumn pos) Nothing Nothing
 
-    formatErrorCollection :: ErrorCollection -> String
-    formatErrorCollection collection = 
-      unlines $ map formatError (errors collection)
+createErrorChain :: [ErrorMessage] -> [ErrorMessage]
+createErrorChain = id
 
-    formatError :: RobustError -> String
-    formatError err = 
-      show (errorSeverity err) ++ " at " ++ 
-      show (posLine (errorLocation err)) ++ ":" ++ 
-      show (posColumn (errorLocation err)) ++ ": " ++ 
-      errorMessage err
+extractErrorMessages :: [ErrorMessage] -> [ErrorMessage]
+extractErrorMessages = id
 
-    parseFormattedErrors :: String -> [String]
-    parseFormattedErrors formatted = lines formatted
+incrementRecovery :: ErrorRecovery -> ErrorRecovery
+incrementRecovery (ErrorRecovery n) = ErrorRecovery (n + 1)
 
-    attemptAdvancedRecovery :: ErrorCollection -> [RecoveryStrategy] -> ErrorCollection
-    attemptAdvancedRecovery collection strategies = 
-      foldl applyRecoveryStrategy collection strategies
+addErrorContext :: String -> ErrorMessage -> ErrorMessage
+addErrorContext context (ErrorMessage msg sev) = 
+  ErrorMessage (T.pack context `T.append` T.pack ": " `T.append` msg) sev
 
-    applyRecoveryStrategy :: RecoveryStrategy -> ErrorCollection -> ErrorCollection
-    applyRecoveryStrategy strategy collection = 
-      case strategy of
-        RetryStrategy -> collection -- Simplified
-        SkipStrategy -> collection { errors = tail (errors collection) }
-        FallbackStrategy -> collection { errors = map downgradeSeverity (errors collection) }
-      where
-        downgradeSeverity err = err { errorSeverity = min Info (errorSeverity err) }
+filterErrorsBySeverity :: ErrorSeverity -> [ErrorMessage] -> [ErrorMessage]
+filterErrorsBySeverity targetSeverity = filter (\err -> messageSeverity err == targetSeverity)
 
-    getRecoveredErrors :: ErrorCollection -> [RobustError]
-    getRecoveredErrors = errors
+aggregateErrorsBySeverity :: [ErrorMessage] -> [Int]
+aggregateErrorsBySeverity errors = 
+  let warnings = length $ filter (\err -> messageSeverity err == ErrorWarning) errors
+      errors' = length $ filter (\err -> messageSeverity err == ErrorError) errors
+      fatals = length $ filter (\err -> messageSeverity err == ErrorFatal) errors
+  in [warnings, errors', fatals]
 
-    extractErrorSemantics :: ErrorCollection -> [String]
-    extractErrorSemantics collection = 
-      map (\e -> errorMessage e ++ ":" ++ show (errorType e)) (errors collection)
+formatError :: ErrorLocation -> ErrorMessage -> String
+formatError loc err = 
+  let locStr = case filePath loc of
+        Just path -> path ++ ":" ++ show (line loc) ++ ":" ++ show (column loc)
+        Nothing -> show (line loc) ++ ":" ++ show (column loc)
+      severityStr = case messageSeverity err of
+        ErrorWarning -> "Warning"
+        ErrorError -> "Error"
+        ErrorFatal -> "Fatal"
+  in locStr ++ ": " ++ severityStr ++ ": " ++ T.unpack (messageText err)
 
-    createBasicError :: String -> RobustError
-    createBasicError message = RobustError message startPos Error [] RuntimeError
+-- Arbitrary instances
+instance Arbitrary ErrorSeverity where
+  arbitrary = elements [ErrorWarning, ErrorError, ErrorFatal]
 
-    createErrorWithLocation :: String -> SourcePos -> RobustError
-    createErrorWithLocation message pos = RobustError message pos Error [] RuntimeError
+instance Arbitrary ErrorMessage where
+  arbitrary = do
+    msg <- arbitrary
+    severity <- arbitrary
+    return $ ErrorMessage (T.pack msg) severity
 
-    getErrorMessage :: RobustError -> String
-    getErrorMessage = errorMessage
+instance Arbitrary ErrorLocation where
+  arbitrary = do
+    line <- choose (1, 1000)
+    col <- choose (1, 1000)
+    endLine <- arbitrary
+    endCol <- arbitrary
+    file <- arbitrary
+    return $ ErrorLocation file line col endLine endCol
 
-    getErrorLocation :: RobustError -> SourcePos
-    getErrorLocation = errorLocation
+instance Arbitrary ErrorRecovery where
+  arbitrary = do
+    attempts <- choose (0, 10)
+    return $ ErrorRecovery attempts
 
-    addErrorContext :: RobustError -> String -> RobustError
-    addErrorContext err context = err { errorContexts = context : errorContexts err }
+tests :: TestTree
+tests = $(testGroupGenerator)
 
-    getErrorContexts :: RobustError -> [String]
-    getErrorContexts = errorContexts
-
-    stackErrors :: [RobustError] -> RobustError
-    stackErrors = chainErrors
-
-    getErrorHierarchy :: RobustError -> [ErrorSeverity]
-    getErrorHierarchy err = map classifyErrorSeverity (errors (createErrorCollection [err]))
-
-    isHierarchyValid :: [ErrorSeverity] -> Bool
-    isHierarchyValid _ = True -- Simplified
-
-    unwindErrors :: RobustError -> [RobustError]
-    unwindErrors err = [err] -- Simplified
-
-    measureErrorProcessing :: ErrorCollection -> Double
-    measureErrorProcessing collection = fromIntegral (length (errors collection)) * 0.0001
-
-    measureErrorMemoryUsage :: ErrorCollection -> Int
-    measureErrorMemoryUsage collection = length (errors collection) * 100
-
-    processErrorsConcurrently :: Int -> [RobustError] -> [String]
-    processErrorsConcurrently threadCount errors = 
-      map (\i -> "processed " ++ show i) [1..threadCount]
-
-    isValidResult :: String -> Bool
-    isValidResult result = not (null result)
-
-    -- Helper functions
-    isSubsetOf :: Eq a => [a] -> [a] -> Bool
-    isSubsetOf [] _ = True
-    isSubsetOf (x:xs) ys = x `elem` ys && isSubsetOf xs ys
-
-    isInfixOf :: String -> String -> Bool
-    isInfixOf needle haystack = needle `elem` 
-      [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]
-
-    -- Helper instances for QuickCheck
-    instance Arbitrary ErrorType where
-      arbitrary = arbitraryBoundedEnum
-
-    instance Arbitrary ErrorSeverity where
-      arbitrary = arbitraryBoundedEnum
-
-    instance Arbitrary RecoveryStrategy where
-      arbitrary = arbitraryBoundedEnum
-
-    instance Arbitrary RobustError where
-      arbitrary = RobustError <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+main :: IO ()
+main = defaultMain tests

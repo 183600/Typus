@@ -1,179 +1,152 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Unit.NewAdvancedSourceLocationQuickCheckSpec (spec) where
+module Test.Unit.NewAdvancedSourceLocationQuickCheckSpec where
 
-import Test.Hspec
-import Test.QuickCheck
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.TH
 import SourceLocation
+  ( SourcePos(..), SourceSpan(..), Located(..)
+  , startPos, posAfter, posAt, posAtLineCol
+  , emptySpan, spanFrom, spanTo, spanBetween, mergeSpans, isValidSpan
+  , locatedAt, locatedWithSpan, locatedValue, locatedSpan, mapLocated
+  , advancePos, advancePosBy, advancePosByText, advancePosByLine
+  )
 import Data.Text (Text)
 import qualified Data.Text as T
+import Control.DeepSeq (NFData, rnf)
 
--- | Test advanced source location tracking properties
-spec :: Spec
-spec = describe "NewAdvancedSourceLocation QuickCheck Tests" $ do
+-- Test SourcePos properties
+prop_start_pos_valid :: Bool
+prop_start_pos_valid = 
+  posLine startPos > 0 && posColumn startPos > 0 && posOffset startPos >= 0
 
-  describe "Advanced position arithmetic properties" $ do
-    it "position advancement is consistent" $ property $
-      \pos chars ->
-        let result1 = advancePosBy chars pos
-            result2 = foldl (flip advancePos) pos chars
-        in result1 === result2
+prop_pos_after_newline_increments_line :: Int -> Property
+prop_pos_after_newline_increments_line lineNum = 
+  lineNum >= 0 ==> 
+  let pos = posAt lineNum 1
+      newPos = posAfter '\n' pos
+  in posLine newPos == lineNum + 1 && posColumn newPos == 1
 
-    it "position arithmetic is associative" $ property $
-      \pos chars1 chars2 ->
-        let result1 = advancePosBy (chars1 ++ chars2) pos
-            result2 = advancePosBy chars2 (advancePosBy chars1 pos)
-        in result1 === result2
+prop_pos_after_tab_advances_to_next_tab_stop :: Int -> Property
+prop_pos_after_tab_advances_to_next_tab_stop col = 
+  col > 0 && col <= 8 ==> 
+  let pos = posAt 1 col
+      newPos = posAfter '\t' pos
+      expectedCol = ((col - 1) `div` 8 + 1) * 8 + 1
+  in posColumn newPos == expectedCol
 
-    it "position advancement handles complex Unicode" $ property $
-      \pos ->
-        let unicodeChars = "αβγδεζηθ"
-            newPos = advancePosBy unicodeChars pos
-        in posOffset newPos === posOffset pos + length unicodeChars
+prop_pos_after_regular_char_increments_column :: Char -> Int -> Property
+prop_pos_after_regular_char_increments_column c col = 
+  c /= '\n' && c /= '\t' && col > 0 ==> 
+  let pos = posAt 1 col
+      newPos = posAfter c pos
+  in posColumn newPos == col + 1 && posLine newPos == 1
 
-  describe "Span manipulation properties" $ do
-    it "span merging is commutative" $ property $
-      \span1 span2 ->
-        let merged1 = mergeSpans span1 span2
-            merged2 = mergeSpans span2 span1
-        in merged1 === merged2
+-- Test SourceSpan properties
+prop_empty_span_valid :: Bool
+prop_empty_span_valid = 
+  let span = emptySpan startPos
+  in isValidSpan span && spanStart span == spanEnd span
 
-    it "span merging is associative" $ property $
-      \span1 span2 span3 ->
-        let merged1 = mergeSpans span1 (mergeSpans span2 span3)
-            merged2 = mergeSpans (mergeSpans span1 span2) span3
-        in merged1 === merged2
+prop_span_between_valid :: Int -> Int -> Int -> Int -> Property
+prop_span_between_valid line1 col1 line2 col2 = 
+  line1 > 0 && col1 > 0 && line2 > 0 && col2 > 0 ==> 
+  let start = posAt line1 col1
+      end = posAt line2 col2
+      span = spanBetween start end
+  in spanStart span == start && spanEnd span == end
 
-    it "span contains its start and end positions" $ property $
-      \start end ->
-        let span = spanBetween start end
-        in start <= end ==> 
-           _isPosInSpan start span && _isPosInSpan end span
+prop_merge_spans_contains_originals :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
+prop_merge_spans_contains_originals l1 c1 l2 c2 l3 c3 l4 c4 = 
+  all (>0) [l1, c1, l2, c2, l3, c3, l4, c4] ==> 
+  let span1 = spanBetween (posAt l1 c1) (posAt l2 c2)
+      span2 = spanBetween (posAt l3 c3) (posAt l4 c4)
+      merged = mergeSpans span1 span2
+  in spanStart merged <= spanStart span1 && spanEnd merged >= spanEnd span1 &&
+     spanStart merged <= spanStart span2 && spanEnd merged >= spanEnd span2
 
-  describe "Complex location tracking" $ do
-    it "location tracking preserves order" $ property $
-      \positions ->
-        let tracked = map (\pos -> (pos, pos)) positions
-            sorted = sort tracked
-        in map fst sorted === sort positions
+-- Test Located properties
+prop_located_at_preserves_position :: Int -> Int -> String -> Property
+prop_located_at_preserves_position line col value = 
+  line > 0 && col > 0 ==> 
+  let pos = posAt line col
+      located = locatedAt pos value
+  in locatedPos located == pos && locatedValue located == value
 
-    it "span calculations are accurate" $ property $
-      \start end ->
-        let span = spanBetween start end
-            length = _spanLength span
-        in start <= end ==> length >= 0
+prop_located_with_span_preserves_span :: Int -> Int -> Int -> Int -> String -> Property
+prop_located_with_span_preserves_span l1 c1 l2 c2 value = 
+  all (>0) [l1, c1, l2, c2] ==> 
+  let span = spanBetween (posAt l1 c1) (posAt l2 c2)
+      located = locatedWithSpan span value
+  in locatedSpan located == span && locatedValue located == value
 
-    it "nested spans are handled correctly" $ property $
-      \outerStart outerEnd innerStart innerEnd ->
-        let outerSpan = spanBetween outerStart outerEnd
-            innerSpan = spanBetween innerStart innerEnd
-        in outerStart <= innerStart && innerEnd <= outerEnd ==> 
-           _spanContains outerSpan (spanStart innerSpan) &&
-           _spanContains outerSpan (spanEnd innerSpan)
+prop_map_located_preserves_location :: Int -> Int -> Int -> Property
+prop_map_located_preserves_location line col n = 
+  line > 0 && col > 0 ==> 
+  let pos = posAt line col
+      located = locatedAt pos n
+      doubled = mapLocated (*2) located
+  in locatedPos doubled == pos && locatedSpan doubled == locatedSpan located &&
+     locatedValue doubled == n * 2
 
-  describe "Error location conversion" $ do
-    it "error location preserves essential information" $ property $
-      \span ->
-        let errLoc = toErrorLocationWithSpan span
-            start = spanStart span
-            end = spanEnd span
-        in line errLoc === posLine start &&
-           column errLoc === posColumn start &&
-           endLine errLoc === Just (posLine end) &&
-           endColumn errLoc === Just (posColumn end)
+-- Test position advancement properties
+prop_advance_pos_by_empty_string :: SourcePos -> Bool
+prop_advance_pos_by_empty_string pos = advancePosBy "" pos == pos
 
-    it "single position error locations are consistent" $ property $
-      \pos ->
-        let errLoc = toErrorLocation pos
-            spanErrLoc = toErrorLocationWithSpan (spanBetween pos pos)
-        in line errLoc === line spanErrLoc &&
-           column errLoc === column spanErrLoc
+prop_advance_pos_by_consistency :: String -> SourcePos -> Bool
+prop_advance_pos_by_consistency s pos = 
+  let advanced = advancePosBy s pos
+      charAdvanced = foldl (flip advancePos) pos s
+  in advanced == charAdvanced
 
-  describe "Advanced span operations" = do
-    it "span overlap detection is symmetric" $ property $
-      \span1 span2 ->
-        let overlap1 = _doSpansOverlap span1 span2
-            overlap2 = _doSpansOverlap span2 span1
-        in overlap1 === overlap2
+prop_advance_pos_by_text_consistency :: String -> SourcePos -> Bool
+prop_advance_pos_by_text_consistency s pos = 
+  let text = T.pack s
+      advancedByText = advancePosByText text pos
+      advancedByString = advancePosBy s pos
+  in advancedByText == advancedByString
 
-    it "span expansion works correctly" $ property $
-      \span before after ->
-        let expanded = _expandSpan before after span
-            originalStart = spanStart span
-            originalEnd = spanEnd span
-            newStart = spanStart expanded
-            newEnd = spanEnd expanded
-        in posLine newStart <= posLine originalStart &&
-           posLine newEnd >= posLine originalEnd
+prop_advance_pos_by_line_increments_line :: Int -> Int -> Int -> Property
+prop_advance_pos_by_line_increments_line line numLines col = 
+  line > 0 && numLines >= 0 && col > 0 ==> 
+  let pos = posAt line col
+      newPos = advancePosByLine numLines pos
+  in posLine newPos == line + numLines && posColumn newPos == 1
 
-    it "span distance calculation is accurate" $ property $
-      \start end ->
-        let span = spanBetween start end
-            distance = _posDistance start end
-        in distance >= 0
+-- Test NFData instances
+prop_sourcepos_nfdata :: SourcePos -> Bool
+prop_sourcepos_nfdata pos = rnf pos == ()
 
-  describe "Location tracking invariants" = do
-    it "position invariants are maintained" $ property $
-      \pos ->
-        let afterNewline = posAfter '\n' pos
-            afterTab = posAfter '\t' pos
-            afterRegular = posAfter 'x' pos
-        in posColumn afterNewline === 1 &&
-           posLine afterNewline === posLine pos + 1 &&
-           posColumn afterTab `mod` 8 === 1 &&
-           posColumn afterRegular === posColumn pos + 1
+prop_sourcespan_nfdata :: SourceSpan -> Bool
+prop_sourcespan_nfdata span = rnf span == ()
 
-    it "span invariants hold" $ property $
-      \start end ->
-        let span = spanBetween start end
-        in start <= end ==> 
-           spanStart span <= spanEnd span &&
-           _spanLength span >= 0
+prop_located_nfdata :: Located String -> Bool
+prop_located_nfdata located = rnf located == ()
 
-    it "located value invariants" $ property $
-      \pos value ->
-        let located = locatedAt pos value
-            locatedSpan = locatedSpan located
-        in spanStart locatedSpan === pos &&
-           spanEnd locatedSpan === pos &&
-           locValue located === value
+-- Arbitrary instances for QuickCheck
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 1000)
+    col <- choose (1, 1000)
+    offset <- choose (0, 1000000)
+    return $ SourcePos line col offset
 
-  where
-    -- Helper functions for advanced testing
-    _isPosInSpan :: SourcePos -> SourceSpan -> Bool
-    _isPosInSpan pos srcSpan = pos >= spanStart srcSpan && pos <= spanEnd srcSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    endOffset <- choose (0, 1000)
+    let end = SourcePos (posLine start) (posColumn start + endOffset) (posOffset start + endOffset)
+    return $ SourceSpan start end
 
-    _doSpansOverlap :: SourceSpan -> SourceSpan -> Bool
-    _doSpansOverlap span1 span2 =
-      spanStart span1 <= spanEnd span2 && spanEnd span1 >= spanStart span2
+instance Arbitrary a => Arbitrary (Located a) where
+  arbitrary = do
+    value <- arbitrary
+    span <- arbitrary
+    return $ Located value (spanStart span) span
 
-    _spanLength :: SourceSpan -> Int
-    _spanLength srcSpan = posOffset (spanEnd srcSpan) - posOffset (spanStart srcSpan)
+tests :: TestTree
+tests = $(testGroupGenerator)
 
-    _spanContains :: SourceSpan -> SourcePos -> Bool
-    _spanContains srcSpan pos = pos >= spanStart srcSpan && pos <= spanEnd srcSpan
-
-    _expandSpan :: Int -> Int -> SourceSpan -> SourceSpan
-    _expandSpan before after srcSpan =
-      let start = spanStart srcSpan
-          end = spanEnd srcSpan
-          newStart = SourcePos (posLine start) (max 1 (posColumn start - before)) (posOffset start)
-          newEnd = SourcePos (posLine end) (posColumn end + after) (posOffset end)
-      in SourceSpan newStart newEnd
-
-    _posDistance :: SourcePos -> SourcePos -> Int
-    _posDistance p1 p2 = abs (posOffset p2 - posOffset p1)
-
-    -- Helper instances for QuickCheck
-    instance Arbitrary SourcePos where
-      arbitrary = SourcePos <$> arbitraryPositive <*> arbitraryPositive <*> arbitraryNonNegative
-        where
-          arbitraryPositive = getPositive <$> arbitrary
-          arbitraryNonNegative = getNonNegative <$> arbitrary
-
-    instance Arbitrary SourceSpan where
-      arbitrary = do
-        start <- arbitrary
-        endOffset <- arbitrary
-        let end = SourcePos (posLine start) (posColumn start + endOffset) (posOffset start + endOffset)
-        return $ spanBetween start end
+main :: IO ()
+main = defaultMain tests

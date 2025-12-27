@@ -81,6 +81,18 @@ import qualified Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec
 -- New Cabal QuickCheck Test Module
 import qualified Test.Unit.NewCabalQuickCheckTestSpec
 
+-- New Comprehensive QuickCheck Test Modules (2025)
+import qualified Test.Unit.CompilerIRQuickCheckTestSpec
+import qualified Test.Unit.OwnershipCommonTypesQuickCheckTestSpec
+import qualified Test.Unit.AnalyzerSymbolTableQuickCheckTestSpec
+import qualified Test.Unit.CompilerTypeCheckerQuickCheckTestSpec
+import qualified Test.Unit.CompilerGoAstQuickCheckTestSpec
+import qualified Test.Unit.DependenciesASTQuickCheckTestSpec
+import qualified Test.Unit.CompilerGoLexerQuickCheckTestSpec
+import qualified Test.Unit.CompilerGoParsingQuickCheckTestSpec
+import qualified Test.Unit.ErrorHandlerQuickCheckTestSpec
+import qualified Test.Unit.IntegratedCompilerQuickCheckTestSpec
+
 -- ============================================================================
 -- New QuickCheck Test Modules Added (2025)
 -- ============================================================================
@@ -2272,6 +2284,22 @@ tests =
   -- New Cabal QuickCheck Test Module - 10 comprehensive tests
   -- ============================================================================
   , Test.Unit.NewCabalQuickCheckTestSpec.tests
+
+  -- ============================================================================
+  -- New Comprehensive QuickCheck Test Modules (2025)
+  -- ============================================================================
+  , testGroup "New Comprehensive QuickCheck Test Modules (2025)"
+    [ Test.Unit.CompilerIRQuickCheckTestSpec.tests
+    , Test.Unit.OwnershipCommonTypesQuickCheckTestSpec.tests
+    , Test.Unit.AnalyzerSymbolTableQuickCheckTestSpec.tests
+    , Test.Unit.CompilerTypeCheckerQuickCheckTestSpec.tests
+    , Test.Unit.CompilerGoAstQuickCheckTestSpec.tests
+    , Test.Unit.DependenciesASTQuickCheckTestSpec.tests
+    , Test.Unit.CompilerGoLexerQuickCheckTestSpec.tests
+    , Test.Unit.CompilerGoParsingQuickCheckTestSpec.tests
+    , Test.Unit.ErrorHandlerQuickCheckTestSpec.tests
+    , Test.Unit.IntegratedCompilerQuickCheckTestSpec.tests
+    ]
 
   -- ============================================================================
   -- New Cabal QuickCheck Test Suite - 10 comprehensive tests

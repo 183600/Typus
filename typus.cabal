@@ -654,6 +654,18 @@ test-suite typus-test
         
         -- New Additional QuickCheck Test Module
         Test.Unit.NewAdditionalQuickCheckSpec,
+
+        -- New Comprehensive QuickCheck Test Modules (2025)
+        Test.Unit.CompilerIRQuickCheckTestSpec,
+        Test.Unit.OwnershipCommonTypesQuickCheckTestSpec,
+        Test.Unit.AnalyzerSymbolTableQuickCheckTestSpec,
+        Test.Unit.CompilerTypeCheckerQuickCheckTestSpec,
+        Test.Unit.CompilerGoAstQuickCheckTestSpec,
+        Test.Unit.DependenciesASTQuickCheckTestSpec,
+        Test.Unit.CompilerGoLexerQuickCheckTestSpec,
+        Test.Unit.CompilerGoParsingQuickCheckTestSpec,
+        Test.Unit.ErrorHandlerQuickCheckTestSpec,
+        Test.Unit.IntegratedCompilerQuickCheckTestSpec,
         
         -- New Additional Test Modules
         Test.Unit.AdditionalCorePropertiesSpec,
