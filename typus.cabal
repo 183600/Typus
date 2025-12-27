@@ -866,6 +866,7 @@ test-suite typus-test
         , Test.Unit.UtilsStringProcessingTestSpec
         , Test.Unit.DependencyAnalysisTestSpec
         , Test.Unit.EndToEndIntegrationTestSpec
+        , Test.Unit.SimpleStringTestsSpec
         
         
     other-modules:
