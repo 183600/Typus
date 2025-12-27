@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Test.Unit.OwnershipTransferBoundarySpec (tests) where
+module Test.Unit.OwnershipTransferBoundaryNewSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)

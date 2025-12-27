@@ -97,6 +97,8 @@ import qualified Test.Unit.PerformanceEnhancedQuickCheckSpec
 -- New Comprehensive Cabal Test Suite (2025)
 import qualified Test.Unit.NewCabalTestSuiteSpec
 
+import qualified Test.Unit.NewComprehensiveCabalQuickCheckTestSuite
+
 -- New Cabal Test Modules (10 comprehensive QuickCheck tests)
 import qualified Test.Unit.ParserErrorRecoveryQuickCheckSpec
 import qualified Test.Unit.OwnershipTransferConsistencyQuickCheckSpec
@@ -226,11 +228,11 @@ import qualified Test.Unit.CompilerErrorRecoveryAdvancedSpec
 import qualified Test.Unit.ParserUnicodeHandlingSpec
 import qualified Test.Unit.OwnershipMemoryLeakPreventionSpec
 import qualified Test.Unit.TypeSystemInferenceBoundarySpec
-import qualified Test.Unit.SourceLocationPrecisionSpec
+import qualified Test.Unit.SourceLocationPrecisionNewSpec
 import qualified Test.Unit.ErrorHandlerConsistencySpec
 import qualified Test.Unit.DependencyAnalysisCyclicSpec
-import qualified Test.Unit.IntegrationEndToEndSpec
-import qualified Test.Unit.PerformanceRegressionSpec
+import qualified Test.Unit.IntegrationEndToEndNewSpec
+import qualified Test.Unit.PerformanceRegressionNewSpec
 import qualified Test.Unit.SecurityValidationSpec
 
 -- New QuickCheck Test Modules (2025)
@@ -323,7 +325,7 @@ import qualified Test.Unit.NewCabalTestSuiteSpec
 -- Advanced Test Modules
 import qualified Test.Unit.BoundaryConditionsAdvancedSpec
 import qualified Test.Unit.ErrorRecoveryAdvancedSpec
-import qualified Test.Unit.PerformanceRegressionSpec
+import qualified Test.Unit.PerformanceRegressionNewSpec
 import qualified Test.Unit.IntegrationAdvancedSpec
 
 -- New Simple Cabal Test Module
@@ -403,7 +405,7 @@ import qualified Test.Unit.NewCoreQuickCheckPropertiesSpec
 
 -- New Advanced Test Suite (2025)
 import qualified Test.Unit.CompilerErrorRecoverySpec
-import qualified Test.Unit.TypeInferenceAdvancedSpec
+import qualified Test.Unit.TypeInferenceAdvancedNewSpec
 import qualified Test.Unit.OwnershipMemorySafetySpec
 import qualified Test.Unit.DependencyAnalysisAdvancedSpec
 import qualified Test.Unit.SourcePositionPrecisionSpec
@@ -580,7 +582,7 @@ import qualified Test.Unit.ErrorRecoveryBasicSpec
 import qualified Test.Unit.IntegrationBasicSpec
 -- New Cabal QuickCheck test modules
 import qualified Test.Unit.NewCabalQuickCheckTestSpec
-import qualified Test.Unit.NewCabalQuickCheckTestSuite
+import qualified Test.Unit.NewComprehensiveCabalQuickCheckTestSuite
 
 -- New core test modules
 import qualified Test.Unit.SourceLocationCoreTestSpec
@@ -640,13 +642,13 @@ import qualified Test.Unit.IntegratedCompilerSpec
 
 -- New Cabal Test Modules (2025) - 8 comprehensive tests
 import qualified Test.Unit.CompilerOptimizationConsistencySpec
-import qualified Test.Unit.OwnershipTransferBoundarySpec
-import qualified Test.Unit.DependentTypeConstraintValidationSpec
-import qualified Test.Unit.SourceLocationPrecisionSpec
-import qualified Test.Unit.ErrorRecoveryConsistencySpec
-import qualified Test.Unit.TypeInferenceAdvancedSpec
-import qualified Test.Unit.IntegrationEndToEndSpec
-import qualified Test.Unit.PerformanceRegressionSpec
+import qualified Test.Unit.OwnershipTransferBoundaryNewSpec
+import qualified Test.Unit.DependentTypeConstraintValidationNewSpec
+import qualified Test.Unit.SourceLocationPrecisionNewSpec
+import qualified Test.Unit.ErrorRecoveryConsistencyNewSpec
+import qualified Test.Unit.TypeInferenceAdvancedNewSpec
+import qualified Test.Unit.IntegrationEndToEndNewSpec
+import qualified Test.Unit.PerformanceRegressionNewSpec
 
 import qualified Test.Unit.NewCabalPropertySpec
 import qualified Test.Unit.ErrorHandlerCoreQuickCheckSpec
@@ -893,7 +895,7 @@ import qualified Test.Unit.DependentTypeSystemBoundaryQuickCheckSpec
 
 -- New test modules for enhanced coverage
 import qualified Test.Unit.DirectiveInteractionSpec
-import qualified Test.Unit.OwnershipTransferBoundarySpec
+import qualified Test.Unit.OwnershipTransferBoundaryNewSpec
 import qualified Test.Unit.DependentTypeConstraintSpec
 import qualified Test.Unit.SyntaxValidatorBoundarySpec
 
@@ -1526,7 +1528,7 @@ tests =
         ]
     , testGroup "New Enhanced Test Modules (2025)"
         [ Test.Unit.DirectiveInteractionSpec.tests
-        , Test.Unit.OwnershipTransferBoundarySpec.tests
+        , Test.Unit.OwnershipTransferBoundaryNewSpec.tests
         , Test.Unit.DependentTypeConstraintSpec.tests
 
         , Test.Unit.SyntaxValidatorBoundarySpec.tests
@@ -1582,14 +1584,13 @@ tests =
         ]
     , testGroup "New Advanced Test Suite (2025)"
         [ Test.Unit.CompilerErrorRecoverySpec.tests
-        , Test.Unit.TypeInferenceAdvancedSpec.tests
+        , Test.Unit.TypeInferenceAdvancedNewSpec.tests
         , Test.Unit.OwnershipMemorySafetySpec.tests
         , Test.Unit.DependencyAnalysisAdvancedSpec.tests
         , Test.Unit.SourcePositionPrecisionSpec.tests
         , Test.Unit.TextProcessingRobustnessSpec.tests
-        , Test.Unit.CompilerOptimizationSpec.tests
-        , Test.Unit.IntegrationEndToEndSpec.tests
-        ]
+            , Test.Unit.CompilerOptimizationSpec.tests
+            , Test.Unit.IntegrationEndToEndNewSpec.tests        ]
     , testGroup "New Cabal Test Suite"
         [ Test.Unit.NewCabalTestSuiteSpec.tests
         ]
@@ -2113,11 +2114,11 @@ tests =
     , Test.Unit.ParserUnicodeHandlingSpec.tests
     , Test.Unit.OwnershipMemoryLeakPreventionSpec.tests
     , Test.Unit.TypeSystemInferenceBoundarySpec.tests
-    , Test.Unit.SourceLocationPrecisionSpec.tests
+    , Test.Unit.SourceLocationPrecisionNewSpec.tests
     , Test.Unit.ErrorHandlerConsistencySpec.tests
     , Test.Unit.DependencyAnalysisCyclicSpec.tests
     , Test.Unit.IntegrationEndToEndSpec.tests
-    , Test.Unit.PerformanceRegressionSpec.tests
+    , Test.Unit.PerformanceRegressionNewSpec.tests
     , Test.Unit.SecurityValidationSpec.tests
     ]
 
@@ -2188,12 +2189,17 @@ tests =
   -- ============================================================================
   , testGroup "New Cabal Test Modules (2025) - Advanced Testing"
     [ Test.Unit.CompilerOptimizationConsistencySpec.tests
-    , Test.Unit.OwnershipTransferBoundarySpec.tests
+    , Test.Unit.OwnershipTransferBoundaryNewSpec.tests
     , Test.Unit.DependentTypeConstraintValidationSpec.tests
-    , Test.Unit.SourceLocationPrecisionSpec.tests
-    , Test.Unit.ErrorRecoveryConsistencySpec.tests
-    , Test.Unit.TypeInferenceAdvancedSpec.tests
-    , Test.Unit.IntegrationEndToEndSpec.tests
-    , Test.Unit.PerformanceRegressionSpec.tests
+    , Test.Unit.SourceLocationPrecisionNewSpec.tests
+    , Test.Unit.ErrorRecoveryConsistencyNewSpec.tests
+    , Test.Unit.TypeInferenceAdvancedNewSpec.tests
+    , Test.Unit.IntegrationEndToEndNewSpec.tests
+    , Test.Unit.PerformanceRegressionNewSpec.tests
     ]
+
+  -- ============================================================================
+  -- New Cabal QuickCheck Test Suite - 10 comprehensive tests
+  -- ============================================================================
+  , Test.Unit.NewComprehensiveCabalQuickCheckTestSuite.tests
   ]

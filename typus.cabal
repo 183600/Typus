@@ -396,6 +396,17 @@ test-suite typus-test
         Test.Unit.SourceLocationAdditionalSpec,
         Test.Unit.ParserAdditionalSpec,
         Test.Unit.AdditionalTypusSpec,
+
+        -- New Cabal Test Modules (2025) - 8 comprehensive tests
+        Test.Unit.CompilerOptimizationConsistencySpec,
+        Test.Unit.OwnershipTransferBoundaryNewSpec,
+        Test.Unit.DependentTypeConstraintValidationSpec,
+        Test.Unit.SourceLocationPrecisionNewSpec,
+        Test.Unit.ErrorRecoveryConsistencyNewSpec,
+        Test.Unit.TypeInferenceAdvancedNewSpec,
+        Test.Unit.IntegrationEndToEndNewSpec,
+        Test.Unit.PerformanceRegressionNewSpec,
+        
         Test.Golden,
         Test.Golden.Tests,
         Test.Golden.CompilerSpec,
@@ -551,7 +562,6 @@ test-suite typus-test
         
         -- New Enhanced Test Modules (2025)
         Test.Unit.DirectiveInteractionSpec,
-        Test.Unit.OwnershipTransferBoundarySpec,
         Test.Unit.DependentTypeConstraintSpec,
 
         -- New Core Functionality Test Modules
@@ -569,13 +579,11 @@ test-suite typus-test
         
 -- New Comprehensive Test Modules (2025)
         Test.Unit.CompilerErrorRecoverySpec,
-        Test.Unit.TypeInferenceAdvancedSpec,
         Test.Unit.OwnershipMemorySafetySpec,
         Test.Unit.DependencyAnalysisAdvancedSpec,
         Test.Unit.SourcePositionPrecisionSpec,
         Test.Unit.TextProcessingRobustnessSpec,
         Test.Unit.CompilerOptimizationSpec,
-        Test.Unit.IntegrationEndToEndSpec,
 
         -- New Comprehensive Test Suite (2025)
         Test.Unit.SourceLocationBoundarySpec,
@@ -596,12 +604,10 @@ test-suite typus-test
         Test.Unit.CombinedFeaturesSpec,
         Test.Unit.ErrorBoundarySpec,
         Test.Unit.TextProcessingSpec,
-        Test.Unit.PerformanceRegressionSpec,
         Test.Unit.CompilerIntegrationSpec,
         Test.Unit.TypeSystemEdgeCasesSpec,
         Test.Unit.OwnershipComplexScenariosSpec,
         Test.Unit.ParserRecoverySpec,
-        Test.Unit.SourceLocationPrecisionSpec,
         Test.Unit.DependencyAnalysisSpec,
         Test.Unit.NewEnhancedTestSuiteSpec,
         Test.Unit.CompilerErrorHandlerTestSpec,
@@ -661,7 +667,7 @@ test-suite typus-test
         Test.Unit.ParserBoundarySpec,
         Test.Unit.CompilerErrorBoundarySpec,
         Test.Unit.NewQuickCheckPropertiesSpec,
-        Test.Unit.NewCabalQuickCheckTestSuite,
+        Test.Unit.NewComprehensiveCabalQuickCheckTestSuite,
         
         -- New Cabals Test Modules (10 comprehensive tests)
         Test.Unit.ParserErrorRecoveryCabalsSpec,
@@ -822,6 +828,9 @@ test-suite typus-test
         , Test.Unit.CabalMemorySafetySpec
         , Test.Unit.CabalRegressionSpec
         , Test.Unit.CabalEndToEndSpec
+        
+        -- New Cabal QuickCheck Test Suite
+        , Test.Unit.NewComprehensiveCabalQuickCheckTestSuite
     other-modules:
             Test.Dependencies.Arbitrary
     build-depends:

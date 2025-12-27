@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Test.Unit.PerformanceRegressionSpec (tests) where
+module Test.Unit.PerformanceRegressionNewSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)

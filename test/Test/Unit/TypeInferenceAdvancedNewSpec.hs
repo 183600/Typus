@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE GADTs #-}
 
-module Test.Unit.TypeInferenceAdvancedSpec (tests) where
+module Test.Unit.TypeInferenceAdvancedNewSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)

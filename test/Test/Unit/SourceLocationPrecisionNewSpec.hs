@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Test.Unit.SourceLocationPrecisionSpec (tests) where
+module Test.Unit.SourceLocationPrecisionNewSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)

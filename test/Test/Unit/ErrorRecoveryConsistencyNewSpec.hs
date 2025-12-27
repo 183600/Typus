@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Test.Unit.ErrorRecoveryConsistencySpec (tests) where
+module Test.Unit.ErrorRecoveryConsistencyNewSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)

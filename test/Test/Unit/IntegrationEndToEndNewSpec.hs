@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Test.Unit.IntegrationEndToEndSpec (tests) where
+module Test.Unit.IntegrationEndToEndNewSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
