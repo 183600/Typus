@@ -49,6 +49,15 @@ import qualified Test.Unit.NewCabalBoundaryConditionsSpec
 import qualified Test.Unit.UtilsEnhancedQuickCheckSpec
 import qualified Test.Unit.SourceLocationEnhancedQuickCheckSpec
 
+-- New Comprehensive Test Modules Added (2025)
+import qualified Test.Unit.NewParserPropertiesSpec
+import qualified Test.Unit.NewSourceLocationMathSpec
+import qualified Test.Unit.NewErrorHandlerCoreSpec
+import qualified Test.Unit.NewUtilsStringPropertiesSpec
+import qualified Test.Unit.NewOwnershipTransferPropertiesSpec
+import qualified Test.Unit.NewDependenciesCorePropertiesSpec
+import qualified Test.Unit.NewSyntaxValidatorBoundarySpec
+
 -- New Comprehensive Test Modules (2025)
 import qualified Test.Unit.StringAnalysisSpec
 import qualified Test.Unit.CompilerOptimizationSpec
@@ -1236,6 +1245,17 @@ tests =
     , Test.Unit.SourceLocationAdditionalQuickCheckSpec.tests
     , Test.Unit.ParserAdditionalSpec.tests
     , Test.Unit.NewCabalTestSpec.tests
+    
+    -- New Comprehensive Test Modules (2025)
+    , testGroup "New Comprehensive QuickCheck Test Suite (2025)"
+        [ Test.Unit.NewParserPropertiesSpec.tests
+        , Test.Unit.NewSourceLocationMathSpec.tests
+        , Test.Unit.NewErrorHandlerCoreSpec.tests
+        , Test.Unit.NewUtilsStringPropertiesSpec.tests
+        , Test.Unit.NewOwnershipTransferPropertiesSpec.tests
+        , Test.Unit.NewDependenciesCorePropertiesSpec.tests
+        , Test.Unit.NewSyntaxValidatorBoundarySpec.tests
+        ]
     , testGroup "New Test Modules"
         [ Test.Unit.SourceLocationQuickCheckSpec.tests
         , Test.Unit.ErrorHandlerQuickCheckSpec.tests
