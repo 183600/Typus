@@ -389,6 +389,9 @@ import qualified Test.Unit.ConcurrentSafetyAdvanced2025Spec
 import qualified Test.Unit.PerformanceOptimization2025Spec
 import qualified Test.Unit.BoundaryConditionsAdvanced2025Spec
 
+-- New Cabal Test Module
+import qualified Test.Unit.NewCabalTestSpec
+
 -- New Test Modules Added for Enhanced Testing (2025)
 import qualified Test.Unit.NewTextProcessingQuickCheckSpec
 import qualified Test.Unit.NewSourceLocationTrackingQuickCheckSpec
@@ -1822,5 +1825,6 @@ tests =
     , Test.Unit.PerformanceOptimization2025Spec.tests
     , Test.Unit.BoundaryConditionsAdvanced2025Spec.tests
     , Test.Unit.NewComprehensiveCabalTestSpec.tests
+    , Test.Unit.NewCabalTestSpec.tests
     ]
   ]

@@ -731,10 +731,8 @@ test-suite typus-test
         Test.Unit.TypeInferenceComplex2025Spec,
         Test.Unit.ConcurrentSafetyAdvanced2025Spec,
         Test.Unit.PerformanceOptimization2025Spec,
-        Test.Unit.BoundaryConditionsAdvanced2025Spec
-        
-                -- New Core QuickCheck Test Modules (2025)
-            , Test.Unit.CoreSourceLocationQuickCheckSpec
+        Test.Unit.BoundaryConditionsAdvanced2025Spec,
+        Test.Unit.CoreSourceLocationQuickCheckSpec
             , Test.Unit.CoreErrorHandlerQuickCheckSpec
             , Test.Unit.CoreParserQuickCheckSpec
             , Test.Unit.CoreOwnershipQuickCheckSpec
