@@ -276,6 +276,16 @@ import qualified Test.Unit.EnhancedErrorHandlerQuickCheckSpec
 import qualified Test.Unit.EnhancedDependenciesQuickCheckSpec
 import qualified Test.Unit.EnhancedSyntaxValidatorQuickCheckSpec
 
+-- New Additional Test Modules (2025)
+import qualified Test.Unit.NewCabalQuickCheckTestsSpec
+import qualified Test.Unit.CompilerBasicPropertiesSpec
+import qualified Test.Unit.SourceLocationMathSpec
+import qualified Test.Unit.ErrorHandlingRobustnessSpec
+import qualified Test.Unit.TypeInferenceBasicSpec
+import qualified Test.Unit.OwnershipTransferSpec
+import qualified Test.Unit.ParserCombinatorSpec
+import qualified Test.Unit.UtilsStringSpec
+
 -- New comprehensive test modules added for enhanced coverage
 import qualified Test.Unit.NewIntegratedParserTestsSpec
 import qualified Test.Unit.NewCompilerErrorRecoverySpec
@@ -1894,5 +1904,17 @@ tests =
     , Test.Unit.NewQuickCheckUtilsSpec.tests
     , Test.Unit.NewQuickCheckSourceLocationSpec.tests
     , Test.Unit.NewErrorRecoverySpec.tests
+    ]
+
+  -- New Additional Test Modules (2025)
+  , testGroup "New Additional Test Modules 2025"
+    [ Test.Unit.NewCabalQuickCheckTestsSpec.tests
+    , Test.Unit.CompilerBasicPropertiesSpec.tests
+    , Test.Unit.SourceLocationMathSpec.tests
+    , Test.Unit.ErrorHandlingRobustnessSpec.tests
+    , Test.Unit.TypeInferenceBasicSpec.tests
+    , Test.Unit.OwnershipTransferSpec.tests
+    , Test.Unit.ParserCombinatorSpec.tests
+    , Test.Unit.UtilsStringSpec.tests
     ]
   ]
