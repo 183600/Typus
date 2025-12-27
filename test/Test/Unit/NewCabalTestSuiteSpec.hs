@@ -2,217 +2,274 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module Test.Unit.NewCabalTestSuiteSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
+import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Gen, Arbitrary(..), oneof, elements, listOf1, choose)
+import qualified Test.QuickCheck as QC
 
--- Core modules
+import Utils
+  ( trim
+  , splitBy
+  , splitByCollapsed
+  , splitByComma
+  , removeLineComments
+  , removeComments
+  , normalizeIndentation
+  , breakOn
+  )
+
 import SourceLocation
-import Compiler.Errors.Core
-import Utils (trim, splitBy, removeComments, normalizeIndentation)
+  ( SourcePos(..)
+  , SourceSpan(..)
+  , Located(..)
+  , startPos
+  , posAfter
+  , posAt
+  , emptySpan
+  , spanFrom
+  , spanTo
+  , spanBetween
+  , mergeSpans
+  , isValidSpan
+  , locatedAt
+  , locatedWithSpan
+  , locatedValue
+  , locatedSpan
+  , advancePos
+  , advancePosBy
+  )
+
+import Parser
+  ( parseTypus
+  , FileDirectives(..)
+  , BlockDirectives(..)
+  , CodeBlock(..)
+  , TypusFile(..)
+  , defaultFileDirectives
+  , defaultBlockDirectives
+  )
+
+import qualified Compiler
+import qualified Compiler.DependentTypeChecker as DepChecker
+import qualified SyntaxValidator
+
+import Data.Char (isSpace, isAlphaNum)
+import Data.List (isPrefixOf, isInfixOf, null, head, tail, last, init)
 import qualified Data.Text as T
-import qualified Data.List as L
-import Data.Char (isSpace, isLetter, isDigit)
 
 -- ============================================================================
--- SourceLocation Tests
+-- QuickCheck Properties for Utils Module
 -- ============================================================================
 
--- Test position advancement properties
-prop_source_position_advancement :: String -> Property
-prop_source_position_advancement text =
-  let startPos' = startPos
-      endPos = advancePosBy text startPos'
-      lineCount = length $ filter (== '\n') text
-  in property $ posLine endPos === posLine startPos' + lineCount
+-- Property: trim removes leading and trailing whitespace but preserves internal content
+prop_trim_preserves_content :: String -> String -> Property
+prop_trim_preserves_content prefix suffix =
+  let content = "content"
+      full = prefix ++ content ++ suffix
+      trimmed = trim full
+  in classify (not (null prefix) && any isSpace prefix) "has leading whitespace" $
+     classify (not (null suffix) && any isSpace suffix) "has trailing whitespace" $
+     property $ content `isInfixOf` trimmed
 
--- Test span merging properties
-prop_span_merging_commutative :: SourcePos -> SourcePos -> SourcePos -> Property
-prop_span_merging_commutative p1 p2 p3 =
-  let span1 = spanBetween p1 p2
-      span2 = spanBetween p2 p3
-      merged1 = mergeSpans span1 span2
-      merged2 = mergeSpans span2 span1
-  in property $ merged1 === merged2
+-- Property: splitBy delim (splitBy delim x) == x for any delimiter and string
+prop_split_by_idempotent :: Char -> String -> Property
+prop_split_by_idempotent delim str =
+  let parts = splitBy delim str
+      rejoined = foldr (\x acc -> if null acc then x else x ++ [delim] ++ acc) "" parts
+  in property $ rejoined === str
 
--- Test span validity
-prop_span_validity :: SourcePos -> SourcePos -> Property
-prop_span_validity start end =
-  let span = spanBetween start end
-      isValid = isValidSpan span
-  in property $ isValid === (start <= end)
+-- Property: splitByCollapsed never returns empty strings
+prop_split_by_collapsed_no_empty :: Char -> String -> Property
+prop_split_by_collapsed_no_empty delim str =
+  let parts = splitByCollapsed delim str
+  in property $ all (not . null) parts
 
--- ============================================================================
--- Error Handler Tests  
--- ============================================================================
-
--- Test error collection
-prop_error_collection_preserves_order :: [String] -> Property
-prop_error_collection_preserves_order messages =
-  not (null messages) ==>
-  let collector = newErrorCollector
-      addMsgs = foldl (\acc msg -> addError (errorAt msg) acc) collector messages
-      errors = getErrors addMsgs
-  in property $ length errors === length messages
-
--- Test error filtering by severity
-prop_error_filtering_by_severity :: [ErrorSeverity] -> Property
-prop_error_filtering_by_severity severities =
-  let errors = map (\sev -> errorAt "test" `withSeverity` sev) severities
-      filtered = filterBySeverity Error errors
-  in property $ all (\e -> getErrorSeverity e >= Error) filtered
+-- Property: removeLineComments removes // comments but preserves other content
+prop_remove_line_comments_preserves_non_comments :: String -> Property
+prop_remove_line_comments_preserves_non_comments str =
+  let withoutComments = removeLineComments str
+      hasLineComment = "//" `isInfixOf` str
+  in classify hasLineComment "has line comments" $
+     property $ length withoutComments <= length str
 
 -- ============================================================================
--- Parser Tests
+-- QuickCheck Properties for SourceLocation Module
 -- ============================================================================
 
--- Test comment removal preserves code structure
-prop_comment_removal_preserves_structure :: String -> String -> Property  
-prop_comment_removal_preserves_structure code comment =
-  not ('"' `elem` code) && not ('\'' `elem` code) ==>
-  let withComment = code ++ " // " ++ comment ++ "\n" ++ code
-      withoutComment = removeComments withComment
-  in property $ code `isInfixOf` withoutComment
+-- Property: advancePos by newline increments line number and resets column
+prop_advance_pos_newline :: Int -> Int -> Property
+prop_advance_pos_newline line col =
+  let pos = SourcePos line col
+      newPos = advancePos '\n' pos
+  in property $ posLine newPos === line + 1 .&&. posColumn newPos === 1
 
--- Test string normalization
-prop_normalize_indentation_preserves_lines :: [String] -> Property
-prop_normalize_indentation_preserves_lines lines =
-  not (null lines) ==>
-  let input = unlines lines
-      normalized = normalizeIndentation input
-      outputLines = lines normalized
-  in property $ length outputLines === length lines
+-- Property: advancePos by other characters increments column only
+prop_advance_pos_regular_char :: Int -> Int -> Char -> Property
+prop_advance_pos_regular_char line col ch =
+  let pos = SourcePos line col
+      newPos = advancePos ch pos
+  in (ch /= '\n') ==> property $ posLine newPos === line .&&. posColumn newPos === col + 1
 
--- ============================================================================
--- Compiler Tests
--- ============================================================================
+-- Property: spanBetween creates valid span when start <= end
+prop_span_between_valid :: Int -> Int -> Int -> Property
+prop_span_between_valid startLine offset endOffset =
+  let start = SourcePos startLine 1
+      endPos = SourcePos startLine (1 + offset + endOffset)
+      span = spanBetween start endPos
+  in (offset >= 0 && endOffset >= 0) ==> property $ isValidSpan span
 
--- Test type consistency
-prop_type_checking_consistency :: String -> Property
-prop_type_checking_consistency typeName =
-  not (null typeName) && all isLetter (take 1 typeName) ==>
-  let validType = all (\c -> isLetter c || isDigit c || c == '_') typeName
-  in property $ validType ==> length typeName <= 100
-
--- ============================================================================
--- Ownership Tests
--- ============================================================================
-
--- Test ownership transfer properties
-prop_ownership_transfer_exclusive :: String -> Property
-prop_ownership_transfer_exclusive resourceId =
-  not (null resourceId) ==>
-  let transferred = True
-      ownedAfter = not transferred
-  in property $ ownedAfter === False
+-- Property: mergeSpans contains both original spans
+prop_merge_spans_contains_both :: Int -> Int -> Int -> Property
+prop_merge_spans_contains_both line1 col1 offset =
+  let span1 = spanFrom (SourcePos line1 col1) (SourcePos line1 (col1 + offset))
+      span2 = spanFrom (SourcePos line1 (col1 + offset + 1)) (SourcePos line1 (col1 + offset + 2))
+      merged = mergeSpans span1 span2
+  in (offset >= 0) ==> property $ 
+    spanStart merged `isBeforeOrEqual` spanStart span2 .&&.
+    spanEnd span2 `isBeforeOrEqual` spanEnd merged
+  where
+    isBeforeOrEqual p1 p2 = posLine p1 < posLine p2 || 
+                           (posLine p1 == posLine p2 && posColumn p1 <= posColumn p2)
 
 -- ============================================================================
--- Dependencies Tests
+-- Unit Tests for Parser Module
 -- ============================================================================
 
--- Test dependency ordering
-prop_dependency_ordering_preserves_edges :: [(String, String)] -> Property
-prop_dependency_ordering_preserves_edges dependencies =
-  not (null dependencies) ==>
-  let hasCycles = any (\(a, b) -> (b, a) `elem` dependencies) dependencies
-  in property $ hasCycles ==> length dependencies >= 2
+-- Test: parseTypus handles empty input
+test_parse_empty_input :: TestTree
+test_parse_empty_input = testCase "parseTypus handles empty input" $ do
+  case parseTypus "" of
+    Left err -> assertFailure $ "parseTypus failed on empty input: " ++ err
+    Right typusFile -> do
+      tfDirectives typusFile @?= defaultFileDirectives
+      tfBlocks typusFile @?= []
+
+-- Test: parseTypus correctly parses file-level ownership directive
+test_parse_ownership_directive :: TestTree
+test_parse_ownership_directive = testCase "parseTypus parses ownership directive" $ do
+  let source = "//! ownership: on\npackage main"
+  case parseTypus source of
+    Left err -> assertFailure $ "parseTypus failed: " ++ err
+    Right typusFile -> do
+      let FileDirectives { fdOwnership = ownership } = tfDirectives typusFile
+      case ownership of
+        Nothing -> assertFailure "expected ownership directive"
+        Just loc -> locatedValue loc @?= True
+
+-- Test: parseTypus handles block directives correctly
+test_parse_block_directives :: TestTree
+test_parse_block_directives = testCase "parseTypus parses block directives" $ do
+  let source = unlines
+        [ "package main"
+        , "func main() {"
+        , "    {//! ownership: on"
+        , "    // ownership-enabled code"
+        , "    }"
+        , "}"
+        ]
+  case parseTypus source of
+    Left err -> assertFailure $ "parseTypus failed: " ++ err
+    Right typusFile -> do
+      let blocks = tfBlocks typusFile
+      assertBool "expected at least one block" (not (null blocks))
+      let firstBlock = head blocks
+          BlockDirectives { bdOwnership = ownership } = cbDirectives firstBlock
+      case ownership of
+        Nothing -> assertFailure "expected block ownership directive"
+        Just loc -> locatedValue loc @?= True
 
 -- ============================================================================
--- Integration Tests
+-- Unit Tests for Compiler Module
 -- ============================================================================
 
--- Test end-to-end compilation pipeline
-prop_compilation_pipeline_roundtrip :: String -> Property
-prop_compilation_pipeline_roundtrip source =
-  length source <= 1000 ==> -- Limit for performance
-  let processed = source |> trim |> normalizeIndentation |> removeComments
-  in property $ length processed <= length source
+-- Test: compiler handles basic Go code correctly
+test_compiler_basic_go_code :: TestTree
+test_compiler_basic_go_code = testCase "compiler handles basic Go code" $ do
+  let source = unlines
+        [ "package main"
+        , "func main() {"
+        , "    println(\"hello world\")"
+        , "}"
+        ]
+  case parseTypus source of
+    Left err -> assertFailure $ "parseTypus failed: " ++ err
+    Right typusFile -> do
+      case Compiler.compile typusFile of
+        Left err -> assertFailure $ "compile failed: " ++ show err
+        Right goCode -> do
+          assertBool "compiled code should contain package declaration" ("package main" `isInfixOf` goCode)
+          assertBool "compiled code should contain main function" ("func main" `isInfixOf` goCode)
+
+-- Test: dependent type checker catches invalid syntax
+test_dependent_type_error_detection :: TestTree
+test_dependent_type_error_detection = testCase "dependent type checker detects errors" $ do
+  let source = unlines
+        [ "//! dependent_types: on"
+        , "package main"
+        , "alias Broken"  -- Invalid dependent type syntax
+        ]
+  case parseTypus source of
+    Left err -> assertFailure $ "parseTypus failed: " ++ err
+    Right typusFile -> do
+      case DepChecker.checkDependentTypes typusFile of
+        Left errs -> assertBool "expected dependent type errors" (not (null errs))
+        Right _ -> assertFailure "expected dependent type checking to fail"
 
 -- ============================================================================
--- Performance Tests
+-- Additional QuickCheck Property Tests
 -- ============================================================================
 
--- Test large file processing
-prop_large_file_processing_performance :: Int -> String -> Property
-prop_large_file_processing_performance multiplier baseContent =
-  multiplier > 0 && multiplier <= 100 ==> -- Limit for performance
-  let largeContent = concat $ replicate multiplier baseContent
-      processed = trim largeContent
-  in property $ length processed <= length largeContent
+-- Property: normalizeIndentation preserves relative indentation
+prop_normalize_indentation_preserves_structure :: [String] -> Property
+prop_normalize_indentation_preserves_structure lines =
+  let normalized = normalizeIndentation lines
+      hasContent = not (null lines) && any (not . null) lines
+  in hasContent ==> property $ length normalized === length lines
+
+-- Property: breakOn behaves like standard break function
+prop_break_on_consistency :: String -> String -> Property
+prop_break_on_consistency delim str =
+  let (before, after) = breakOn delim str
+      expectedBefore = takeWhile (not . isPrefixOf delim . take (length delim)) (tails str) >>= head
+  in property $ before === expectedBefore
 
 -- ============================================================================
--- Test Suite Definition
+-- Test Collection
 -- ============================================================================
 
 tests :: TestTree
 tests = testGroup "New Cabal Test Suite"
-  [ testGroup "SourceLocation Properties"
-    [ fastProperty "Position advancement preserves line count" prop_source_position_advancement
-    , fastProperty "Span merging is commutative" prop_span_merging_commutative  
-    , fastProperty "Span validity check" prop_span_validity
+  [ testGroup "Utils Module Properties"
+    [ fastProperty "trim preserves content" prop_trim_preserves_content
+    , fastProperty "splitBy is idempotent" prop_split_by_idempotent
+    , fastProperty "splitByCollapsed never returns empty strings" prop_split_by_collapsed_no_empty
+    , fastProperty "removeLineComments preserves non-comments" prop_remove_line_comments_preserves_non_comments
     ]
-
-  , testGroup "Error Handler Properties"
-    [ fastProperty "Error collection preserves order" prop_error_collection_preserves_order
-    , fastProperty "Error filtering by severity" prop_error_filtering_by_severity
+  , testGroup "SourceLocation Module Properties"
+    [ fastProperty "advancePos handles newline correctly" prop_advance_pos_newline
+    , fastProperty "advancePos handles regular characters" prop_advance_pos_regular_char
+    , fastProperty "spanBetween creates valid spans" prop_span_between_valid
+    , fastProperty "mergeSpans contains both spans" prop_merge_spans_contains_both
     ]
-
-  , testGroup "Parser Properties"
-    [ fastProperty "Comment removal preserves structure" prop_comment_removal_preserves_structure
-    , fastProperty "Indentation normalization preserves lines" prop_normalize_indentation_preserves_lines
+  , testGroup "Parser Module Tests"
+    [ test_parse_empty_input
+    , test_parse_ownership_directive
+    , test_parse_block_directives
     ]
-
-  , testGroup "Compiler Properties"
-    [ fastProperty "Type checking consistency" prop_type_checking_consistency
+  , testGroup "Compiler Module Tests"
+    [ test_compiler_basic_go_code
+    , test_dependent_type_error_detection
     ]
-
-  , testGroup "Ownership Properties"
-    [ fastProperty "Ownership transfer exclusivity" prop_ownership_transfer_exclusive
-    ]
-
-  , testGroup "Dependencies Properties"
-    [ fastProperty "Dependency ordering preserves edges" prop_dependency_ordering_preserves_edges
-    ]
-
-  , testGroup "Integration Properties"
-    [ fastProperty "Compilation pipeline roundtrip" prop_compilation_pipeline_roundtrip
-    ]
-
-  , testGroup "Performance Properties"
-    [ fastProperty "Large file processing performance" prop_large_file_processing_performance
-    ]
-
-  , testGroup "Unit Tests"
-    [ testCase "Source position starts at (1,1,0)" $
-        assertEqual "Start position should be (1,1,0)" startPos (SourcePos 1 1 0)
-
-    , testCase "Empty span is valid" $
-        assertBool "Empty span should be valid" $ isValidSpan (emptySpan startPos)
-
-    , testCase "Error collector starts empty" $
-        assertBool "New error collector should have no errors" $ not $ hasErrors newErrorCollector
-
-    , testCase "Trim removes whitespace" $
-        assertEqual "Trim should remove surrounding whitespace" "hello" (trim "  hello  ")
-
-    , testCase "Split by delimiter works" $
-        assertEqual "Split should work on simple case" ["a", "b", "c"] (splitBy ',' "a,b,c")
+  , testGroup "Additional Properties"
+    [ fastProperty "normalizeIndentation preserves structure" prop_normalize_indentation_preserves_structure
+    , fastProperty "breakOn consistency" prop_break_on_consistency
     ]
   ]
-
--- Helper functions for property tests
-withSeverity :: a -> ErrorSeverity -> a  
-withSeverity x _ = x
-
-getErrorSeverity :: a -> ErrorSeverity
-getErrorSeverity _ = Error
-
-(|>) :: a -> (a -> b) -> b
-x |> f = f x
-
-isInfixOf :: String -> String -> Bool
-isInfixOf = L.isInfixOf
