@@ -374,6 +374,18 @@ import qualified Test.Unit.OwnershipOwnershipAnalysisSpec
 import qualified Test.Unit.DependenciesDependencyAnalysisSpec
 import qualified Test.Unit.SyntaxValidatorValidationSpec
 
+-- New Advanced Test Suite Imports (2025) - 10 comprehensive tests
+import qualified Test.Unit.NewComprehensiveTestSuite2025Spec
+import qualified Test.Unit.ParserDirectivesAdvanced2025Spec
+import qualified Test.Unit.SourceLocationMathAdvanced2025Spec
+import qualified Test.Unit.StringUtilsProcessingAdvanced2025Spec
+import qualified Test.Unit.ErrorRecoveryAdvancedTest2025Spec
+import qualified Test.Unit.OwnershipTransferComplex2025Spec
+import qualified Test.Unit.TypeInferenceComplex2025Spec
+import qualified Test.Unit.ConcurrentSafetyAdvanced2025Spec
+import qualified Test.Unit.PerformanceOptimization2025Spec
+import qualified Test.Unit.BoundaryConditionsAdvanced2025Spec
+
 -- New Test Modules Added for Enhanced Testing (2025)
 import qualified Test.Unit.NewTextProcessingQuickCheckSpec
 import qualified Test.Unit.NewSourceLocationTrackingQuickCheckSpec
@@ -745,7 +757,6 @@ import qualified Test.Unit.DependentTypeSystemBoundaryQuickCheckSpec
 import qualified Test.Unit.DirectiveInteractionSpec
 import qualified Test.Unit.OwnershipTransferBoundarySpec
 import qualified Test.Unit.DependentTypeConstraintSpec
-import qualified Test.Unit.TypeInferenceComplexSpec
 import qualified Test.Unit.SyntaxValidatorBoundarySpec
 
 import qualified Test.Unit.SourceLocationAccuracyQuickCheckSpec
@@ -1307,7 +1318,7 @@ tests =
         [ Test.Unit.DirectiveInteractionSpec.tests
         , Test.Unit.OwnershipTransferBoundarySpec.tests
         , Test.Unit.DependentTypeConstraintSpec.tests
-        , Test.Unit.TypeInferenceComplexSpec.tests
+
         , Test.Unit.SyntaxValidatorBoundarySpec.tests
         ]
     , testGroup "New Comprehensive QuickCheck Test Modules (2025)"
@@ -1793,5 +1804,19 @@ tests =
     , Test.Unit.TypeInferenceEdgeCasesSpec.tests
     , Test.Unit.IntegrationComplexWorkflowsSpec.tests
     , Test.Unit.TextProcessingBoundarySpec.tests
+    ]
+
+  -- New Advanced Test Suite (2025) - 10 comprehensive tests
+  , testGroup "New Advanced Test Suite 2025"
+    [ Test.Unit.NewComprehensiveTestSuite2025Spec.tests
+    , Test.Unit.ParserDirectivesAdvanced2025Spec.tests
+    , Test.Unit.SourceLocationMathAdvanced2025Spec.tests
+    , Test.Unit.StringUtilsProcessingAdvanced2025Spec.tests
+    , Test.Unit.ErrorRecoveryAdvancedTest2025Spec.tests
+    , Test.Unit.OwnershipTransferComplex2025Spec.tests
+    , Test.Unit.TypeInferenceComplex2025Spec.tests
+    , Test.Unit.ConcurrentSafetyAdvanced2025Spec.tests
+    , Test.Unit.PerformanceOptimization2025Spec.tests
+    , Test.Unit.BoundaryConditionsAdvanced2025Spec.tests
     ]
   ]

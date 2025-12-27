@@ -552,7 +552,6 @@ test-suite typus-test
         Test.Unit.DirectiveInteractionSpec,
         Test.Unit.OwnershipTransferBoundarySpec,
         Test.Unit.DependentTypeConstraintSpec,
-        Test.Unit.TypeInferenceComplexSpec,
 
         -- New Core Functionality Test Modules
         Test.Unit.CoreParserSpec,
@@ -717,10 +716,22 @@ test-suite typus-test
         Test.Unit.ParserBoundaryConditionsSpec,
         Test.Unit.UtilsStringProcessingEnhancedSpec,
         Test.Unit.ErrorHandlerErrorHandlingSpec,
-        Test.Unit.CompilerCompilationLogicSpec
-            , Test.Unit.OwnershipOwnershipAnalysisSpec
-            , Test.Unit.DependenciesDependencyAnalysisSpec
-            , Test.Unit.SyntaxValidatorValidationSpec
+        Test.Unit.CompilerCompilationLogicSpec,
+        Test.Unit.OwnershipOwnershipAnalysisSpec,
+        Test.Unit.DependenciesDependencyAnalysisSpec,
+        Test.Unit.SyntaxValidatorValidationSpec,
+
+        -- New Advanced Test Suite (2025) - 10 comprehensive tests
+        Test.Unit.NewComprehensiveTestSuite2025Spec,
+        Test.Unit.ParserDirectivesAdvanced2025Spec,
+        Test.Unit.SourceLocationMathAdvanced2025Spec,
+        Test.Unit.StringUtilsProcessingAdvanced2025Spec,
+        Test.Unit.ErrorRecoveryAdvancedTest2025Spec,
+        Test.Unit.OwnershipTransferComplex2025Spec,
+        Test.Unit.TypeInferenceComplex2025Spec,
+        Test.Unit.ConcurrentSafetyAdvanced2025Spec,
+        Test.Unit.PerformanceOptimization2025Spec,
+        Test.Unit.BoundaryConditionsAdvanced2025Spec
         
                 -- New Core QuickCheck Test Modules (2025)
             , Test.Unit.CoreSourceLocationQuickCheckSpec
