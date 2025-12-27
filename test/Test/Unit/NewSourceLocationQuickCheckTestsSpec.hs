@@ -1,181 +1,125 @@
-{-# OPTIONS_GHC -Wno-missing-export-lists #-}
+{-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
-module Test.Unit.NewSourceLocationQuickCheckTestsSpec where
+module Test.Unit.NewSourceLocationQuickCheckTestsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty)
-import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, choose, property, (==>), forAll)
+import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import Test.Tasty (TestTree)
 
-import SourceLocation
-import qualified Data.Text as T
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, posAfter, posAt, 
+                      emptySpan, spanFrom, spanTo, spanBetween, mergeSpans, isValidSpan,
+                      locatedAt, locatedWithSpan, locatedValue, locatedSpan, locatedPos,
+                      advancePos, advancePosBy, sourceLine, sourceColumn)
+import Data.Char (isSpace)
 import qualified Data.List as List
 
--- Additional generators for source location testing
-genSmallLine :: Gen Int
-genSmallLine = choose (1, 50)
+-- Property: Source position advances correctly with newline
+prop_source_pos_newline :: Int -> Int -> Property
+prop_source_pos_newline line col =
+  line >= 1 && line <= 100 && col >= 1 && col <= 100 ==>
+  let pos = SourcePos line col
+      advanced = advancePos pos '\n'
+  in sourceLine advanced === line + 1 .&&. sourceColumn advanced === 1
 
-genSmallColumn :: Gen Int
-genSmallColumn = choose (1, 100)
+-- Property: Source position advances correctly with tab
+prop_source_pos_tab :: Int -> Int -> Property
+prop_source_pos_tab line col =
+  line >= 1 && line <= 100 && col >= 1 && col <= 100 ==>
+  let pos = SourcePos line col
+      advanced = advancePos pos '\t'
+  in sourceLine advanced === line .&&. sourceColumn advanced >= col + 1
 
-genSmallOffset :: Gen Int
-genSmallOffset = choose (0, 1000)
+-- Property: Source position advances correctly with regular character
+prop_source_pos_regular_char :: Int -> Int -> Char -> Property
+prop_source_pos_regular_char line col ch =
+  line >= 1 && line <= 100 && col >= 1 && col <= 100 && 
+  ch /= '\n' && ch /= '\t' && ch /= '\r' ==>
+  let pos = SourcePos line col
+      advanced = advancePos pos ch
+  in sourceLine advanced === line .&&. sourceColumn advanced === col + 1
 
-genSourcePos :: Gen SourcePos
-genSourcePos = SourcePos <$> genSmallLine <*> genSmallColumn <*> genSmallOffset
+-- Property: Source span validity is consistent
+prop_source_span_validity :: Int -> Int -> Int -> Int -> Property
+prop_source_span_validity startLine startCol endLine endCol =
+  startLine >= 1 && startLine <= 100 && startCol >= 1 && startCol <= 100 &&
+  endLine >= 1 && endLine <= 100 && endCol >= 1 && endCol <= 100 ==>
+  let startPos = SourcePos startLine startCol
+      endPos = SourcePos endLine endCol
+      span = SourceSpan startPos endPos
+      valid = isValidSpan span
+      shouldBeValid = startLine < endLine || (startLine == endLine && startCol <= endCol)
+  in valid === shouldBeValid
 
-genValidSourceSpan :: Gen SourceSpan
-genValidSourceSpan = do
-  startLine <- genSmallLine
-  startCol <- genSmallColumn
-  startOffset <- genSmallOffset
-  let startPos = SourcePos startLine startCol startOffset
-  
-  endLine <- choose (startLine, startLine + 20)
-  endCol <- if endLine == startLine 
-            then choose (startCol, startCol + 100)
-            else genSmallColumn
-  endOffset <- choose (startOffset, startOffset + 2000)
-  let endPos = SourcePos endLine endCol endOffset
-  
-  return $ SourceSpan startPos endPos
+-- Property: Empty span is always valid
+prop_empty_span_valid :: Property
+prop_empty_span_valid =
+  let empty = emptySpan
+  in property $ isValidSpan empty
 
-genZeroLengthSpan :: Gen SourceSpan
-genZeroLengthSpan = do
-  line <- genSmallLine
-  col <- genSmallColumn
-  offset <- genSmallOffset
-  let pos = SourcePos line col offset
-  return $ SourceSpan pos pos
+-- Property: Span merging is commutative for overlapping spans
+prop_span_merge_commutative :: SourceSpan -> SourceSpan -> Property
+prop_span_merge_commutative span1 span2 =
+  isValidSpan span1 && isValidSpan span2 ==>
+  let merged1 = mergeSpans span1 span2
+      merged2 = mergeSpans span2 span1
+  in merged1 === merged2
 
-genMultiLineSpan :: Gen SourceSpan
-genMultiLineSpan = do
-  startLine <- genSmallLine
-  startCol <- genSmallColumn
-  startOffset <- genSmallOffset
-  let startPos = SourcePos startLine startCol startOffset
-  
-  endLine <- choose (startLine + 1, startLine + 10)
-  endCol <- genSmallColumn
-  endOffset <- choose (startOffset + 100, startOffset + 2000)
-  let endPos = SourcePos endLine endCol endOffset
-  
-  return $ SourceSpan startPos endPos
+-- Property: Span merging is associative
+prop_span_merge_associative :: SourceSpan -> SourceSpan -> SourceSpan -> Property
+prop_span_merge_associative span1 span2 span3 =
+  isValidSpan span1 && isValidSpan span2 && isValidSpan span3 ==>
+  let merge12 = mergeSpans span1 span2
+      merge23 = mergeSpans span2 span3
+      merge123_1 = mergeSpans merge12 span3
+      merge123_2 = mergeSpans span1 merge23
+  in merge123_1 === merge123_2
 
--- Property: Source span length is non-negative
-prop_sourceSpanLengthNonNegative :: SourceSpan -> Bool
-prop_sourceSpanLengthNonNegative span = 
-  let start = spanStart span
+-- Property: Located values preserve their content
+prop_located_preserves_content :: String -> SourcePos -> Property
+prop_located_preserves_content value pos =
+  let located = locatedAt pos value
+  in locatedValue located === value
+
+-- Property: Located values preserve their position
+prop_located_preserves_position :: String -> SourcePos -> Property
+prop_located_preserves_position value pos =
+  let located = locatedAt pos value
+  in locatedPos located === pos
+
+-- Property: Span between positions is correct
+prop_span_between_positions :: SourcePos -> SourcePos -> Property
+prop_span_between_positions pos1 pos2 =
+  let span = spanBetween pos1 pos2
+      start = spanStart span
       end = spanEnd span
-      startOffset = sourcePosOffset start
-      endOffset = sourcePosOffset end
-      length = endOffset - startOffset
-  in length >= 0
+  in start === pos1 .&&. end === pos2
 
--- Property: Zero-length spans have same start and end positions
-prop_zeroLengthSpanPositionsEqual :: SourceSpan -> Bool
-prop_zeroLengthSpanPositionsEqual span = 
-  let start = spanStart span
-      end = spanEnd span
-      startOffset = sourcePosOffset start
-      endOffset = sourcePosOffset end
-      length = endOffset - startOffset
-  in length == 0 ==> start == end
+-- Property: Position advancement by string is consistent
+prop_pos_advance_by_string :: SourcePos -> String -> Property
+prop_pos_advance_by_string pos str =
+  let advanced1 = foldl advancePos pos str
+      advanced2 = advancePosBy pos str
+  in advanced1 === advanced2
 
--- Property: Multi-line spans have different line numbers
-prop_multiLineSpanHasDifferentLines :: SourceSpan -> Bool
-prop_multiLineSpanHasDifferentLines span = 
-  let start = spanStart span
-      end = spanEnd span
-      startLine = sourcePosLine start
-      endLine = sourcePosLine end
-  in startLine /= endLine ==> endLine > startLine
-
--- Property: Source position ordering is consistent
-prop_sourcePositionOrdering :: SourcePos -> SourcePos -> Bool
-prop_sourcePositionOrdering pos1 pos2 = 
-  let line1 = sourcePosLine pos1
-      line2 = sourcePosLine pos2
-      col1 = sourcePosColumn pos1
-      col2 = sourcePosColumn pos2
-      offset1 = sourcePosOffset pos1
-      offset2 = sourcePosOffset pos2
-  in if line1 < line2 then True
-     else if line1 > line2 then False
-     else if col1 < col2 then True
-     else if col1 > col2 then False
-     else offset1 <= offset2
-
--- Property: Span contains its start position
-prop_spanContainsStartPosition :: SourceSpan -> Bool
-prop_spanContainsStartPosition span = 
-  let start = spanStart span
-      end = spanEnd span
-      startOffset = sourcePosOffset start
-      endOffset = sourcePosOffset end
-  in startOffset <= endOffset
-
--- Property: Span contains its end position
-prop_spanContainsEndPosition :: SourceSpan -> Bool
-prop_spanContainsEndPosition span = 
-  let start = spanStart span
-      end = spanEnd span
-      startOffset = sourcePosOffset start
-      endOffset = sourcePosOffset end
-  in startOffset <= endOffset
-
--- Property: Span merging preserves coverage
-prop_spanMergingCoverage :: SourceSpan -> SourceSpan -> Bool
-prop_spanMergingCoverage span1 span2 = 
-  let start1 = spanStart span1
-      end1 = spanEnd span1
-      start2 = spanStart span2
-      end2 = spanEnd span2
-      startOffset1 = sourcePosOffset start1
-      endOffset1 = sourcePosOffset end1
-      startOffset2 = sourcePosOffset start2
-      endOffset2 = sourcePosOffset end2
-      mergedStartOffset = min startOffset1 startOffset2
-      mergedEndOffset = max endOffset1 endOffset2
-      originalLength1 = endOffset1 - startOffset1
-      originalLength2 = endOffset2 - startOffset2
-      mergedLength = mergedEndOffset - mergedStartOffset
-  in mergedLength >= max originalLength1 originalLength2
-
--- Property: Line and column are within reasonable bounds
-prop_lineColumnBounds :: SourcePos -> Bool
-prop_lineColumnBounds pos = 
-  let line = sourcePosLine pos
-      col = sourcePosColumn pos
-      offset = sourcePosOffset pos
-  in line >= 1 && col >= 1 && offset >= 0
-
--- Test suite
 tests :: TestTree
 tests = testGroup "New SourceLocation QuickCheck Tests"
-  [ testProperty "Source span length is non-negative" $
-      fastProperty "Span length non-negative" prop_sourceSpanLengthNonNegative
-  
-  , testProperty "Zero-length spans have same start and end positions" $
-      fastProperty "Zero-length span positions" prop_zeroLengthSpanPositionsEqual
-  
-  , testProperty "Multi-line spans have different line numbers" $
-      fastProperty "Multi-line span lines" prop_multiLineSpanHasDifferentLines
-  
-  , testProperty "Source position ordering is consistent" $
-      fastProperty "Position ordering" prop_sourcePositionOrdering
-  
-  , testProperty "Span contains its start position" $
-      fastProperty "Span contains start" prop_spanContainsStartPosition
-  
-  , testProperty "Span contains its end position" $
-      fastProperty "Span contains end" prop_spanContainsEndPosition
-  
-  , testProperty "Span merging preserves coverage" $
-      fastProperty "Span merging coverage" prop_spanMergingCoverage
-  
-  , testProperty "Line and column are within reasonable bounds" $
-      fastProperty "Line column bounds" prop_lineColumnBounds
+  [ fastProperty "Source position advances with newline" prop_source_pos_newline
+  , fastProperty "Source position advances with tab" prop_source_pos_tab
+  , fastProperty "Source position advances with regular char" prop_source_pos_regular_char
+  , fastProperty "Source span validity is consistent" prop_source_span_validity
+  , fastProperty "Empty span is always valid" prop_empty_span_valid
+  , fastProperty "Span merging is commutative" prop_span_merge_commutative
+  , fastProperty "Span merging is associative" prop_span_merge_associative
+  , fastProperty "Located values preserve content" prop_located_preserves_content
+  , fastProperty "Located values preserve position" prop_located_preserves_position
+  , fastProperty "Span between positions is correct" prop_span_between_positions
   ]

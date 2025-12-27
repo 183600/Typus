@@ -146,17 +146,16 @@ spec = describe "NewSourceLocation QuickCheck Tests" $ do
             expected = advancePosBy chars startPos
         in tracked === expected
 
-  where
-    -- Helper instances for QuickCheck
-    instance Arbitrary SourcePos where
-      arbitrary = SourcePos <$> arbitraryPositive <*> arbitraryPositive <*> arbitraryNonNegative
-        where
-          arbitraryPositive = getPositive <$> arbitrary
-          arbitraryNonNegative = getNonNegative <$> arbitrary
+-- Helper instances for QuickCheck
+instance Arbitrary SourcePos where
+  arbitrary = SourcePos <$> arbitraryPositive <*> arbitraryPositive <*> arbitraryNonNegative
+    where
+      arbitraryPositive = getPositive <$> arbitrary
+      arbitraryNonNegative = getNonNegative <$> arbitrary
 
-    instance Arbitrary SourceSpan where
-      arbitrary = do
-        start <- arbitrary
-        endOffset <- arbitrary
-        let end = SourcePos (posLine start) (posColumn start + endOffset) (posOffset start + endOffset)
-        return $ spanBetween start end
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    endOffset <- arbitrary
+    let end = SourcePos (posLine start) (posColumn start + endOffset) (posOffset start + endOffset)
+    return $ spanBetween start end

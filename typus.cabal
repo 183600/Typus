@@ -738,6 +738,16 @@ test-suite typus-test
         , Test.Unit.ParserCabalTestsSpec
         , Test.Unit.ErrorHandlingCabalTestsSpec
         , Test.Unit.IntegrationCabalTestsSpec
+
+        -- New Comprehensive Cabal Test Modules (2025)
+        , Test.Unit.NewCabalComprehensiveTestsSpec
+        , Test.Unit.NewParserQuickCheckTestsSpec
+        , Test.Unit.NewCompilerQuickCheckTestsSpec
+        , Test.Unit.NewOwnershipQuickCheckTestsSpec
+        , Test.Unit.NewSourceLocationQuickCheckTestsSpec
+        , Test.Unit.NewErrorHandlerQuickCheckTestsSpec
+        , Test.Unit.NewDependenciesQuickCheckTestsSpec
+        , Test.Unit.NewIntegrationQuickCheckTestsSpec
     other-modules:
             Test.Dependencies.Arbitrary
     build-depends:

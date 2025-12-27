@@ -124,10 +124,10 @@ spec = describe "NewIntegration QuickCheck Tests" $ do
             areResultsEquivalent full incremental
           _ -> True
 
-  describe "Error propagation properties" = do
-    it "parsing errors propagate correctly" $ property $
-      \invalidSource ->
-        let errors = compileWithErrorCollection invalidSource
+  -- Property: Error propagation properties
+prop_integration_error_propagation :: String -> Property
+prop_integration_error_propagation invalidSource =
+  let errors = compileWithErrorCollection invalidSource
         in hasParsingErrors errors
 
     it "type errors propagate with context" $ property $
@@ -460,4 +460,18 @@ spec = describe "NewIntegration QuickCheck Tests" $ do
       arbitrary = DebugInfo <$> arbitrary <*> arbitrary <*> arbitrary
 
     instance Arbitrary ProfileResult where
-      arbitrary = ProfileResult <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = ProfileResult <$> arbitrary <*> arbitrary <*> arbitrary
+
+tests :: TestTree
+tests = testGroup "New Integration QuickCheck Tests"
+  [ fastProperty "Pipeline maintains consistency" prop_integration_pipeline_consistency
+  , fastProperty "Parser and compiler error correlation" prop_integration_parser_compiler_errors
+  , fastProperty "Ownership and dependency consistency" prop_integration_ownership_dependency_consistency
+  , fastProperty "Error handling across modules" prop_integration_error_handling
+  , fastProperty "Source location consistency" prop_integration_source_location_consistency
+  , fastProperty "Comment removal consistency" prop_integration_comment_removal
+  , fastProperty "Compilation is idempotent" prop_integration_compilation_idempotent
+  , fastProperty "Multi-feature programs handled" prop_integration_multi_feature
+  , fastProperty "Performance consistency" prop_integration_performance_consistency
+  , fastProperty "Error recovery across modules" prop_integration_error_recovery
+  ]

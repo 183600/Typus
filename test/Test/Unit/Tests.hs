@@ -106,6 +106,16 @@ import qualified Test.Unit.ParserCabalTestsSpec
 import qualified Test.Unit.ErrorHandlingCabalTestsSpec
 import qualified Test.Unit.IntegrationCabalTestsSpec
 
+-- New Comprehensive Cabal Test Modules (2025)
+import qualified Test.Unit.NewCabalComprehensiveTestsSpec
+import qualified Test.Unit.NewParserQuickCheckTestsSpec
+import qualified Test.Unit.NewCompilerQuickCheckTestsSpec
+import qualified Test.Unit.NewOwnershipQuickCheckTestsSpec
+import qualified Test.Unit.NewSourceLocationQuickCheckTestsSpec
+import qualified Test.Unit.NewErrorHandlerQuickCheckTestsSpec
+import qualified Test.Unit.NewDependenciesQuickCheckTestsSpec
+import qualified Test.Unit.NewIntegrationQuickCheckTestsSpec
+
 -- New Core QuickCheck Test Modules
 import qualified Test.Unit.SourceLocationCoreQuickCheckSpec
 import qualified Test.Unit.ErrorHandlerCoreQuickCheckSpec
@@ -1744,5 +1754,17 @@ tests =
     , Test.Unit.ParserCabalTestsSpec.tests
     , Test.Unit.ErrorHandlingCabalTestsSpec.tests
     , Test.Unit.IntegrationCabalTestsSpec.tests
+    ]
+
+  -- New Comprehensive Cabal Test Modules (2025)
+  , testGroup "New Comprehensive Cabal Test Modules"
+    [ Test.Unit.NewCabalComprehensiveTestsSpec.tests
+    , Test.Unit.NewParserQuickCheckTestsSpec.tests
+    , Test.Unit.NewCompilerQuickCheckTestsSpec.tests
+    , Test.Unit.NewOwnershipQuickCheckTestsSpec.tests
+    , Test.Unit.NewSourceLocationQuickCheckTestsSpec.tests
+    , Test.Unit.NewErrorHandlerQuickCheckTestsSpec.tests
+    , Test.Unit.NewDependenciesQuickCheckTestsSpec.tests
+    , Test.Unit.NewIntegrationQuickCheckTestsSpec.tests
     ]
   ]
