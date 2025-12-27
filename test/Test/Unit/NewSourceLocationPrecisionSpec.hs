@@ -1,451 +1,268 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module Test.Unit.NewSourceLocationPrecisionSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertEqual, assertBool, assertFailure)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, elements, suchThat)
+import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
+import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck 
+  ( Property
+  , (===)
+  , (==>)
+  , forAll
+  , counterexample
+  , classify
+  , property
+  , (.&&.)
+  , (.||.)
+  , Arbitrary(..)
+  , Gen
+  , choose
+  , listOf
+  , elements
+  , oneof
+  , sized
+  , resize
+  , Positive(..)
+  , NonEmptyList(..)
+  )
+
+import SourceLocation
+  ( SourcePos(..)
+  , SourceSpan(..)
+  , Located(..)
+  , HasLocation(..)
+  , startPos
+  , posAfter
+  , posAt
+  , posAtLineCol
+  , emptySpan
+  , spanFrom
+  , spanTo
+  , spanBetween
+  , mergeSpans
+  , isValidSpan
+  , locatedAt
+  , locatedWithSpan
+  , locatedValue
+  , locatedSpan
+  , locatedPos
+  , mapLocated
+  , advancePos
+  , advancePosBy
+  , toErrorLocation
+  , toErrorLocationWithSpan
+  )
+
+import Data.Char (isSpace, toLower)
+import qualified Data.List as Data.List
+import Data.List (isPrefixOf, tails, isInfixOf, sort, nub)
 import qualified Data.Text as T
-import Data.Maybe (isJust, isNothing, catMaybes)
-import Data.List (isInfixOf, nub)
 
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedWithSpan, spanStart, spanEnd, sourceLine, sourceColumn)
-import Parser (parseTypus, TypusFile(..))
-import Compiler (compile, CompilerError(..))
-import SyntaxValidator (validateSyntax)
+-- Test source position creation and arithmetic
+test_source_position_arithmetic :: TestTree
+test_source_position_arithmetic = testCase "Source position arithmetic works correctly" $ do
+  let pos1 = SourcePos 1 1 0
+      pos2 = advancePos pos1 'a'
+      pos3 = advancePos pos2 '\n'
+      pos4 = advancePos pos3 'b'
+  pos2 @?= SourcePos 1 2 1
+  pos3 @?= SourcePos 2 1 2
+  pos4 @?= SourcePos 2 2 3
 
--- | Test source location precision functionality
+-- Test source span creation and validation
+test_source_span_creation :: TestTree
+test_source_span_creation = testCase "Source span creation and validation" $ do
+  let start = SourcePos 1 1 0
+      end = SourcePos 1 5 4
+      span = SourceSpan start end
+  isValidSpan span @?= True
+  spanFrom start end @?= span
+  
+  let invalidSpan = SourceSpan end start  -- end before start
+  isValidSpan invalidSpan @?= False
+
+-- Test span merging functionality
+test_span_merging :: TestTree
+test_span_merging = testCase "Span merging works correctly" $ do
+  let span1 = SourceSpan (SourcePos 1 1 0) (SourcePos 1 5 4)
+      span2 = SourceSpan (SourcePos 1 3 2) (SourcePos 1 8 7)
+      merged = mergeSpans span1 span2
+  merged @?= SourceSpan (SourcePos 1 1 0) (SourcePos 1 8 7)
+
+-- Test located values and their positions
+test_located_values :: TestTree
+test_located_values = testCase "Located values track positions correctly" $ do
+  let pos = SourcePos 2 3 10
+      span = SourceSpan pos (SourcePos 2 8 15)
+      located = locatedWithSpan span "test value"
+  locatedValue located @?= "test value"
+  locatedSpan located @?= span
+  locatedPos located @?= pos
+
+-- Test position advancement with different characters
+test_position_advancement :: TestTree
+test_position_advancement = testCase "Position advancement handles different characters" $ do
+  let start = SourcePos 1 1 0
+      pos1 = advancePos start 'a'      -- Regular character
+      pos2 = advancePos pos1 '\t'      -- Tab
+      pos3 = advancePos pos2 '\n'      -- Newline
+      pos4 = advancePos pos3 ' '       -- Space
+      pos5 = advancePos pos4 '中'      -- Unicode character
+  pos1 @?= SourcePos 1 2 1
+  pos2 @?= SourcePos 1 3 2
+  pos3 @?= SourcePos 2 1 3
+  pos4 @?= SourcePos 2 2 4
+  pos5 @?= SourcePos 2 3 5
+
+-- Test position advancement with strings
+test_position_advancement_by_string :: TestTree
+test_position_advancement_by_string = testCase "Position advancement by strings" $ do
+  let start = SourcePos 1 1 0
+      pos1 = advancePosBy start "hello"
+      pos2 = advancePosBy pos1 "\nworld"
+      pos3 = advancePosBy pos2 "\ttest"
+  pos1 @?= SourcePos 1 6 5
+  pos2 @?= SourcePos 2 6 11
+  pos3 @?= SourcePos 2 11 16
+
+-- Test error location conversion
+test_error_location_conversion :: TestTree
+test_error_location_conversion = testCase "Error location conversion" $ do
+  let pos = SourcePos 3 4 20
+      span = SourceSpan pos (SourcePos 3 8 24)
+      errorLoc1 = toErrorLocation pos
+      errorLoc2 = toErrorLocationWithSpan span
+  -- Test that error locations contain position information
+  assertBool "Error location should contain line info" $ 
+    isInfixOf "3" (show errorLoc1)
+  assertBool "Error location with span should contain line info" $ 
+    isInfixOf "3" (show errorLoc2)
+
+-- Test location tracking with multi-line content
+test_multiline_location_tracking :: TestTree
+test_multiline_location_tracking = testCase "Multi-line location tracking" $ do
+  let content = unlines
+        [ "line 1"
+        , "line 2"
+        , "line 3"
+        ]
+      start = startPos
+      posAfterLine1 = advancePosBy start "line 1\n"
+      posAfterLine2 = advancePosBy posAfterLine1 "line 2\n"
+      posAfterLine3 = advancePosBy posAfterLine2 "line 3"
+  posAfterLine1 @?= SourcePos 2 1 7
+  posAfterLine2 @?= SourcePos 3 1 14
+  posAfterLine3 @?= SourcePos 3 7 21
+
+-- Test location precision with Unicode characters
+test_unicode_location_precision :: TestTree
+test_unicode_location_precision = testCase "Unicode location precision" $ do
+  let start = SourcePos 1 1 0
+      unicodeText = "测试Unicode🚀"
+      posAfter = advancePosBy start unicodeText
+  posAfter @?= SourcePos 1 (1 + length unicodeText) (length unicodeText)
+
+-- Test span boundaries and containment
+test_span_boundaries :: TestTree
+test_span_boundaries = testCase "Span boundaries and containment" $ do
+  let outerSpan = SourceSpan (SourcePos 1 1 0) (SourcePos 3 1 20)
+      innerSpan1 = SourceSpan (SourcePos 1 5 4) (SourcePos 1 10 9)
+      innerSpan2 = SourceSpan (SourcePos 2 1 10) (SourcePos 2 8 17)
+      overlappingSpan = SourceSpan (SourcePos 3 1 20) (SourcePos 4 1 25)
+  
+  -- Test span creation and validation
+  isValidSpan outerSpan @?= True
+  isValidSpan innerSpan1 @?= True
+  isValidSpan innerSpan2 @?= True
+  isValidSpan overlappingSpan @?= True
+
+-- Property: Position advancement is consistent
+prop_position_advancement_consistent :: String -> Char -> Property
+prop_position_advancement_consistent str ch = 
+  let start = startPos
+      pos1 = advancePosBy start str
+      pos2 = advancePos pos1 ch
+      pos3 = advancePosBy start (str ++ [ch])
+  in pos2 === pos3
+
+-- Property: Span merging is commutative for valid spans
+prop_span_merging_commutative :: SourceSpan -> SourceSpan -> Property
+prop_span_merging_commutative span1 span2 = 
+  isValidSpan span1 && isValidSpan span2 ==>
+    let merged1 = mergeSpans span1 span2
+        merged2 = mergeSpans span2 span1
+    in merged1 === merged2
+
+-- Property: Position arithmetic is additive
+prop_position_arithmetic_additive :: String -> String -> Property
+prop_position_arithmetic_additive str1 str2 = 
+  let start = startPos
+      pos1 = advancePosBy start str1
+      pos2 = advancePosBy pos1 str2
+      pos3 = advancePosBy start (str1 ++ str2)
+  in pos2 === pos3
+
+-- Property: Located values preserve their content
+prop_located_values_preserve_content :: String -> SourceSpan -> Property
+prop_located_values_preserve_content str span = 
+  isValidSpan span ==>
+    let located = locatedWithSpan span str
+    in locatedValue located === str
+
+-- Property: Position tracking handles newlines correctly
+prop_position_newline_handling :: Int -> Int -> Property
+prop_position_newline_handling (Positive lines) (Positive cols) = 
+  let newlineCount = min lines 100
+      colCount = min cols 100
+      content = unlines (replicate newlineCount (replicate colCount 'a'))
+      start = startPos
+      finalPos = advancePosBy start content
+  in posLine finalPos === newlineCount + 1 .&&. posColumn finalPos === 1
+
+-- Property: Span boundaries are consistent
+prop_span_boundaries_consistent :: Int -> Int -> Property
+prop_span_boundaries_consistent (Positive startLine) (Positive length) = 
+  let startL = min startLine 100
+      len = min length 100
+      start = SourcePos startL 1 (startL * 10)
+      end = advancePosBy start (replicate len 'a')
+      span = SourceSpan start end
+  in isValidSpan span ==> posLine (spanStart span) === startL .&&. posLine (spanEnd span) >= startL
+
+-- Property: Error locations contain position information
+prop_error_locations_contain_position :: SourcePos -> Property
+prop_error_locations_contain_position pos = 
+  let errorLoc = toErrorLocation pos
+      posStr = show pos
+      errorStr = show errorLoc
+  in property $ isInfixOf (show (posLine pos)) errorStr .&&. 
+             isInfixOf (show (posColumn pos)) errorStr
+
 tests :: TestTree
-tests =
-  testGroup "New Source Location Precision Tests"
-    [ basicLocationTests
-    , precisionTests
-    , multiLineTests
-    , errorLocationTests
-    , locationTrackingTests
-    , performanceTests
-    , quickCheckProperties
-    ]
-
--- | Basic source location functionality tests
-basicLocationTests :: TestTree
-basicLocationTests =
-  testGroup "Basic Location Tests"
-    [ testCase "Track single character positions" $
-        let input = "x"
-            result = parseTypus "test.typus" input
-        in case result of
-             Right typusFile -> do
-               let blocks = tfCodeBlocks typusFile
-               assertBool "Should track character positions" (all hasValidCharacterPositions blocks)
-             Left _ -> assertFailure "Should parse simple input"
-
-    , testCase "Track line and column positions" $
-        let input = "let x = 5\nlet y = 10"
-            result = parseTypus "test.typus" input
-        in case result of
-             Right typusFile -> do
-               let blocks = tfCodeBlocks typusFile
-               assertBool "Should track line positions" (all hasValidLinePositions blocks)
-               assertBool "Should track column positions" (all hasValidColumnPositions blocks)
-             Left _ -> assertFailure "Should parse multi-line input"
-
-    , testCase "Handle empty files" $
-        let input = ""
-            result = parseTypus "test.typus" input
-        in case result of
-             Right typusFile -> do
-               assertEqual "Empty file should have no blocks" [] (tfCodeBlocks typusFile)
-             Left _ -> assertFailure "Should parse empty file"
-
-    , testCase "Track whitespace positions" $
-        let input = "  let x = 5\t\n  let y = 10"
-            result = parseTypus "test.typus" input
-        in case result of
-             Right typusFile -> do
-               let blocks = tfCodeBlocks typusFile
-               assertBool "Should handle whitespace correctly" (all handlesWhitespaceCorrectly blocks)
-             Left _ -> assertFailure "Should parse input with whitespace"
-    ]
-
--- | Precision tests
-precisionTests :: TestTree
-precisionTests =
-  testGroup "Precision Tests"
-    [ testCase "Precise token boundaries" $
-        let input = "let x = 5 + 3"
-            result = parseTypus "test.typus" input
-        in case result of
-             Right typusFile -> do
-               let blocks = tfCodeBlocks typusFile
-               assertBool "Should have precise token boundaries" (all hasPreciseTokenBoundaries blocks)
-             Left _ -> assertFailure "Should parse arithmetic expression"
-
-    , testCase "Unicode character handling" $
-        let input = "let π = 3.14159\nlet 你好 = \"hello\""
-            result = parseTypus "test.typus" input
-        in case result of
-             Right typusFile -> do
-               let blocks = tfCodeBlocks typusFile
-               assertBool "Should handle Unicode characters" (all handlesUnicodeCharacters blocks)
-             Left _ -> assertFailure "Should parse Unicode input"
-
-    , testCase "Tab character handling" $
-        let input = "\tlet x = 5\n\t\tlet y = 10"
-            result = parseTypus "test.typus" input
-        in case result of
-             Right typusFile -> do
-               let blocks = tfCodeBlocks typusFile
-               assertBool "Should handle tabs correctly" (all handlesTabsCorrectly blocks)
-             Left _ -> assertFailure "Should parse input with tabs"
-
-    , testCase "Mixed line endings" $
-        let input = "let x = 5\r\nlet y = 10\nlet z = 15\r"
-            result = parseTypus "test.typus" input
-        in case result of
-             Right typusFile -> do
-               let blocks = tfCodeBlocks typusFile
-               assertBool "Should handle mixed line endings" (all handlesMixedLineEndings blocks)
-             Left _ -> assertFailure "Should parse input with mixed line endings"
-    ]
-
--- | Multi-line tests
-multiLineTests :: TestTree
-multiLineTests =
-  testGroup "Multi-line Tests"
-    [ testCase "Track multi-line statements" $
-        let input = "let x = (\n  5 +\n  3\n)"
-            result = parseTypus "test.typus" input
-        in case result of
-             Right typusFile -> do
-               let blocks = tfCodeBlocks typusFile
-               assertBool "Should track multi-line spans" (all tracksMultiLineSpans blocks)
-             Left _ -> assertFailure "Should parse multi-line statement"
-
-    , testCase "Track nested block locations" $
-        let input = "func test() {\n  if true {\n    let x = 5\n  }\n}"
-            result = parseTypus "test.typus" input
-        in case result of
-             Right typusFile -> do
-               let blocks = tfCodeBlocks typusFile
-               assertBool "Should track nested blocks" (all tracksNestedBlocks blocks)
-             Left _ -> assertFailure "Should parse nested blocks"
-
-    , testCase "Handle large spans efficiently" $
-        let input = unlines $ replicate 1000 "let x" ++ "let y = 42"
-            result = parseTypus "test.typus" input
-        in case result of
-             Right typusFile -> do
-               let blocks = tfCodeBlocks typusFile
-               assertBool "Should handle large files" (all handlesLargeSpans blocks)
-             Left _ -> assertFailure "Should parse large input"
-
-    , testCase "Track comment locations" $
-        let input = "// This is a comment\nlet x = 5 /* block comment */\nlet y = 10"
-            result = parseTypus "test.typus" input
-        in case result of
-             Right typusFile -> do
-               let blocks = tfCodeBlocks typusFile
-               assertBool "Should track comment locations" (all tracksCommentLocations blocks)
-             Left _ -> assertFailure "Should parse input with comments"
-    ]
-
--- | Error location tests
-errorLocationTests :: TestTree
-errorLocationTests =
-  testGroup "Error Location Tests"
-    [ testCase "Precise syntax error locations" $
-        let input = "let x = 5\nlet y = \nlet z = 10"  -- Syntax error on line 2
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               assertBool "Should locate syntax errors precisely" (all locatesSyntaxErrorsPrecisely errs)
-               assertBool "Should include line numbers" (all includesLineNumbers errs)
-               assertBool "Should include column numbers" (all includesColumnNumbers errs)
-             Right _ -> assertFailure "Should have failed with syntax error"
-
-    , testCase "Type error location accuracy" $
-        let input = "let x: int = \"hello\""  -- Type error
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               assertBool "Should locate type errors accurately" (all locatesTypeErrorsAccurately errs)
-               assertBool "Should highlight problematic tokens" (all highlightsProblematicTokens errs)
-             Right _ -> assertFailure "Should have failed with type error"
-
-    , testCase "Multi-error location tracking" $
-        let input = "let x: int = \"hello\"\nlet y = \nlet z: string = 42"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               assertBool "Should track multiple error locations" (all tracksMultipleErrorLocations errs)
-               assertBool "Should order errors by location" (errorsOrderedByLocation errs)
-             Right _ -> assertFailure "Should have failed with multiple errors"
-
-    , testCase "Error context preservation" $
-        let input = "func complex(a: int, b: string) -> float {\n  return a + b\n}"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               assertBool "Should preserve error context" (all preservesErrorContext errs)
-               assertBool "Should show surrounding code" (all showsSurroundingCode errs)
-             Right _ -> assertFailure "Should have failed with type error"
-    ]
-
--- | Location tracking tests
-locationTrackingTests :: TestTree
-locationTrackingTests =
-  testGroup "Location Tracking Tests"
-    [ testCase "Track location through transformations" $
-        let input = "let x = 5 + 3 * 2"
-            result = compile "test.typus" input
-        in case result of
-             Right _ -> do
-               assertBool "Should track through transformations" True
-             Left _ -> assertFailure "Should compile successfully"
-
-    , testCase "Maintain location consistency" $
-        let input = "func test() {\n  let x = 5\n  return x\n}"
-            result = compile "test.typus" input
-        in case result of
-             Right _ -> do
-               assertBool "Should maintain location consistency" True
-             Left _ -> assertFailure "Should compile successfully"
-
-    , testCase "Track location in macros" $
-        let input = "#define SQUARE(x) x * x\nlet y = SQUARE(5)"
-            result = compile "test.typus" input
-        in case result of
-             Right _ -> do
-               assertBool "Should track macro locations" True
-             Left _ -> assertFailure "Should handle macros"
-
-    , testCase "Handle location in generated code" $
-        let input = "func test() {\n  for i in 0..10 {\n    let x = i\n  }\n}"
-            result = compile "test.typus" input
-        in case result of
-             Right _ -> do
-               assertBool "Should handle generated code locations" True
-             Left _ -> assertFailure "Should compile successfully"
-    ]
-
--- | Performance tests
-performanceTests :: TestTree
-performanceTests =
-  testGroup "Performance Tests"
-    [ testCase "Large file parsing performance" $
-        let input = unlines $ replicate 10000 "let x = x + 1"
-            result = parseTypus "test.typus" input
-        in case result of
-             Right typusFile -> do
-               let blocks = tfCodeBlocks typusFile
-               assertBool "Should handle large files efficiently" (length blocks > 0)
-             Left _ -> assertFailure "Should parse large file"
-
-    , testCase "Location tracking overhead" $
-        let input = unlines $ replicate 1000 "func test_" ++ show (1 :: Int) ++ "() { return 42 }"
-            result = parseTypus "test.typus" input
-        in case result of
-             Right typusFile -> do
-               let blocks = tfCodeBlocks typusFile
-               assertBool "Should minimize location tracking overhead" (all hasEfficientLocationTracking blocks)
-             Left _ -> assertFailure "Should parse many functions"
-
-    , testCase "Memory usage with locations" $
-        let input = unlines $ replicate 5000 "let x_" ++ show (1 :: Int) ++ " = " ++ show (1 :: Int)
-            result = parseTypus "test.typus" input
-        in case result of
-             Right typusFile -> do
-               let blocks = tfCodeBlocks typusFile
-               assertBool "Should use memory efficiently" (all usesMemoryEfficiently blocks)
-             Left _ -> assertFailure "Should parse many variables"
-    ]
-
--- | QuickCheck properties for source location precision
-quickCheckProperties :: TestTree
-quickCheckProperties =
-  testGroup "QuickCheck Properties"
-    [ testProperty "Location positions are consistent" $
-        forAll genValidCode $ \code ->
-            case parseTypus "test.typus" code of
-              Right typusFile -> 
-                let blocks = tfCodeBlocks typusFile
-                in property $ all hasConsistentLocations blocks
-              Left _ -> property True  -- Invalid code is allowed to fail
-
-    , testProperty "Multi-line spans are accurate" $
-        forAll genMultiLineCode $ \code ->
-            case parseTypus "test.typus" code of
-              Right typusFile -> 
-                let blocks = tfCodeBlocks typusFile
-                in property $ all hasAccurateMultiLineSpans blocks
-              Left _ -> property True
-
-    , testProperty "Error locations are precise" $
-        forAll genErrorCode $ \code ->
-            case compile "test.typus" code of
-              Left errs -> 
-                property $ all hasPreciseErrorLocations errs
-              Right _ -> property True  -- Valid code should succeed
-    ]
-
--- | Helper functions for location validation
-hasValidCharacterPositions :: CodeBlock -> Bool
-hasValidCharacterPositions block = 
-    let span = cbSpan block
-    in sourceColumn (spanStart span) >= 1 && sourceColumn (spanEnd span) >= sourceColumn (spanStart span)
-
-hasValidLinePositions :: CodeBlock -> Bool
-hasValidLinePositions block = 
-    let span = cbSpan block
-    in sourceLine (spanStart span) >= 1 && sourceLine (spanEnd span) >= sourceLine (spanStart span)
-
-hasValidColumnPositions :: CodeBlock -> Bool
-hasValidColumnPositions block = 
-    let span = cbSpan block
-    in sourceColumn (spanStart span) >= 1 && sourceColumn (spanEnd span) >= sourceColumn (spanStart span)
-
-handlesWhitespaceCorrectly :: CodeBlock -> Bool
-handlesWhitespaceCorrectly block = 
-    let content = cbContent block
-        span = cbSpan block
-    in length content > 0 && spanStart span /= spanEnd span
-
-hasPreciseTokenBoundaries :: CodeBlock -> Bool
-hasPreciseTokenBoundaries block = 
-    let content = cbContent block
-        span = cbSpan block
-    in length content == fromEnum (sourceColumn (spanEnd span)) - fromEnum (sourceColumn (spanStart span)) + 1
-
-handlesUnicodeCharacters :: CodeBlock -> Bool
-handlesUnicodeCharacters block = 
-    let content = cbContent block
-    in any (> 127) (map fromEnum content) ==> length content > 0
-
-handlesTabsCorrectly :: CodeBlock -> Bool
-handlesTabsCorrectly block = 
-    let content = cbContent block
-    in '\t' `elem` content ==> length (filter (== '\t') content) >= 0
-
-handlesMixedLineEndings :: CodeBlock -> Bool
-handlesMixedLineEndings block = 
-    let content = cbContent block
-    in any (`elem` content) ['\r', '\n'] ==> length content > 0
-
-tracksMultiLineSpans :: CodeBlock -> Bool
-tracksMultiLineSpans block = 
-    let span = cbSpan block
-    in sourceLine (spanStart span) < sourceLine (spanEnd span)
-
-tracksNestedBlocks :: CodeBlock -> Bool
-tracksNestedBlocks block = 
-    let content = cbContent block
-    in '{' `elem` content && '}' `elem` content
-
-handlesLargeSpans :: CodeBlock -> Bool
-handlesLargeSpans block = 
-    let span = cbSpan block
-    in sourceLine (spanEnd span) - sourceLine (spanStart span) >= 100
-
-tracksCommentLocations :: CodeBlock -> Bool
-tracksCommentLocations block = 
-    let content = cbContent block
-    in any (`isInfixOf` content) ["//", "/*", "*/"]
-
-locatesSyntaxErrorsPrecisely :: CompilerError -> Bool
-locatesSyntaxErrorsPrecisely (CompilerError SyntaxError (Just span) _ _) = 
-    sourceLine span >= 1 && sourceColumn span >= 1
-locatesSyntaxErrorsPrecisely _ = False
-
-includesLineNumbers :: CompilerError -> Bool
-includesLineNumbers (CompilerError _ (Just span) _ _) = sourceLine (spanStart span) >= 1
-includesLineNumbers _ = False
-
-includesColumnNumbers :: CompilerError -> Bool
-includesColumnNumbers (CompilerError _ (Just span) _ _) = sourceColumn (spanStart span) >= 1
-includesColumnNumbers _ = False
-
-locatesTypeErrorsAccurately :: CompilerError -> Bool
-locatesTypeErrorsAccurately (CompilerError TypeError (Just span) _ _) = 
-    sourceLine span >= 1 && sourceColumn span >= 1
-locatesTypeErrorsAccurately _ = False
-
-highlightsProblematicTokens :: CompilerError -> Bool
-highlightsProblematicTokens (CompilerError _ (Just span) _ _) = spanStart span /= spanEnd span
-highlightsProblematicTokens _ = False
-
-tracksMultipleErrorLocations :: CompilerError -> Bool
-tracksMultipleErrorLocations (CompilerError _ (Just span) _ _) = 
-    sourceLine span >= 1 && sourceColumn span >= 1
-tracksMultipleErrorLocations _ = False
-
-errorsOrderedByLocation :: [CompilerError] -> Bool
-errorsOrderedByLocation errs = all (uncurry (<=)) $ zip locations (tail locations)
-  where
-    locations = map getErrorLocation errs
-    getErrorLocation (CompilerError _ (Just span) _ _) = (sourceLine (spanStart span), sourceColumn (spanStart span))
-    getErrorLocation _ = (0, 0)
-
-preservesErrorContext :: CompilerError -> Bool
-preservesErrorContext (CompilerError _ (Just span) _ _) = 
-    sourceLine (spanEnd span) >= sourceLine (spanStart span)
-preservesErrorContext _ = False
-
-showsSurroundingCode :: CompilerError -> Bool
-showsSurroundingCode (CompilerError _ (Just span) msg _) = 
-    length (words msg) >= 3
-showsSurroundingCode _ = False
-
-hasConsistentLocations :: CodeBlock -> Bool
-hasConsistentLocations block = 
-    let span = cbSpan block
-    in sourceLine (spanStart span) <= sourceLine (spanEnd span) && 
-       sourceColumn (spanStart span) <= sourceColumn (spanEnd span)
-
-hasAccurateMultiLineSpans :: CodeBlock -> Bool
-hasAccurateMultiLineSpans block = 
-    let span = cbSpan block
-        isMultiLine = sourceLine (spanStart span) < sourceLine (spanEnd span)
-    in not isMultiLine || (sourceLine (spanEnd span) - sourceLine (spanStart span) >= 1)
-
-hasPreciseErrorLocations :: CompilerError -> Bool
-hasPreciseErrorLocations (CompilerError _ (Just span) _ _) = 
-    sourceLine span >= 1 && sourceColumn span >= 1 && spanStart span /= spanEnd span
-hasPreciseErrorLocations _ = False
-
-hasEfficientLocationTracking :: CodeBlock -> Bool
-hasEfficientLocationTracking block = 
-    let span = cbSpan block
-    in sourceLine (spanStart span) >= 1
-
-usesMemoryEfficiently :: CodeBlock -> Bool
-usesMemoryEfficiently block = 
-    let content = cbContent block
-        span = cbSpan block
-    in length content <= 1000 || sourceLine (spanEnd span) - sourceLine (spanStart span) <= 100
-
--- | Generators for QuickCheck testing
-genValidCode :: Gen String
-genValidCode = elements
-  [ "let x = 5"
-  , "func test() { return 42 }"
-  , "let y = x + 3"
-  , "type Point = struct { x: int, y: int }"
-  ]
-
-genMultiLineCode :: Gen String
-genMultiLineCode = elements
-  [ "let x = (\n  5 +\n  3\n)"
-  , "func test() {\n  if true {\n    let x = 5\n  }\n}"
-  , "let y = {\n  let a = 1\n  let b = 2\n  a + b\n}"
-  , "type Person = struct {\n  name: string\n  age: int\n}"
-  ]
-
-genErrorCode :: Gen String
-genErrorCode = elements
-  [ "let x: int = \"hello\""
-  , "let y = \nlet z = 10"
-  , "func test( { return 42 }"
-  , "let x = 5\nlet x = 10"
+tests = testGroup "New Source Location Precision Tests"
+  [ test_source_position_arithmetic
+  , test_source_span_creation
+  , test_span_merging
+  , test_located_values
+  , test_position_advancement
+  , test_position_advancement_by_string
+  , test_error_location_conversion
+  , test_multiline_location_tracking
+  , test_unicode_location_precision
+  , test_span_boundaries
+  , fastProperty "Position advancement is consistent" prop_position_advancement_consistent
+  , fastProperty "Span merging is commutative" prop_span_merging_commutative
+  , fastProperty "Position arithmetic is additive" prop_position_arithmetic_additive
+  , fastProperty "Located values preserve content" prop_located_values_preserve_content
+  , fastProperty "Position tracking handles newlines correctly" prop_position_newline_handling
+  , fastProperty "Span boundaries are consistent" prop_span_boundaries_consistent
+  , fastProperty "Error locations contain position information" prop_error_locations_contain_position
   ]

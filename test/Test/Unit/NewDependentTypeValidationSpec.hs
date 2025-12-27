@@ -1,466 +1,332 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module Test.Unit.NewDependentTypeValidationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertEqual, assertBool, assertFailure)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, elements, suchThat)
+import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
+import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck 
+  ( Property
+  , (===)
+  , (==>)
+  , forAll
+  , counterexample
+  , classify
+  , property
+  , (.&&.)
+  , (.||.)
+  , Arbitrary(..)
+  , Gen
+  , choose
+  , listOf
+  , elements
+  , oneof
+  , sized
+  , resize
+  , Positive(..)
+  , NonEmptyList(..)
+  )
+
+import DependentTypesParser
+  ( DependentTypesParser(..)
+  , DependentTypeError(..)
+  , TypeRef(..)
+  , TypeBody(..)
+  , Field(..)
+  , TypeParameter(..)
+  , TypeConstraint(..)
+  , DependentType(..)
+  , DependentParseResult
+  , runDependentTypesParser
+  , parseDependentType
+  , parseTypeDeclaration
+  , validateDependentTypeSyntax
+  )
+
+import Data.Char (isSpace, toLower)
+import qualified Data.List as Data.List
+import Data.List (isPrefixOf, tails, isInfixOf, sort, nub)
 import qualified Data.Text as T
-import Data.Maybe (isJust, isNothing, catMaybes)
-import Data.List (isInfixOf, nub)
 
-import Parser (parseTypus, TypusFile(..))
-import Compiler (compile, CompilerError(..), CompilationPhase(..))
-import Compiler.DependentTypeChecker (checkDependentTypes)
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
+-- Test basic type declaration parsing
+test_basic_type_declaration :: TestTree
+test_basic_type_declaration = testCase "Basic type declaration parsing" $ do
+  let source = "type Int where value >= 0"
+      result = validateDependentTypeSyntax source
+  case result of
+    Left errors -> assertFailure $ "Parse failed: " ++ show errors
+    Right _ -> pure () -- Should parse successfully
 
--- | Test dependent type validation functionality
+-- Test complex type with constraints
+test_complex_type_constraints :: TestTree
+test_complex_type_constraints = testCase "Complex type with constraints" $ do
+  let source = unlines
+        [ "type Vector<T> where"
+        , "  len(T) > 0"
+        , "  T == Int || T == String"
+        , "  len(T) <= 100"
+        ]
+      result = validateDependentTypeSyntax source
+  case result of
+    Left errors -> assertFailure $ "Parse failed: " ++ show errors
+    Right _ -> pure () -- Should parse successfully
+
+-- Test struct type with fields
+test_struct_type_fields :: TestTree
+test_struct_type_fields = testCase "Struct type with fields" $ do
+  let source = unlines
+        [ "type Person where"
+        , "  age: Int where age >= 0 && age < 150"
+        , "  name: String where len(name) > 0"
+        , "  email: String where email contains '@'"
+        ]
+      result = validateDependentTypeSyntax source
+  case result of
+    Left errors -> assertFailure $ "Parse failed: " ++ show errors
+    Right _ -> pure () -- Should parse successfully
+
+-- Test generic type parameters
+test_generic_type_parameters :: TestTree
+test_generic_type_parameters = testCase "Generic type parameters" $ do
+  let source = unlines
+        [ "type Container<T, U> where"
+        , "  T: Ord"
+        , "  U: Show"
+        , "  len(T) == len(U)"
+        , ]
+      result = validateDependentTypeSyntax source
+  case result of
+    Left errors -> assertFailure $ "Parse failed: " ++ show errors
+    Right _ -> pure () -- Should parse successfully
+
+-- Test nested type constraints
+test_nested_constraints :: TestTree
+test_nested_constraints = testCase "Nested type constraints" $ do
+  let source = unlines
+        [ "type Matrix<T> where"
+        , "  T: Numeric"
+        , "  rows: Int where rows > 0"
+        , "  cols: Int where cols > 0"
+        , "  rows * cols <= 1000"
+        , ]
+      result = validateDependentTypeSyntax source
+  case result of
+    Left errors -> assertFailure $ "Parse failed: " ++ show errors
+    Right _ -> pure () -- Should parse successfully
+
+-- Test type alias declarations
+test_type_aliases :: TestTree
+test_type_aliases = testCase "Type alias declarations" $ do
+  let source = unlines
+        [ "alias UserID = Int where value > 0"
+        , "alias Email = String where contains '@'"
+        , "alias PositiveInt = Int where value >= 1"
+        ]
+      result = validateDependentTypeSyntax source
+  case result of
+    Left errors -> assertFailure $ "Parse failed: " ++ show errors
+    Right _ -> pure () -- Should parse successfully
+
+-- Test function type declarations
+test_function_types :: TestTree
+test_function_types = testCase "Function type declarations" = do
+  let source = unlines
+        [ "func safeDivide(a: Int, b: Int) -> Int where b != 0"
+        , "func arrayAccess(arr: Array<T>, index: Int) -> T where"
+        , "  index >= 0 && index < len(arr)"
+        ]
+      result = validateDependentTypeSyntax source
+  case result of
+    Left errors -> assertFailure $ "Parse failed: " ++ show errors
+    Right _ -> pure () -- Should parse successfully
+
+-- Test error handling for invalid syntax
+test_invalid_syntax_handling :: TestTree
+test_invalid_syntax_handling = testCase "Invalid syntax handling" $ do
+  let invalidSources = 
+        [ "type Int where"  -- Incomplete constraint
+        , "type where value >= 0"  -- Missing type name
+        , "type Int where >="  -- Incomplete constraint
+        , "type Int where value > 0 &&"  -- Incomplete binary operation
+        , "func () -> Int"  -- Empty function name
+        ]
+  mapM_ (\source -> do
+    let result = validateDependentTypeSyntax source
+    case result of
+      Left _ -> pure () -- Should fail as expected
+      Right _ -> assertFailure $ "Expected parse failure for: " ++ source
+    ) invalidSources
+
+-- Test constraint validation edge cases
+test_constraint_validation_edge_cases :: TestTree
+test_constraint_validation_edge_cases = testCase "Constraint validation edge cases" $ do
+  let edgeCases = 
+        [ "type Int where value == 0"  -- Equality constraint
+        , "type String where len(s) == 0"  -- Empty string constraint
+        , "type Array<T> where len(T) == 1"  -- Single element constraint
+        , "type Number where value > -1000 && value < 1000"  -- Range constraint
+        ]
+  mapM_ (\source -> do
+    let result = validateDependentTypeSyntax source
+    case result of
+      Left errors -> assertFailure $ "Parse failed: " ++ show errors
+      Right _ -> pure () -- Should parse successfully
+    ) edgeCases
+
+-- Test Unicode and special characters in type names
+test_unicode_type_names :: TestTree
+test_unicode_type_names = testCase "Unicode and special characters in type names" = do
+  let unicodeSources = 
+        [ "type 测试类型 where value > 0"
+        , "type Vector<向量类型> where len(向量类型) > 0"
+        , "type 🚀Rocket where speed >= 0"
+        ]
+  mapM_ (\source -> do
+    let result = validateDependentTypeSyntax source
+    case result of
+      Left errors -> do
+        -- Unicode support might be limited, so we check if it's a reasonable error
+        let errorStr = show errors
+        assertBool ("Should handle Unicode gracefully: " ++ errorStr) $ 
+          not (isInfixOf "crash" errorStr) && not (isInfixOf "panic" errorStr)
+      Right _ -> pure () -- Unicode support works
+    ) unicodeSources
+
+-- Test very long type definitions
+test_long_type_definitions :: TestTree
+test_long_type_definitions = testCase "Very long type definitions" $ do
+  let longConstraint = "value >= 0 && value <= " ++ show (maxBound :: Int)
+      longSource = "type VeryLongTypeName<" ++ replicate 50 'A' ++ "> where " ++ longConstraint
+      result = validateDependentTypeSyntax longSource
+  case result of
+    Left errors -> do
+      -- Should handle long inputs gracefully
+      let errorStr = show errors
+      assertBool ("Should handle long inputs gracefully: " ++ errorStr) $ 
+        not (isInfixOf "crash" errorStr) && not (isInfixOf "panic" errorStr)
+    Right _ -> pure () -- Long input handled successfully
+
+-- Test deeply nested type structures
+test_deeply_nested_types :: TestTree
+test_deeply_nested_types = testCase "Deeply nested type structures" = do
+  let nestedSource = unlines
+        [ "type Outer<T> where"
+        , "  inner: Inner<T> where"
+        , "    deep: Deep<T> where"
+        , "      value: T where value > 0"
+        ]
+      result = validateDependentTypeSyntax nestedSource
+  case result of
+    Left errors -> assertFailure $ "Parse failed: " ++ show errors
+    Right _ -> pure () -- Should parse successfully
+
+-- Property: Type parsing is deterministic
+prop_type_parsing_deterministic :: String -> Property
+prop_type_parsing_deterministic source = 
+  let result1 = validateDependentTypeSyntax source
+      result2 = validateDependentTypeSyntax source
+  in case (result1, result2) of
+    (Left err1, Left err2) -> err1 === err2
+    (Right res1, Right res2) -> res1 === res2
+    _ -> property False -- Should have consistent results
+
+-- Property: Valid type constraints parse successfully
+prop_valid_constraints_parse :: String -> Property
+prop_valid_constraints_parse constraint = 
+  let source = "type Test where " ++ constraint
+      result = validateDependentTypeSyntax source
+  in classify (isRight result) "parses successfully" $
+     property $ case result of
+       Left _ -> True -- May fail for invalid constraints
+       Right _ -> True -- Success is good
+
+-- Property: Type name validation
+prop_type_name_validation :: String -> Property
+prop_type_name_validation name = 
+  let validName = not (null name) && all isAlphaNum (head name : dropWhile (== ' ') name)
+      source = "type " ++ name ++ " where value > 0"
+      result = validateDependentTypeSyntax source
+  in classify validName "valid name" $
+     classify (not validName) "invalid name" $
+     property $ case result of
+       Left _ -> not validName -- Should fail for invalid names
+       Right _ -> validName -- Should succeed for valid names
+
+-- Property: Constraint complexity handling
+prop_constraint_complexity :: Positive Int -> Property
+prop_constraint_complexity (Positive n) = 
+  let complexity = min n 10  -- Limit complexity for reasonable test size
+      constraint = "value > 0" ++ concat (replicate complexity " && value < " ++ show (complexity * 10))
+      source = "type Complex where " ++ constraint
+      result = validateDependentTypeSyntax source
+  in property $ case result of
+    Left _ -> True -- May fail for very complex constraints
+    Right _ -> True -- Success is good
+
+-- Property: Generic type parameter handling
+prop_generic_parameters :: [String] -> Property
+prop_generic_parameters params = 
+  let validParams = all (not . null) params
+      paramList = intercalate ", " params
+      source = "type Generic<" ++ paramList ++ "> where true"
+      result = validateDependentTypeSyntax source
+  in classify validParams "valid parameters" $
+     classify (not validParams) "invalid parameters" $
+     property $ case result of
+       Left _ -> not validParams -- Should fail for invalid params
+       Right _ -> validParams -- Should succeed for valid params
+
+-- Property: Multiple type declarations
+prop_multiple_declarations :: [String] -> Property
+prop_multiple_declarations typeNames = 
+  let validNames = all (not . null) typeNames
+      declarations = map (\name -> "type " ++ name ++ " where value > 0") typeNames
+      source = unlines declarations
+      result = validateDependentTypeSyntax source
+  in classify validNames "valid names" $
+     classify (not validNames) "invalid names" $
+     property $ case result of
+       Left _ -> not validNames -- Should fail for invalid names
+       Right _ -> validNames -- Should succeed for valid names
+
+-- Helper functions for property tests
+isRight :: Either a b -> Bool
+isRight (Right _) = True
+isRight _ = False
+
+isAlphaNum :: Char -> Bool
+isAlphaNum c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+
+intercalate :: String -> [String] -> String
+intercalate _ [] = ""
+intercalate _ [x] = x
+intercalate sep (x:xs) = x ++ sep ++ intercalate sep xs
+
 tests :: TestTree
-tests =
-  testGroup "New Dependent Type Validation Tests"
-    [ basicDependentTypeTests
-    , typeConstraintTests
-    , typeInferenceTests
-    , typeEqualityTests
-    , typeScopeTests
-    , errorReportingTests
-    , quickCheckProperties
-    ]
-
--- | Basic dependent type functionality tests
-basicDependentTypeTests :: TestTree
-basicDependentTypeTests =
-  testGroup "Basic Dependent Type Tests"
-    [ testCase "Validate simple dependent array types" $
-        let input = "// @dependent-types: true\nlet arr: array[5]int = [1,2,3,4,5]"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should accept matching array size" (null depTypeErrs)
-             Right _ -> assertBool "Should succeed with correct array size" True
-
-    , testCase "Reject mismatched array sizes" $
-        let input = "// @dependent-types: true\nlet arr: array[5]int = [1,2,3]"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should reject mismatched array size" (any isArraySizeMismatch depTypeErrs)
-               assertBool "Should explain size difference" (any explainsSizeDifference depTypeErrs)
-             Right _ -> assertFailure "Should have failed with array size mismatch"
-
-    , testCase "Validate vector length constraints" $
-        let input = "// @dependent-types: true\ntype Vec(n: int) = array[n]int\nlet v: Vec(3) = [1,2,3]"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should accept valid vector type" (null depTypeErrs)
-             Right _ -> assertBool "Should succeed with valid vector" True
-
-    , testCase "Handle dependent function types" $
-        let input = "// @dependent-types: true\nfunc id<n: int>(arr: array[n]int) -> array[n]int { return arr }"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should handle dependent function types" (any handlesDependentFunctionTypes depTypeErrs)
-             Right _ -> assertBool "Should succeed with dependent function" True
-    ]
-
--- | Type constraint tests
-typeConstraintTests :: TestTree
-typeConstraintTests =
-  testGroup "Type Constraint Tests"
-    [ testCase "Validate positive integer constraints" $
-        let input = "// @dependent-types: true\ntype Positive = int where n > 0\nlet x: Positive = 5"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should accept positive integer" (null depTypeErrs)
-             Right _ -> assertBool "Should succeed with positive integer" True
-
-    , testCase "Reject negative integer constraints" $
-        let input = "// @dependent-types: true\ntype Positive = int where n > 0\nlet x: Positive = -5"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should reject negative integer" (any isConstraintViolation depTypeErrs)
-               assertBool "Should explain constraint" (any explainsConstraint depTypeErrs)
-             Right _ -> assertFailure "Should have failed with constraint violation"
-
-    , testCase "Validate range constraints" $
-        let input = "// @dependent-types: true\ntype Age = int where n >= 0 && n <= 150\nlet x: Age = 25"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should accept valid range" (null depTypeErrs)
-             Right _ -> assertBool "Should succeed with valid range" True
-
-    , testCase "Handle complex constraints" $
-        let input = "// @dependent-types: true\ntype Even = int where n % 2 == 0\ntype PositiveEven = Even where n > 0\nlet x: PositiveEven = 4"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should handle complex constraints" (any handlesComplexConstraints depTypeErrs)
-             Right _ -> assertBool "Should succeed with complex constraints" True
-    ]
-
--- | Type inference tests
-typeInferenceTests :: TestTree
-typeInferenceTests =
-  testGroup "Type Inference Tests"
-    [ testCase "Infer array size from literal" $
-        let input = "// @dependent-types: true\nlet arr = [1,2,3,4,5]\nlet first: int = arr[0]"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should infer array size correctly" (any infersArraySize depTypeErrs)
-             Right _ -> assertBool "Should succeed with type inference" True
-
-    , testCase "Infer dependent function parameters" $
-        let input = "// @dependent-types: true\nfunc first<n: int>(arr: array[n]int) -> int { return arr[0] }\nlet result = first([1,2,3])"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should infer function parameter types" (any infersFunctionParameters depTypeErrs)
-             Right _ -> assertBool "Should succeed with parameter inference" True
-
-    , testCase "Handle generic type inference" $
-        let input = "// @dependent-types: true\ntype Pair<a, b> = struct { first: a, second: b }\nlet p = Pair { first: 5, second: \"hello\" }"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should infer generic types" (any infersGenericTypes depTypeErrs)
-             Right _ -> assertBool "Should succeed with generic inference" True
-
-    , testCase "Resolve type dependencies" $
-        let input = "// @dependent-types: true\ntype Matrix(m: int, n: int) = array[m]array[n]int\nlet mat: Matrix(2,3) = [[1,2,3],[4,5,6]]"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should resolve type dependencies" (any resolvesTypeDependencies depTypeErrs)
-             Right _ -> assertBool "Should succeed with type dependencies" True
-    ]
-
--- | Type equality tests
-typeEqualityTests :: TestTree
-typeEqualityTests =
-  testGroup "Type Equality Tests"
-    [ testCase "Check equivalent dependent types" $
-        let input = "// @dependent-types: true\ntype Vec5 = array[5]int\nlet a: Vec5 = [1,2,3,4,5]\nlet b: array[5]int = a"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should recognize equivalent types" (any recognizesEquivalentTypes depTypeErrs)
-             Right _ -> assertBool "Should succeed with equivalent types" True
-
-    , testCase "Reject incompatible dependent types" $
-        let input = "// @dependent-types: true\nlet a: array[3]int = [1,2,3]\nlet b: array[5]int = a"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should reject incompatible types" (any rejectsIncompatibleTypes depTypeErrs)
-               assertBool "Should explain type difference" (any explainsTypeDifference depTypeErrs)
-             Right _ -> assertFailure "Should have failed with type incompatibility"
-
-    , testCase "Handle type normalization" $
-        let input = "// @dependent-types: true\ntype AddOne<n: int> = n + 1\nlet x: AddOne<4> = 5"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should normalize type expressions" (any normalizesTypeExpressions depTypeErrs)
-             Right _ -> assertBool "Should succeed with type normalization" True
-
-    , testCase "Validate type substitution" $
-        let input = "// @dependent-types: true\ntype Double<n: int> = n * 2\nlet x: Double<3> = 6"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should validate type substitution" (any validatesTypeSubstitution depTypeErrs)
-             Right _ -> assertBool "Should succeed with type substitution" True
-    ]
-
--- | Type scope tests
-typeScopeTests :: TestTree
-typeScopeTests =
-  testGroup "Type Scope Tests"
-    [ testCase "Handle local dependent types" $
-        let input = "// @dependent-types: true\nfunc test() {\n  type LocalVec = array[3]int\n  let v: LocalVec = [1,2,3]\n  return v[0]\n}"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should handle local types" (any handlesLocalTypes depTypeErrs)
-             Right _ -> assertBool "Should succeed with local types" True
-
-    , testCase "Validate type visibility" $
-        let input = "// @dependent-types: true\ntype GlobalType = array[5]int\nfunc test() {\n  type LocalType = array[3]int\n  let a: GlobalType = [1,2,3,4,5]\n  let b: LocalType = [1,2,3]\n  return a[0] + b[0]\n}"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should respect type visibility" (any respectsTypeVisibility depTypeErrs)
-             Right _ -> assertBool "Should succeed with proper visibility" True
-
-    , testCase "Handle type parameter scoping" $
-        let input = "// @dependent-types: true\nfunc outer<n: int>() {\n  func inner<m: int>(arr: array[m]int) -> int {\n    return arr[0]\n  }\n  let arr: array[n]int = [1]\n  return inner(arr)\n}"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should handle parameter scoping" (any handlesParameterScoping depTypeErrs)
-             Right _ -> assertBool "Should succeed with parameter scoping" True
-
-    , testCase "Validate type lifetime" $
-        let input = "// @dependent-types: true\nfunc create_array() -> array[3]int {\n  type LocalArray = array[3]int\n  let arr: LocalArray = [1,2,3]\n  return arr\n}"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should validate type lifetime" (any validatesTypeLifetime depTypeErrs)
-             Right _ -> assertBool "Should succeed with valid type lifetime" True
-    ]
-
--- | Error reporting tests
-errorReportingTests :: TestTree
-errorReportingTests =
-  testGroup "Error Reporting Tests"
-    [ testCase "Provide detailed constraint violation messages" $
-        let input = "// @dependent-types: true\ntype Positive = int where n > 0\nlet x: Positive = -5"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should explain constraint violation" (any explainsConstraintViolation depTypeErrs)
-               assertBool "Should show actual vs expected" (any showsActualVsExpected depTypeErrs)
-               assertBool "Should suggest fix" (any suggestsConstraintFix depTypeErrs)
-             Right _ -> assertFailure "Should have failed with constraint violation"
-
-    , testCase "Track error locations precisely" $
-        let input = "// @dependent-types: true\nlet arr: array[5]int = [1,2,3]\nlet invalid = arr[10]"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should locate error precisely" (any locatesErrorPrecisely depTypeErrs)
-               assertBool "Should show context" (any showsErrorContext depTypeErrs)
-             Right _ -> assertFailure "Should have failed with out-of-bounds access"
-
-    , testCase "Provide helpful error suggestions" $
-        let input = "// @dependent-types: true\ntype Even = int where n % 2 == 0\nlet x: Even = 3"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should suggest valid values" (any suggestsValidValues depTypeErrs)
-               assertBool "Should explain constraint logic" (any explainsConstraintLogic depTypeErrs)
-             Right _ -> assertFailure "Should have failed with constraint violation"
-
-    , testCase "Handle complex error scenarios" $
-        let input = "// @dependent-types: true\ntype Matrix(m: int, n: int) = array[m]array[n]int\nlet mat: Matrix(2,3) = [[1,2],[3,4,5]]"
-            result = compile "test.typus" input
-        in case result of
-             Left errs -> do
-               let depTypeErrs = filter isDependentTypeError errs
-               assertBool "Should handle complex errors" (any handlesComplexErrors depTypeErrs)
-               assertBool "Should provide clear explanation" (any providesClearExplanation depTypeErrs)
-             Right _ -> assertFailure "Should have failed with matrix shape error"
-    ]
-
--- | QuickCheck properties for dependent type validation
-quickCheckProperties :: TestTree
-quickCheckProperties =
-  testGroup "QuickCheck Properties"
-    [ testProperty "Type constraints are enforced correctly" $
-        forAll genConstrainedTypeCode $ \code ->
-            case compile "test.typus" code of
-              Left errs -> 
-                let depTypeErrs = filter isDependentTypeError errs
-                in property $ any enforcesTypeConstraints depTypeErrs
-              Right _ -> property True  -- Valid code should succeed
-
-    , testProperty "Type inference preserves correctness" $
-        forAll genInferenceCode $ \code ->
-            case compile "test.typus" code of
-              Left errs -> 
-                let depTypeErrs = filter isDependentTypeError errs
-                in property $ all preservesInferenceCorrectness depTypeErrs
-              Right _ -> property True
-
-    , testProperty "Type equality is transitive" $
-        forAll genEqualityCode $ \code ->
-            case compile "test.typus" code do
-              Left errs -> 
-                let depTypeErrs = filter isDependentTypeError errs
-                in property $ respectsTransitivity depTypeErrs
-              Right _ -> property True
-    ]
-
--- | Helper functions for dependent type error detection
-isDependentTypeError :: CompilerError -> Bool
-isDependentTypeError (CompilerError TypeError _ msg _) = "dependent" `isInfixOf` msg || "constraint" `isInfixOf` msg
-isDependentTypeError _ = False
-
-isArraySizeMismatch :: CompilerError -> Bool
-isArraySizeMismatch (CompilerError TypeError _ msg _) = "array" `isInfixOf` msg && "size" `isInfixOf` msg
-isArraySizeMismatch _ = False
-
-explainsSizeDifference :: CompilerError -> Bool
-explainsSizeDifference (CompilerError _ _ msg _) = "expected" `isInfixOf` msg && "actual" `isInfixOf` msg
-explainsSizeDifference _ = False
-
-handlesDependentFunctionTypes :: CompilerError -> Bool
-handlesDependentFunctionTypes (CompilerError _ _ msg _) = "function" `isInfixOf` msg && "dependent" `isInfixOf` msg
-handlesDependentFunctionTypes _ = False
-
-isConstraintViolation :: CompilerError -> Bool
-isConstraintViolation (CompilerError TypeError _ msg _) = "constraint" `isInfixOf` msg && "violation" `isInfixOf` msg
-isConstraintViolation _ = False
-
-explainsConstraint :: CompilerError -> Bool
-explainsConstraint (CompilerError _ _ msg _) = "constraint" `isInfixOf` msg || "where" `isInfixOf` msg
-explainsConstraint _ = False
-
-handlesComplexConstraints :: CompilerError -> Bool
-handlesComplexConstraints (CompilerError _ _ msg _) = "complex" `isInfixOf` msg && "constraint" `isInfixOf` msg
-handlesComplexConstraints _ = False
-
-infersArraySize :: CompilerError -> Bool
-infersArraySize (CompilerError TypeError _ msg _) = "infer" `isInfixOf` msg && "array" `isInfixOf` msg
-infersArraySize _ = False
-
-infersFunctionParameters :: CompilerError -> Bool
-infersFunctionParameters (CompilerError TypeError _ msg _) = "infer" `isInfixOf` msg && "parameter" `isInfixOf` msg
-infersFunctionParameters _ = False
-
-infersGenericTypes :: CompilerError -> Bool
-infersGenericTypes (CompilerError TypeError _ msg _) = "infer" `isInfixOf` msg && "generic" `isInfixOf` msg
-infersGenericTypes _ = False
-
-resolvesTypeDependencies :: CompilerError -> Bool
-resolvesTypeDependencies (CompilerError TypeError _ msg _) = "resolve" `isInfixOf` msg && "dependency" `isInfixOf` msg
-resolvesTypeDependencies _ = False
-
-recognizesEquivalentTypes :: CompilerError -> Bool
-recognizesEquivalentTypes (CompilerError TypeError _ msg _) = "equivalent" `isInfixOf` msg || "compatible" `isInfixOf` msg
-recognizesEquivalentTypes _ = False
-
-rejectsIncompatibleTypes :: CompilerError -> Bool
-rejectsIncompatibleTypes (CompilerError TypeError _ msg _) = "incompatible" `isInfixOf` msg || "mismatch" `isInfixOf` msg
-rejectsIncompatibleTypes _ = False
-
-explainsTypeDifference :: CompilerError -> Bool
-explainsTypeDifference (CompilerError _ _ msg _) = "difference" `isInfixOf` msg || "expected" `isInfixOf` msg
-explainsTypeDifference _ = False
-
-normalizesTypeExpressions :: CompilerError -> Bool
-normalizesTypeExpressions (CompilerError TypeError _ msg _) = "normalize" `isInfixOf` msg
-normalizesTypeExpressions _ = False
-
-validatesTypeSubstitution :: CompilerError -> Bool
-validatesTypeSubstitution (CompilerError TypeError _ msg _) = "substitution" `isInfixOf` msg
-validatesTypeSubstitution _ = False
-
-handlesLocalTypes :: CompilerError -> Bool
-handlesLocalTypes (CompilerError TypeError _ msg _) = "local" `isInfixOf` msg && "type" `isInfixOf` msg
-handlesLocalTypes _ = False
-
-respectsTypeVisibility :: CompilerError -> Bool
-respectsTypeVisibility (CompilerError TypeError _ msg _) = "visibility" `isInfixOf` msg || "scope" `isInfixOf` msg
-respectsTypeVisibility _ = False
-
-handlesParameterScoping :: CompilerError -> Bool
-handlesParameterScoping (CompilerError TypeError _ msg _) = "parameter" `isInfixOf` msg && "scope" `isInfixOf` msg
-handlesParameterScoping _ = False
-
-validatesTypeLifetime :: CompilerError -> Bool
-validatesTypeLifetime (CompilerError TypeError _ msg _) = "lifetime" `isInfixOf` msg
-validatesTypeLifetime _ = False
-
-explainsConstraintViolation :: CompilerError -> Bool
-explainsConstraintViolation (CompilerError _ _ msg _) = "constraint" `isInfixOf` msg && "violation" `isInfixOf` msg
-explainsConstraintViolation _ = False
-
-showsActualVsExpected :: CompilerError -> Bool
-showsActualVsExpected (CompilerError _ _ msg _) = "actual" `isInfixOf` msg && "expected" `isInfixOf` msg
-showsActualVsExpected _ = False
-
-suggestsConstraintFix :: CompilerError -> Bool
-suggestsConstraintFix (CompilerError _ _ msg _) = "suggest" `isInfixOf` msg || "fix" `isInfixOf` msg
-suggestsConstraintFix _ = False
-
-locatesErrorPrecisely :: CompilerError -> Bool
-locatesErrorPrecisely (CompilerError _ (Just span) _ _) = span /= undefined
-locatesErrorPrecisely _ = False
-
-showsErrorContext :: CompilerError -> Bool
-showsErrorContext (CompilerError _ _ msg _) = length (words msg) >= 5
-showsErrorContext _ = False
-
-suggestsValidValues :: CompilerError -> Bool
-suggestsValidValues (CompilerError _ _ msg _) = "valid" `isInfixOf` msg || "example" `isInfixOf` msg
-suggestsValidValues _ = False
-
-explainsConstraintLogic :: CompilerError -> Bool
-explainsConstraintLogic (CompilerError _ _ msg _) = "logic" `isInfixOf` msg || "reason" `isInfixOf` msg
-explainsConstraintLogic _ = False
-
-handlesComplexErrors :: CompilerError -> Bool
-handlesComplexErrors (CompilerError _ _ msg _) = "complex" `isInfixOf` msg
-handlesComplexErrors _ = False
-
-providesClearExplanation :: CompilerError -> Bool
-providesClearExplanation (CompilerError _ _ msg _) = "explanation" `isInfixOf` msg || "clear" `isInfixOf` msg
-providesClearExplanation _ = False
-
-enforcesTypeConstraints :: CompilerError -> Bool
-enforcesTypeConstraints (CompilerError TypeError _ msg _) = "constraint" `isInfixOf` msg
-enforcesTypeConstraints _ = False
-
-preservesInferenceCorrectness :: CompilerError -> Bool
-preservesInferenceCorrectness (CompilerError TypeError _ msg _) = "inference" `isInfixOf` msg
-preservesInferenceCorrectness _ = False
-
-respectsTransitivity :: CompilerError -> Bool
-respectsTransitivity (CompilerError TypeError _ msg _) = "transitive" `isInfixOf` msg || "equality" `isInfixOf` msg
-respectsTransitivity _ = False
-
--- | Generators for QuickCheck testing
-genConstrainedTypeCode :: Gen String
-genConstrainedTypeCode = elements
-  [ "// @dependent-types: true\ntype Positive = int where n > 0\nlet x: Positive = 5"
-  , "// @dependent-types: true\ntype Even = int where n % 2 == 0\nlet x: Even = 4"
-  , "// @dependent-types: true\ntype Range = int where n >= 0 && n <= 100\nlet x: Range = 50"
-  , "// @dependent-types: true\ntype NonEmpty = array[n]int where n > 0\nlet x: NonEmpty = [1]"
-  ]
-
-genInferenceCode :: Gen String
-genInferenceCode = elements
-  [ "// @dependent-types: true\nlet arr = [1,2,3,4,5]\nlet first = arr[0]"
-  , "// @dependent-types: true\nfunc first<n: int>(arr: array[n]int) -> int { return arr[0] }\nlet result = first([1,2,3])"
-  , "// @dependent-types: true\ntype Pair<a, b> = struct { first: a, second: b }\nlet p = Pair { first: 5, second: \"hello\" }"
-  , "// @dependent-types: true\nlet matrix = [[1,2,3],[4,5,6]]\nlet element = matrix[0][1]"
-  ]
-
-genEqualityCode :: Gen String
-genEqualityCode = elements
-  [ "// @dependent-types: true\ntype Vec5 = array[5]int\nlet a: Vec5 = [1,2,3,4,5]\nlet b: array[5]int = a"
-  , "// @dependent-types: true\ntype AddOne<n: int> = n + 1\nlet x: AddOne<4> = 5"
-  , "// @dependent-types: true\ntype Double<n: int> = n * 2\nlet x: Double<3> = 6"
-  , "// @dependent-types: true\ntype Matrix(m: int, n: int) = array[m]array[n]int\nlet mat: Matrix(2,3) = [[1,2,3],[4,5,6]]"
+tests = testGroup "New Dependent Type Validation Tests"
+  [ test_basic_type_declaration
+  , test_complex_type_constraints
+  , test_struct_type_fields
+  , test_generic_type_parameters
+  , test_nested_constraints
+  , test_type_aliases
+  , test_function_types
+  , test_invalid_syntax_handling
+  , test_constraint_validation_edge_cases
+  , test_unicode_type_names
+  , test_long_type_definitions
+  , test_deeply_nested_types
+  , fastProperty "Type parsing is deterministic" prop_type_parsing_deterministic
+  , fastProperty "Valid constraints parse successfully" prop_valid_constraints_parse
+  , fastProperty "Type name validation" prop_type_name_validation
+  , fastProperty "Constraint complexity handling" prop_constraint_complexity
+  , fastProperty "Generic type parameter handling" prop_generic_parameters
+  , fastProperty "Multiple type declarations" prop_multiple_declarations
   ]

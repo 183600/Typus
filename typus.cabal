@@ -832,6 +832,26 @@ test-suite typus-test
         , Test.Unit.ErrorLocationTrackingQuickCheckSpec
         , Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec
         
+        -- New Advanced QuickCheck Test Modules (8 tests added)
+        , Test.Unit.AdvancedSourceLocationQuickCheckSpec
+        , Test.Unit.AdvancedParserQuickCheckSpec
+        , Test.Unit.AdvancedCompilerQuickCheckSpec
+        , Test.Unit.AdvancedOwnershipQuickCheckSpec
+        , Test.Unit.AdvancedDependenciesQuickCheckSpec
+        , Test.Unit.AdvancedErrorHandlerQuickCheckSpec
+        , Test.Unit.AdvancedGoToolchainQuickCheckSpec
+        , Test.Unit.AdvancedSyntaxValidatorQuickCheckSpec
+        
+        -- New Test Modules Added (2025) - Comprehensive Test Coverage
+        , Test.Unit.NewParserErrorRecoverySpec
+        , Test.Unit.NewCompilerOptimizationConsistencySpec
+        , Test.Unit.NewOwnershipTransferBoundarySpec
+        , Test.Unit.NewSourceLocationPrecisionSpec
+        , Test.Unit.NewUtilsStringBoundarySpec
+        , Test.Unit.NewErrorHandlerConsistencySpec
+        , Test.Unit.NewDependentTypeValidationSpec
+        , Test.Unit.NewEndToEndCompilationSpec
+        
         
     other-modules:
             Test.Dependencies.Arbitrary

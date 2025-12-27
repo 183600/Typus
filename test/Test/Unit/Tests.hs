@@ -2232,4 +2232,18 @@ tests =
   -- New Cabal QuickCheck Test Suite - 10 comprehensive tests
   -- ============================================================================
   , Test.Unit.NewCabalQuickCheckTestSuiteSpec.tests
+
+  -- ============================================================================
+  -- New Test Modules Added (2025) - Comprehensive Test Coverage
+  -- ============================================================================
+  , testGroup "New Test Modules - Comprehensive Coverage"
+    [ Test.Unit.NewParserErrorRecoverySpec.tests
+    , Test.Unit.NewCompilerOptimizationConsistencySpec.tests
+    , Test.Unit.NewOwnershipTransferBoundarySpec.tests
+    , Test.Unit.NewSourceLocationPrecisionSpec.tests
+    , Test.Unit.NewUtilsStringBoundarySpec.tests
+    , Test.Unit.NewErrorHandlerConsistencySpec.tests
+    , Test.Unit.NewDependentTypeValidationSpec.tests
+    , Test.Unit.NewEndToEndCompilationSpec.tests
+    ]
   ]
