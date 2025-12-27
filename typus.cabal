@@ -828,6 +828,9 @@ test-suite typus-test
         , Test.Unit.CabalMemorySafetySpec
         , Test.Unit.CabalRegressionSpec
         , Test.Unit.CabalEndToEndSpec
+        , Test.Unit.CompilerIRConsistencyQuickCheckSpec
+        , Test.Unit.ErrorLocationTrackingQuickCheckSpec
+        , Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec
         
         
     other-modules:

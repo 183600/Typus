@@ -49,6 +49,15 @@ import qualified Test.Unit.NewCabalBoundaryConditionsSpec
 import qualified Test.Unit.UtilsEnhancedQuickCheckSpec
 import qualified Test.Unit.SourceLocationEnhancedQuickCheckSpec
 
+-- New QuickCheck Test Modules (7 comprehensive tests)
+import qualified Test.Unit.ParserErrorHandlingQuickCheckSpec
+import qualified Test.Unit.UtilsStringProcessingQuickCheckSpec
+import qualified Test.Unit.OwnershipTransferConsistencyQuickCheckSpec
+import qualified Test.Unit.ErrorHandlerRecoveryQuickCheckSpec
+import qualified Test.Unit.CompilerIRConsistencyQuickCheckSpec
+import qualified Test.Unit.ErrorLocationTrackingQuickCheckSpec
+import qualified Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec
+
 -- ============================================================================
 -- New QuickCheck Test Modules Added (2025)
 -- ============================================================================
@@ -2202,4 +2211,17 @@ tests =
   -- New Cabal QuickCheck Test Suite - 10 comprehensive tests
   -- ============================================================================
   , Test.Unit.NewComprehensiveCabalQuickCheckTestSuite.tests
+
+  -- ============================================================================
+  -- New QuickCheck Test Modules (7 comprehensive tests)
+  -- ============================================================================
+  , testGroup "New QuickCheck Test Modules - Core Functionality"
+    [ Test.Unit.ParserErrorHandlingQuickCheckSpec.tests
+    , Test.Unit.UtilsStringProcessingQuickCheckSpec.tests
+    , Test.Unit.OwnershipTransferConsistencyQuickCheckSpec.tests
+    , Test.Unit.ErrorHandlerRecoveryQuickCheckSpec.tests
+    , Test.Unit.CompilerIRConsistencyQuickCheckSpec.tests
+    , Test.Unit.ErrorLocationTrackingQuickCheckSpec.tests
+    , Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec.tests
+    ]
   ]
