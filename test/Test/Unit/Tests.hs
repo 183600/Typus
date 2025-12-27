@@ -2138,4 +2138,18 @@ tests =
     , Test.Unit.CabalRegressionSpec.tests
     , Test.Unit.CabalEndToEndSpec.tests
     ]
+
+  -- ============================================================================
+  -- New QuickCheck Test Modules (8 comprehensive tests)
+  -- ============================================================================
+  , testGroup "New QuickCheck Test Modules - Enhanced Testing"
+    [ Test.Unit.SourceLocationMathPropertiesSpec.tests
+    , Test.Unit.ParserConsistencyPropertiesSpec.tests
+    , Test.Unit.CompilerIROptimizationSpec.tests
+    , Test.Unit.OwnershipTransferInvariantSpec.tests
+    , Test.Unit.TypeSystemSubstitutionSpec.tests
+    , Test.Unit.ErrorHandlerRecoverySpec.tests
+    , Test.Unit.DependencyAnalysisCycleSpec.tests
+    , Test.Unit.UtilsPerformanceSpec.tests
+    ]
   ]
