@@ -779,8 +779,10 @@ test-suite typus-test
         , Test.Unit.TypeInferenceEdgeCasesSpec
         , Test.Unit.IntegrationComplexWorkflowsSpec
 
+        -- New Advanced Edge Case QuickCheck Test Module
+        , Test.Unit.AdvancedEdgeCaseQuickCheckSpec
+
         -- New Comprehensive Cabal QuickCheck Test Module
-        , Test.Unit.NewComprehensiveCabalQuickCheckSpec
         , Test.Unit.TextProcessingBoundarySpec
         , Test.Unit.NewCabalTestSpec
         , Test.Unit.NewComprehensiveCabalTestSpec

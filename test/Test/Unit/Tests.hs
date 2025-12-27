@@ -628,6 +628,9 @@ import qualified Test.Unit.DebugIntegrationCoreQuickCheckSpec
 import qualified Test.Unit.ParserQuickCheckSpec
 import qualified Test.Unit.CompilerQuickCheckSpec
 import qualified Test.Unit.TypeCheckerQuickCheckSpec
+
+-- New Advanced Edge Case QuickCheck Test Module
+import qualified Test.Unit.AdvancedEdgeCaseQuickCheckSpec
 import qualified Test.Unit.OwnershipQuickCheckSpec
 import qualified Test.Unit.AnalyzerQuickCheckSpec
 import qualified Test.Unit.UtilsQuickCheckSpec
@@ -2102,4 +2105,9 @@ tests =
     , Test.Unit.OwnershipAnalysisSpec.tests
     , Test.Unit.DependencyAnalysisSpec.tests
     ]
+
+  -- ============================================================================
+  -- Advanced Edge Case QuickCheck Test Module (10 comprehensive tests)
+  -- ============================================================================
+  , Test.Unit.AdvancedEdgeCaseQuickCheckSpec.tests
   ]
