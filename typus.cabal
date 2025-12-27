@@ -731,6 +731,13 @@ test-suite typus-test
             , Test.Unit.CoreSyntaxValidatorQuickCheckSpec
             , Test.Unit.CoreGoToolchainQuickCheckSpec
             , Test.Unit.CoreIntegratedCompilerQuickCheckSpec
+
+        -- Additional Cabal Test Modules (2025)
+        , Test.Unit.NewCabalTestSuiteSpec
+        , Test.Unit.SourceLocationCabalTestsSpec
+        , Test.Unit.ParserCabalTestsSpec
+        , Test.Unit.ErrorHandlingCabalTestsSpec
+        , Test.Unit.IntegrationCabalTestsSpec
     other-modules:
             Test.Dependencies.Arbitrary
     build-depends:

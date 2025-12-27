@@ -99,6 +99,13 @@ import qualified Test.Unit.IntegrationEndToEndCabalsSpec
 import qualified Test.Unit.PerformanceRegressionCabalsSpec
 import qualified Test.Unit.SecurityValidationCabalsSpec
 
+-- Additional Cabal Test Modules (2025)
+import qualified Test.Unit.NewCabalTestSuiteSpec
+import qualified Test.Unit.SourceLocationCabalTestsSpec
+import qualified Test.Unit.ParserCabalTestsSpec
+import qualified Test.Unit.ErrorHandlingCabalTestsSpec
+import qualified Test.Unit.IntegrationCabalTestsSpec
+
 -- New Core QuickCheck Test Modules
 import qualified Test.Unit.SourceLocationCoreQuickCheckSpec
 import qualified Test.Unit.ErrorHandlerCoreQuickCheckSpec
@@ -1728,5 +1735,14 @@ tests =
     , Test.Unit.CoreSyntaxValidatorQuickCheckSpec.tests
     , Test.Unit.CoreGoToolchainQuickCheckSpec.tests
     , Test.Unit.CoreIntegratedCompilerQuickCheckSpec.tests
+    ]
+
+  -- Additional Cabal Test Modules (2025)
+  , testGroup "Additional Cabal Test Modules 2025"
+    [ Test.Unit.NewCabalTestSuiteSpec.tests
+    , Test.Unit.SourceLocationCabalTestsSpec.tests
+    , Test.Unit.ParserCabalTestsSpec.tests
+    , Test.Unit.ErrorHandlingCabalTestsSpec.tests
+    , Test.Unit.IntegrationCabalTestsSpec.tests
     ]
   ]
