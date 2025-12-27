@@ -19,6 +19,17 @@ import qualified Test.Unit.SyntaxValidatorSpec
 import qualified Test.Unit.ValueAnalysisSpec
 import qualified Test.Unit.VerbositySpec
 import qualified Test.Unit.UtilsSpec
+
+-- New Basic Test Modules Added
+import qualified Test.Unit.SourceLocationBasicPropertiesSpec
+import qualified Test.Unit.ParserBasicFunctionsSpec
+import qualified Test.Unit.CompilerErrorHandlingSpec
+import qualified Test.Unit.OwnershipAnalysisBasicSpec
+import qualified Test.Unit.UtilsStringProcessingSpec
+import qualified Test.Unit.DependenciesTypeSystemSpec
+import qualified Test.Unit.ValueAnalysisBasicSpec
+import qualified Test.Unit.ErrorHandlerRecoverySpec
+import qualified Test.Unit.SyntaxValidatorValidationSpec
 import qualified Test.Unit.AdvancedParserSpec
 import qualified Test.Unit.IntegrationSpec
 import qualified Test.Unit.PerformanceSpec
@@ -1019,6 +1030,19 @@ tests =
     , Test.Unit.IntegrationSpec.tests
     , Test.Unit.PerformanceSpec.tests
     , Test.Unit.EdgeCaseSpec.tests
+    
+    -- New Basic Test Modules Added
+    , testGroup "New Basic Test Modules"
+        [ Test.Unit.SourceLocationBasicPropertiesSpec.tests
+        , Test.Unit.ParserBasicFunctionsSpec.tests
+        , Test.Unit.CompilerErrorHandlingSpec.tests
+        , Test.Unit.OwnershipAnalysisBasicSpec.tests
+        , Test.Unit.UtilsStringProcessingSpec.tests
+        , Test.Unit.DependenciesTypeSystemSpec.tests
+        , Test.Unit.ValueAnalysisBasicSpec.tests
+        , Test.Unit.ErrorHandlerRecoverySpec.tests
+        , Test.Unit.SyntaxValidatorValidationSpec.tests
+        ]
     , Test.Unit.EnhancedQuickCheckSpec.tests
     , Test.Unit.EnhancedParserTestSpec.tests
     , Test.Unit.EnhancedCompilerTestSpec.tests

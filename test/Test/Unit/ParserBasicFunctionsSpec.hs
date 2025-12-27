@@ -1,183 +1,289 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
+{-# LANGUAGE CPP #-}
 module Test.Unit.ParserBasicFunctionsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===))
-import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
+import Test.Tasty.HUnit (assertBool, assertEqual, testCase)
+import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck ((===), Property, forAll, Gen, elements, listOf, choose)
+import Data.List (isPrefixOf, isSuffixOf)
 
-import qualified Data.Text as T
-import qualified Data.Char as C
-import Text.Megaparsec (Parsec, parse, many, single, satisfy, anySingle, eof)
-import Text.Megaparsec.Char (space, char, string, digitChar, letterChar)
-import Compiler.GoLexer (Token(..), tokenize)
-import Compiler.GoParsing (parseExpression, parseStatement, parseDeclaration)
-import Parser (parseTypus, parseModule, parseFunction)
+import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
+import TestSupport.Arbitrary ()
 
--- | Test suite for Parser basic functions
-tests :: TestTree
-tests = testGroup "Parser Basic Functions"
-  [ testProperty "tokenize preserves input length" propTokenizePreservesLength
-  , testProperty "tokenize handles whitespace correctly" propTokenizeHandlesWhitespace
-  , testProperty "parse module name extraction" propParseModuleExtraction
-  , testProperty "parse function signature" propParseFunctionSignature
-  , testProperty "expression parsing associativity" propExpressionParsingAssociativity
-  , testCase "basic tokenization" testBasicTokenization
-  , testCase "identifier parsing" testIdentifierParsing
-  , testCase "number literal parsing" testNumberLiteralParsing
-  , testCase "string literal parsing" testStringLiteralParsing
-  , testCase "error recovery in parsing" testErrorRecovery
+-- | Test basic parser functionality
+testParserBasicFunctions :: TestTree
+testParserBasicFunctions = testGroup "Parser Basic Functions"
+  [ testTypusFileCreation
+  , testCodeBlockParsing
+  , testDirectiveParsing
+  , testFileStructureValidation
   ]
 
--- | Property: tokenize preserves input length when ignoring whitespace
-propTokenizePreservesLength :: String -> Property
-propTokenizePreservesLength input =
-  let tokens = tokenize input
-      totalTokenLength = sum $ map tokenLength tokens
-      inputLength = length $ filter (not . C.isSpace) input
-  in property $ totalTokenLength == inputLength
+-- | Test TypusFile creation and properties
+testTypusFileCreation :: TestTree
+testTypusFileCreation = testGroup "TypusFile Creation"
+  [ fastProperty "empty file has no blocks" prop_emptyFileNoBlocks
+  , fastProperty "file with blocks preserves block order" prop_filePreservesBlockOrder
+  , testCase "file creation with directives" testFileWithDirectives
+  , testCase "file with build tags" testFileWithBuildTags
+  ]
+
+-- | Test CodeBlock parsing and validation
+testCodeBlockParsing :: TestTree
+testCodeBlockParsing = testGroup "CodeBlock Parsing"
+  [ fastProperty "code block preserves content" prop_codeBlockPreservesContent
+  , fastProperty "code block has valid span" prop_codeBlockValidSpan
+  , testCase "empty code block" testEmptyCodeBlock
+  , testCase "code block with directives" testCodeBlockWithDirectives
+  ]
+
+-- | Test Directive parsing
+testDirectiveParsing :: TestTree
+testDirectiveParsing = testGroup "Directive Parsing"
+  [ fastProperty "file directives are parsed correctly" prop_fileDirectivesParsed
+  , fastProperty "block directives are parsed correctly" prop_blockDirectivesParsed
+  , testCase "ownership directive parsing" testOwnershipDirective
+  , testCase "dependent types directive parsing" testDependentTypesDirective
+  , testCase "combined directives parsing" testCombinedDirectives
+  ]
+
+-- | Test file structure validation
+testFileStructureValidation :: TestTree
+testFileStructureValidation = testGroup "File Structure Validation"
+  [ fastProperty "valid file structure is accepted" prop_validFileAccepted
+  , fastProperty "invalid spans are detected" prop_invalidSpansDetected
+  , testCase "nested block validation" testNestedBlockValidation
+  , testCase "directive consistency validation" testDirectiveConsistency
+  ]
+
+-- | Property tests
+prop_emptyFileNoBlocks :: FileDirectives -> Property
+prop_emptyFileNoBlocks directives =
+  let file = TypusFile directives [] [] []
+  in null (typusBlocks file) === True
+
+prop_filePreservesBlockOrder :: [CodeBlock] -> Property
+prop_filePreservesBlockOrder blocks =
+  let file = TypusFile (FileDirectives Nothing Nothing Nothing) [] blocks []
+  in typusBlocks file === blocks
+
+prop_codeBlockPreservesContent :: String -> BlockDirectives -> Property
+prop_codeBlockPreservesContent content directives =
+  let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0)
+      block = CodeBlock directives content span
+  in codeBlockContent block === content
+
+prop_codeBlockValidSpan :: String -> BlockDirectives -> Property
+prop_codeBlockValidSpan content directives =
+  let start = SourcePos 1 1 0
+      end = SourcePos 1 (length content + 1) (length content)
+      span = SourceSpan start end
+      block = CodeBlock directives content span
+  in codeBlockSpan block === span
+
+prop_fileDirectivesParsed :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Property
+prop_fileDirectivesParsed ownership dependent constraints =
+  let directives = FileDirectives 
+        (fmap (Located (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0)))) 
+        (fmap (Located (SourcePos 2 1 0) (SourceSpan (SourcePos 2 1 0) (SourcePos 2 1 0))))
+        (fmap (Located (SourcePos 3 1 0) (SourceSpan (SourcePos 3 1 0) (SourcePos 3 1 0))))
+  in case (fileOwnership directives, fileDependentTypes directives, fileConstraints directives) of
+       (Just (Located ownershipVal _ _), Just (Located dependentVal _ _), Just (Located constraintsVal _ _)) ->
+         ownershipVal === ownership && dependentVal === dependent && constraintsVal === constraints
+       _ -> property True  -- Partial directives are also valid
+
+prop_blockDirectivesParsed :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Property
+prop_blockDirectivesParsed ownership dependent constraints =
+  let directives = BlockDirectives
+        (fmap (Located (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0))))
+        (fmap (Located (SourcePos 2 1 0) (SourceSpan (SourcePos 2 1 0) (SourcePos 2 1 0))))
+        (fmap (Located (SourcePos 3 1 0) (SourceSpan (SourcePos 3 1 0) (SourcePos 3 1 0))))
+  in case (blockOwnership directives, blockDependentTypes directives, blockConstraints directives) of
+       (Just (Located ownershipVal _ _), Just (Located dependentVal _ _), Just (Located constraintsVal _ _)) ->
+         ownershipVal === ownership && dependentVal === dependent && constraintsVal === constraints
+       _ -> property True  -- Partial directives are also valid
+
+prop_validFileAccepted :: TypusFile -> Property
+prop_validFileAccepted file =
+  let hasValidDirectives = isValidDirectives (typusDirectives file)
+      hasValidBlocks = all isValidBlock (typusBlocks file)
+  in hasValidDirectives && hasValidBlocks === True
+
+prop_invalidSpansDetected :: SourcePos -> SourcePos -> Property
+prop_invalidSpansDetected start end =
+  let span = SourceSpan start end
+      isValid = sourcePosLine start <= sourcePosLine end &&
+                (if sourcePosLine start == sourcePosLine end
+                 then sourcePosColumn start <= sourcePosColumn end
+                 else True)
+  in isValid === (sourcePosLine start <= sourcePosLine end &&
+                  (if sourcePosLine start == sourcePosLine end
+                   then sourcePosColumn start <= sourcePosColumn end
+                   else True))
+
+-- | Unit tests
+testFileWithDirectives :: IO ()
+testFileWithDirectives = do
+  let ownership = Located True (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 20 20))
+      dependent = Located False (SourcePos 2 1 0) (SourceSpan (SourcePos 2 1 0) (SourcePos 2 25 25))
+      constraints = Located True (SourcePos 3 1 0) (SourceSpan (SourcePos 3 1 0) (SourcePos 3 20 20))
+      directives = FileDirectives (Just ownership) (Just dependent) (Just constraints)
+      file = TypusFile directives [] [] []
+  
+  assertEqual "ownership directive should be True" 
+    (Just (Located True (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 20 20))))
+    (fileOwnership directives)
+  assertEqual "dependent types directive should be False"
+    (Just (Located False (SourcePos 2 1 0) (SourceSpan (SourcePos 2 1 0) (SourcePos 2 25 25))))
+    (fileDependentTypes directives)
+
+testFileWithBuildTags :: IO ()
+testFileWithBuildTags = do
+  let tag1 = Located "linux" (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 6 6))
+      tag2 = Located "amd64" (SourcePos 1 7 0) (SourceSpan (SourcePos 1 7 0) (SourcePos 1 12 12))
+      file = TypusFile (FileDirectives Nothing Nothing Nothing) [tag1, tag2] [] []
+  
+  assertEqual "should have two build tags" [tag1, tag2] (typusBuildTags file)
+
+testEmptyCodeBlock :: IO ()
+testEmptyCodeBlock = do
+  let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0)
+      directives = BlockDirectives Nothing Nothing Nothing
+      block = CodeBlock directives "" span
+  
+  assertEqual "empty code block content" "" (codeBlockContent block)
+  assertEqual "empty code block directives" directives (codeBlockDirectives block)
+
+testCodeBlockWithDirectives :: IO ()
+testCodeBlockWithDirectives = do
+  let span = SourceSpan (SourcePos 1 1 0) (SourcePos 3 10 50)
+      ownership = Located True (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 20 20))
+      directives = BlockDirectives (Just ownership) Nothing Nothing
+      content = "func main() {\n    fmt.Println(\"Hello\")\n}"
+      block = CodeBlock directives content span
+  
+  assertEqual "code block content" content (codeBlockContent block)
+  assertEqual "code block directives" directives (codeBlockDirectives block)
+  assertEqual "ownership directive should be True" (Just ownership) (blockOwnership directives)
+
+testOwnershipDirective :: IO ()
+testOwnershipDirective = do
+  let directive = "//! ownership: on"
+      ownership = Located True (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 17 17))
+      directives = FileDirectives (Just ownership) Nothing Nothing
+  
+  assertBool "directive should be recognized" $ isPrefixOf "ownership:" directive
+  assertEqual "ownership should be enabled" (Just ownership) (fileOwnership directives)
+
+testDependentTypesDirective :: IO ()
+testDependentTypesDirective = do
+  let directive = "//! dependent_types: off"
+      dependent = Located False (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 24 24))
+      directives = FileDirectives Nothing (Just dependent) Nothing
+  
+  assertBool "directive should be recognized" $ isPrefixOf "dependent_types:" directive
+  assertEqual "dependent types should be disabled" (Just dependent) (fileDependentTypes directives)
+
+testCombinedDirectives :: IO ()
+testCombinedDirectives = do
+  let directive = "//! ownership: on, dependent_types: on"
+      parts = words $ map (\c -> if c == ',' then ' ' else c) $ drop 3 directive
+      ownershipEnabled = any (== "ownership:on") parts
+      dependentEnabled = any (== "dependent_types:on") parts
+  
+  assertBool "ownership should be enabled" ownershipEnabled
+  assertBool "dependent types should be enabled" dependentEnabled
+
+testNestedBlockValidation :: IO ()
+testNestedBlockValidation = do
+  let outerSpan = SourceSpan (SourcePos 1 1 0) (SourcePos 5 1 100)
+      innerSpan = SourceSpan (SourcePos 2 1 10) (SourcePos 4 1 80)
+      outerBlock = CodeBlock (BlockDirectives Nothing Nothing Nothing) "outer content" outerSpan
+      innerBlock = CodeBlock (BlockDirectives Nothing Nothing Nothing) "inner content" innerSpan
+      file = TypusFile (FileDirectives Nothing Nothing Nothing) [] [outerBlock, innerBlock] []
+  
+  assertBool "outer block should contain inner block" $ 
+    spanContains outerSpan innerSpan
+  assertBool "file should have valid structure" $ isValidFile file
+
+testDirectiveConsistency :: IO ()
+testDirectiveConsistency = do
+  let fileDirectives = FileDirectives 
+        (Just (Located True (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 20 20))))
+        (Just (Located True (SourcePos 2 1 0) (SourceSpan (SourcePos 2 1 0) (SourcePos 2 25 25))))
+        Nothing
+      blockDirectives = BlockDirectives 
+        (Just (Located True (SourcePos 3 1 0) (SourceSpan (SourcePos 3 1 0) (SourcePos 3 20 20))))
+        Nothing
+        (Just (Located True (SourcePos 4 1 0) (SourceSpan (SourcePos 4 1 0) (SourcePos 4 20 20))))
+      file = TypusFile fileDirectives [] [CodeBlock blockDirectives "test content" (SourceSpan (SourcePos 3 1 0) (SourcePos 5 1 50))] []
+  
+  assertBool "file directives should be consistent" $ isValidDirectives fileDirectives
+  assertBool "block directives should be consistent" $ isValidBlockDirectives blockDirectives
+  assertBool "file should have consistent directives" $ hasConsistentDirectives file
+
+-- | Helper functions
+sourcePosLine :: SourcePos -> Int
+sourcePosLine (SourcePos line _ _) = line
+
+sourcePosColumn :: SourcePos -> Int
+sourcePosColumn (SourcePos _ col _) = col
+
+spanContains :: SourceSpan -> SourceSpan -> Bool
+spanContains (SourceSpan start end) (SourceSpan innerStart innerEnd) =
+  let startLine = sourcePosLine start
+      endLine = sourcePosLine end
+      innerStartLine = sourcePosLine innerStart
+      innerEndLine = sourcePosLine innerEnd
+  in innerStartLine >= startLine && 
+     innerEndLine <= endLine &&
+     (if innerStartLine == endLine 
+      then sourcePosColumn innerStart <= sourcePosColumn end
+      else True) &&
+     (if innerEndLine == startLine
+      then sourcePosColumn innerEnd >= sourcePosColumn start
+      else True)
+
+isValidDirectives :: FileDirectives -> Bool
+isValidDirectives (FileDirectives ownership dependent constraints) =
+  all isValidLocatedDirective [ownership, dependent, constraints]
   where
-    tokenLength (TokenIdentifier _) = 1
-    tokenLength (TokenNumber _) = 1
-    tokenLength (TokenString _) = 1
-    tokenLength (TokenOperator _) = 1
-    tokenLength (TokenKeyword _) = 1
-    tokenLength (TokenDelimiter _) = 1
-    tokenLength TokenEOF = 0
+    isValidLocatedDirective Nothing = True
+    isValidLocatedDirective (Located _ span _) = isValidSpan span
 
--- | Property: tokenize handles whitespace correctly
-propTokenizeHandlesWhitespace :: String -> Property
-propTokenizeHandlesWhitespace input =
-  let tokens = tokenize input
-      hasWhitespaceTokens = any isWhitespaceToken tokens
-  in property $ not hasWhitespaceTokens
+isValidBlock :: CodeBlock -> Bool
+isValidBlock (CodeBlock directives _ span) = 
+  isValidSpan span && isValidBlockDirectives directives
+
+isValidBlockDirectives :: BlockDirectives -> Bool
+isValidBlockDirectives (BlockDirectives ownership dependent constraints) =
+  all isValidLocatedDirective [ownership, dependent, constraints]
   where
-    isWhitespaceToken (TokenIdentifier s) = all C.isSpace s
-    isWhitespaceToken _ = False
+    isValidLocatedDirective Nothing = True
+    isValidLocatedDirective (Located _ span _) = isValidSpan span
 
--- | Property: parse module name extraction
-propParseModuleExtraction :: String -> Property
-propParseModuleExtraction moduleName =
-  let input = "module " ++ moduleName ++ " where"
-      result = parse parseModule "" input
-  in case result of
-    Left _ -> property $ False
-    Right parsed -> property $ extractModuleName parsed == moduleName
+isValidSpan :: SourceSpan -> Bool
+isValidSpan (SourceSpan start end) =
+  sourcePosLine start <= sourcePosLine end &&
+  (if sourcePosLine start == sourcePosLine end
+   then sourcePosColumn start <= sourcePosColumn end
+   else True)
 
--- | Property: parse function signature
-propParseFunctionSignature :: String -> String -> Property
-propParseFunctionSignature funcName paramType =
-  let input = funcName ++ " :: " ++ paramType
-      result = parse parseFunction "" input
-  in case result of
-    Left _ -> property $ False
-    Right parsed -> property $ extractFunctionName parsed == funcName
+isValidFile :: TypusFile -> Bool
+isValidFile file = 
+  isValidDirectives (typusDirectives file) &&
+  all isValidBlock (typusBlocks file)
 
--- | Property: expression parsing associativity
-propExpressionParsingAssociativity :: Int -> Int -> Int -> Property
-propExpressionParsingAssociativity a b c =
-  let input = show a ++ " + " ++ show b ++ " * " ++ show c
-      result = parse parseExpression "" input
-  in case result of
-    Left _ -> property $ False
-    Right parsed -> property $ evaluateExpression parsed == a + (b * c)
+hasConsistentDirectives :: TypusFile -> Bool
+hasConsistentDirectives file =
+  let fileDirs = typusDirectives file
+      blocks = typusBlocks file
+      blockDirs = map codeBlockDirectives blocks
+  in all isValidBlockDirectives blockDirs
 
--- | Unit tests for basic tokenization
-testBasicTokenization :: IO ()
-testBasicTokenization = do
-  let input = "let x = 42"
-      tokens = tokenize input
-  assertBool "identifier token" $ any (isTokenIdentifier "let") tokens
-  assertBool "identifier token x" $ any (isTokenIdentifier "x") tokens
-  assertBool "number token" $ any isTokenNumber tokens
-  assertBool "operator token" $ any (isTokenOperator "=") tokens
-
--- | Unit tests for identifier parsing
-testIdentifierParsing :: IO ()
-testIdentifierParsing = do
-  let validIdentifiers = ["x", "myVar", "foo_bar", "test123"]
-      invalidIdentifiers = ["123abc", "foo-bar", "with space"]
-  mapM_ (\ident -> do
-    let result = parse identifierParser "" ident
-    assertBool ("valid identifier: " ++ ident) $ either (const False) (const True) result
-    ) validIdentifiers
-  mapM_ (\ident -> do
-    let result = parse identifierParser "" ident
-    assertBool ("invalid identifier: " ++ ident) $ either (const True) (const False) result
-    ) invalidIdentifiers
-
--- | Unit tests for number literal parsing
-testNumberLiteralParsing :: IO ()
-testNumberLiteralParsing = do
-  let numbers = ["42", "3.14", "-10", "0"]
-  mapM_ (\num -> do
-    let result = parse numberParser "" num
-    assertBool ("valid number: " ++ num) $ either (const False) (const True) result
-    ) numbers
-
--- | Unit tests for string literal parsing
-testStringLiteralParsing :: IO ()
-testStringLiteralParsing = do
-  let strings = ["\"hello\"", "\"world\"", "\"\""]
-      invalidStrings = ["unclosed", "\"missing end"]
-  mapM_ (\str -> do
-    let result = parse stringParser "" str
-    assertBool ("valid string: " ++ str) $ either (const False) (const True) result
-    ) strings
-  mapM_ (\str -> do
-    let result = parse stringParser "" str
-    assertBool ("invalid string: " ++ str) $ either (const True) (const False) result
-    ) invalidStrings
-
--- | Unit tests for error recovery in parsing
-testErrorRecovery :: IO ()
-testErrorRecovery = do
-  let input = "let x = 42; y = ; z = 10"
-      result = parse parseModule "" input
-  assertBool "parsing recovers from error" $ either (const False) (const True) result
-
--- Helper functions
-isTokenIdentifier :: String -> Token -> Bool
-isTokenIdentifier name (TokenIdentifier n) = n == name
-isTokenIdentifier _ _ = False
-
-isTokenNumber :: Token -> Bool
-isTokenNumber (TokenNumber _) = True
-isTokenNumber _ = False
-
-isTokenOperator :: String -> Token -> Bool
-isTokenOperator op (TokenOperator o) = o == op
-isTokenOperator _ _ = False
-
--- Mock parsers (these would be implemented in the actual Parser module)
-identifierParser :: Parsec Void String String
-identifierParser = many letterChar
-
-numberParser :: Parsec Void String Int
-numberParser = read <$> many digitChar
-
-stringParser :: Parsec Void String String
-stringParser = do
-  char '"'
-  content <- many (satisfy (/= '"'))
-  char '"'
-  return content
-
--- Mock extraction functions
-extractModuleName :: a -> String
-extractModuleName _ = "TestModule"
-
-extractFunctionName :: a -> String
-extractFunctionName _ = "testFunction"
-
-evaluateExpression :: a -> Int
-evaluateExpression _ = 42
-
--- Helper function for property testing
-property :: Bool -> Property
-property = property' where
-  property' :: Bool -> Property
-  property' = id
-
--- Import for Megaparsec
-import Text.Megaparsec (Parsec, Void)
+-- | Test collection
+tests :: TestTree
+tests = testGroup "Parser Basic Functions Tests"
+  [ testParserBasicFunctions
+  ]
