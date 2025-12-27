@@ -13,7 +13,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), conjoin)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), conjoin, Arbitrary(..), elements)
 
 import Parser
 import SourceLocation
@@ -34,6 +34,10 @@ import Data.Char (isSpace, isAlpha, isAlphaNum)
 import qualified Data.List as Data.List
 import Data.List (isPrefixOf, isInfixOf, sort, nub)
 import Data.Maybe (isJust, isNothing, fromMaybe)
+
+-- ErrorSeverity的Arbitrary实例
+instance Arbitrary ErrorSeverity where
+  arbitrary = elements [Fatal, Error, Warning, Info]
 
 -- | 10个新的QuickCheck测试用例，覆盖Typus项目的核心功能
 
@@ -135,10 +139,10 @@ prop_end_to_end_compilation_consistency typusFile =
 -- 位置比较函数
 isBeforeOrEqual :: SourcePos -> SourcePos -> Bool
 isBeforeOrEqual pos1 pos2 =
-  let line1 = sourceLine pos1
-      line2 = sourceLine pos2
-      col1 = sourceColumn pos1
-      col2 = sourceColumn pos2
+  let line1 = posLine pos1
+      line2 = posLine pos2
+      col1 = posColumn pos1
+      col2 = posColumn pos2
   in line1 < line2 || (line1 == line2 && col1 <= col2)
 
 -- 计算span长度
@@ -146,8 +150,8 @@ spanLength :: SourceSpan -> Int
 spanLength span = 
   let start = spanStart span
       end = spanEnd span
-  in (sourceLine end - sourceLine start) * 1000 + 
-     (sourceColumn end - sourceColumn start)
+  in (posLine end - posLine start) * 1000 + 
+     (posColumn end - posColumn start)
 
 -- 合并两个span
 combineSpans :: SourceSpan -> SourceSpan -> SourceSpan
