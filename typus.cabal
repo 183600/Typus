@@ -868,6 +868,11 @@ test-suite typus-test
         , Test.Unit.EndToEndIntegrationTestSpec
         , Test.Unit.SimpleStringTestsSpec
         
+        -- New Cabal Test Modules (Added for enhanced coverage)
+        , Test.Unit.UtilsBoundarySpec
+        , Test.Unit.SourceLocationMathSpec
+        , Test.Unit.ErrorHandlingCoreSpec
+        , Test.Unit.CorePropertiesQuickCheckSpec
         
     other-modules:
             Test.Dependencies.Arbitrary

@@ -78,6 +78,9 @@ import qualified Test.Unit.CompilerIRConsistencyQuickCheckSpec
 import qualified Test.Unit.ErrorLocationTrackingQuickCheckSpec
 import qualified Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec
 
+-- New Cabal QuickCheck Test Module
+import qualified Test.Unit.NewCabalQuickCheckTestSpec
+
 -- ============================================================================
 -- New QuickCheck Test Modules Added (2025)
 -- ============================================================================
@@ -99,6 +102,12 @@ import qualified Test.Unit.UtilsPerformanceBoundarySpec
 import qualified Test.Unit.ErrorHandlerConsistencySpec
 import qualified Test.Unit.OwnershipAnalysisBoundarySpec
 import qualified Test.Unit.EndToEndCompilationSpec
+
+-- New Cabal Test Modules (Added for enhanced coverage)
+import qualified Test.Unit.UtilsBoundarySpec
+import qualified Test.Unit.SourceLocationMathSpec
+import qualified Test.Unit.ErrorHandlingCoreSpec
+import qualified Test.Unit.CorePropertiesQuickCheckSpec
 
 -- New Cabal Test Modules (9 comprehensive tests)
 import qualified Test.Unit.SourceLocationCoreTestSpec
@@ -2260,6 +2269,11 @@ tests =
     ]
 
   -- ============================================================================
+  -- New Cabal QuickCheck Test Module - 10 comprehensive tests
+  -- ============================================================================
+  , Test.Unit.NewCabalQuickCheckTestSpec.tests
+
+  -- ============================================================================
   -- New Cabal QuickCheck Test Suite - 10 comprehensive tests
   -- ============================================================================
   , Test.Unit.NewCabalQuickCheckTestSuiteSpec.tests
@@ -2292,5 +2306,15 @@ tests =
     , Test.Unit.NewQuickCheckTestSuite8Spec.tests
     , Test.Unit.NewQuickCheckTestSuite9Spec.tests
     , Test.Unit.NewQuickCheckTestSuite10Spec.tests
+    ]
+
+  -- ============================================================================
+  -- New Cabal Test Modules (Added for enhanced coverage)
+  -- ============================================================================
+  , testGroup "New Cabal Test Modules - Enhanced Coverage"
+    [ Test.Unit.UtilsBoundarySpec.tests
+    , Test.Unit.SourceLocationMathSpec.tests
+    , Test.Unit.ErrorHandlingCoreSpec.tests
+    , Test.Unit.CorePropertiesQuickCheckSpec.tests
     ]
   ]

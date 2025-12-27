@@ -1,187 +1,207 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE OverloadedStrings #-}
 
--- | Source location mathematical property tests using QuickCheck
-module Test.Unit.SourceLocationMathSpec (tests) where
+module Test.Unit.SourceLocationMathSpec where
 
-import Test.Tasty (TestTree, testGroup)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (==>), property, classify, counterexample)
-import qualified Data.List as Data.List
+import Test.Hspec
+import Test.Hspec.QuickCheck
+import Test.QuickCheck
+import SourceLocation
 
-import SourceLocation (SourcePos(..), SourceSpan(..), posLine, posColumn)
+spec :: Spec
+spec = describe "SourceLocation Mathematical Properties" $ do
+  
+  describe "SourcePos properties" $ do
+    it "startPos has correct initial values" $ do
+      posLine startPos `shouldBe` 1
+      posColumn startPos `shouldBe` 1
+      posOffset startPos `shouldBe` 0
+    
+    it "posAt creates position with correct values" $ do
+      let pos = posAt 5 10
+      posLine pos `shouldBe` 5
+      posColumn pos `shouldBe` 10
+      posOffset pos `shouldBe` 0
+    
+    it "posAtLineCol creates position with all values" $ do
+      let pos = posAtLineCol 5 10 100
+      posLine pos `shouldBe` 5
+      posColumn pos `shouldBe` 10
+      posOffset pos `shouldBe` 100
 
--- ============================================================================
--- Source Position Mathematical Properties
--- ============================================================================
+  describe "Position advancement" $ do
+    it "newline advances line and resets column" $ do
+      let start = posAt 1 5
+          result = posAfter '\n' start
+      posLine result `shouldBe` 2
+      posColumn result `shouldBe` 1
+      posOffset result `shouldBe` 6
+    
+    it "tab advances to next tab stop" $ do
+      let start = posAt 1 3
+          result = posAfter '\t' start
+      posColumn result `shouldBe` 9  -- Next tab stop after column 3
+      posLine result `shouldBe` 1
+      posOffset result `shouldBe` 4
+    
+    it "tab at tab stop advances to next" $ do
+      let start = posAt 1 9
+          result = posAfter '\t' start
+      posColumn result `shouldBe` 17  -- Next tab stop after column 9
+      posLine result `shouldBe` 1
+    
+    it "regular character advances column" $ do
+      let start = posAt 1 5
+          result = posAfter 'a' start
+      posLine result `shouldBe` 1
+      posColumn result `shouldBe` 6
+      posOffset result `shouldBe` 5
+    
+    property "advancePosBy advances correctly for multiple chars" $ do
+      \chars startPos -> 
+        let result = advancePosBy chars startPos
+            expected = foldl (flip advancePos) startPos chars
+        in result === expected
 
--- Property: SourcePos creation preserves values
-prop_sourcepos_creation :: Int -> Int -> Property
-prop_sourcepos_creation line col =
-  line >= 1 && col >= 1 ==>
-  let pos = SourcePos line col
-  in property $ posLine pos == line && posColumn pos == col
+  describe "SourceSpan properties" $ do
+    it "emptySpan has same start and end" $ do
+      let pos = posAt 3 7
+          span = emptySpan pos
+      spanStart span `shouldBe` pos
+      spanEnd span `shouldBe` pos
+    
+    it "spanBetween creates correct span" $ do
+      let start = posAt 1 5
+          end = posAt 2 10
+          span = spanBetween start end
+      spanStart span `shouldBe` start
+      spanEnd span `shouldBe` end
+    
+    it "mergeSpans takes minimum start and maximum end" $ do
+      let span1 = spanBetween (posAt 1 5) (posAt 1 10)
+          span2 = spanBetween (posAt 1 3) (posAt 1 8)
+          merged = mergeSpans span1 span2
+      spanStart merged `shouldBe` spanStart span2  -- Minimum start
+      spanEnd merged `shouldBe` spanEnd span1      -- Maximum end
+    
+    it "isValidSpan checks start <= end" $ do
+      let validSpan = spanBetween (posAt 1 5) (posAt 1 10)
+          invalidSpan = spanBetween (posAt 1 10) (posAt 1 5)
+      isValidSpan validSpan `shouldBe` True
+      isValidSpan invalidSpan `shouldBe` False
 
--- Property: SourcePos ordering is consistent
-prop_sourcepos_ordering :: Int -> Int -> Int -> Int -> Property
-prop_sourcepos_ordering line1 col1 line2 col2 =
-  line1 >= 1 && col1 >= 1 && line2 >= 1 && col2 >= 1 ==>
-  let pos1 = SourcePos line1 col1
-      pos2 = SourcePos line2 col2
-      isEarlier = (line1 < line2) || (line1 == line2 && col1 < col2)
-  in classify isEarlier "earlier position" $
-     property $ isEarlier == (pos1 < pos2)
+  describe "Located values" $ do
+    it "locatedAt creates value with empty span" $ do
+      let pos = posAt 3 7
+          value = "test"
+          located = locatedAt pos value
+      locValue located `shouldBe` value
+      locPos located `shouldBe` pos
+      spanStart (locSpan located) `shouldBe` pos
+      spanEnd (locSpan located) `shouldBe` pos
+    
+    it "locatedWithSpan creates value with given span" $ do
+      let span = spanBetween (posAt 1 5) (posAt 1 10)
+          value = 42
+          located = locatedWithSpan span value
+      locValue located `shouldBe` value
+      locSpan located `shouldBe` span
+      locPos located `shouldBe` spanStart span
+    
+    it "mapLocated applies function to value" $ do
+      let span = spanBetween (posAt 1 5) (posAt 1 10)
+          located = locatedWithSpan span 5
+          result = mapLocated (*2) located
+      locValue result `shouldBe` 10
+      locSpan result `shouldBe` span
 
--- Property: SourcePos equality is reflexive
-prop_sourcepos_equality_reflexive :: Int -> Int -> Property
-prop_sourcepos_equality_reflexive line col =
-  line >= 1 && col >= 1 ==>
-  let pos = SourcePos line col
-  in property $ pos == pos
+  describe "Location tracking" $ do
+    it "runLocationTracker starts at startPos" $ do
+      let result = runLocationTracker getCurrentPos
+      result `shouldBe` startPos
+    
+    it "setCurrentPos changes current position" $ do
+      let newPos = posAt 5 10
+          result = evalState (setCurrentPos newPos >> getCurrentPos) startPos
+      result `shouldBe` newPos
+    
+    it "markSpanStart and markSpanEnd create correct span" $ do
+      let start = posAt 1 5
+          end = posAt 1 10
+          result = evalState (do
+            setCurrentPos start
+            spanStart <- markSpanStart
+            setCurrentPos end
+            markSpanEnd spanStart) startPos
+      spanStart result `shouldBe` start
+      spanEnd result `shouldBe` end
 
--- Property: SourcePos equality is symmetric
-prop_sourcepos_equality_symmetric :: Int -> Int -> Int -> Int -> Property
-prop_sourcepos_equality_symmetric line1 col1 line2 col2 =
-  line1 >= 1 && col1 >= 1 && line2 >= 1 && col2 >= 1 ==>
-  let pos1 = SourcePos line1 col1
-      pos2 = SourcePos line2 col2
-  in property $ (pos1 == pos2) == (pos2 == pos1)
+  describe "Position advancement by text" $ do
+    property "advancePosByText is consistent with advancePosBy" $ do
+      \text startPos -> 
+        let result1 = advancePosByText text startPos
+            result2 = advancePosBy (T.unpack text) startPos
+        in result1 === result
+    
+    it "advancePosByLine advances line count" $ do
+      let start = posAt 3 7
+          result = advancePosByLine 5 start
+      posLine result `shouldBe` 8
+      posColumn result `shouldBe` 1
+      posOffset result `shouldBe` posOffset start  -- Offset unchanged in this implementation
 
--- ============================================================================
--- Source Span Mathematical Properties
--- ============================================================================
+  describe "Error location conversion" $ do
+    it "toErrorLocation converts position correctly" $ do
+      let pos = posAt 5 10
+          errorLoc = toErrorLocation pos
+      line errorLoc `shouldBe` 5
+      column errorLoc `shouldBe` 10
+      filePath errorLoc `shouldBe` Nothing
+      endLine errorLoc `shouldBe` Nothing
+      endColumn errorLoc `shouldBe` Nothing
+    
+    it "toErrorLocationWithSpan converts span correctly" $ do
+      let span = spanBetween (posAt 5 10) (posAt 6 15)
+          errorLoc = toErrorLocationWithSpan span
+      line errorLoc `shouldBe` 5
+      column errorLoc `shouldBe` 10
+      endLine errorLoc `shouldBe` Just 6
+      endColumn errorLoc `shouldBe` Just 15
+      filePath errorLoc `shouldBe` Nothing
 
--- Property: SourceSpan creation preserves boundaries
-prop_sourcespan_creation :: Int -> Int -> Int -> Int -> Property
-prop_sourcespan_creation startLine startCol endLine endCol =
-  startLine >= 1 && startCol >= 1 && endLine >= startLine && 
-  (endLine > startLine || endCol >= startCol) ==>
-  let start = SourcePos startLine startCol
-      end = SourcePos endLine endCol
-      span = SourceSpan start end
-  in property $ spanStart span == start && spanEnd span == end
+  describe "Span length and distance calculations" $ do
+    it "span length is end offset minus start offset" $ do
+      let start = posAtLineCol 1 1 100
+          end = posAtLineCol 1 5 104
+          span = spanBetween start end
+      _spanLength span `shouldBe` 4
+    
+    it "position distance is absolute offset difference" $ do
+      let pos1 = posAtLineCol 1 1 100
+          pos2 = posAtLineCol 1 5 104
+      _posDistance pos1 pos2 `shouldBe` 4
+    
+    it "line distance is absolute line difference" $ do
+      let pos1 = posAt 5 10
+          pos2 = posAt 8 15
+      _lineDistance pos1 pos2 `shouldBe` 3
 
--- Property: SourceSpan length calculation
-prop_sourcespan_length :: Int -> Int -> Int -> Int -> Property
-prop_sourcespan_length startLine startCol endLine endCol =
-  startLine >= 1 && startCol >= 1 && endLine >= startLine && 
-  (endLine > startLine || endCol >= startCol) && 
-  (endLine - startLine <= 5) ==> -- Reasonable size limit
-  let start = SourcePos startLine startCol
-      end = SourcePos endLine endCol
-      span = SourceSpan start end
-      expectedLength = if startLine == endLine 
-                       then endCol - startCol + 1
-                       else endCol + (endLine - startLine - 1) * 80 + (80 - startCol + 1)
-  in property $ spanLength span >= 1
-
--- Property: SourceSpan contains its start position
-prop_sourcespan_contains_start :: Int -> Int -> Int -> Int -> Property
-prop_sourcespan_contains_start startLine startCol endLine endCol =
-  startLine >= 1 && startCol >= 1 && endLine >= startLine && 
-  (endLine > startLine || endCol >= startCol) ==>
-  let start = SourcePos startLine startCol
-      end = SourcePos endLine endCol
-      span = SourceSpan start end
-  in property $ spanContains span start
-
--- Property: SourceSpan contains its end position
-prop_sourcespan_contains_end :: Int -> Int -> Int -> Int -> Property
-prop_sourcespan_contains_end startLine startCol endLine endCol =
-  startLine >= 1 && startCol >= 1 && endLine >= startLine && 
-  (endLine > startLine || endCol >= startCol) ==>
-  let start = SourcePos startLine startCol
-      end = SourcePos endLine endCol
-      span = SourceSpan start end
-  in property $ spanContains span end
-
--- Property: SourceSpan containment is transitive
-prop_sourcespan_containment_transitive :: Int -> Int -> Int -> Int -> Int -> Int -> Property
-prop_sourcespan_containment_transitive startLine startCol midLine midCol endLine endCol =
-  startLine >= 1 && startCol >= 1 && midLine >= startLine && endLine >= midLine &&
-  ((midLine > startLine) || (midLine == startLine && midCol >= startCol)) &&
-  ((endLine > midLine) || (endLine == midLine && endCol >= midCol)) ==>
-  let start = SourcePos startLine startCol
-      mid = SourcePos midLine midCol
-      end = SourcePos endLine endCol
-      span1 = SourceSpan start mid
-      span2 = SourceSpan mid end
-      combined = SourceSpan start end
-  in property $ spanContains combined span1 && spanContains combined span2
-
--- Property: SourceSpan intersection properties
-prop_sourcespan_intersection :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
-prop_sourcespan_intersection start1Line start1Col end1Line end1Col 
-                               start2Line start2Col end2Line end2Col =
-  start1Line >= 1 && start1Col >= 1 && end1Line >= start1Line && 
-  (end1Line > start1Line || end1Col >= start1Col) &&
-  start2Line >= 1 && start2Col >= 1 && end2Line >= start2Line && 
-  (end2Line > start2Line || end2Col >= start2Col) ==>
-  let start1 = SourcePos start1Line start1Col
-      end1 = SourcePos end1Line end1Col
-      start2 = SourcePos start2Line start2Col
-      end2 = SourcePos end2Line end2Col
-      span1 = SourceSpan start1 end1
-      span2 = SourceSpan start2 end2
-      intersection = spanIntersection span1 span2
-  in property $ case intersection of
-    Nothing -> True -- No intersection is valid
-    Just interSpan -> spanContains span1 interSpan && spanContains span2 interSpan
-
--- ============================================================================
--- Helper Functions
--- ============================================================================
-
--- Helper functions for SourceSpan operations (these would normally be in SourceLocation module)
-spanLength :: SourceSpan -> Int
-spanLength (SourceSpan start end) = 
-  let SourcePos startLine startCol = start
-      SourcePos endLine endCol = end
-  in if startLine == endLine 
-     then endCol - startCol + 1
-     else endCol + (endLine - startLine - 1) * 80 + (80 - startCol + 1)
-
-spanContains :: SourceSpan -> SourcePos -> Bool
-spanContains (SourceSpan start end) pos =
-  let SourcePos startLine startCol = start
-      SourcePos endLine endCol = end
-      SourcePos posLine posCol = pos
-  in (posLine > startLine || (posLine == startLine && posCol >= startCol)) &&
-     (posLine < endLine || (posLine == endLine && posCol <= endCol))
-
-spanContains :: SourceSpan -> SourceSpan -> Bool
-spanContains (SourceSpan start1 end1) (SourceSpan start2 end2) =
-  spanContains (SourceSpan start1 end1) start2 &&
-  spanContains (SourceSpan start1 end1) end2
-
-spanIntersection :: SourceSpan -> SourceSpan -> Maybe SourceSpan
-spanIntersection span1@(SourceSpan start1 end1) span2@(SourceSpan start2 end2) =
-  let newStart = maxPos start1 start2
-      newEnd = minPos end1 end2
-  in if posLessOrEqual newStart newEnd 
-     then Just (SourceSpan newStart newEnd)
-     else Nothing
-  where
-    maxPos p1 p2 = if p1 >= p2 then p1 else p2
-    minPos p1 p2 = if p1 <= p2 then p1 else p2
-
-posLessOrEqual :: SourcePos -> SourcePos -> Bool
-posLessOrEqual (SourcePos line1 col1) (SourcePos line2 col2) =
-  line1 < line2 || (line1 == line2 && col1 <= col2)
-
--- ============================================================================
--- Test Suite
--- ============================================================================
-
-tests :: TestTree
-tests = testGroup "Source Location Mathematical Tests"
-  [ fastProperty "SourcePos creation preserves values" prop_sourcepos_creation
-  , fastProperty "SourcePos ordering is consistent" prop_sourcepos_ordering
-  , fastProperty "SourcePos equality is reflexive" prop_sourcepos_equality_reflexive
-  , fastProperty "SourcePos equality is symmetric" prop_sourcepos_equality_symmetric
-  , fastProperty "SourceSpan creation preserves boundaries" prop_sourcespan_creation
-  , fastProperty "SourceSpan length calculation" prop_sourcespan_length
-  , fastProperty "SourceSpan contains its start position" prop_sourcespan_contains_start
-  , fastProperty "SourceSpan contains its end position" prop_sourcespan_contains_end
-  , fastProperty "SourceSpan containment is transitive" prop_sourcespan_containment_transitive
-  , fastProperty "SourceSpan intersection properties" prop_sourcespan_intersection
-  ]
+  describe "Span operations" $ do
+    it "spanContains checks if position is within span" $ do
+      let span = spanBetween (posAt 1 5) (posAt 1 10)
+          inside = posAt 1 7
+          outside = posAt 1 15
+      _spanContains span inside `shouldBe` True
+      _spanContains span outside `shouldBe` False
+    
+    it "spansOverlap detects overlapping spans" $ do
+      let span1 = spanBetween (posAt 1 5) (posAt 1 10)
+          span2 = spanBetween (posAt 1 8) (posAt 1 15)
+          span3 = spanBetween (posAt 1 12) (posAt 1 20)
+      _spansOverlap span1 span2 `shouldBe` True
+      _spansOverlap span1 span3 `shouldBe` False
+    
+    it "expandSpan expands span by given amounts" $ do
+      let original = spanBetween (posAt 1 5) (posAt 1 10)
+          expanded = _expandSpan 2 3 original
+      spanStart expanded `shouldBe` posAt 1 3  -- 5 - 2
+      spanEnd expanded `shouldBe` posAt 1 13    -- 10 + 3
