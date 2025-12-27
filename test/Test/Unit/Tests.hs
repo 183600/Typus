@@ -998,6 +998,21 @@ import qualified Test.Unit.NewCoreFunctionalitySpec
 import qualified Test.Unit.NewCoreQuickCheckSpec
 import qualified Test.Unit.EnhancedCoreFunctionalityQuickCheckSpec
 
+-- ============================================================================
+-- New Advanced Test Modules (10 comprehensive tests)
+-- ============================================================================
+
+import qualified Test.Unit.SourceLocationAdvancedSpec
+import qualified Test.Unit.ErrorHandlerAdvancedSpec
+import qualified Test.Unit.ParserDirectiveSpec
+import qualified Test.Unit.IntegrationAdvancedSpec
+import qualified Test.Unit.BoundaryConditionSpec
+import qualified Test.Unit.PerformanceAdvancedSpec
+import qualified Test.Unit.StringUtilsAdvancedSpec
+import qualified Test.Unit.CompilerTypeCheckerSpec
+import qualified Test.Unit.OwnershipAnalysisSpec
+import qualified Test.Unit.DependencyAnalysisSpec
+
 -- New comprehensive QuickCheck test module
 
 
@@ -2070,5 +2085,21 @@ tests =
     , Test.Unit.IntegrationEndToEndSpec.tests
     , Test.Unit.PerformanceRegressionSpec.tests
     , Test.Unit.SecurityValidationSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Advanced Test Modules (10 comprehensive tests)
+  -- ============================================================================
+  , testGroup "New Advanced Test Modules"
+    [ Test.Unit.SourceLocationAdvancedSpec.tests
+    , Test.Unit.ErrorHandlerAdvancedSpec.tests
+    , Test.Unit.ParserDirectiveSpec.tests
+    , Test.Unit.IntegrationAdvancedSpec.tests
+    , Test.Unit.BoundaryConditionSpec.tests
+    , Test.Unit.PerformanceAdvancedSpec.tests
+    , Test.Unit.StringUtilsAdvancedSpec.tests
+    , Test.Unit.CompilerTypeCheckerSpec.tests
+    , Test.Unit.OwnershipAnalysisSpec.tests
+    , Test.Unit.DependencyAnalysisSpec.tests
     ]
   ]

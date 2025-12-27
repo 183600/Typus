@@ -793,6 +793,18 @@ test-suite typus-test
         , Test.Unit.CabalSyntaxValidatorQuickCheckSpec
         , Test.Unit.CabalAnalyzerQuickCheckSpec
         , Test.Unit.CabalIntegrationQuickCheckSpec
+
+        -- New Additional Cabal Test Modules (2025)
+        , Test.Unit.NewCabalMathPropertiesSpec
+        , Test.Unit.NewCabalParserErrorRecoverySpec
+        , Test.Unit.NewCabalUtilsBoundarySpec
+        , Test.Unit.NewCabalErrorHandlerConsistencySpec
+        , Test.Unit.NewCabalCompilerIRSpec
+        , Test.Unit.NewCabalOwnershipTransitivitySpec
+        , Test.Unit.NewCabalDependencyCycleSpec
+        , Test.Unit.NewCabalTypeSystemBoundarySpec
+        , Test.Unit.NewCabalIntegrationEndToEndSpec
+        , Test.Unit.NewCabalPerformanceMemorySpec
     other-modules:
             Test.Dependencies.Arbitrary
     build-depends:
