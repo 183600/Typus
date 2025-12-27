@@ -151,6 +151,12 @@ import qualified Test.Unit.NewParserQuickCheckTestsSpec
 import qualified Test.Unit.NewSourceLocationQuickCheckTestsSpec
 import qualified Test.Unit.NewUtilsQuickCheckTestsSpec
 
+-- New Cabal QuickCheck Test Modules
+import qualified Test.Unit.NewCabalQuickCheckTestsSpec
+import qualified Test.Unit.OwnershipTransferPropertiesSpec
+import qualified Test.Unit.DependentTypeValidationPropertiesSpec
+import qualified Test.Unit.CompilerIRConsistencyPropertiesSpec
+
 -- New Comprehensive QuickCheck Test Modules (2025)
 import qualified Test.Unit.SourceLocationAdvancedTestSpec
 import qualified Test.Unit.ParserRobustnessTestSpec
@@ -1766,5 +1772,13 @@ tests =
     , Test.Unit.NewErrorHandlerQuickCheckTestsSpec.tests
     , Test.Unit.NewDependenciesQuickCheckTestsSpec.tests
     , Test.Unit.NewIntegrationQuickCheckTestsSpec.tests
+    ]
+
+  -- New Cabal QuickCheck Test Modules (Added for enhanced testing)
+  , testGroup "New Cabal QuickCheck Test Modules"
+    [ Test.Unit.NewCabalQuickCheckTestsSpec.tests
+    , Test.Unit.OwnershipTransferPropertiesSpec.tests
+    , Test.Unit.DependentTypeValidationPropertiesSpec.tests
+    , Test.Unit.CompilerIRConsistencyPropertiesSpec.tests
     ]
   ]
