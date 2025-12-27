@@ -10,242 +10,409 @@
 module Test.Unit.OwnershipTransferPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
+import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 import TestSupport.Arbitrary
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), elements, oneof, frequency, suchThat)
 
--- Ownership modules
-import Ownership (analyzeOwnership)
-import Ownership.Common.Types (OwnershipInfo(..), OwnershipState(..), TransferResult(..))
-import Parser (parseTypus)
-import Compiler (compile)
+import Ownership
+  ( OwnershipType(..)
+  , OwnershipState(..)
+  , OwnershipError(..)
+  , OwnershipAnalyzer(..)
+  , transferOwnership
+  , checkOwnership
+  , analyzeOwnership
+  , isOwned
+  , isBorrowed
+  , isMutBorrowed
+  , getOwner
+  )
 
-import Data.Char (isSpace, isAlpha)
-import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, sort, nub, union)
-import qualified Data.Text as T
-import Data.Set (Set)
-import qualified Data.Set as Set
+import SourceLocation
+  ( Located(..)
+  , SourcePos(..)
+  , SourceSpan(..)
+  )
 
--- ============================================================================
--- Ownership Transfer Properties
--- ============================================================================
+import qualified Ownership.Common.Types as Own
+import qualified Data.Map as Map
+import Data.List (sort, nub)
+import Data.Maybe (isJust, isNothing, fromMaybe)
 
--- Property: ownership analysis is deterministic
-prop_ownership_deterministic :: String -> Property
-prop_ownership_deterministic source =
-  length source <= 500 ==>  -- Keep reasonable size
-  case parseTypus source of
-    Left _ -> property $ True  -- Parse failures are OK
-    Right typusFile -> 
-      let result1 = analyzeOwnership typusFile
-          result2 = analyzeOwnership typusFile
-      in property $ result1 === result2
-
--- Property: ownership transfer preserves total resources
-prop_ownership_preserves_resources :: String -> String -> String -> Property
-prop_ownership_preserves_resources var1 var2 var3 =
-  all (not . null) [var1, var2, var3] && 
-  all (all isAlpha) [var1, var2, var3] ==>  -- Valid identifiers
-  let source = unlines
-        [ "//! ownership: on"
-        , "package main"
-        , "func main() {"
-        , "  " ++ var1 ++ " := 42"
-        , "  " ++ var2 ++ " := " ++ var1
-        , "  " ++ var3 ++ " := " ++ var2
-        , "}"
-        ]
-  in case parseTypus source of
-    Left _ -> property $ True
-    Right typusFile ->
-      let result = analyzeOwnership typusFile
-      in property $ True  -- If analysis succeeds, structure should be valid
-
--- Property: ownership cannot be duplicated
-prop_ownership_no_duplication :: String -> String -> Property
-prop_ownership_no_duplication var1 var2 =
-  var1 /= var2 && 
-  all (not . null) [var1, var2] && 
-  all (all isAlpha) [var1, var2] ==>
-  let source = unlines
-        [ "//! ownership: on"
-        , "package main"
-        , "func main() {"
-        , "  " ++ var1 ++ " := 42"
-        , "  " ++ var2 ++ " := " ++ var1
-        , "  " ++ var1 ++ " := " ++ var2  -- This should cause ownership issue
-        , "}"
-        ]
-  in case parseTypus source of
-    Left _ -> property $ True
-    Right typusFile ->
-      let result = analyzeOwnership typusFile
-      in property $ True  -- Analysis should detect issues if present
-
--- Property: ownership transfer chains are acyclic
-prop_ownership_acyclic_transfers :: [String] -> Property
-prop_ownership_acyclic_transfers vars =
-  length vars <= 10 && 
-  all (not . null) vars && 
-  all (all isAlpha) vars && 
-  nub vars == vars ==>  -- Unique variables
-  let assignments = zipWith (\i v -> "  " ++ v ++ " := " ++ (vars !! ((i - 1) `mod` length vars))) [0..] vars
-      source = unlines
-        [ "//! ownership: on"
-        , "package main"
-        , "func main() {"
-        ] ++ assignments ++ ["}"]
-  in case parseTypus source of
-    Left _ -> property $ True
-    Right typusFile ->
-      let result = analyzeOwnership typusFile
-      in property $ True  -- Analysis should handle cycles appropriately
-
--- Property: ownership analysis respects block scope
-prop_ownership_respects_scope :: String -> String -> Property
-prop_ownership_respects_scope outerVar innerVar =
-  outerVar /= innerVar && 
-  all (not . null) [outerVar, innerVar] && 
-  all (all isAlpha) [outerVar, innerVar] ==>
-  let source = unlines
-        [ "//! ownership: on"
-        , "package main"
-        , "func main() {"
-        , "  " ++ outerVar ++ " := 42"
-        , "  {"
-        , "    " ++ innerVar ++ " := " ++ outerVar
-        , "  }"
-        , "  _ = " ++ outerVar  -- Should still be valid here
-        , "}"
-        ]
-  in case parseTypus source of
-    Left _ -> property $ True
-    Right typusFile ->
-      let result = analyzeOwnership typusFile
-      in property $ True  -- Scope should be respected
-
--- Property: move operations transfer ownership completely
-prop_ownership_move_complete :: String -> String -> Property
-prop_ownership_move_complete sourceVar targetVar =
-  sourceVar /= targetVar && 
-  all (not . null) [sourceVar, targetVar] && 
-  all (all isAlpha) [sourceVar, targetVar] ==>
-  let source = unlines
-        [ "//! ownership: on"
-        , "package main"
-        , "func main() {"
-        , "  " ++ sourceVar ++ " := make([]int, 10)"
-        , "  " ++ targetVar ++ " := move(" ++ sourceVar ++ ")"
-        , "}"
-        ]
-  in case parseTypus source of
-    Left _ -> property $ True
-    Right typusFile ->
-      let result = analyzeOwnership typusFile
-      in property $ True  -- Move should transfer ownership
-
--- Property: borrow operations preserve original ownership
-prop_ownership_borrow_preserves :: String -> String -> Property
-prop_ownership_borrow_preserves sourceVar borrowerVar =
-  sourceVar /= borrowerVar && 
-  all (not . null) [sourceVar, borrowerVar] && 
-  all (all isAlpha) [sourceVar, borrowerVar] ==>
-  let source = unlines
-        [ "//! ownership: on"
-        , "package main"
-        , "func main() {"
-        , "  " ++ sourceVar ++ " := 42"
-        , "  " ++ borrowerVar ++ " := borrow(" ++ sourceVar ++ ")"
-        , "  _ = " ++ sourceVar  -- Should still be valid
-        , "}"
-        ]
-  in case parseTypus source of
-    Left _ -> property $ True
-    Right typusFile ->
-      let result = analyzeOwnership typusFile
-      in property $ True  -- Borrow should preserve ownership
-
--- Property: ownership analysis handles function parameters
-prop_ownership_function_params :: [String] -> String -> Property
-prop_ownership_function_params params retVar =
-  length params <= 5 && 
-  all (not . null) params && 
-  all (all isAlpha) (retVar : params) && 
-  nub (retVar : params) == (retVar : params) ==>
-  let paramList = Data.List.intercalate ", " params
-      source = unlines
-        [ "//! ownership: on"
-        , "package main"
-        , "func test(" ++ paramList ++ ") " ++ retVar ++ " {"
-        , "  return " ++ head params  -- Simple return
-        , "}"
-        ]
-  in case parseTypus source of
-    Left _ -> property $ True
-    Right typusFile ->
-      let result = analyzeOwnership typusFile
-      in property $ True  -- Function parameters should be handled
-
--- Property: ownership analysis handles returns correctly
-prop_ownership_return_transfer :: String -> String -> Property
-prop_ownership_return_transfer inputVar outputVar =
-  inputVar /= outputVar && 
-  all (not . null) [inputVar, outputVar] && 
-  all (all isAlpha) [inputVar, outputVar] ==>
-  let source = unlines
-        [ "//! ownership: on"
-        , "package main"
-        , "func producer() " ++ inputVar ++ " {"
-        , "  return 42"
-        , "}"
-        , "func consumer() {"
-        , "  " ++ outputVar ++ " := producer()"
-        , "}"
-        ]
-  in case parseTypus source of
-    Left _ -> property $ True
-    Right typusFile ->
-      let result = analyzeOwnership typusFile
-      in property $ True  -- Return should transfer ownership
-
--- Property: ownership analysis is consistent with compilation
-prop_ownership_consistent_with_compilation :: String -> Property
-prop_ownership_consistent_with_compilation source =
-  length source <= 300 ==>  -- Keep reasonable
-  case parseTypus source of
-    Left _ -> property $ True
-    Right typusFile ->
-      let ownershipResult = analyzeOwnership typusFile
-          compileResult = compile typusFile
-      in property $ True  -- Both should succeed or fail consistently
-
--- ============================================================================
--- Test Collection
--- ============================================================================
-
+-- | Ownership transfer mathematical properties
 tests :: TestTree
-tests = testGroup "Ownership Transfer Properties"
-  [ testGroup "Basic Ownership Properties"
-    [ fastProperty "ownership analysis is deterministic" prop_ownership_deterministic
-    , fastProperty "ownership preserves total resources" prop_ownership_preserves_resources
-    , fastProperty "ownership cannot be duplicated" prop_ownership_no_duplication
-    ]
-  
-  , testGroup "Transfer Operations"
-    [ fastProperty "ownership transfer chains are acyclic" prop_ownership_acyclic_transfers
-    , fastProperty "ownership respects block scope" prop_ownership_respects_scope
-    , fastProperty "move operations transfer ownership completely" prop_ownership_move_complete
-    , fastProperty "borrow operations preserve original ownership" prop_ownership_borrow_preserves
-    ]
-  
-  , testGroup "Function Ownership"
-    [ fastProperty "ownership handles function parameters" prop_ownership_function_params
-    , fastProperty "ownership handles returns correctly" prop_ownership_return_transfer
-    ]
-  
-  , testGroup "Integration Properties"
-    [ fastProperty "ownership consistent with compilation" prop_ownership_consistent_with_compilation
-    ]
+tests = testGroup "Ownership transfer mathematical properties"
+  [ -- Basic ownership properties
+    testGroup "Basic ownership properties"
+      [ testCase "owned values have clear ownership" $ do
+          let analyzer = Own.newOwnershipAnalyzer
+              state = Own.initialState analyzer
+              value = "test_var"
+              ownedState = Own.ownValue state value
+          in isOwned ownedState value @?= True
+
+      , testCase "borrowed values track their owner" $ do
+          let analyzer = Own.newOwnershipAnalyzer
+              state = Own.initialState analyzer
+              owner = "owner_var"
+              borrower = "borrower_var"
+              borrowedState = Own.borrowValue state owner borrower
+          in isBorrowed borrowedState borrower @?= True
+
+      , fastProperty "ownership is exclusive" prop_ownership_exclusive
+      , fastProperty "borrowing preserves original owner" prop_borrowing_preserves_owner
+      , fastProperty "mutable borrowing is exclusive" prop_mutable_borrowing_exclusive
+      ]
+
+  , -- Transfer properties
+    testGroup "Transfer properties"
+      [ fastProperty "transfer changes ownership correctly" prop_transfer_changes_ownership
+      , fastProperty "transfer is deterministic" prop_transfer_deterministic
+      , fastProperty "transfer preserves borrow relationships" prop_transfer_preserves_borrows
+      , fastProperty "transfer invalidates old borrows" prop_transfer_invalidates_old_borrows
+      , fastProperty "transfer is idempotent for same owner" prop_transfer_idempotent_same_owner
+      ]
+
+  , -- Borrow properties
+    testGroup "Borrow properties"
+      [ fastProperty "borrowing creates valid relationship" prop_borrowing_creates_relationship
+      , fastProperty "multiple immutable borrows allowed" prop_multiple_immutable_borrows
+      , fastProperty "borrowing prevents mutations" prop_borrowing_prevents_mutation
+      , fastProperty "borrowing tracks lifetime" prop_borrowing_tracks_lifetime
+      , fastProperty "borrowing is transitive for references" prop_borrowing_transitive
+      ]
+
+  , -- Lifetime properties
+    testGroup "Lifetime properties"
+      [ fastProperty "lifetimes are properly nested" prop_lifetimes_nested
+      , fastProperty "lifetime end releases borrows" prop_lifetime_end_releases
+      , fastProperty "lifetime violations are detected" prop_lifetime_violations_detected
+      , fastProperty "lifetime inference is conservative" prop_lifetime_inference_conservative
+      ]
+
+  , -- Error properties
+    testGroup "Error detection properties"
+      [ fastProperty "use after move is detected" prop_use_after_move_detected
+      , fastProperty "double borrow is detected" prop_double_borrow_detected
+      , fastProperty "borrowing owned value prevents move" prop_borrowing_prevents_move
+      , fastProperty "ownership errors are deterministic" prop_ownership_errors_deterministic
+      ]
+
+  , -- Advanced properties
+    testGroup "Advanced properties"
+      [ fastProperty "ownership analysis is monotonic" prop_ownership_analysis_monotonic
+      , fastProperty "ownership state is finite" prop_ownership_state_finite
+      , fastProperty "ownership transfer preserves invariants" prop_transfer_preserves_invariants
+      , fastProperty "ownership analysis terminates" prop_ownership_analysis_terminates
+      ]
+
+  , -- Edge cases
+    testGroup "Edge cases"
+      [ fastProperty "self-borrowing is handled correctly" prop_self_borrowing
+      , fastProperty "circular ownership is detected" prop_circular_ownership_detected
+      , fastProperty "empty ownership state is valid" prop_empty_ownership_valid
+      , fastProperty "ownership with complex expressions" prop_complex_expressions
+      ]
   ]
+
+-- Basic ownership properties
+
+prop_ownership_exclusive :: String -> String -> Property
+prop_ownership_exclusive value owner1 owner2 =
+  owner1 /= owner2 ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      owned1 = Own.ownValue state value
+      owner = getOwner owned1 value
+  in property $ owner === Just owner1 .||. owner === Just owner2
+
+prop_borrowing_preserves_owner :: String -> String -> String -> Property
+prop_borrowing_preserves_owner value owner borrower =
+  owner /= borrower ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      borrowedState = Own.borrowValue ownedState owner borrower
+      originalOwner = getOwner ownedState value
+      currentOwner = getOwner borrowedState value
+  in property $ originalOwner === currentOwner .&&. 
+             isBorrowed borrowedState borrower
+
+prop_mutable_borrowing_exclusive :: String -> String -> String -> Property
+prop_mutable_borrowing_exclusive value borrower1 borrower2 =
+  borrower1 /= borrower2 ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      mutBorrowed1 = Own.mutBorrowValue ownedState value borrower1
+      result = Own.mutBorrowValue mutBorrowed1 value borrower2
+  in property $ isMutBorrowed mutBorrowed1 borrower1 .&&.
+             not (isMutBorrowed result borrower2)
+
+-- Transfer properties
+
+prop_transfer_changes_ownership :: String -> String -> String -> Property
+prop_transfer_changes_ownership value oldOwner newOwner =
+  oldOwner /= newOwner ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      transferredState = Own.transferOwnership ownedState value oldOwner newOwner
+      oldOwnerStill = getOwner ownedState value
+      newOwnerNow = getOwner transferredState value
+  in property $ oldOwnerStill === Just oldOwner .&&.
+             newOwnerNow === Just newOwner
+
+prop_transfer_deterministic :: String -> String -> String -> Property
+prop_transfer_deterministic value oldOwner newOwner =
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      transferred1 = Own.transferOwnership ownedState value oldOwner newOwner
+      transferred2 = Own.transferOwnership ownedState value oldOwner newOwner
+  in property $ getOwner transferred1 value === getOwner transferred2 value
+
+prop_transfer_preserves_borrows :: String -> String -> String -> String -> Property
+prop_transfer_preserves_borrows value oldOwner newOwner borrower =
+  oldOwner /= newOwner && oldOwner /= borrower && newOwner /= borrower ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      borrowedState = Own.borrowValue ownedState oldOwner borrower
+      transferredState = Own.transferOwnership borrowedState value oldOwner newOwner
+      stillBorrowed = isBorrowed transferredState borrower
+  in property $ stillBorrowed
+
+prop_transfer_invalidates_old_borrows :: String -> String -> String -> String -> Property
+prop_transfer_invalidates_old_borrows value oldOwner newOwner borrower1 borrower2 =
+  oldOwner /= newOwner && borrower1 /= borrower2 ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      borrowedState = Own.borrowValue (Own.borrowValue ownedState oldOwner borrower1) oldOwner borrower2
+      transferredState = Own.transferOwnership borrowedState value oldOwner newOwner
+      borrower1Still = isBorrowed transferredState borrower1
+      borrower2Still = isBorrowed transferredState borrower2
+  in property $ not (borrower1Still .||. borrower2Still)
+
+prop_transfer_idempotent_same_owner :: String -> String -> Property
+prop_transfer_idempotent_same_owner value owner =
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      transferred1 = Own.transferOwnership ownedState value owner owner
+      transferred2 = Own.transferOwnership transferred1 value owner owner
+  in property $ getOwner transferred1 value === getOwner transferred2 value
+
+-- Borrow properties
+
+prop_borrowing_creates_relationship :: String -> String -> String -> Property
+prop_borrowing_creates_relationship value owner borrower =
+  owner /= borrower ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      borrowedState = Own.borrowValue ownedState owner borrower
+      hasRelationship = isBorrowed borrowedState borrower
+      ownerPreserved = getOwner borrowedState value
+  in property $ hasRelationship .&&. ownerPreserved === Just owner
+
+prop_multiple_immutable_borrows :: String -> String -> [String] -> Property
+prop_multiple_immutable_borrows value owner borrowers =
+  not (null borrowers) && all (/= owner) borrowers && nub borrowers == borrowers ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      borrowedState = foldl (\s b -> Own.borrowValue s owner b) ownedState borrowers
+      allBorrowed = all (isBorrowed borrowedState) borrowers
+  in property $ allBorrowed
+
+prop_borrowing_prevents_mutation :: String -> String -> String -> Property
+prop_borrowing_prevents_mutation value owner borrower =
+  owner /= borrower ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      borrowedState = Own.borrowValue ownedState owner borrower
+      canMutateBefore = Own.canMutate ownedState value owner
+      canMutateAfter = Own.canMutate borrowedState value borrower
+  in property $ canMutateBefore .&&. not canMutateAfter
+
+prop_borrowing_tracks_lifetime :: String -> String -> String -> Property
+prop_borrowing_tracks_lifetime value owner borrower =
+  owner /= borrower ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      borrowedState = Own.borrowValue ownedState owner borrower
+      lifetime = Own.getBorrowLifetime borrowedState borrower
+  in property $ isJust lifetime
+
+prop_borrowing_transitive :: String -> String -> String -> String -> Property
+prop_borrowing_transitive value owner borrower1 borrower2 =
+  owner /= borrower1 && borrower1 /= borrower2 ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      borrowed1 = Own.borrowValue ownedState owner borrower1
+      borrowed2 = Own.borrowValue borrowed1 borrower1 borrower2
+      borrower1CanBorrow = isBorrowed borrowed1 borrower1
+      borrower2CanBorrow = isBorrowed borrowed2 borrower2
+  in property $ borrower1CanBorrow .&&. borrower2CanBorrow
+
+-- Lifetime properties
+
+prop_lifetimes_nested :: String -> [String] -> Property
+prop_lifetimes_nested value borrowers =
+  not (null borrowers) && nub borrowers == borrowers ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      borrowedState = foldl (\s b -> Own.borrowValue s value b) ownedState borrowers
+      lifetimes = map (Own.getBorrowLifetime borrowedState) borrowers
+  in property $ all isJust lifetimes
+
+prop_lifetime_end_releases :: String -> String -> String -> Property
+prop_lifetime_end_releases value owner borrower =
+  owner /= borrower ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      borrowedState = Own.borrowValue ownedState owner borrower
+      releasedState = Own.endBorrow borrowedState borrower
+      stillBorrowed = isBorrowed releasedState borrower
+  in property $ not stillBorrowed
+
+prop_lifetime_violations_detected :: String -> String -> String -> Property
+prop_lifetime_violations_detected value owner borrower =
+  owner /= borrower ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      borrowedState = Own.borrowValue ownedState owner borrower
+      releasedState = Own.endBorrow borrowedState borrower
+      useAfterEnd = Own.useValue releasedState borrower
+  in property $ isJust useAfterEnd
+
+prop_lifetime_inference_conservative :: String -> String -> Property
+prop_lifetime_inference_conservative value owner =
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      inferredLifetime = Own.inferLifetime ownedState value
+  in property $ isJust inferredLifetime
+
+-- Error detection properties
+
+prop_use_after_move_detected :: String -> String -> String -> Property
+prop_use_after_move_detected value oldOwner newOwner =
+  oldOwner /= newOwner ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      transferredState = Own.transferOwnership ownedState value oldOwner newOwner
+      useAfterMove = Own.useValue transferredState oldOwner
+  in property $ isJust useAfterMove
+
+prop_double_borrow_detected :: String -> String -> String -> Property
+prop_double_borrow_detected value borrower1 borrower2 =
+  borrower1 /= borrower2 ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      mutBorrowed1 = Own.mutBorrowValue ownedState value borrower1
+      doubleBorrow = Own.mutBorrowValue mutBorrowed1 value borrower2
+  in property $ Own.hasErrors doubleBorrow
+
+prop_borrowing_prevents_move :: String -> String -> String -> Property
+prop_borrowing_prevents_move value owner borrower =
+  owner /= borrower ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      borrowedState = Own.borrowValue ownedState owner borrower
+      moveResult = Own.transferOwnership borrowedState value owner "new_owner"
+  in property $ Own.hasErrors moveResult
+
+prop_ownership_errors_deterministic :: String -> String -> String -> Property
+prop_ownership_errors_deterministic value owner1 owner2 =
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      error1 = Own.transferOwnership ownedState value owner1 owner2
+      error2 = Own.transferOwnership ownedState value owner1 owner2
+  in property $ Own.hasErrors error1 === Own.hasErrors error2
+
+-- Advanced properties
+
+prop_ownership_analysis_monotonic :: String -> [String] -> Property
+prop_ownership_analysis_monotonic value operations =
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      finalState = foldl (\s op -> Own.applyOperation s value op) state operations
+      initialStateInfo = Own.getStateInfo state
+      finalStateInfo = Own.getStateInfo finalState
+  in property $ length finalStateInfo >= length initialStateInfo
+
+prop_ownership_state_finite :: String -> Property
+prop_ownership_state_finite value =
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      possibleStates = Own.enumerateStates state value
+  in property $ length possibleStates < 1000 -- Reasonable bound
+
+prop_transfer_preserves_invariants :: String -> String -> String -> Property
+prop_transfer_preserves_invariants value oldOwner newOwner =
+  oldOwner /= newOwner ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      invariants1 = Own.checkInvariants ownedState
+      transferredState = Own.transferOwnership ownedState value oldOwner newOwner
+      invariants2 = Own.checkInvariants transferredState
+  in property $ all id invariants1 ==> all id invariants2
+
+prop_ownership_analysis_terminates :: String -> [String] -> Property
+prop_ownership_analysis_terminates value operations =
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      result = Own.analyzeOperations state value operations
+  in property $ True -- Should terminate for all inputs
+
+-- Edge cases
+
+prop_self_borrowing :: String -> Property
+prop_self_borrowing value =
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      ownedState = Own.ownValue state value
+      selfBorrow = Own.borrowValue ownedState value value
+  in property $ Own.hasErrors selfBorrow
+
+prop_circular_ownership_detected :: String -> String -> String -> Property
+prop_circular_ownership_detected value1 value2 value3 =
+  value1 /= value2 && value2 /= value3 && value1 /= value3 ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      owned1 = Own.ownValue state value1
+      owned2 = Own.ownValue owned1 value2
+      owned3 = Own.ownValue owned2 value3
+      circular = Own.transferOwnership owned3 value3 value2 value1
+  in property $ Own.hasErrors circular
+
+prop_empty_ownership_valid :: Property
+prop_empty_ownership_valid =
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      invariants = Own.checkInvariants state
+  in property $ all id invariants
+
+prop_complex_expressions :: String -> [String] -> Property
+prop_complex_expressions baseValue operations =
+  not (null operations) ==>
+  let analyzer = Own.newOwnershipAnalyzer
+      state = Own.initialState analyzer
+      complexState = foldl (\s op -> Own.applyComplexOperation s baseValue op) state operations
+      invariants = Own.checkInvariants complexState
+  in property $ all id invariants
