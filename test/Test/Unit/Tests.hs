@@ -573,6 +573,13 @@ import qualified Test.Unit.DependentTypesQuickCheckSpec
 import qualified Test.Unit.DependenciesQuickCheckSpec
 import qualified Test.Unit.AdvancedQuickCheckSpec
 import qualified Test.Unit.PerformanceQuickCheckSpec
+
+-- New QuickCheck Test Modules (Added 2025)
+import qualified Test.Unit.BasicParserQuickCheckSpec
+import qualified Test.Unit.CompilerIRQuickCheckSpec
+import qualified Test.Unit.OwnershipTransferQuickCheckSpec
+import qualified Test.Unit.SourceLocationMathQuickCheckSpec
+import qualified Test.Unit.ErrorHandlingQuickCheckSpec
 -- New QuickCheck test modules
 import qualified Test.Unit.SimpleSyntaxValidatorQuickCheckSpec
 import qualified Test.Unit.DebugQuickCheckSpec
@@ -1016,6 +1023,13 @@ tests =
         , Test.Unit.CompilerIRSpec.tests
         , Test.Unit.IntegrationBasicSpec.tests
         , Test.Unit.AdditionalTypusSpec.tests
+        ]
+    , testGroup "New QuickCheck Test Modules (2025)"
+        [ Test.Unit.BasicParserQuickCheckSpec.tests
+        , Test.Unit.CompilerIRQuickCheckSpec.tests
+        , Test.Unit.OwnershipTransferQuickCheckSpec.tests
+        , Test.Unit.SourceLocationMathQuickCheckSpec.tests
+        , Test.Unit.ErrorHandlingQuickCheckSpec.tests
         ]
     , testGroup "Additional New Test Modules"
         [ Test.Unit.NewParserValidationSpec.tests
