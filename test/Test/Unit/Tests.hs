@@ -297,6 +297,14 @@ import qualified Test.Unit.OwnershipTransferSpec
 import qualified Test.Unit.ParserCombinatorSpec
 import qualified Test.Unit.UtilsStringSpec
 
+-- New Comprehensive Test Suites (2025)
+import qualified Test.Unit.SourceLocationMathComprehensiveSpec
+import qualified Test.Unit.CompilerIntegrationComprehensiveSpec
+import qualified Test.Unit.OwnershipAnalysisComprehensiveSpec
+import qualified Test.Unit.DependentTypesValidationComprehensiveSpec
+import qualified Test.Unit.ErrorHandlerCoreComprehensiveSpec
+import qualified Test.Unit.UtilsStringProcessingComprehensiveSpec
+
 -- New comprehensive test modules added for enhanced coverage
 import qualified Test.Unit.NewIntegratedParserTestsSpec
 import qualified Test.Unit.NewCompilerErrorRecoverySpec
@@ -1954,5 +1962,15 @@ tests =
     , Test.Unit.OwnershipTransferSpec.tests
     , Test.Unit.ParserCombinatorSpec.tests
     , Test.Unit.UtilsStringSpec.tests
+    ]
+
+  -- New Comprehensive Test Suites (2025) - 6 comprehensive test modules
+  , testGroup "New Comprehensive Test Suites 2025"
+    [ Test.Unit.SourceLocationMathComprehensiveSpec.tests
+    , Test.Unit.CompilerIntegrationComprehensiveSpec.tests
+    , Test.Unit.OwnershipAnalysisComprehensiveSpec.tests
+    , Test.Unit.DependentTypesValidationComprehensiveSpec.tests
+    , Test.Unit.ErrorHandlerCoreComprehensiveSpec.tests
+    , Test.Unit.UtilsStringProcessingComprehensiveSpec.tests
     ]
   ]
