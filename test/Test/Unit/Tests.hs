@@ -767,7 +767,7 @@ import qualified Test.Unit.SourceLocationPropertiesQuickCheckSpec
 import qualified Test.Unit.NewCoreQuickCheckTests
 import qualified Test.Unit.SimpleCoreQuickCheckSpec
 import qualified Test.Unit.NewCabalQuickCheckSpec
-import qualified Test.Unit.NewCabalQuickCheckTestSuite
+import qualified Test.Unit.NewComprehensiveCabalQuickCheckTestSuite
 import qualified Test.Unit.NewCabalQuickCheckTestSpec
 import qualified Test.Unit.NewCabalTestQuickCheckSpec
 import qualified Test.Unit.AdditionalCabalQuickCheckSpec
@@ -1962,7 +1962,7 @@ tests =
     ]
 
   -- New Cabal QuickCheck Tests (10 comprehensive tests)
-  , Test.Unit.NewCabalQuickCheckTestSuite.tests
+  , Test.Unit.NewComprehensiveCabalQuickCheckTestSuite.tests
 
   -- New Core QuickCheck Test Modules (2025)
   , testGroup "Core QuickCheck Test Modules 2025"
