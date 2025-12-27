@@ -1027,6 +1027,16 @@ import qualified Test.Unit.CompilerIRCoreQuickCheckSpec
 import qualified Test.Unit.OwnershipCoreQuickCheckSpec
 import qualified Test.Unit.ErrorHandlerCoreQuickCheckSpec
 
+-- New Cabal Test Modules (10 comprehensive tests added by user)
+import qualified Test.Unit.NewCabalParserQuickCheckSpec
+import qualified Test.Unit.NewCabalSourceLocationQuickCheckSpec
+import qualified Test.Unit.NewCabalUtilsQuickCheckSpec
+import qualified Test.Unit.NewCabalOwnershipQuickCheckSpec
+import qualified Test.Unit.NewCabalCompilerQuickCheckSpec
+import qualified Test.Unit.NewCabalErrorHandlerQuickCheckSpec
+import qualified Test.Unit.NewCabalDependenciesQuickCheckSpec
+import qualified Test.Unit.NewCabalSyntaxValidatorQuickCheckSpec
+
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
 --
@@ -1167,6 +1177,14 @@ tests =
     , testGroup "New Cabal QuickCheck Tests"
         [ Test.Unit.NewCabalQuickCheckTestSpec.tests
         , Test.Unit.NewCabalTestsSpec.tests
+        , Test.Unit.NewCabalParserQuickCheckSpec.tests
+        , Test.Unit.NewCabalSourceLocationQuickCheckSpec.tests
+        , Test.Unit.NewCabalUtilsQuickCheckSpec.tests
+        , Test.Unit.NewCabalOwnershipQuickCheckSpec.tests
+        , Test.Unit.NewCabalCompilerQuickCheckSpec.tests
+        , Test.Unit.NewCabalErrorHandlerQuickCheckSpec.tests
+        , Test.Unit.NewCabalDependenciesQuickCheckSpec.tests
+        , Test.Unit.NewCabalSyntaxValidatorQuickCheckSpec.tests
         ]
     , testGroup "New Comprehensive QuickCheck Tests"
         [ Test.Unit.OwnershipTransferQuickCheckSpec.tests
