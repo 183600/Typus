@@ -98,6 +98,18 @@ import qualified Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec
 -- New test modules added for enhanced coverage
 import qualified Test.Unit.ParserBoundarySpec
 import qualified Test.Unit.CompilerErrorBoundarySpec
+
+-- New Cabal Test Modules (10 comprehensive tests added)
+import qualified Test.Unit.CabalCrossModuleIntegrationSpec
+import qualified Test.Unit.CabalErrorRecoverySpec
+import qualified Test.Unit.CabalPerformanceSpec
+import qualified Test.Unit.CabalQuickCheckPropertiesSpec
+import qualified Test.Unit.CabalBoundaryConditionsSpec
+import qualified Test.Unit.CabalUnicodeHandlingSpec
+import qualified Test.Unit.CabalConcurrentParsingSpec
+import qualified Test.Unit.CabalMemorySafetySpec
+import qualified Test.Unit.CabalRegressionSpec
+import qualified Test.Unit.CabalEndToEndSpec
 import qualified Test.Unit.NewQuickCheckPropertiesSpec
 
 -- New Comprehensive Cabal QuickCheck Test Module
@@ -2110,4 +2122,20 @@ tests =
   -- Advanced Edge Case QuickCheck Test Module (10 comprehensive tests)
   -- ============================================================================
   , Test.Unit.AdvancedEdgeCaseQuickCheckSpec.tests
+
+  -- ============================================================================
+  -- New Cabal Test Modules (10 comprehensive tests)
+  -- ============================================================================
+  , testGroup "New Cabal Test Modules - Comprehensive Testing"
+    [ Test.Unit.CabalCrossModuleIntegrationSpec.tests
+    , Test.Unit.CabalErrorRecoverySpec.tests
+    , Test.Unit.CabalPerformanceSpec.tests
+    , Test.Unit.CabalQuickCheckPropertiesSpec.tests
+    , Test.Unit.CabalBoundaryConditionsSpec.tests
+    , Test.Unit.CabalUnicodeHandlingSpec.tests
+    , Test.Unit.CabalConcurrentParsingSpec.tests
+    , Test.Unit.CabalMemorySafetySpec.tests
+    , Test.Unit.CabalRegressionSpec.tests
+    , Test.Unit.CabalEndToEndSpec.tests
+    ]
   ]

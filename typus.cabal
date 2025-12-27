@@ -810,6 +810,18 @@ test-suite typus-test
         , Test.Unit.NewCabalTypeSystemBoundarySpec
         , Test.Unit.NewCabalIntegrationEndToEndSpec
         , Test.Unit.NewCabalPerformanceMemorySpec
+
+        -- New Cabal Test Modules (10 comprehensive tests)
+        , Test.Unit.CabalCrossModuleIntegrationSpec
+        , Test.Unit.CabalErrorRecoverySpec
+        , Test.Unit.CabalPerformanceSpec
+        , Test.Unit.CabalQuickCheckPropertiesSpec
+        , Test.Unit.CabalBoundaryConditionsSpec
+        , Test.Unit.CabalUnicodeHandlingSpec
+        , Test.Unit.CabalConcurrentParsingSpec
+        , Test.Unit.CabalMemorySafetySpec
+        , Test.Unit.CabalRegressionSpec
+        , Test.Unit.CabalEndToEndSpec
     other-modules:
             Test.Dependencies.Arbitrary
     build-depends:
