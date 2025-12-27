@@ -148,6 +148,11 @@ import qualified Test.Unit.NewCabalComprehensiveTestsSpec
 import qualified Test.Unit.NewParserQuickCheckTestsSpec
 import qualified Test.Unit.NewCompilerQuickCheckTestsSpec
 import qualified Test.Unit.NewOwnershipQuickCheckTestsSpec
+
+-- New Additional QuickCheck Test Modules (2025)
+import qualified Test.Unit.EmbedAssetsQuickCheckSpec
+import qualified Test.Unit.CommandLineDebugQuickCheckSpec
+import qualified Test.Unit.AdditionalIntegratedCompilerQuickCheckSpec
 import qualified Test.Unit.NewSourceLocationQuickCheckTestsSpec
 import qualified Test.Unit.NewErrorHandlerQuickCheckTestsSpec
 import qualified Test.Unit.NewDependenciesQuickCheckTestsSpec
@@ -1400,6 +1405,11 @@ tests =
         , Test.Unit.IntegratedCompilerSpec.tests
         
         , Test.Unit.NewCabalPropertySpec.tests
+        ]
+    , testGroup "New Additional QuickCheck Test Modules (2025)"
+        [ Test.Unit.EmbedAssetsQuickCheckSpec.tests
+        , Test.Unit.CommandLineDebugQuickCheckSpec.tests
+        , Test.Unit.AdditionalIntegratedCompilerQuickCheckSpec.tests
         ]
     , testGroup "New Enhanced Test Modules"
         [ Test.Unit.CoreParserFunctionsSpec.tests
