@@ -511,6 +511,20 @@ test-suite typus-test
         Test.Unit.DependenciesAdvancedQuickCheckSpec,
         Test.Unit.OwnershipAdvancedQuickCheckSpec,
         Test.Unit.IntegrationAdvancedQuickCheckSpec,
+
+        -- ============================================================================
+        -- New Enhanced Test Modules (2025) - 10 comprehensive QuickCheck tests
+        -- ============================================================================
+        Test.Unit.NewEnhancedUtilsQuickCheckSpec,
+        Test.Unit.NewAdvancedSourceLocationQuickCheckSpec,
+        Test.Unit.NewRobustErrorHandlerQuickCheckSpec,
+        Test.Unit.NewComprehensiveParserQuickCheckSpec,
+        Test.Unit.NewAdvancedOwnershipQuickCheckSpec,
+        Test.Unit.NewDependenciesAdvancedQuickCheckSpec,
+        Test.Unit.NewIntegrationAdvancedQuickCheckSpec,
+        Test.Unit.NewCoreFunctionalityQuickCheckSpec,
+        Test.Unit.NewTextProcessingQuickCheckSpec,
+        Test.Unit.NewSourceLocationMathQuickCheckSpec,
         
         Test.Unit.ErrorHandlerBoundaryQuickCheckSpec,
         Test.Unit.ParserEdgeCaseQuickCheckSpec,
@@ -714,7 +728,6 @@ test-suite typus-test
 
 -- New Cabal Test Modules (10 comprehensive tests added)
         Test.Unit.NewStringProcessingQuickCheckSpec,
-        Test.Unit.NewSourceLocationMathQuickCheckSpec,
         Test.Unit.NewParserBoundaryQuickCheckSpec,
         Test.Unit.NewErrorHandlerCoreQuickCheckSpec,
         Test.Unit.NewParserCoreQuickCheckSpec,
@@ -738,11 +751,6 @@ test-suite typus-test
         Test.Unit.NewCabalTestSpec10,
         
         -- New comprehensive QuickCheck test modules (2025)
-        Test.Unit.NewEnhancedUtilsQuickCheckSpec,
-        Test.Unit.NewAdvancedSourceLocationQuickCheckSpec,
-        Test.Unit.NewRobustErrorHandlerQuickCheckSpec,
-        Test.Unit.NewComprehensiveParserQuickCheckSpec,
-        Test.Unit.NewAdvancedOwnershipQuickCheckSpec,
         Test.Unit.NewCompilerIRQuickCheckSpec,
         Test.Unit.NewDependenciesQuickCheckSpec,
         Test.Unit.NewTypeSystemQuickCheckSpec,

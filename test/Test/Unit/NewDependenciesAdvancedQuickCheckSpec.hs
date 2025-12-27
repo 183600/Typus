@@ -9,7 +9,7 @@ import Dependencies
 import Dependencies.AST
 import Dependencies.Analyzer
 import Dependencies.TypeSystem
-import SourceLocation (SourcePos(..), SourceSpan(.., posAt, spanBetween)
+import SourceLocation (SourcePos(..), SourceSpan(..), posAt, spanBetween)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Set (Set)

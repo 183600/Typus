@@ -7,7 +7,7 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.TH
 import Ownership
 import Ownership.Common.Types
-import SourceLocation (SourcePos(..), SourceSpan(.., posAt, spanBetween))
+import SourceLocation (SourcePos(..), SourceSpan(..), posAt, spanBetween))
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Set (Set)

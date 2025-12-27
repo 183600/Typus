@@ -476,6 +476,20 @@ import qualified Test.Unit.NewComprehensiveCabalQuickCheckSpec
 import qualified Test.Unit.EnhancedCabalQuickCheckTestSpec
 import qualified Test.Unit.ErrorBoundaryQuickCheckSpec
 
+-- ============================================================================
+-- New Enhanced Test Modules (2025) - 10 comprehensive QuickCheck tests
+-- ============================================================================
+import qualified Test.Unit.NewEnhancedUtilsQuickCheckSpec
+import qualified Test.Unit.NewAdvancedSourceLocationQuickCheckSpec
+import qualified Test.Unit.NewRobustErrorHandlerQuickCheckSpec
+import qualified Test.Unit.NewComprehensiveParserQuickCheckSpec
+import qualified Test.Unit.NewAdvancedOwnershipQuickCheckSpec
+import qualified Test.Unit.NewDependenciesAdvancedQuickCheckSpec
+import qualified Test.Unit.NewIntegrationAdvancedQuickCheckSpec
+import qualified Test.Unit.NewCoreFunctionalityQuickCheckSpec
+import qualified Test.Unit.NewTextProcessingQuickCheckSpec
+import qualified Test.Unit.NewSourceLocationMathQuickCheckSpec
+
 -- New Cabal QuickCheck Test Suite (10 comprehensive tests)
 import qualified Test.Unit.NewCabalQuickCheckTestSuiteSpec
 
@@ -2344,5 +2358,21 @@ tests =
     , Test.Unit.SourceLocationMathSpec.tests
     , Test.Unit.ErrorHandlingCoreSpec.tests
     , Test.Unit.CorePropertiesQuickCheckSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Enhanced Test Modules (2025) - 10 comprehensive QuickCheck tests
+  -- ============================================================================
+  , testGroup "New Enhanced Test Modules - Comprehensive QuickCheck Testing"
+    [ Test.Unit.NewEnhancedUtilsQuickCheckSpec.tests
+    , Test.Unit.NewAdvancedSourceLocationQuickCheckSpec.tests
+    , Test.Unit.NewRobustErrorHandlerQuickCheckSpec.tests
+    , Test.Unit.NewComprehensiveParserQuickCheckSpec.tests
+    , Test.Unit.NewAdvancedOwnershipQuickCheckSpec.tests
+    , Test.Unit.NewDependenciesAdvancedQuickCheckSpec.tests
+    , Test.Unit.NewIntegrationAdvancedQuickCheckSpec.tests
+    , Test.Unit.NewCoreFunctionalityQuickCheckSpec.tests
+    , Test.Unit.NewTextProcessingQuickCheckSpec.tests
+    , Test.Unit.NewSourceLocationMathQuickCheckSpec.tests
     ]
   ]

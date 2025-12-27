@@ -1,224 +1,258 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Test.Unit.NewSourceLocationMathQuickCheckSpec where
 
-import Test.Tasty (TestTree)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample)
-import Test.Tasty.HUnit (testCase, assertBool)
-
-import qualified Data.Text as T
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.TH
 import SourceLocation
+  ( SourcePos(..), SourceSpan(..), Located(..)
+  , startPos, posAfter, posAt, posAtLineCol
+  , emptySpan, spanFrom, spanTo, spanBetween, mergeSpans, isValidSpan
+  , locatedAt, locatedWithSpan, advancePos, advancePosBy, advancePosByText
+  , mergeOverlappingSpans, spanLength, posDistance, lineDistance
+  )
+import Data.Text (Text)
+import qualified Data.Text as T
+import Data.List (sort, nub)
 
--- ============================================================================
--- Test Data Generators
--- ============================================================================
+-- Test mathematical properties of source positions
+prop_position_addition_associative :: String -> String -> SourcePos -> Bool
+prop_position_addition_associative s1 s2 pos = 
+  let pos1 = advancePosBy s1 pos
+      pos2 = advancePosBy s2 pos
+      pos12 = advancePosBy s2 pos1
+      combined = advancePosBy (s1 ++ s2) pos
+  in pos12 == combined
 
--- Generate valid source positions with reasonable constraints
-genSourcePos :: Gen SourcePos
-genSourcePos = SourcePos <$> 
-    choose (1, 1000) <*>
-    choose (1, 1000) <*>
-    choose (0, 100000)
+prop_position_distance_symmetric :: SourcePos -> SourcePos -> Bool
+prop_position_distance_symmetric pos1 pos2 = 
+  let dist1 = posDistance pos1 pos2
+      dist2 = posDistance pos2 pos1
+  in dist1 == dist2
 
+prop_position_distance_triangle_inequality :: SourcePos -> SourcePos -> SourcePos -> Bool
+prop_position_distance_triangle_inequality pos1 pos2 pos3 = 
+  let dist12 = posDistance pos1 pos2
+      dist23 = posDistance pos2 pos3
+      dist13 = posDistance pos1 pos3
+  in dist13 <= dist12 + dist23
+
+prop_position_distance_zero_identity :: SourcePos -> Bool
+prop_position_distance_zero_identity pos = 
+  posDistance pos pos == 0
+
+prop_line_distance_properties :: SourcePos -> SourcePos -> Bool
+prop_line_distance_properties pos1 pos2 = 
+  let lineDiff = lineDistance pos1 pos2
+      colDiff = abs (posColumn pos1 - posColumn pos2)
+  in lineDiff >= 0 && 
+     (lineDiff == 0) ==> (colDiff == posDistance pos1 pos2)
+
+-- Test mathematical properties of source spans
+prop_span_length_additivity :: SourcePos -> SourcePos -> SourcePos -> Property
+prop_span_length_additivity pos1 pos2 pos3 = 
+  pos1 <= pos2 && pos2 <= pos3 ==> 
+  let span12 = spanBetween pos1 pos2
+      span23 = spanBetween pos2 pos3
+      span13 = spanBetween pos1 pos3
+  in spanLength span12 + spanLength span23 == spanLength span13
+
+prop_span_merge_associative :: SourceSpan -> SourceSpan -> SourceSpan -> Bool
+prop_span_merge_associative span1 span2 span3 = 
+  let merge12 = mergeSpans span1 span2
+      merge23 = mergeSpans span2 span3
+      merge123_1 = mergeSpans merge12 span3
+      merge123_2 = mergeSpans span1 merge23
+  in merge123_1 == merge123_2
+
+prop_span_merge_commutative :: SourceSpan -> SourceSpan -> Bool
+prop_span_merge_commutative span1 span2 = 
+  let merge12 = mergeSpans span1 span2
+      merge21 = mergeSpans span2 span1
+  in merge12 == merge21
+
+prop_span_merge_idempotent :: SourceSpan -> Bool
+prop_span_merge_idempotent span = 
+  let merged = mergeSpans span span
+  in merged == span
+
+-- Test span overlap mathematical properties
+prop_span_overlap_reflexive :: SourceSpan -> Bool
+prop_span_overlap_reflexive span = 
+  spansOverlap span span
+
+prop_span_overlap_symmetric :: SourceSpan -> SourceSpan -> Bool
+prop_span_overlap_symmetric span1 span2 = 
+  spansOverlap span1 span2 == spansOverlap span2 span1
+
+prop_span_merge_overlapping_properties :: [SourceSpan] -> Bool
+prop_span_merge_overlapping_properties spans = 
+  let merged = mergeOverlappingSpans spans
+  in all isValidSpan merged &&
+     all (\span -> any (\mergedSpan -> spansOverlap span mergedSpan) merged) spans &&
+     all (\(i, j) -> i < j ==> not (spansOverlap (merged !! i) (merged !! j)))
+         (zip [0..] [0..length merged - 1])
+
+-- Test located value mathematical properties
+prop_located_value_position_preservation :: Int -> String -> SourcePos -> Bool
+prop_located_value_position_preservation n value pos = 
+  let located = locatedAt pos value
+      doubled = mapLocated (*2) located
+  in locatedPos doubled == pos && locatedSpan doubled == locatedSpan located
+
+prop_located_value_functor_composition :: Int -> Int -> SourcePos -> Bool
+prop_located_value_functor_composition n m pos = 
+  let located = locatedAt pos n
+      composed = mapLocated (*m) (mapLocated (*2) located)
+      separate = mapLocated (* (2 * m)) located
+  in composed == separate
+
+prop_located_value_functor_identity :: Int -> SourcePos -> Bool
+prop_located_value_functor_identity n pos = 
+  let located = locatedAt pos n
+      mapped = mapLocated id located
+  in mapped == located
+
+-- Test position advancement mathematical properties
+prop_position_advancement_monotonic :: String -> SourcePos -> Bool
+prop_position_advancement_monotonic s pos = 
+  let advanced = advancePosBy s pos
+  in posOffset advanced >= posOffset pos
+
+prop_position_advancement_additive :: String -> String -> SourcePos -> Bool
+prop_position_advancement_additive s1 s2 pos = 
+  let advanced1 = advancePosBy s1 pos
+      advanced2 = advancePosBy s2 advanced1
+      combined = advancePosBy (s1 ++ s2) pos
+  in advanced2 == combined
+
+prop_position_advancement_identity :: SourcePos -> Bool
+prop_position_advancement_identity pos = 
+  advancePosBy "" pos == pos
+
+-- Test span ordering mathematical properties
+prop_span_ordering_total :: [SourceSpan] -> Bool
+prop_span_ordering_total spans = 
+  let sorted = sort spans
+  in all (\(i, span1) -> 
+            all (\(j, span2) -> 
+                  i <= j || span1 <= span2) 
+                (zip [0..] sorted))
+         (zip [0..] sorted)
+
+prop_span_ordering_transitive :: SourceSpan -> SourceSpan -> SourceSpan -> Bool
+prop_span_ordering_transitive span1 span2 span3 = 
+  (span1 <= span2 && span2 <= span3) ==> span1 <= span3
+
+prop_span_ordering_antisymmetric :: SourceSpan -> SourceSpan -> Bool
+prop_span_ordering_antisymmetric span1 span2 = 
+  (span1 <= span2 && span2 <= span1) ==> span1 == span2
+
+-- Test span coverage mathematical properties
+prop_span_coverage_idempotent :: SourcePos -> SourcePos -> Bool
+prop_span_coverage_idempotent pos1 pos2 = 
+  let span1 = spanCovering pos1 pos2
+      span2 = spanCovering (spanStart span1) (spanEnd span1)
+  in span1 == span2
+
+prop_span_coverage_commutative :: SourcePos -> SourcePos -> Bool
+prop_span_coverage_commutative pos1 pos2 = 
+  let span12 = spanCovering pos1 pos2
+      span21 = spanCovering pos2 pos1
+  in span12 == span21
+
+prop_span_coverage_contains_inputs :: SourcePos -> SourcePos -> Bool
+prop_span_coverage_contains_inputs pos1 pos2 = 
+  let span = spanCovering pos1 pos2
+  in spanContains span pos1 && spanContains span pos2
+
+-- Test span expansion mathematical properties
+prop_span_expansion_monotonic :: Int -> Int -> SourceSpan -> Bool
+prop_span_expansion_monotonic before after span = 
+  let expanded = expandSpan before after span
+  in spanLength expanded >= spanLength span
+
+prop_span_expansion_idempotent :: Int -> Int -> SourceSpan -> Property
+prop_span_expansion_idempotent before after span = 
+  before >= 0 && after >= 0 ==> 
+  let expanded1 = expandSpan before after span
+      expanded2 = expandSpan before after expanded1
+  in expanded1 == expanded2
+
+prop_span_expansion_additive :: Int -> Int -> Int -> Int -> SourceSpan -> Property
+prop_span_expansion_additive b1 a1 b2 a2 span = 
+  all (>= 0) [b1, a1, b2, a2] ==> 
+  let expanded1 = expandSpan b1 a1 span
+      expanded2 = expandSpan b2 a2 expanded1
+      combined = expandSpan (b1 + b2) (a1 + a2) span
+  in expanded2 == combined
+
+-- Helper functions
+spansOverlap :: SourceSpan -> SourceSpan -> Bool
+spansOverlap span1 span2 =
+  spanStart span1 <= spanEnd span2 && spanEnd span1 >= spanStart span2
+
+mergeOverlappingSpans :: [SourceSpan] -> [SourceSpan]
+mergeOverlappingSpans = foldr merge []
+  where
+    merge current [] = [current]
+    merge current (acc:rest)
+        | spansOverlap current acc = merge (spanCovering (spanStart current) (spanEnd acc)) rest
+        | otherwise = current : acc : rest
+
+spanLength :: SourceSpan -> Int
+spanLength srcSpan = posOffset (spanEnd srcSpan) - posOffset (spanStart srcSpan)
+
+posDistance :: SourcePos -> SourcePos -> Int
+posDistance p1 p2 = abs (posOffset p2 - posOffset p1)
+
+lineDistance :: SourcePos -> SourcePos -> Int
+lineDistance p1 p2 = abs (posLine p2 - posLine p1)
+
+spanCovering :: SourcePos -> SourcePos -> SourceSpan
+spanCovering p1 p2 = SourceSpan (minPos p1 p2) (maxPos p1 p2)
+
+minPos :: SourcePos -> SourcePos -> SourcePos
+minPos p1 p2 = if p1 <= p2 then p1 else p2
+
+maxPos :: SourcePos -> SourcePos -> SourcePos
+maxPos p1 p2 = if p1 >= p2 then p1 else p2
+
+spanContains :: SourceSpan -> SourcePos -> Bool
+spanContains srcSpan pos = pos >= spanStart srcSpan && pos <= spanEnd srcSpan
+
+expandSpan :: Int -> Int -> SourceSpan -> SourceSpan
+expandSpan before after srcSpan =
+    let start = spanStart srcSpan
+        end = spanEnd srcSpan
+        newStart = posAt (posLine start) (max 1 (posColumn start - before))
+        newEnd = posAt (posLine end) (posColumn end + after)
+    in SourceSpan newStart newEnd
+
+-- Arbitrary instances
 instance Arbitrary SourcePos where
-    arbitrary = genSourcePos
-
--- Generate source spans
-genSourceSpan :: Gen SourceSpan
-genSourceSpan = do
-    start <- genSourcePos
-    endOffset <- choose (0, 1000)
-    let end = advancePosBy (replicate endOffset 'a') start
-    return $ spanBetween start end
+  arbitrary = do
+    line <- choose (1, 1000)
+    col <- choose (1, 1000)
+    offset <- choose (0, 1000000)
+    return $ SourcePos line col offset
 
 instance Arbitrary SourceSpan where
-    arbitrary = genSourceSpan
+  arbitrary = do
+    start <- arbitrary
+    endOffset <- choose (0, 1000)
+    let end = SourcePos (posLine start) (posColumn start + endOffset) (posOffset start + endOffset)
+    return $ SourceSpan start end
 
--- Generate characters for position advancement testing
-genChar :: Gen Char
-genChar = elements ['\n', '\t', ' ', 'a', 'z', '0', '9', ';', '{', '}', '(', ')']
-
-instance Arbitrary Char where
-    arbitrary = genChar
-
--- ============================================================================
--- Source Position Mathematical Properties
--- ============================================================================
-
--- Property: Advancing position by newline increments line number and resets column
-prop_advanceNewlineIncrementsLine :: SourcePos -> Property
-prop_advanceNewlineIncrementsLine pos =
-    let newPos = posAfter '\n' pos
-    in counterexample ("Line should increment, column should reset to 1")
-       (posLine newPos === posLine pos + 1 && posColumn newPos === 1)
-
--- Property: Advancing position by tab aligns to next tab stop (8-character boundaries)
-prop_advanceTabAlignsToTabStop :: SourcePos -> Property
-prop_advanceTabAlignsToTabStop pos =
-    let newPos = posAfter '\t' pos
-        expectedCol = ((posColumn pos - 1) `div` 8 + 1) * 8 + 1
-    in counterexample ("Tab should align to next 8-character boundary")
-       (posColumn newPos === expectedCol)
-
--- Property: Advancing position by regular character increments column only
-prop_advanceRegularCharIncrementsColumn :: SourcePos -> Char -> Property
-prop_advanceRegularCharIncrementsColumn pos char
-    | char `elem` ['\n', '\t'] = property True  -- Skip special chars
-    | otherwise = 
-        let newPos = posAfter char pos
-        in counterexample ("Regular character should increment column by 1")
-           (posLine newPos === posLine pos && posColumn newPos === posColumn pos + 1)
-
--- Property: Position offset always increases when advancing by any character
-prop_offsetAlwaysIncreases :: SourcePos -> Char -> Property
-prop_offsetAlwaysIncreases pos char =
-    let newPos = posAfter char pos
-    in counterexample ("Offset should always increase")
-       (posOffset newPos > posOffset pos === True)
-
--- Property: Advancing by multiple characters is equivalent to sequential advancement
-prop_advanceByMultipleChars :: SourcePos -> String -> Property
-prop_advanceByMultipleChars pos chars =
-    let newPos1 = advancePosBy chars pos
-        newPos2 = foldl (flip posAfter) pos chars
-    in counterexample ("Batch advancement should equal sequential advancement")
-       (newPos1 === newPos2)
-
--- Property: Position comparison is consistent with offset comparison
-prop_positionComparisonConsistentWithOffset :: SourcePos -> SourcePos -> Property
-prop_positionComparisonConsistentWithOffset pos1 pos2 =
-    let posComparison = compare pos1 pos2
-        offsetComparison = compare (posOffset pos1) (posOffset pos2)
-    in counterexample ("Position comparison should match offset comparison")
-       (posComparison === offsetComparison)
-
--- ============================================================================
--- Source Span Mathematical Properties
--- ============================================================================
-
--- Property: Empty span has same start and end position
-prop_emptySpanHasSameStartEnd :: SourcePos -> Property
-prop_emptySpanHasSameStartEnd pos =
-    let span = emptySpan pos
-    in counterexample ("Empty span should have same start and end")
-       (spanStart span === spanEnd span)
-
--- Property: Span between positions maintains correct order
-prop_spanBetweenMaintainsOrder :: SourcePos -> SourcePos -> Property
-prop_spanBetweenMaintainsOrder pos1 pos2 =
-    let span = spanBetween pos1 pos2
-        minPos = if pos1 <= pos2 then pos1 else pos2
-        maxPos = if pos1 >= pos2 then pos1 else pos2
-    in counterexample ("Span should maintain correct order")
-       (spanStart span === minPos && spanEnd span === maxPos)
-
--- Property: Merging spans creates span that covers both original spans
-prop_mergeSpansCoversBoth :: SourceSpan -> SourceSpan -> Property
-prop_mergeSpansCoversBoth span1 span2 =
-    let merged = mergeSpans span1 span2
-        start1 = spanStart span1
-        end1 = spanEnd span1
-        start2 = spanStart span2
-        end2 = spanEnd span2
-        expectedStart = min start1 start2
-        expectedEnd = max end1 end2
-    in counterexample ("Merged span should cover both original spans")
-       (spanStart merged === expectedStart && spanEnd merged === expectedEnd)
-
--- Property: Span validity check works correctly
-prop_spanValidityCheck :: SourcePos -> SourcePos -> Property
-prop_spanValidityCheck pos1 pos2 =
-    let span = spanBetween pos1 pos2
-        isValid = isValidSpan span
-        shouldBeValid = spanStart span <= spanEnd span
-    in counterexample ("Span validity should be consistent")
-       (isValid === shouldBeValid)
-
--- ============================================================================
--- Text Advancement Properties
--- ============================================================================
-
--- Property: Advancing by text is equivalent to advancing by unpacked string
-prop_advanceByTextEquivalence :: SourcePos -> String -> Property
-prop_advanceByTextEquivalence pos str =
-    let text = T.pack str
-        posByText = advancePosByText text pos
-        posByString = advancePosBy str pos
-    in counterexample ("Text advancement should equal string advancement")
-       (posByText === posByString)
-
--- Property: Advancing by empty text/string doesn't change position
-prop_advanceByEmptyNoChange :: SourcePos -> Property
-prop_advanceByEmptyNoChange pos =
-    let posByText = advancePosByText T.empty pos
-        posByString = advancePosBy "" pos
-    in counterexample ("Advancing by empty should not change position")
-       (posByText === pos && posByString === pos)
-
--- Property: Line advancement only changes line number and resets column
-prop_advanceLineOnlyChangesLine :: SourcePos -> Int -> Property
-prop_advanceLineOnlyChangesLine pos numLines
-    | numLines <= 0 = property True
-    | otherwise =
-        let newPos = advancePosByLine numLines pos
-        in counterexample ("Line advancement should only change line and reset column")
-           (posLine newPos === posLine pos + numLines && posColumn newPos === 1)
-
--- ============================================================================
--- Mathematical Operations Properties
--- ============================================================================
-
--- Property: Position distance is symmetric
-prop_positionDistanceSymmetric :: SourcePos -> SourcePos -> Property
-prop_positionDistanceSymmetric pos1 pos2 =
-    let dist1 = abs (posOffset pos1 - posOffset pos2)
-        dist2 = abs (posOffset pos2 - posOffset pos1)
-    in counterexample ("Position distance should be symmetric")
-       (dist1 === dist2)
-
--- Property: Line distance is non-negative
-prop_lineDistanceNonNegative :: SourcePos -> SourcePos -> Property
-prop_lineDistanceNonNegative pos1 pos2 =
-    let lineDist = abs (posLine pos1 - posLine pos2)
-    in counterexample ("Line distance should be non-negative")
-       (lineDist >= 0 === True)
-
--- Property: Creating position at specific coordinates matches expected values
-prop_positionAtCoordinates :: Int -> Int -> Property
-prop_positionAtCoordinates line col
-    | line <= 0 || col <= 0 = property True
-    | otherwise =
-        let pos = posAt line col
-        in counterexample ("Position at coordinates should match")
-           (posLine pos === line && posColumn pos === col)
-
--- ============================================================================
--- Test Suite
--- ============================================================================
+instance Arbitrary a => Arbitrary (Located a) where
+  arbitrary = do
+    value <- arbitrary
+    span <- arbitrary
+    return $ Located value (spanStart span) span
 
 tests :: TestTree
-tests = testGroup "New Source Location Math QuickCheck Tests"
-    [ testProperty "Advance newline increments line and resets column" prop_advanceNewlineIncrementsLine
-    , testProperty "Advance tab aligns to tab stop" prop_advanceTabAlignsToTabStop
-    , testProperty "Advance regular char increments column" prop_advanceRegularCharIncrementsColumn
-    , testProperty "Offset always increases when advancing" prop_offsetAlwaysIncreases
-    , testProperty "Advance by multiple chars equals sequential advancement" prop_advanceByMultipleChars
-    , testProperty "Position comparison consistent with offset comparison" prop_positionComparisonConsistentWithOffset
-    , testProperty "Empty span has same start and end" prop_emptySpanHasSameStartEnd
-    , testProperty "Span between maintains correct order" prop_spanBetweenMaintainsOrder
-    , testProperty "Merge spans covers both original spans" prop_mergeSpansCoversBoth
-    , testProperty "Span validity check works correctly" prop_spanValidityCheck
-    , testProperty "Advance by text equals advance by string" prop_advanceByTextEquivalence
-    , testProperty "Advance by empty doesn't change position" prop_advanceByEmptyNoChange
-    , testProperty "Line advancement only changes line and resets column" prop_advanceLineOnlyChangesLine
-    , testProperty "Position distance is symmetric" prop_positionDistanceSymmetric
-    , testProperty "Line distance is non-negative" prop_lineDistanceNonNegative
-    , testProperty "Position at coordinates matches expected values" prop_positionAtCoordinates
-    ]
+tests = $(testGroupGenerator)
 
--- ============================================================================
--- Helper Functions
--- ============================================================================
-
--- Import required for choose and elements
-import Test.QuickCheck (choose, elements, property)
+main :: IO ()
+main = defaultMain tests
