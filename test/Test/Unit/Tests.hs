@@ -620,6 +620,16 @@ import qualified Test.Unit.NewCabalQuickCheckPropertiesSpec
 import qualified Test.Unit.IRPropertiesQuickCheckSpec
 import qualified Test.Unit.EnhancedCabalTestQuickCheckSpec
 import qualified Test.Unit.CabalEnhancedQuickCheckSpec
+
+-- New Test Modules Added for Enhanced Coverage
+import qualified Test.Unit.NewUtilsEdgeCaseSpec
+import qualified Test.Unit.NewSourceLocationMathPropertiesSpec
+import qualified Test.Unit.NewParserUnicodeSpec
+import qualified Test.Unit.NewCommentHandlingSpec
+import qualified Test.Unit.NewIndentationSpec
+import qualified Test.Unit.NewQuickCheckUtilsSpec
+import qualified Test.Unit.NewQuickCheckSourceLocationSpec
+import qualified Test.Unit.NewErrorRecoverySpec
 import qualified Test.Unit.EnhancedCoreQuickCheckSpec
 -- New QuickCheck property test modules
 import qualified Test.Unit.ComprehensiveQuickCheckSpec
@@ -1858,5 +1868,17 @@ tests =
     , Test.Unit.CabalSyntaxValidatorQuickCheckSpec.tests
     , Test.Unit.CabalAnalyzerQuickCheckSpec.tests
     , Test.Unit.CabalIntegrationQuickCheckSpec.tests
+    ]
+
+  -- New Test Modules Added for Enhanced Coverage (2025)
+  , testGroup "New Enhanced Coverage Test Modules"
+    [ Test.Unit.NewUtilsEdgeCaseSpec.tests
+    , Test.Unit.NewSourceLocationMathPropertiesSpec.tests
+    , Test.Unit.NewParserUnicodeSpec.tests
+    , Test.Unit.NewCommentHandlingSpec.tests
+    , Test.Unit.NewIndentationSpec.tests
+    , Test.Unit.NewQuickCheckUtilsSpec.tests
+    , Test.Unit.NewQuickCheckSourceLocationSpec.tests
+    , Test.Unit.NewErrorRecoverySpec.tests
     ]
   ]

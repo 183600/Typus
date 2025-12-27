@@ -1,0 +1,201 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
+
+module Test.Unit.NewQuickCheckUtilsSpec (tests) where
+
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample, forAll, oneof, elements, listOf, getNonEmpty)
+
+import Utils (trim, splitBy, splitByComma, splitByCollapsed, removeLineComments, removeComments, normalizeIndentation)
+import Data.Char (isSpace, isAlphaNum)
+import Data.List (isPrefixOf, isInfixOf)
+import GHC.Generics (Generic)
+import Control.DeepSeq (NFData)
+
+-- | 生成用于测试的任意字符
+instance Arbitrary Char where
+  arbitrary = oneof
+    [ elements ['a'..'z']
+    , elements ['A'..'Z']
+    , elements ['0'..'9']
+    , elements " \t\n\r,;:!@#$%^&*()[]{}<>-=_+|~`"
+    , elements "中文测试。！，"  -- 添加一些中文字符
+    , pure '\0'  -- null字符
+    ]
+
+-- | 生成用于测试的任意字符串
+instance Arbitrary String where
+  arbitrary = listOf arbitrary
+
+tests :: TestTree
+tests = testGroup "New QuickCheck Utils Tests"
+  [ trimProperties
+  , splitByProperties
+  , commentRemovalProperties
+  , indentationProperties
+  ]
+
+-- | trim 函数的属性测试
+trimProperties :: TestTree
+trimProperties = testGroup "Trim Properties"
+  [ testProperty "trim removes all leading and trailing whitespace" $ \str ->
+      let trimmed = trim str
+          hasLeadingSpace = not (null trimmed) && isSpace (head trimmed)
+          hasTrailingSpace = not (null trimmed) && isSpace (last trimmed)
+      in not (hasLeadingSpace || hasTrailingSpace)
+      
+  , testProperty "trim is idempotent" $ \str ->
+      let trimmedOnce = trim str
+          trimmedTwice = trim trimmedOnce
+      in trimmedOnce === trimmedTwice
+      
+  , testProperty "trim preserves non-whitespace content" $ \str ->
+      let trimmed = trim str
+          originalContent = filter (not . isSpace) str
+          trimmedContent = filter (not . isSpace) trimmed
+      in originalContent === trimmedContent
+      
+  , testProperty "trim empty string" $ \() ->
+      let empty = "" :: String
+          result = trim empty
+      in result === empty
+      
+  , testProperty "trim all whitespace string" $ \whitespace ->
+      let allWhitespace = all isSpace whitespace
+          result = trim whitespace
+      in if allWhitespace
+         then result === ""
+         else property True
+  ]
+
+-- | splitBy 函数的属性测试
+splitByProperties :: TestTree
+splitByProperties = testGroup "Split Properties"
+  [ testProperty "splitBy preserves total length" $ \delim str ->
+      let parts = splitBy delim str
+          totalLength = sum (map length parts) + length parts - 1
+          originalLength = length str
+      in if null str
+         then parts === [""]
+         else totalLength === originalLength
+         
+  , testProperty "splitBy empty string returns single empty" $ \delim ->
+      let result = splitBy delim ""
+      in result === [""]
+      
+  , testProperty "splitBy with delimiter not in string returns single part" $ \str ->
+      let delim = '\0'  -- unlikely to be in random string
+          result = splitBy delim str
+          in if '\0' `elem` str
+             then property True
+             else result === [str]
+             
+  , testProperty "splitByCollapsed removes empty parts" $ \delim str ->
+      let normalParts = splitBy delim str
+          collapsedParts = splitByCollapsed delim str
+      in all (not . null) collapsedParts
+      
+  , testProperty "splitByComma equals splitBy with comma" $ \str ->
+      let byComma = splitByComma str
+          byChar = splitBy ',' str
+      in byComma === byChar
+      
+  , testProperty "splitBy preserves order" $ \delim str ->
+      let parts = splitBy delim str
+          reconstructed = concatMap (\p -> p ++ [delim]) (init parts) ++ last parts
+      in if null str
+         then parts === [""]
+         else if delim `elem` str
+              then reconstructed === str
+              else parts === [str]
+  ]
+
+-- | 注释移除函数的属性测试
+commentRemovalProperties :: TestTree
+commentRemovalProperties = testGroup "Comment Removal Properties"
+  [ testProperty "removeLineComments removes all line comments" $ \str ->
+      let result = removeLineComments str
+          lines' = lines result
+          hasLineComment = any ("//" `isPrefixOf`) lines'
+      in not hasLineComment
+      
+  , testProperty "removeComments removes all block comments" $ \str ->
+      let result = removeComments str
+      in not ("/*" `isInfixOf` result && "*/" `isInfixOf` result)
+      
+  , testProperty "removeLineComments preserves string literals" $ \str ->
+      let stringWithComment = "\"// not a comment\" // real comment"
+          result = removeLineComments stringWithComment
+      in "// not a comment" `isInfixOf` result
+      
+  , testProperty "removeComments preserves string literals" $ \str ->
+      let stringWithComment = "\"/* not a comment */\" ++ " /* real comment */"
+          result = removeComments stringWithComment
+      in "/* not a comment */" `isInfixOf` result
+      
+  , testProperty "removeLineComments is idempotent" $ \str ->
+      let once = removeLineComments str
+          twice = removeLineComments once
+      in once === twice
+      
+  , testProperty "removeComments is idempotent" $ \str ->
+      let once = removeComments str
+          twice = removeComments once
+      in once === twice
+      
+  , testProperty "removeComments handles nested comments" $ \str ->
+      let nested = "text /* outer /* inner */ still outer */ more text"
+          result = removeComments nested
+      in not ("/*" `isInfixOf` result)
+  ]
+
+-- | 缩进处理函数的属性测试
+indentationProperties :: TestTree
+indentationProperties = testGroup "Indentation Properties"
+  [ testProperty "normalizeIndentation preserves line count" $ \str ->
+      let originalLines = lines str
+          resultLines = lines (normalizeIndentation str)
+      in length originalLines === length resultLines
+      
+  , testProperty "normalizeIndentation preserves non-empty content" $ \str ->
+      let originalLines = lines str
+          resultLines = lines (normalizeIndentation str)
+          originalContent = filter (not . null . trim) originalLines
+          resultContent = filter (not . null . trim) resultLines
+      in originalContent === resultContent
+      
+  , testProperty "normalizeIndentation is idempotent" $ \str ->
+      let first = normalizeIndentation str
+          second = normalizeIndentation first
+      in first === second
+      
+  , testProperty "normalizeIndentation handles empty string" $ \() ->
+      let empty = "" :: String
+          result = normalizeIndentation empty
+      in result === empty
+      
+  , testProperty "normalizeIndentation removes common leading whitespace" $ \str ->
+      let lines' = lines str
+          nonEmptyLines = filter (not . null . trim) lines'
+      in if null nonEmptyLines
+         then property True
+         else let result = normalizeIndentation str
+                  resultLines = lines result
+                  resultNonEmpty = filter (not . null . trim) resultLines
+                  hasCommonIndent = any (isPrefixOf "  ") resultNonEmpty
+              in not hasCommonIndent
+              
+  , testProperty "normalizeIndentation preserves relative indentation" $ \str ->
+      let lines' = lines str
+          resultLines = lines (normalizeIndentation str)
+          calculateIndents ls = map (length . takeWhile isSpace) ls
+          originalIndents = calculateIndents $ filter (not . null . trim) lines'
+          resultIndents = calculateIndents $ filter (not . null . trim) resultLines
+      in if null originalIndents
+         then property True
+         else let minOriginal = minimum originalIndents
+                  adjustedOriginal = map (subtract minOriginal) originalIndents
+              in adjustedOriginal === resultIndents
+  ]
