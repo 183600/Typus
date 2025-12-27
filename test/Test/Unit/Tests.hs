@@ -1781,4 +1781,14 @@ tests =
     , Test.Unit.DependentTypeValidationPropertiesSpec.tests
     , Test.Unit.CompilerIRConsistencyPropertiesSpec.tests
     ]
+
+  -- New Comprehensive Test Suite (2025)
+  , testGroup "New Comprehensive Test Suite 2025"
+    [ Test.Unit.ErrorRecoveryAdvancedSpec.tests
+    , Test.Unit.ConcurrentCompilationSpec.tests
+    , Test.Unit.MemoryEfficiencySpec.tests
+    , Test.Unit.TypeInferenceEdgeCasesSpec.tests
+    , Test.Unit.IntegrationComplexWorkflowsSpec.tests
+    , Test.Unit.TextProcessingBoundarySpec.tests
+    ]
   ]

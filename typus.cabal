@@ -748,6 +748,14 @@ test-suite typus-test
         , Test.Unit.NewErrorHandlerQuickCheckTestsSpec
         , Test.Unit.NewDependenciesQuickCheckTestsSpec
         , Test.Unit.NewIntegrationQuickCheckTestsSpec
+
+        -- New Comprehensive Test Suite (2025)
+        , Test.Unit.ErrorRecoveryAdvancedSpec
+        , Test.Unit.ConcurrentCompilationSpec
+        , Test.Unit.MemoryEfficiencySpec
+        , Test.Unit.TypeInferenceEdgeCasesSpec
+        , Test.Unit.IntegrationComplexWorkflowsSpec
+        , Test.Unit.TextProcessingBoundarySpec
     other-modules:
             Test.Dependencies.Arbitrary
     build-depends:
