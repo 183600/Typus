@@ -49,6 +49,14 @@ import qualified Test.Unit.NewCabalBoundaryConditionsSpec
 import qualified Test.Unit.UtilsEnhancedQuickCheckSpec
 import qualified Test.Unit.SourceLocationEnhancedQuickCheckSpec
 
+-- New Comprehensive Test Modules (2025)
+import qualified Test.Unit.StringAnalysisSpec
+import qualified Test.Unit.CompilerOptimizationSpec
+import qualified Test.Unit.TypeSystemBoundarySpec
+import qualified Test.Unit.OwnershipComplexSpec
+import qualified Test.Unit.ErrorRecoveryAdvancedSpec
+import qualified Test.Unit.SourceLocationPrecisionSpec
+
 -- New QuickCheck Test Suite Modules (2025)
 import qualified Test.Unit.NewQuickCheckTestSuite1Spec
 import qualified Test.Unit.NewQuickCheckTestSuite2Spec
@@ -2198,6 +2206,17 @@ tests =
     ]
 
   -- ============================================================================
+  -- New Comprehensive Test Modules (2025) - Advanced Testing Suite
+  -- ============================================================================
+  , testGroup "New Comprehensive Test Modules (2025)"
+    [ Test.Unit.StringAnalysisSpec.tests
+    , Test.Unit.CompilerOptimizationSpec.tests
+    , Test.Unit.TypeSystemBoundarySpec.tests
+    , Test.Unit.OwnershipComplexSpec.tests
+    , Test.Unit.ErrorRecoveryAdvancedSpec.tests
+    , Test.Unit.SourceLocationPrecisionSpec.tests
+    ]
+
   -- New QuickCheck Test Modules Added (2025) - Comprehensive Testing
   -- ============================================================================
   , testGroup "New QuickCheck Test Modules (2025)"

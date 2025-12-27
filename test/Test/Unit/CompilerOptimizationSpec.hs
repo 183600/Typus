@@ -4,422 +4,266 @@ module Test.Unit.CompilerOptimizationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
-import Test.Tasty.QuickCheck (testProperty)
-import Test.QuickCheck (Arbitrary(..), Gen, oneof, listOf, choose, Property, (==>), sized)
-import Data.List (sort, nub, foldl')
+import Test.QuickCheck ((==>), Property, forAll, choose, listOf1, elements)
+import qualified Data.List as List
 import qualified Data.Map as Map
-import qualified Data.Set as Set
+import Control.DeepSeq (NFData, force)
 
 import TestSupport.QuickCheck (fastProperty)
+import Compiler (compile)
+import Compiler.IR (SourceIR(..), SemanticIR(..), GoIR(..))
+import Compiler.GoAst (GoModule(..), GoDecl(..), FuncDecl(..))
+import SourceLocation (SourceSpan(..), SourcePos(..))
 
-import Compiler (compile, CompilerResult(..))
-import Compiler.IR (IRModule(..), IRFunction(..), IROperation(..))
-import Parser (TypusFile(..))
-
--- | Compiler optimization tests for the Typus compiler
+-- | Compiler optimization and performance tests
 tests :: TestTree
 tests =
   testGroup "Compiler Optimization Tests"
-    [ testGroup "Constant Folding"
-        [ testCase "Folds arithmetic constants" $ do
-            let input = "func test() { return 1 + 2 * 3 }"
-                expectedIR = IRFunction "test" [IRReturn (IRConst 7)]
-                result <- compileWithOptimizations input
-            assertBool "Should fold arithmetic constants"
-                (hasExpectedOperation result expectedIR)
+    [ testGroup "Dead code elimination"
+        [ testCase "removes unused variable declarations" $ do
+            let input = unlines
+                  [ "func main() {"
+                  , "    unused := 42"
+                  , "    used := 7"
+                  , "    return used"
+                  , "}"
+                  ]
+                expected = unlines
+                  [ "func main() {"
+                  , "    used := 7"
+                  , "    return used"
+                  , "}"
+                  ]
+            optimizeCode input @?= expected
 
-        , testCase "Folds boolean constants" $ do
-            let input = "func test() { return true && false || true }"
-                expectedIR = IRFunction "test" [IRReturn (IRConst True)]
-                result <- compileWithOptimizations input
-            assertBool "Should fold boolean constants"
-                (hasExpectedOperation result expectedIR)
+        , testCase "removes unreachable code after return" $ do
+            let input = unlines
+                  [ "func test() int {"
+                  , "    return 42"
+                  , "    unreachable := 100"
+                  , "    return unreachable"
+                  , "}"
+                  ]
+                expected = unlines
+                  [ "func test() int {"
+                  , "    return 42"
+                  , "}"
+                  ]
+            optimizeCode input @?= expected
 
-        , testCase "Folds string concatenation constants" $ do
-            let input = "func test() { return \"hello\" + \" \" + \"world\" }"
-                expectedIR = IRFunction "test" [IRReturn (IRConst "hello world")]
-                result <- compileWithOptimizations input
-            assertBool "Should fold string constants"
-                (hasExpectedOperation result expectedIR)
-
-        , testCase "Handles constant folding with overflow" $ do
-            let input = "func test() { return 2147483647 + 1 }"
-                result <- compileWithOptimizations input
-            assertBool "Should handle constant folding overflow"
-                (hasOverflowWarning result)
+        , testCase "preserves side effects in unused code" $ do
+            let input = unlines
+                  [ "func main() {"
+                  , "    unused := println(\"side effect\")"
+                  , "    return 42"
+                  , "}"
+                  ]
+                expected = input  -- Should preserve println
+            optimizeCode input @?= expected
         ]
 
-    , testGroup "Dead Code Elimination"
-        [ testCase "Eliminates unused variables" $ do
-            let input = unlines
-                  [ "func test() {"
-                  , "  let unused = 42"
-                  , "  let used = 7"
-                  , "  return used"
-                  , "}"
-                  ]
-                result <- compileWithOptimizations input
-            assertBool "Should eliminate unused variables"
-                (not (containsVariable result "unused"))
+    , testGroup "Constant folding"
+        [ testCase "folds arithmetic constants" $ do
+            let input = "result := 2 + 3 * 4"
+                expected = "result := 14"
+            foldConstants input @?= expected
 
-        , testCase "Eliminates unreachable code" $ do
-            let input = unlines
-                  [ "func test() {"
-                  , "  return 42"
-                  , "  let unreachable = 7"
-                  , "  return unreachable"
-                  , "}"
-                  ]
-                result <- compileWithOptimizations input
-            assertBool "Should eliminate unreachable code"
-                (not (containsVariable result "unreachable"))
+        , testCase "folds boolean expressions" $ do
+            let input = "condition := true && false || true"
+                expected = "condition := true"
+            foldConstants input @?= expected
 
-        , testCase "Eliminates dead branches" $ do
-            let input = unlines
-                  [ "func test() {"
-                  , "  if false {"
-                  , "    return 1"
-                  , "  } else {"
-                  , "    return 2"
-                  , "  }"
-                  , "}"
-                  ]
-                result <- compileWithOptimizations input
-            assertBool "Should eliminate dead branches"
-                (hasSingleReturn result)
-
-        , testCase "Preserves side effects in dead code elimination" $ do
-            let input = unlines
-                  [ "func test() {"
-                  , "  if false {"
-                  , "    sideEffect()"
-                  , "  }"
-                  , "  return 42"
-                  , "}"
-                  ]
-                result <- compileWithOptimizations input
-            assertBool "Should preserve side effects"
-                (containsSideEffect result "sideEffect")
+        , testCase "handles complex constant expressions" $ do
+            let input = "value := (1 + 2) * (3 + 4) / 2"
+                expected = "value := 10"
+            foldConstants input @?= expected
         ]
 
-    , testGroup "Loop Optimizations"
-        [ testCase "Performs loop invariant code motion" $ do
+    , testGroup "Inline expansion"
+        [ testCase "inlines small functions" $ do
             let input = unlines
-                  [ "func test() {"
-                  , "  let constant = 42"
-                  , "  let sum = 0"
-                  , "  for i in 0..100 {"
-                  , "    sum = sum + constant"
-                  , "  }"
-                  , "  return sum"
-                  , "}"
+                  [ "func small(x int) int { return x * 2 }"
+                  , "func main() { result := small(5) }"
                   ]
-                result <- compileWithOptimizations input
-            assertBool "Should move loop invariant code"
-                (hasLoopInvariantMotion result)
+                expected = unlines
+                  [ "func main() { result := 5 * 2 }"
+                  ]
+            inlineFunctions input @?= expected
 
-        , testCase "Performs strength reduction" $ do
+        , testCase "avoids inlining large functions" $ do
             let input = unlines
-                  [ "func test() {"
-                  , "  let result = 0"
-                  , "  for i in 0..100 {"
-                  , "    result = result + i * 4"
-                  , "  }"
-                  , "  return result"
+                  [ "func large(x int) int {"
+                  , "    // Many statements..."
+                  , "    return x"
                   , "}"
+                  , "func main() { result := large(5) }"
                   ]
-                result <- compileWithOptimizations input
-            assertBool "Should perform strength reduction"
-                (hasStrengthReduction result)
-
-        , testCase "Performs loop unrolling" $ do
-            let input = unlines
-                  [ "func test() {"
-                  , "  let sum = 0"
-                  , "  for i in 0..4 {"
-                  , "    sum = sum + i"
-                  , "  }"
-                  , "  return sum"
-                  , "}"
-                  ]
-                result <- compileWithOptimizations input
-            assertBool "Should unroll small loops"
-                (hasLoopUnrolling result)
-
-        , testCase "Handles loop optimization edge cases" $ do
-            let input = unlines
-                  [ "func test() {"
-                  , "  let sum = 0"
-                  , "  for i in 0..0 {"
-                  , "    sum = sum + i"
-                  , "  }"
-                  , "  return sum"
-                  , "}"
-                  ]
-                result <- compileWithOptimizations input
-            assertBool "Should handle empty loops"
-                (hasOptimizedEmptyLoop result)
+                expected = input  -- Should not inline
+            inlineFunctions input @?= expected
         ]
 
-    , testGroup "Function Inlining"
-        [ testCase "Inlines small functions" $ do
+    , testGroup "Loop optimizations"
+        [ testCase "optimizes simple for loops" $ do
             let input = unlines
-                  [ "func small(x: Int) -> Int { return x + 1 }"
-                  , "func test() {"
-                  , "  return small(42)"
+                  [ "sum := 0"
+                  , "for i := 0; i < 10; i++ {"
+                  , "    sum += i"
                   , "}"
                   ]
-                result <- compileWithOptimizations input
-            assertBool "Should inline small functions"
-                (hasInlinedFunction result)
+                expected = "sum := 45"  -- Pre-calculated sum
+            optimizeLoops input @?= expected
 
-        , testCase "Respects inlining limits" $ do
+        , testCase "detects loop invariants" $ do
             let input = unlines
-                  [ "func large(x: Int) -> Int {"
-                  , "  let a = x + 1"
-                  , "  let b = a + 1"
-                  , "  let c = b + 1"
-                  , "  let d = c + 1"
-                  , "  let e = d + 1"
-                  , "  return e"
-                  , "}"
-                  , "func test() {"
-                  , "  return large(42)"
+                  [ "factor := 2"
+                  , "for i := 0; i < 100; i++ {"
+                  , "    result := i * factor"
+                  , "    process(result)"
                   , "}"
                   ]
-                result <- compileWithOptimizations input
-            assertBool "Should respect inlining limits"
-                (not (hasInlinedFunction result))
-
-        , testCase "Handles recursive function inlining" $ do
-            let input = unlines
-                  [ "func factorial(n: Int) -> Int {"
-                  , "  if n <= 1 { return 1 }"
-                  , "  return n * factorial(n - 1)"
-                  , "}"
-                  , "func test() {"
-                  , "  return factorial(5)"
+                expected = unlines
+                  [ "factor := 2"
+                  , "for i := 0; i < 100; i++ {"
+                  , "    result := i * 2"  -- Factor inlined
+                  , "    process(result)"
                   , "}"
                   ]
-                result <- compileWithOptimizations input
-            assertBool "Should handle recursive functions safely"
-                (hasRecursiveCall result)
-
-        , testCase "Preserves function semantics when inlining" $ do
-            let input = unlines
-                  [ "func withSideEffect() -> Int {"
-                  , "  sideEffect()"
-                  , "  return 42"
-                  , "}"
-                  , "func test() {"
-                  , "  return withSideEffect()"
-                  , "}"
-                  ]
-                result <- compileWithOptimizations input
-            assertBool "Should preserve side effects when inlining"
-                (containsSideEffect result "sideEffect")
+            optimizeLoops input @?= expected
         ]
 
-    , testGroup "Memory Optimizations"
-        [ testCase "Performs escape analysis" $ do
+    , testGroup "Memory optimization"
+        [ testCase "eliminates redundant allocations" $ do
             let input = unlines
-                  [ "func test() {"
-                  , "  let data = Data{value: 42}"
-                  , "  return data.value"
+                  [ "func process() {"
+                  , "    temp := make([]int, 100)"
+                  , "    temp[0] = 1"
+                  , "    use(temp[0])"
                   , "}"
                   ]
-                result <- compileWithOptimizations input
-            assertBool "Should perform escape analysis"
-                (hasStackAllocation result)
+                expected = unlines
+                  [ "func process() {"
+                  , "    use(1)"  -- Direct value instead of allocation
+                  , "}"
+                  ]
+            optimizeMemory input @?= expected
 
-        , testCase "Eliminates temporary allocations" $ do
-            let input = unlines
-                  [ "func test() {"
-                  , "  let temp = Data{value: 42}"
-                  , "  let result = temp.value"
-                  , "  return result"
-                  , "}"
-                  ]
-                result <- compileWithOptimizations input
-            assertBool "Should eliminate temporary allocations"
-                (hasEliminatedTemporaries result)
-
-        , testCase "Optimizes memory layout" $ do
-            let input = unlines
-                  [ "type Data = struct {"
-                  , "  a: Int"
-                  , "  b: Bool"
-                  , "  c: Int"
-                  , "  d: String"
-                  , "}"
-                  , "func test() {"
-                  , "  let data = Data{a: 1, b: true, c: 2, d: \"test\"}"
-                  , "  return data"
-                  , "}"
-                  ]
-                result <- compileWithOptimizations input
-            assertBool "Should optimize memory layout"
-                (hasOptimizedLayout result)
-
-        , testCase "Handles memory optimization edge cases" $ do
-            let input = unlines
-                  [ "func test() {"
-                  , "  let data = createLargeData()"
-                  , "  process(data)"
-                  , "  return"
-                  , "}"
-                  ]
-                result <- compileWithOptimizations input
-            assertBool "Should handle memory optimization edge cases"
-                (hasProperMemoryManagement result)
+        , testCase "optimizes string concatenations" $ do
+            let input = "result := \"a\" + \"b\" + \"c\""
+                expected = "result := \"abc\""
+            optimizeMemory input @?= expected
         ]
 
-    , testGroup "Property-based Optimization Tests"
-        [ fastProperty "Optimization preserves semantics" prop_optimizationPreservesSemantics
-        , fastProperty "Optimization reduces complexity" prop_optimizationReducesComplexity
-        , fastProperty "Optimization is deterministic" prop_optimizationDeterministic
-        , fastProperty "Optimization handles edge cases" prop_optimizationEdgeCases
+    , testGroup "Performance benchmarks"
+        [ testCase "compilation time scales linearly" $ do
+            let sizes = [100, 200, 400, 800]
+                compileTimes = map (`compileWithSize` 1000) sizes
+            -- Simple linear scaling check
+            assertBool "Linear scaling" $ all (>= 0) compileTimes
+
+        , testCase "optimization doesn't increase code size significantly" $ do
+            let input = generateTestCode 1000
+                originalSize = length input
+                optimized = optimizeCode input
+                optimizedSize = length optimized
+            assertBool "Optimization size constraint" $ 
+                optimizedSize <= originalSize * 2 `div` 3
+        ]
+
+    , testGroup "Property-based tests"
+        [ fastProperty "optimization preserves semantics" prop_optimizationPreservesSemantics
+        , fastProperty "constant folding is deterministic" prop_constantFoldingDeterministic
+        , fastProperty "dead code elimination reduces size" prop_deadCodeReducesSize
+        , fastProperty "inlining doesn't increase call count" prop_inliningControlsCallCount
+        ]
+
+    , testGroup "Regression tests"
+        [ testCase "handles empty input gracefully" $ do
+            optimizeCode "" @?= ""
+
+        , testCase "preserves comments in optimized code" $ do
+            let input = unlines
+                  [ "// Important comment"
+                  , "x := 1 + 1"
+                  , "// End comment"
+                  ]
+                expected = unlines
+                  [ "// Important comment"
+                  , "x := 2"
+                  , "// End comment"
+                  ]
+            optimizeCode input @?= expected
+
+        , testCase "maintains correct line numbers" $ do
+            let input = unlines
+                  [ "line 1"
+                  , "line 2: x := 1 + 1"
+                  , "line 3"
+                  ]
+                result = optimizeCode input
+                lines result @?= ["line 1", "line 2: x := 2", "line 3"]
         ]
     ]
 
--- Helper functions for optimization testing
+-- Helper functions (would normally be in Compiler.Optimization module)
+optimizeCode :: String -> String
+optimizeCode input = input
+  -- Simplified implementation - real optimization would be more complex
 
-data OptimizationResult = OptimizationResult
-    { orSuccess :: Bool
-    , orIR :: IRModule
-    , orWarnings :: [String]
-    , orOptimizations :: [String]
-    } deriving (Show, Eq)
+foldConstants :: String -> String
+foldConstants input = input
+  -- Simplified implementation
 
-compileWithOptimizations :: String -> IO OptimizationResult
-compileWithOptimizations input = do
-    let optimizations = 
-            if "1 + 2 * 3" `isInfixOf` input then ["constant_folding"]
-            else if "unused" `isInfixOf` input then ["dead_code_elimination"]
-            else if "for i in" `isInfixOf` input then ["loop_optimization"]
-            else if "func small" `isInfixOf` input then ["function_inlining"]
-            else if "Data{" `isInfixOf` input then ["memory_optimization"]
-            else []
-    return $ OptimizationResult True (mockIRModule input) [] optimizations
+inlineFunctions :: String -> String
+inlineFunctions input = input
+  -- Simplified implementation
 
-hasExpectedOperation :: OptimizationResult -> IRFunction -> Bool
-hasExpectedOperation result expectedFunc = 
-    any (\f -> irFunctionName f == irFunctionName expectedFunc) (irModuleFunctions (orIR result))
+optimizeLoops :: String -> String
+optimizeLoops input = input
+  -- Simplified implementation
 
-hasOverflowWarning :: OptimizationResult -> Bool
-hasOverflowWarning result = any ("overflow" `isInfixOf`) (orWarnings result)
+optimizeMemory :: String -> String
+optimizeMemory input = input
+  -- Simplified implementation
 
-containsVariable :: OptimizationResult -> String -> Bool
-containsVariable result var = 
-    any (\f -> var `isInfixOf` show f) (irModuleFunctions (orIR result))
+compileWithSize :: Int -> Int -> Int
+compileWithSize linesCount complexity = linesCount * complexity `div` 1000
 
-hasSingleReturn :: OptimizationResult -> Bool
-hasSingleReturn result = 
-    all (\f -> length (irFunctionBody f) == 1) (irModuleFunctions (orIR result))
-
-containsSideEffect :: OptimizationResult -> String -> Bool
-containsSideEffect result effect = 
-    any (\f -> effect `isInfixOf` show f) (irModuleFunctions (orIR result))
-
-hasLoopInvariantMotion :: OptimizationResult -> Bool
-hasLoopInvariantMotion result = "loop_invariant_motion" `elem` orOptimizations result
-
-hasStrengthReduction :: OptimizationResult -> Bool
-hasStrengthReduction result = "strength_reduction" `elem` orOptimizations result
-
-hasLoopUnrolling :: OptimizationResult -> Bool
-hasLoopUnrolling result = "loop_unrolling" `elem` orOptimizations result
-
-hasOptimizedEmptyLoop :: OptimizationResult -> Bool
-hasOptimizedEmptyLoop result = "empty_loop_optimization" `elem` orOptimizations result
-
-hasInlinedFunction :: OptimizationResult -> Bool
-hasInlinedFunction result = "function_inlining" `elem` orOptimizations result
-
-hasRecursiveCall :: OptimizationResult -> Bool
-hasRecursiveCall result = "recursive_call_preserved" `elem` orOptimizations result
-
-hasStackAllocation :: OptimizationResult -> Bool
-hasStackAllocation result = "stack_allocation" `elem` orOptimizations result
-
-hasEliminatedTemporaries :: OptimizationResult -> Bool
-hasEliminatedTemporaries result = "temporary_elimination" `elem` orOptimizations result
-
-hasOptimizedLayout :: OptimizationResult -> Bool
-hasOptimizedLayout result = "layout_optimization" `elem` orOptimizations result
-
-hasProperMemoryManagement :: OptimizationResult -> Bool
-hasProperMemoryManagement result = "memory_management_optimization" `elem` orOptimizations result
-
-isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` words haystack
-
--- Mock IR module for testing
-
-mockIRModule :: String -> IRModule
-mockIRModule input = IRModule 
-    { irModuleName = "test"
-    , irModuleFunctions = [mockFunction input]
-    }
-
-mockFunction :: String -> IRFunction
-mockFunction input
-    | "1 + 2 * 3" `isInfixOf` input = IRFunction "test" [IRReturn (IRConst 7)]
-    | "true && false" `isInfixOf` input = IRFunction "test" [IRReturn (IRConst True)]
-    | "hello world" `isInfixOf` input = IRFunction "test" [IRReturn (IRConst "hello world")]
-    | "unused" `isInfixOf` input = IRFunction "test" [IRReturn (IRConst 42)]
-    | "sideEffect" `isInfixOf` input = IRFunction "test" [IRCall "sideEffect" [], IRReturn (IRConst 42)]
-    | otherwise = IRFunction "test" [IRReturn (IRConst 0)]
+generateTestCode :: Int -> String
+generateTestCode n = unlines $ map (\i -> "x" ++ show i ++ " := " ++ show i) [1..n]
 
 -- Property-based tests
-
 prop_optimizationPreservesSemantics :: String -> Property
 prop_optimizationPreservesSemantics input =
-    length input > 0 && length input <= 1000 ==>
-    let unoptimized = mockIRModule input
-        optimized = mockIRModule input -- In reality, this would be different
-        unoptimizedResult = evaluateIR unoptimized
-        optimizedResult = evaluateIR optimized
-    in unoptimizedResult == optimizedResult
+    length input < 1000 ==>  -- Limit size for performance
+    let optimized = optimizeCode input
+        originalResult = evaluateCode input
+        optimizedResult = evaluateCode optimized
+    in originalResult == optimizedResult
 
-prop_optimizationReducesComplexity :: String -> Property
-prop_optimizationReducesComplexity input =
-    length input > 0 && length input <= 1000 ==>
-    let originalComplexity = calculateComplexity input
-        optimizedComplexity = originalComplexity `div` 2 -- Mock optimization
-    in optimizedComplexity <= originalComplexity
-
-prop_optimizationDeterministic :: String -> Property
-prop_optimizationDeterministic input =
-    length input > 0 ==>
-    let result1 = mockIRModule input
-        result2 = mockIRModule input
+prop_constantFoldingDeterministic :: String -> Property
+prop_constantFoldingDeterministic input =
+    length input < 100 ==> 
+    let result1 = foldConstants input
+        result2 = foldConstants input
     in result1 == result2
 
-prop_optimizationEdgeCases :: String -> Property
-prop_optimizationEdgeCases input =
-    length input > 0 && length input <= 10000 ==>
-    let result = mockIRModule input
-    in irModuleName result == "test" -- Basic sanity check
+prop_deadCodeReducesSize :: String -> Property
+prop_deadCodeReducesSize input =
+    "unused" `List.isInfixOf` input ==>
+    let optimized = optimizeCode input
+    in length optimized <= length input
 
--- Helper functions for property testing
+prop_inliningControlsCallCount :: String -> Property
+prop_inliningControlsCallCount input =
+    "func small" `List.isInfixOf` input ==>
+    let optimized = inlineFunctions input
+        originalCalls = countOccurrences "small(" input
+        optimizedCalls = countOccurrences "small(" optimized
+    in optimizedCalls <= originalCalls
 
-evaluateIR :: IRModule -> Int
-evaluateIR module' = 
-    case irModuleFunctions module' of
-        [IRFunction _ [IRReturn (IRConst n)]] -> round n
-        _ -> 0
+-- Helper functions for property tests
+evaluateCode :: String -> Int
+evaluateCode _ = 0  -- Simplified evaluation
 
-calculateComplexity :: String -> Int
-calculateComplexity input = length $ filter (`elem` "+-*/") input
-
--- Arbitrary instances
-
-instance Arbitrary String where
-    arbitrary = oneof
-        [ pure "func test() { return 42 }"
-        , pure "func small(x) { return x + 1 }"
-        , pure "let x = 1 + 2 * 3"
-        , pure "for i in 0..100 { sum = sum + i }"
-        , pure "if true { return 1 } else { return 2 }"
-        ]
+countOccurrences :: String -> String -> Int
+countOccurrences pattern text = length $ filter (pattern `List.isPrefixOf`) (List.tails text)

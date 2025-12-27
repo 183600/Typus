@@ -219,6 +219,14 @@ test-suite typus-test
         Test.Unit.EdgeCaseSpec,
         Test.Unit.EnhancedQuickCheckSpec,
         Test.Unit.EnhancedQuickCheckTestSpec,
+        
+        -- New Comprehensive Test Modules (2025)
+        Test.Unit.StringAnalysisSpec,
+        Test.Unit.CompilerOptimizationSpec,
+        Test.Unit.TypeSystemBoundarySpec,
+        Test.Unit.OwnershipComplexSpec,
+        Test.Unit.ErrorRecoveryAdvancedSpec,
+        Test.Unit.SourceLocationPrecisionSpec,
         Test.Unit.ParserQuickCheckSpec,
         Test.Unit.CompilerQuickCheckSpec,
         Test.Unit.TypeCheckerQuickCheckSpec,
@@ -583,7 +591,6 @@ test-suite typus-test
         Test.Unit.DependencyAnalysisAdvancedSpec,
         Test.Unit.SourcePositionPrecisionSpec,
         Test.Unit.TextProcessingRobustnessSpec,
-        Test.Unit.CompilerOptimizationSpec,
 
         -- New Comprehensive Test Suite (2025)
         Test.Unit.SourceLocationBoundarySpec,
@@ -779,7 +786,6 @@ test-suite typus-test
         , Test.Unit.NewIntegrationQuickCheckTestsSpec
 
         -- New Comprehensive Test Suite (2025)
-        , Test.Unit.ErrorRecoveryAdvancedSpec
         , Test.Unit.ConcurrentCompilationSpec
         , Test.Unit.MemoryEfficiencySpec
         , Test.Unit.TypeInferenceEdgeCasesSpec
