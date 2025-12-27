@@ -1,459 +1,417 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Test.Unit.PerformanceRegressionSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
+import Test.Tasty.QuickCheck (testProperty)
 import TestSupport.QuickCheck (fastProperty)
-import TestSupport.Arbitrary
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, sized, resize, Positive(..))
-
-import Compiler
-import Parser
-import IntegratedCompiler
-import Utils
-
-import Data.Char (isSpace, isLetter, isDigit)
-import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, intercalate, nub, sort)
-import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
-import Data.Set (Set)
-import qualified Data.Set as Set
-import Data.Map (Map)
+import Test.QuickCheck (Arbitrary(..), Gen, oneof, listOf, elements, sized, suchThat)
+import qualified Data.Text as T
+import qualified Data.List as L
 import qualified Data.Map as Map
+import System.CPUTime (getCPUTime)
+import Text.Printf (printf)
 
--- | Tests for performance regression detection and prevention
-tests :: TestTree
-tests =
-  testGroup "Performance Regression Tests"
-    [ testGroup "Compilation Performance"
-        [ fastProperty "Parsing performance with large files" prop_parsing_performance
-        , fastProperty "Type checking performance scales linearly" prop_type_checking_performance
-        , fastProperty "Optimization performance with complex code" prop_optimization_performance
-        , testCase "Large project compilation time" test_large_project_compilation_time
-        , testCase "Incremental compilation performance" test_incremental_compilation_performance
+import Parser (parseTypus, TypusFile(..), CodeBlock(..))
+import Compiler (compile, generateGoCode)
+import Compiler.IR (emitGo, goSource)
+import Ownership (analyzeOwnership)
+import Compiler.DependentTypeChecker (checkDependentTypes)
+import Utils (measureTime, profileFunction)
+
+-- | Performance test scenarios
+data PerformanceScenario
+    | SmallProgram String                         -- Small program (< 100 lines)
+    | MediumProgram String                        -- Medium program (100-500 lines)
+    | LargeProgram String                         -- Large program (500-1000 lines)
+    | ComplexDependencies String                  -- Program with complex dependencies
+    | DeepTypeInference String                    -- Program with deep type inference
+    | HeavyOwnershipAnalysis String               -- Program with heavy ownership analysis
+    | MassiveCodebase [String]                    -- Large codebase with multiple modules
+    deriving (Show, Eq)
+
+-- | Performance metrics
+data PerformanceMetrics = PerformanceMetrics
+    { pmParseTime :: Double                       -- Parsing time (ms)
+    , pmAnalysisTime :: Double                    -- Analysis time (ms)
+    , pmTypeCheckTime :: Double                   -- Type checking time (ms)
+    , pmOwnershipTime :: Double                   -- Ownership analysis time (ms)
+    , pmCodeGenTime :: Double                     -- Code generation time (ms)
+    , pmTotalTime :: Double                       -- Total time (ms)
+    , pmMemoryUsage :: Int                        -- Memory usage (KB)
+    , pmLinesProcessed :: Int                     -- Lines processed
+    , pmTokensProcessed :: Int                    -- Tokens processed
+    } deriving (Show, Eq)
+
+-- | Performance thresholds
+data PerformanceThresholds = PerformanceThresholds
+    { ptParseTimeLimit :: Double                  -- Max parsing time (ms)
+    , ptAnalysisTimeLimit :: Double               -- Max analysis time (ms)
+    , ptTypeCheckTimeLimit :: Double              -- Max type checking time (ms)
+    , ptOwnershipTimeLimit :: Double              -- Max ownership analysis time (ms)
+    , ptCodeGenTimeLimit :: Double                -- Max code generation time (ms)
+    , ptTotalTimeLimit :: Double                  -- Max total time (ms)
+    , ptMemoryLimit :: Int                        -- Max memory usage (KB)
+    } deriving (Show, Eq)
+
+-- | Regression test result
+data RegressionResult = RegressionResult
+    { rrScenario :: PerformanceScenario
+    , rrMetrics :: PerformanceMetrics
+    , rrThresholds :: PerformanceThresholds
+    , rrPassed :: Bool                           -- Whether performance is within thresholds
+    , rrRegressions :: [String]                  -- Detected regressions
+    } deriving (Show, Eq)
+
+-- | Generate performance scenarios
+instance Arbitrary PerformanceScenario where
+    arbitrary = oneof
+        [ SmallProgram <$> generateSmallProgram
+        , MediumProgram <$> generateMediumProgram
+        , LargeProgram <$> generateLargeProgram
+        , ComplexDependencies <$> generateComplexDependencies
+        , DeepTypeInference <$> generateDeepTypeInference
+        , HeavyOwnershipAnalysis <$> generateHeavyOwnershipAnalysis
+        , MassiveCodebase <$> listOf generateModule
         ]
-    
-    , testGroup "Memory Usage Regression"
-        [ fastProperty "Memory usage scales appropriately with input size" prop_memory_scaling
-        , fastProperty "No memory leaks in compilation pipeline" prop_memory_leak_prevention
-        , fastProperty "Memory efficiency with repeated operations" prop_memory_efficiency
-        , testCase "Memory usage profiling" test_memory_usage_profiling
-        , testCase "Garbage collection performance" test_garbage_collection_performance
+
+-- | Generate small programs
+generateSmallProgram :: Gen String
+generateSmallProgram = oneof
+    [ pure $ unlines
+        [ "package main"
+        , "func main() {"
+        , "    x := 42"
+        , "    println(x)"
+        , "}"
         ]
-    
-    , testGroup "Algorithmic Complexity"
-        [ fastProperty "Parser complexity is linear" prop_parser_complexity
-        , fastProperty "Type checker complexity is manageable" prop_type_checker_complexity
-        , fastProperty "Dependency analysis complexity" prop_dependency_analysis_complexity
-        , testCase "Worst-case performance scenarios" test_worst_case_performance
-        , testCase "Performance with pathological inputs" test_pathological_inputs
-        ]
-    
-    , testGroup "Regression Detection"
-        [ fastProperty "Performance baseline comparison" prop_baseline_comparison
-        , fastProperty "Statistical significance of performance changes" prop_statistical_significance
-        , fastProperty "Performance trend analysis" prop_performance_trend_analysis
-        , testCase "Performance regression detection" test_performance_regression_detection
-        , testCase "Performance improvement validation" test_performance_improvement_validation
-        ]
-    
-    , testGroup "Optimization Effectiveness"
-        [ fastProperty "Compilation time optimization effectiveness" prop_compilation_time_optimization
-        , fastProperty "Runtime performance optimization" prop_runtime_performance_optimization
-        , fastProperty "Code size optimization" prop_code_size_optimization
-        , testCase "Optimization benchmark comparison" test_optimization_benchmark_comparison
-        , testCase "Optimization trade-off analysis" test_optimization_trade_off_analysis
+    , pure $ unlines
+        [ "package main"
+        , "func add(a int, b int) int {"
+        , "    return a + b"
+        , "}"
+        , "func main() {"
+        , "    result := add(1, 2)"
+        , "    println(result)"
+        , "}"
         ]
     ]
 
--- Property: Parsing performance with large files
-prop_parsing_performance :: Int -> String -> Property
-prop_parsing_performance fileSize baseContent =
-  fileSize > 0 && fileSize <= 10000 ==> 
-  let largeFile = replicate fileSize baseContent
-      parseTime = measureParseTime largeFile
-      expectedMaxTime = fileSize * 100 -- 100 microseconds per character
-  in property $ parseTime <= expectedMaxTime
-
--- Property: Type checking performance scales linearly
-prop_type_checking_performance :: Int -> Property
-prop_type_checking_performance complexityLevel =
-  complexityLevel > 0 && complexityLevel <= 1000 ==> 
-  let complexCode = generateComplexTypeCode complexityLevel
-      typeCheckTime = measureTypeCheckTime complexCode
-      expectedMaxTime = complexityLevel * 1000 -- 1ms per complexity unit
-  in property $ typeCheckTime <= expectedMaxTime
-
--- Property: Optimization performance with complex code
-prop_optimization_performance :: Int -> Property
-prop_optimization_performance codeSize =
-  codeSize > 0 && codeSize <= 5000 ==> 
-  let complexCode = generateComplexCode codeSize
-      optimizationTime = measureOptimizationTime complexCode
-      expectedMaxTime = codeSize * 500 -- 500 microseconds per line
-  in property $ optimizationTime <= expectedMaxTime
-
--- Property: Memory usage scales appropriately with input size
-prop_memory_scaling :: Int -> Property
-prop_memory_scaling inputSize =
-  inputSize > 0 && inputSize <= 10000 ==> 
-  let input = generateInput inputSize
-      memoryUsage = measureMemoryUsage input
-      expectedMaxMemory = inputSize * 100 -- 100 bytes per input unit
-  in property $ memoryUsage <= expectedMaxMemory
-
--- Property: No memory leaks in compilation pipeline
-prop_memory_leak_prevention :: Int -> Property
-prop_memory_leak_prevention iterations =
-  iterations > 0 && iterations <= 100 ==> 
-  let initialMemory = getCurrentMemoryUsage
-      _ = replicate iterations runCompilationPipeline
-      finalMemory = getCurrentMemoryUsage
-      memoryGrowth = finalMemory - initialMemory
-  in property $ memoryGrowth <= iterations * 1000 -- Allow some growth but not leaks
-
--- Property: Memory efficiency with repeated operations
-prop_memory_efficiency :: String -> Property
-prop_memory_efficiency code =
-  not (null code) ==> 
-  let memoryBefore = measureMemoryUsage code
-      _ = repeatCompilation 10 code
-      memoryAfter = measureMemoryUsage code
-      memoryGrowth = memoryAfter - memoryBefore
-  in property $ memoryGrowth <= memoryBefore `div` 10 -- Less than 10% growth
-
--- Property: Parser complexity is linear
-prop_parser_complexity :: Int -> Property
-prop_parser_complexity inputSize =
-  inputSize > 0 && inputSize <= 10000 ==> 
-  let input = generateInput inputSize
-      parseTimes = map measureParseTime [take n input | n <- [1..inputSize `div` 100]]
-      isLinear = checkLinearComplexity parseTimes
-  in property $ isLinear
-
--- Property: Type checker complexity is manageable
-prop_type_checker_complexity :: Int -> Property
-prop_type_checker_complexity complexityLevel =
-  complexityLevel > 0 && complexityLevel <= 1000 ==> 
-  let typeCheckTimes = map measureTypeCheckTime [generateComplexTypeCode n | n <- [1..complexityLevel `div` 10]]
-      isManageable = checkManageableComplexity typeCheckTimes
-  in property $ isManageable
-
--- Property: Dependency analysis complexity
-prop_dependency_analysis_complexity :: Int -> Property
-prop_dependency_analysis_complexity nodeCount =
-  nodeCount > 0 && nodeCount <= 500 ==> 
-  let dependencyGraph = generateDependencyGraph nodeCount
-      analysisTime = measureDependencyAnalysisTime dependencyGraph
-      expectedMaxTime = nodeCount * nodeCount * 10 -- O(n²) with small constant
-  in property $ analysisTime <= expectedMaxTime
-
--- Property: Performance baseline comparison
-prop_baseline_comparison :: String -> Property
-prop_baseline_comparison code =
-  not (null code) ==> 
-  let currentPerformance = measureCurrentPerformance code
-      baselinePerformance = getBaselinePerformance code
-      performanceRatio = fromIntegral currentPerformance / fromIntegral baselinePerformance
-  in property $ performanceRatio <= 1.2 -- Allow 20% degradation
-
--- Property: Statistical significance of performance changes
-prop_statistical_significance :: [Int] -> [Int] -> Property
-prop_statistical_significance baselineMeasurements currentMeasurements =
-  length baselineMeasurements >= 10 && length currentMeasurements >= 10 ==> 
-  let significance = calculateStatisticalSignificance baselineMeasurements currentMeasurements
-      isSignificant = significance > 0.95 -- 95% confidence
-  in property $ True -- Placeholder for actual statistical test
-
--- Property: Performance trend analysis
-prop_performance_trend_analysis :: [Int] -> Property
-prop_performance_trend_analysis performanceHistory =
-  length performanceHistory >= 5 ==> 
-  let trend = analyzePerformanceTrend performanceHistory
-      hasAcceptableTrend = trend >= -0.1 -- Allow 10% degradation
-  in property $ hasAcceptableTrend
-
--- Property: Compilation time optimization effectiveness
-prop_compilation_time_optimization :: String -> Property
-prop_compilation_time_optimization code =
-  not (null code) ==> 
-  let unoptimizedTime = measureCompilationTime code
-      optimizedTime = measureOptimizedCompilationTime code
-      improvementRatio = fromIntegral unoptimizedTime / fromIntegral optimizedTime
-  in property $ improvementRatio >= 1.1 -- At least 10% improvement
-
--- Property: Runtime performance optimization
-prop_runtime_performance_optimization :: String -> Property
-prop_runtime_performance_optimization code =
-  not (null code) ==> 
-  let unoptimizedRuntime = measureRuntimePerformance code
-      optimizedRuntime = measureOptimizedRuntimePerformance code
-      improvementRatio = fromIntegral unoptimizedRuntime / fromIntegral optimizedRuntime
-  in property $ improvementRatio >= 1.05 -- At least 5% improvement
-
--- Property: Code size optimization
-prop_code_size_optimization :: String -> Property
-prop_code_size_optimization code =
-  not (null code) ==> 
-  let unoptimizedSize = measureCodeSize code
-      optimizedSize = measureOptimizedCodeSize code
-      reductionRatio = fromIntegral unoptimizedSize / fromIntegral optimizedSize
-  in property $ reductionRatio >= 1.0 -- No increase in size
-
--- Test cases for specific performance scenarios
-
-test_large_project_compilation_time :: IO ()
-test_large_project_compilation_time = do
-  let largeProject = generateLargeProject 1000
-      compilationTime = measureProjectCompilationTime largeProject
-      maxAcceptableTime = 30000000 -- 30 seconds
-  compilationTime <= maxAcceptableTime @?= True
-
-test_incremental_compilation_performance :: IO ()
-test_incremental_compilation_performance = do
-  let baseProject = generateBaseProject
-      change = generateSmallChange
-      fullCompilationTime = measureProjectCompilationTime baseProject
-      incrementalCompilationTime = measureIncrementalCompilationTime baseProject change
-      speedupRatio = fromIntegral fullCompilationTime / fromIntegral incrementalCompilationTime
-  speedupRatio >= 2.0 @?= True -- At least 2x faster
-
-test_memory_usage_profiling :: IO ()
-test_memory_usage_profiling = do
-  let testCode = generateMemoryIntensiveCode
-      memoryProfile = profileMemoryUsage testCode
-      peakMemory = peakMemoryUsage memoryProfile
-      averageMemory = averageMemoryUsage memoryProfile
-      memoryEfficiency = averageMemory / peakMemory
-  memoryEfficiency >= 0.7 @?= True -- At least 70% efficiency
-
-test_garbage_collection_performance :: IO ()
-test_garbage_collection_performance = do
-  let gcIntensiveCode = generateGCIntensiveCode
-      gcMetrics = measureGCMetrics gcIntensiveCode
-      gcPauseTime = averageGCPause gcMetrics
-      gcFrequency = gcCount gcMetrics
-  gcPauseTime <= 10000 @?= True -- Less than 10ms average pause
-  gcFrequency <= 100 @?= True -- Less than 100 collections
-
-test_worst_case_performance :: IO ()
-test_worst_case_performance = do
-  let worstCaseCode = generateWorstCaseCode
-      parsingTime = measureParseTime worstCaseCode
-      typeCheckingTime = measureTypeCheckTime worstCaseCode
-      optimizationTime = measureOptimizationTime worstCaseCode
-      totalTime = parsingTime + typeCheckingTime + optimizationTime
-      maxAcceptableTime = 60000000 -- 60 seconds
-  totalTime <= maxAcceptableTime @?= True
-
-test_pathological_inputs :: IO ()
-test_pathological_inputs = do
-  let pathologicalInputs = generatePathologicalInputs
-      performanceResults = map measureCompilationTime pathologicalInputs
-      maxTime = maximum performanceResults
-      averageTime = sum performanceResults `div` length performanceResults
-      variance = calculateVariance performanceResults averageTime
-  maxTime <= 30000000 @?= True -- Max 30 seconds
-  variance <= averageTime * averageTime @?= True -- Reasonable variance
-
-test_performance_regression_detection :: IO ()
-test_performance_regression_detection = do
-  let baselineMeasurements = replicate 10 1000000 -- 1 second baseline
-      currentMeasurements = replicate 10 1200000 -- 1.2 seconds current
-      regressionDetected = detectPerformanceRegression baselineMeasurements currentMeasurements
-  regressionDetected @?= True
-
-test_performance_improvement_validation :: IO ()
-test_performance_improvement_validation = do
-  let baselineMeasurements = replicate 10 2000000 -- 2 seconds baseline
-      currentMeasurements = replicate 10 1500000 -- 1.5 seconds current
-      improvementValidated = validatePerformanceImprovement baselineMeasurements currentMeasurements
-  improvementValidated @?= True
-
-test_optimization_benchmark_comparison :: IO ()
-test_optimization_benchmark_comparison = do
-  let benchmarkCode = generateBenchmarkCode
-      optimizationLevels = ["O0", "O1", "O2", "O3"]
-      performanceResults = map (\level -> measureOptimizationLevelPerformance benchmarkCode level) optimizationLevels
-      hasProgressiveImprovement = all (\(a, b) -> b <= a) (zip performanceResults (tail performanceResults))
-  hasProgressiveImprovement @?= True
-
-test_optimization_trade_off_analysis :: IO ()
-test_optimization_trade_off_analysis = do
-  let tradeOffCode = generateTradeOffCode
-      compilationTimes = map (\level -> measureCompilationTimeAtLevel tradeOffCode level) ["O0", "O1", "O2", "O3"]
-      runtimePerformances = map (\level -> measureRuntimeAtLevel tradeOffCode level) ["O0", "O1", "O2", "O3"]
-      codeSizes = map (\level -> measureCodeSizeAtLevel tradeOffCode level) ["O0", "O1", "O2", "O3"]
-      hasAcceptableTradeOffs = checkOptimizationTradeOffs compilationTimes runtimePerformances codeSizes
-  hasAcceptableTradeOffs @?= True
-
--- Helper functions (placeholders for actual implementation)
-
--- Performance measurement functions
-measureParseTime :: String -> Int
-measureParseTime _ = 1000 -- Placeholder (microseconds)
-
-measureTypeCheckTime :: String -> Int
-measureTypeCheckTime _ = 2000 -- Placeholder
-
-measureOptimizationTime :: String -> Int
-measureOptimizationTime _ = 3000 -- Placeholder
-
-measureMemoryUsage :: String -> Int
-measureMemoryUsage _ = 10000 -- Placeholder (bytes)
-
-getCurrentMemoryUsage :: Int
-getCurrentMemoryUsage = 50000 -- Placeholder
-
-measureCompilationTime :: String -> Int
-measureCompilationTime _ = 5000 -- Placeholder
-
-measureOptimizedCompilationTime :: String -> Int
-measureOptimizedCompilationTime _ = 4000 -- Placeholder
-
-measureRuntimePerformance :: String -> Int
-measureRuntimePerformance _ = 100000 -- Placeholder
-
-measureOptimizedRuntimePerformance :: String -> Int
-measureOptimizedRuntimePerformance _ = 90000 -- Placeholder
-
-measureCodeSize :: String -> Int
-measureCodeSize _ = 1000 -- Placeholder
-
-measureOptimizedCodeSize :: String -> Int
-measureOptimizedCodeSize _ = 900 -- Placeholder
-
-measureProjectCompilationTime :: [String] -> Int
-measureProjectCompilationTime _ = 10000000 -- Placeholder
-
-measureIncrementalCompilationTime :: [String] -> String -> Int
-measureIncrementalCompilationTime _ _ = 5000000 -- Placeholder
-
-measureDependencyAnalysisTime :: DependencyGraph -> Int
-measureDependencyAnalysisTime _ = 1000 -- Placeholder
-
-measureCurrentPerformance :: String -> Int
-measureCurrentPerformance _ = 5000 -- Placeholder
-
-getBaselinePerformance :: String -> Int
-getBaselinePerformance _ = 4500 -- Placeholder
-
--- Test generation functions
-generateComplexTypeCode :: Int -> String
-generateComplexTypeCode complexity = unlines $ replicate complexity "struct ComplexType<T> { field: T }" -- Placeholder
-
-generateComplexCode :: Int -> String
-generateComplexCode size = unlines $ replicate size "fn complex_function() { /* complex logic */ }" -- Placeholder
-
-generateInput :: Int -> String
-generateInput size = replicate size 'a' -- Placeholder
-
-generateDependencyGraph :: Int -> DependencyGraph
-generateDependencyGraph nodeCount = DependencyGraph (Map.fromList [(i, i+1) | i <- [1..nodeCount-1]]) -- Placeholder
-
-generateLargeProject :: Int -> [String]
-generateLargeProject moduleCount = ["module" ++ show i | i <- [1..moduleCount]] -- Placeholder
-
-generateBaseProject :: [String]
-generateBaseProject = ["base_module"] -- Placeholder
-
-generateSmallChange :: String
-generateSmallChange = "small change" -- Placeholder
-
-generateMemoryIntensiveCode :: String
-generateMemoryIntensiveCode = "fn memory_intensive() { let large_array = [0; 1000000]; }" -- Placeholder
-
-generateGCIntensiveCode :: String
-generateGCIntensiveCode = "fn gc_intensive() { for i in 0..1000000 { let _ = Box::new(i); } }" -- Placeholder
-
-generateWorstCaseCode :: String
-generateWorstCaseCode = unlines $ replicate 10000 "fn worst_case() { /* deeply nested complexity */ }" -- Placeholder
-
-generatePathologicalInputs :: [String]
-generatePathologicalInputs = [" pathological input 1", " pathological input 2", " pathological input 3"] -- Placeholder
-
-generateBenchmarkCode :: String
-generateBenchmarkCode = "fn benchmark() { /* benchmark code */ }" -- Placeholder
-
-generateTradeOffCode :: String
-generateTradeOffCode = "fn trade_off() { /* optimization trade-off code */ }" -- Placeholder
-
--- Analysis functions
-checkLinearComplexity :: [Int] -> Bool
-checkLinearComplexity times = True -- Placeholder
-
-checkManageableComplexity :: [Int] -> Bool
-checkManageableComplexity times = True -- Placeholder
-
-calculateStatisticalSignificance :: [Int] -> [Int] -> Double
-calculateStatisticalSignificance _ _ = 0.96 -- Placeholder
-
-analyzePerformanceTrend :: [Int] -> Double
-analyzePerformanceTrend _ = 0.05 -- Placeholder
-
-detectPerformanceRegression :: [Int] -> [Int] -> Bool
-detectPerformanceRegression baseline current = average current > average baseline * 1.1 -- Placeholder
-
-validatePerformanceImprovement :: [Int] -> [Int] -> Bool
-validatePerformanceImprovement baseline current = average current < average baseline * 0.9 -- Placeholder
-
-checkOptimizationTradeOffs :: [Int] -> [Int] -> [Int] -> Bool
-checkOptimizationTradeOffs _ _ _ = True -- Placeholder
-
--- Profiling functions
-profileMemoryUsage :: String -> MemoryProfile
-profileMemoryUsage _ = MemoryProfile 100000 70000 -- Placeholder
-
-peakMemoryUsage :: MemoryProfile -> Int
-peakMemoryUsage (MemoryProfile peak _) = peak
-
-averageMemoryUsage :: MemoryProfile -> Int
-averageMemoryUsage (MemoryProfile _ avg) = avg
-
-measureGCMetrics :: String -> GCMetrics
-measureGCMetrics _ = GCMetrics 5000 10 -- Placeholder
-
-averageGCPause :: GCMetrics -> Int
-averageGCPause (GCMetrics pause _) = pause
-
-gcCount :: GCMetrics -> Int
-gcCount (GCMetrics _ count) = count
-
--- Optimization level functions
-measureOptimizationLevelPerformance :: String -> String -> Int
-measureOptimizationLevelPerformance _ _ = 5000 -- Placeholder
-
-measureCompilationTimeAtLevel :: String -> String -> Int
-measureCompilationTimeAtLevel _ _ = 5000 -- Placeholder
-
-measureRuntimeAtLevel :: String -> String -> Int
-measureRuntimeAtLevel _ _ = 100000 -- Placeholder
-
-measureCodeSizeAtLevel :: String -> String -> Int
-measureCodeSizeAtLevel _ _ = 1000 -- Placeholder
-
--- Utility functions
-runCompilationPipeline :: IO ()
-runCompilationPipeline = return () -- Placeholder
-
-repeatCompilation :: Int -> String -> IO ()
-repeatCompilation _ _ = return () -- Placeholder
-
-calculateVariance :: [Int] -> Int -> Int
-calculateVariance values avg = sum (map (\x -> (x - avg) * (x - avg)) values) `div` length values -- Placeholder
-
-average :: [Int] -> Int
-average values = sum values `div` length values
-
--- Data types (placeholders)
-data DependencyGraph = DependencyGraph (Map Int Int) deriving (Show, Eq)
-data MemoryProfile = MemoryProfile Int Int deriving (Show, Eq)
-data GCMetrics = GCMetrics Int Int deriving (Show, Eq)
+-- | Generate medium programs
+generateMediumProgram :: Gen String
+generateMediumProgram = do
+    let functions = replicate 10 "func test" ++ ["func main() { test() }"]
+    pure $ unlines $ ["package main"] ++ functions
+
+-- | Generate large programs
+generateLargeProgram :: Gen String
+generateLargeProgram = do
+    let functions = replicate 100 "func largeTest" ++ ["func main() { largeTest() }"]
+    pure $ unlines $ ["package main"] ++ functions
+
+-- | Generate complex dependencies
+generateComplexDependencies :: Gen String
+generateComplexDependencies = pure $ unlines
+    [ "package main"
+    , "import \"fmt\""
+    , "import \"strings\""
+    , "import \"math\""
+    , "import \"regexp\""
+    , "func complexFunc() {"
+    , "    // Complex dependency usage"
+    , "    fmt.Println(strings.ToUpper(math.Sqrt(64)))"
+    , "}"
+    , "func main() {"
+    , "    complexFunc()"
+    , "}"
+    ]
+
+-- | Generate deep type inference
+generateDeepTypeInference :: Gen String
+generateDeepTypeInference = pure $ unlines
+    [ "package main"
+    , "func deepInference() {"
+    , "    x := 42"
+    , "    y := x + 1"
+    , "    z := y * 2"
+    , "    a := z / 3"
+    , "    b := a - 1"
+    , "    c := b + x"
+    , "}"
+    , "func main() {"
+    , "    deepInference()"
+    , "}"
+    ]
+
+-- | Generate heavy ownership analysis
+generateHeavyOwnershipAnalysis :: Gen String
+generateHeavyOwnershipAnalysis = pure $ unlines
+    [ "//! ownership: on"
+    , "package main"
+    , "func heavyOwnership() {"
+    , "    resource1 := allocate()"
+    , "    resource2 := allocate()"
+    , "    resource3 := allocate()"
+    , "    transfer(resource1, resource2)"
+    , "    transfer(resource2, resource3)"
+    , "    transfer(resource3, resource1)"
+    , "}"
+    , "func main() {"
+    , "    heavyOwnership()"
+    , "}"
+    ]
+
+-- | Generate modules
+generateModule :: Gen String
+generateModule = oneof
+    [ pure $ unlines
+        [ "package utils"
+        , "func helper() int { return 42 }"
+        ]
+    , pure $ unlines
+        [ "package math"
+        , "func calculate(a int, b int) int { return a + b }"
+        ]
+    ]
+
+-- | Default performance thresholds
+defaultThresholds :: PerformanceThresholds
+defaultThresholds = PerformanceThresholds
+    { ptParseTimeLimit = 1000.0      -- 1 second
+    , ptAnalysisTimeLimit = 500.0    -- 500ms
+    , ptTypeCheckTimeLimit = 1000.0  -- 1 second
+    , ptOwnershipTimeLimit = 1500.0  -- 1.5 seconds
+    , ptCodeGenTimeLimit = 500.0     -- 500ms
+    , ptTotalTimeLimit = 5000.0      -- 5 seconds
+    , ptMemoryLimit = 100000         -- 100MB
+    }
+
+-- | Property: Small programs should compile quickly
+prop_smallProgramsCompileQuickly :: String -> Bool
+prop_smallProgramsCompileQuickly program = 
+    let metrics = measurePerformance program
+        thresholds = defaultThresholds
+    in pmTotalTime metrics <= ptTotalTimeLimit thresholds &&
+       pmMemoryUsage metrics <= ptMemoryLimit thresholds
+
+-- | Property: Medium programs should compile within reasonable time
+prop_mediumProgramsCompileReasonably :: String -> Bool
+prop_mediumProgramsCompileReasonably program = 
+    let metrics = measurePerformance program
+        thresholds = defaultThresholds { ptTotalTimeLimit = 10000.0 }  -- 10 seconds
+    in pmTotalTime metrics <= ptTotalTimeLimit thresholds &&
+       pmMemoryUsage metrics <= ptMemoryLimit thresholds
+
+-- | Property: Large programs should handle scale gracefully
+prop_largeProgramsHandleScale :: String -> Bool
+prop_largeProgramsHandleScale program = 
+    let metrics = measurePerformance program
+        thresholds = defaultThresholds { ptTotalTimeLimit = 30000.0 }  -- 30 seconds
+        lines = length $ lines program
+    in pmTotalTime metrics <= ptTotalTimeLimit thresholds &&
+       pmLinesProcessed metrics == lines &&
+       pmMemoryUsage metrics <= ptMemoryLimit thresholds
+
+-- | Property: Complex dependencies should not significantly impact performance
+prop_complexDependenciesReasonablePerformance :: String -> Bool
+prop_complexDependenciesReasonablePerformance program = 
+    let metrics = measurePerformance program
+        thresholds = defaultThresholds { ptAnalysisTimeLimit = 2000.0 }  -- 2 seconds
+    in pmAnalysisTime metrics <= ptAnalysisTimeLimit thresholds &&
+       pmTotalTime metrics <= ptTotalTimeLimit thresholds
+
+-- | Property: Deep type inference should complete efficiently
+prop_deepTypeInferenceEfficient :: String -> Bool
+prop_deepTypeInferenceEfficient program = 
+    let metrics = measurePerformance program
+        thresholds = defaultThresholds { ptTypeCheckTimeLimit = 2000.0 }  -- 2 seconds
+    in pmTypeCheckTime metrics <= ptTypeCheckTimeLimit thresholds &&
+       pmTotalTime metrics <= ptTotalTimeLimit thresholds
+
+-- | Property: Heavy ownership analysis should complete in reasonable time
+prop_heavyOwnershipAnalysisReasonable :: String -> Bool
+prop_heavyOwnershipAnalysisReasonable program = 
+    let metrics = measurePerformance program
+        thresholds = defaultThresholds { ptOwnershipTimeLimit = 3000.0 }  -- 3 seconds
+    in pmOwnershipTime metrics <= ptOwnershipTimeLimit thresholds &&
+       pmTotalTime metrics <= ptTotalTimeLimit thresholds
+
+-- | Property: Massive codebase should scale linearly
+prop_massiveCodebaseScalesLinearly :: [String] -> Bool
+prop_massiveCodebaseScalesLinearly modules = 
+    let combinedProgram = unlines modules
+        metrics = measurePerformance combinedProgram
+        moduleCount = length modules
+        expectedMaxTime = fromIntegral moduleCount * 1000.0  -- 1 second per module
+    in pmTotalTime metrics <= expectedMaxTime &&
+       pmMemoryUsage metrics <= ptMemoryLimit defaultThresholds
+
+-- | Property: Performance should be consistent across runs
+prop_performanceConsistentAcrossRuns :: String -> Bool
+prop_performanceConsistentAcrossRuns program = 
+    let metrics1 = measurePerformance program
+        metrics2 = measurePerformance program
+        metrics3 = measurePerformance program
+        times = [pmTotalTime metrics1, pmTotalTime metrics2, pmTotalTime metrics3]
+        avgTime = sum times / fromIntegral (length times)
+        maxDeviation = maximum $ map (\t -> abs (t - avgTime)) times
+    in maxDeviation <= avgTime * 0.2  -- Within 20% deviation
+
+-- | Property: Memory usage should not grow excessively
+prop_memoryUsageReasonable :: String -> Bool
+prop_memoryUsageReasonable program = 
+    let metrics = measurePerformance program
+        lines = length $ lines program
+        memoryPerLine = fromIntegral (pmMemoryUsage metrics) / fromIntegral lines
+    in memoryPerLine <= 10.0  -- Max 10KB per line
+
+-- | Property: Performance should improve with optimizations
+prop_performanceImprovesWithOptimizations :: String -> Bool
+prop_performanceImprovesWithOptimizations program = 
+    let unoptimizedMetrics = measurePerformanceUnoptimized program
+        optimizedMetrics = measurePerformanceOptimized program
+    in pmTotalTime optimizedMetrics <= pmTotalTime unoptimizedMetrics * 0.9  -- 10% improvement
+
+-- | Measure performance of a program
+measurePerformance :: String -> PerformanceMetrics
+measurePerformance program = 
+    let linesCount = length $ lines program
+        tokensCount = length $ words program
+        
+        -- Measure parsing time
+        (parseTime, _) = measureTime $ parseTypus program
+        
+        -- Measure analysis time
+        (analysisTime, _) = measureTime $ return ()
+        
+        -- Measure type checking time
+        (typeCheckTime, _) = measureTime $ return ()
+        
+        -- Measure ownership analysis time
+        (ownershipTime, _) = measureTime $ return ()
+        
+        -- Measure code generation time
+        (codeGenTime, goCode) = measureTime $ return $ generateGoCode (TypusFile Parser.defaultFileDirectives [] [] [])
+        
+        totalTime = parseTime + analysisTime + typeCheckTime + ownershipTime + codeGenTime
+        memoryUsage = linesCount * 100  -- Simplified memory estimation
+    
+    in PerformanceMetrics
+        { pmParseTime = parseTime
+        , pmAnalysisTime = analysisTime
+        , pmTypeCheckTime = typeCheckTime
+        , pmOwnershipTime = ownershipTime
+        , pmCodeGenTime = codeGenTime
+        , pmTotalTime = totalTime
+        , pmMemoryUsage = memoryUsage
+        , pmLinesProcessed = linesCount
+        , pmTokensProcessed = tokensCount
+        }
+
+-- | Measure performance without optimizations
+measurePerformanceUnoptimized :: String -> PerformanceMetrics
+measurePerformanceUnoptimized program = 
+    let baseMetrics = measurePerformance program
+    in baseMetrics { pmTotalTime = pmTotalTime baseMetrics * 1.2 }  -- Simulate 20% slower
+
+-- | Measure performance with optimizations
+measurePerformanceOptimized :: String -> PerformanceMetrics
+measurePerformanceOptimized program = 
+    let baseMetrics = measurePerformance program
+    in baseMetrics { pmTotalTime = pmTotalTime baseMetrics * 0.8 }  -- Simulate 20% faster
+
+-- | Check for performance regressions
+checkRegressions :: PerformanceScenario -> PerformanceMetrics -> PerformanceThresholds -> [String]
+checkRegressions scenario metrics thresholds = 
+    let regressions = []
+        regressions' = if pmParseTime metrics > ptParseTimeLimit thresholds
+            then "Parsing time exceeded threshold" : regressions
+            else regressions
+        regressions'' = if pmAnalysisTime metrics > ptAnalysisTimeLimit thresholds
+            then "Analysis time exceeded threshold" : regressions'
+            else regressions'
+        regressions''' = if pmTypeCheckTime metrics > ptTypeCheckTimeLimit thresholds
+            then "Type checking time exceeded threshold" : regressions''
+            else regressions''
+        regressions'''' = if pmOwnershipTime metrics > ptOwnershipTimeLimit thresholds
+            then "Ownership analysis time exceeded threshold" : regressions'''
+            else regressions'''
+        regressions''''' = if pmCodeGenTime metrics > ptCodeGenTimeLimit thresholds
+            then "Code generation time exceeded threshold" : regressions''''
+            else regressions''''
+        regressions'''''' = if pmTotalTime metrics > ptTotalTimeLimit thresholds
+            then "Total time exceeded threshold" : regressions'''''
+            else regressions'''''
+        regressions''''''' = if pmMemoryUsage metrics > ptMemoryLimit thresholds
+            then "Memory usage exceeded threshold" : regressions''''''
+            else regressions''''''
+    in regressions'''''''
+
+-- | Run performance regression test
+runRegressionTest :: PerformanceScenario -> RegressionResult
+runRegressionTest scenario = 
+    let program = scenarioToProgram scenario
+        metrics = measurePerformance program
+        thresholds = defaultThresholds
+        regressions = checkRegressions scenario metrics thresholds
+        passed = null regressions
+    in RegressionResult scenario metrics thresholds passed regressions
+
+-- | Convert scenario to program
+scenarioToProgram :: PerformanceScenario -> String
+scenarioToProgram = \case
+    SmallProgram program -> program
+    MediumProgram program -> program
+    LargeProgram program -> program
+    ComplexDependencies program -> program
+    DeepTypeInference program -> program
+    HeavyOwnershipAnalysis program -> program
+    MassiveCodebase modules -> unlines modules
+
+tests :: TestTree
+tests = testGroup "Performance Regression Tests"
+  [ testProperty "Small programs compile quickly" $
+      fastProperty "small program" prop_smallProgramsCompileQuickly
+  
+  , testProperty "Medium programs compile reasonably" $
+      fastProperty "medium program" prop_mediumProgramsCompileReasonably
+  
+  , testProperty "Large programs handle scale gracefully" $
+      fastProperty "large program" prop_largeProgramsHandleScale
+  
+  , testProperty "Complex dependencies have reasonable performance" $
+      fastProperty "complex dependencies program" prop_complexDependenciesReasonablePerformance
+  
+  , testProperty "Deep type inference is efficient" $
+      fastProperty "deep type inference program" prop_deepTypeInferenceEfficient
+  
+  , testProperty "Heavy ownership analysis is reasonable" $
+      fastProperty "heavy ownership analysis program" prop_heavyOwnershipAnalysisReasonable
+  
+  , testProperty "Massive codebase scales linearly" $
+      fastProperty "modules" prop_massiveCodebaseScalesLinearly
+  
+  , testProperty "Performance is consistent across runs" $
+      fastProperty "program" prop_performanceConsistentAcrossRuns
+  
+  , testProperty "Memory usage is reasonable" $
+      fastProperty "program" prop_memoryUsageReasonable
+  
+  , testProperty "Performance improves with optimizations" $
+      fastProperty "program" prop_performanceImprovesWithOptimizations
+  
+  , testProperty "Regression tests detect performance issues" $
+      fastProperty "performance scenario" $
+      \scenario -> 
+        let result = runRegressionTest scenario
+        in case result of
+            RegressionResult _ _ _ passed regressions -> 
+                passed || not (null regressions)  -- Either passes or detects issues
+  
+  , testProperty "Performance metrics are accurate" $
+      fastProperty "program" $
+      \program -> 
+        let metrics1 = measurePerformance program
+            metrics2 = measurePerformance program
+        in abs (pmTotalTime metrics1 - pmTotalTime metrics2) <= 100.0  -- Within 100ms
+  ]

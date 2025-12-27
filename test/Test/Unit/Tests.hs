@@ -48,6 +48,15 @@ import qualified Test.Unit.NewCabalBoundaryConditionsSpec
 -- Enhanced QuickCheck Test Modules (New)
 import qualified Test.Unit.UtilsEnhancedQuickCheckSpec
 import qualified Test.Unit.SourceLocationEnhancedQuickCheckSpec
+
+-- ============================================================================
+-- New QuickCheck Test Modules Added (2025)
+-- ============================================================================
+import qualified Test.Unit.SourceLocationNewQuickCheckTests
+import qualified Test.Unit.ParserNewQuickCheckTests
+import qualified Test.Unit.ErrorHandlerNewQuickCheckTests
+import qualified Test.Unit.UtilsNewQuickCheckTests
+import qualified Test.Unit.OwnershipNewQuickCheckTests
 import qualified Test.Unit.ParserEnhancedQuickCheckSpec
 import qualified Test.Unit.ErrorHandlerEnhancedQuickCheckSpec
 import qualified Test.Unit.CompilerIntegrationEnhancedQuickCheckSpec
@@ -628,6 +637,16 @@ import qualified Test.Unit.NewCabalQuickCheckTestCasesSpec
 -- New Test Modules Added for Cabal Testing
 import qualified Test.Unit.DebugIntegrationSpec
 import qualified Test.Unit.IntegratedCompilerSpec
+
+-- New Cabal Test Modules (2025) - 8 comprehensive tests
+import qualified Test.Unit.CompilerOptimizationConsistencySpec
+import qualified Test.Unit.OwnershipTransferBoundarySpec
+import qualified Test.Unit.DependentTypeConstraintValidationSpec
+import qualified Test.Unit.SourceLocationPrecisionSpec
+import qualified Test.Unit.ErrorRecoveryConsistencySpec
+import qualified Test.Unit.TypeInferenceAdvancedSpec
+import qualified Test.Unit.IntegrationEndToEndSpec
+import qualified Test.Unit.PerformanceRegressionSpec
 
 import qualified Test.Unit.NewCabalPropertySpec
 import qualified Test.Unit.ErrorHandlerCoreQuickCheckSpec
@@ -2151,5 +2170,30 @@ tests =
     , Test.Unit.ErrorHandlerRecoverySpec.tests
     , Test.Unit.DependencyAnalysisCycleSpec.tests
     , Test.Unit.UtilsPerformanceSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New QuickCheck Test Modules Added (2025) - Comprehensive Testing
+  -- ============================================================================
+  , testGroup "New QuickCheck Test Modules (2025)"
+    [ Test.Unit.SourceLocationNewQuickCheckTests.tests
+    , Test.Unit.ParserNewQuickCheckTests.tests
+    , Test.Unit.ErrorHandlerNewQuickCheckTests.tests
+    , Test.Unit.UtilsNewQuickCheckTests.tests
+    , Test.Unit.OwnershipNewQuickCheckTests.tests
+    ]
+
+  -- ============================================================================
+  -- New Cabal Test Modules (2025) - 8 comprehensive tests
+  -- ============================================================================
+  , testGroup "New Cabal Test Modules (2025) - Advanced Testing"
+    [ Test.Unit.CompilerOptimizationConsistencySpec.tests
+    , Test.Unit.OwnershipTransferBoundarySpec.tests
+    , Test.Unit.DependentTypeConstraintValidationSpec.tests
+    , Test.Unit.SourceLocationPrecisionSpec.tests
+    , Test.Unit.ErrorRecoveryConsistencySpec.tests
+    , Test.Unit.TypeInferenceAdvancedSpec.tests
+    , Test.Unit.IntegrationEndToEndSpec.tests
+    , Test.Unit.PerformanceRegressionSpec.tests
     ]
   ]
