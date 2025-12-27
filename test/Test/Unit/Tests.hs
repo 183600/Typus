@@ -49,6 +49,18 @@ import qualified Test.Unit.NewCabalBoundaryConditionsSpec
 import qualified Test.Unit.UtilsEnhancedQuickCheckSpec
 import qualified Test.Unit.SourceLocationEnhancedQuickCheckSpec
 
+-- New QuickCheck Test Suite Modules (2025)
+import qualified Test.Unit.NewQuickCheckTestSuite1Spec
+import qualified Test.Unit.NewQuickCheckTestSuite2Spec
+import qualified Test.Unit.NewQuickCheckTestSuite3Spec
+import qualified Test.Unit.NewQuickCheckTestSuite4Spec
+import qualified Test.Unit.NewQuickCheckTestSuite5Spec
+import qualified Test.Unit.NewQuickCheckTestSuite6Spec
+import qualified Test.Unit.NewQuickCheckTestSuite7Spec
+import qualified Test.Unit.NewQuickCheckTestSuite8Spec
+import qualified Test.Unit.NewQuickCheckTestSuite9Spec
+import qualified Test.Unit.NewQuickCheckTestSuite10Spec
+
 -- New QuickCheck Test Modules (7 comprehensive tests)
 import qualified Test.Unit.ParserErrorHandlingQuickCheckSpec
 import qualified Test.Unit.UtilsStringProcessingQuickCheckSpec
@@ -2245,5 +2257,21 @@ tests =
     , Test.Unit.NewErrorHandlerConsistencySpec.tests
     , Test.Unit.NewDependentTypeValidationSpec.tests
     , Test.Unit.NewEndToEndCompilationSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New QuickCheck Test Suite (2025) - 10 Comprehensive Tests
+  -- ============================================================================
+  , testGroup "New QuickCheck Test Suite - Comprehensive Testing"
+    [ Test.Unit.NewQuickCheckTestSuite1Spec.tests
+    , Test.Unit.NewQuickCheckTestSuite2Spec.tests
+    , Test.Unit.NewQuickCheckTestSuite3Spec.tests
+    , Test.Unit.NewQuickCheckTestSuite4Spec.tests
+    , Test.Unit.NewQuickCheckTestSuite5Spec.tests
+    , Test.Unit.NewQuickCheckTestSuite6Spec.tests
+    , Test.Unit.NewQuickCheckTestSuite7Spec.tests
+    , Test.Unit.NewQuickCheckTestSuite8Spec.tests
+    , Test.Unit.NewQuickCheckTestSuite9Spec.tests
+    , Test.Unit.NewQuickCheckTestSuite10Spec.tests
     ]
   ]
