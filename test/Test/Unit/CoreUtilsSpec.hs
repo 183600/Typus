@@ -1,83 +1,111 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-
 module Test.Unit.CoreUtilsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, listOf, elements, (==>)
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), oneof, elements)
 import qualified Data.Text as T
-import Utils (trim, splitBy, splitByCollapsed, removeLineComments, removeComments, normalizeIndentation, breakOn)
 
+import Utils
+
+-- | Core functionality tests for Utils module
 tests :: TestTree
-tests = testGroup "Core Utils Tests"
-  [ testGroup "trim function"
-    [ testCase "trims whitespace from both ends" $
-        trim "  hello world  " @?= "hello world"
-    , testCase "handles empty string" $
-        trim "" @?= ""
-    , testCase "handles only whitespace" $
-        trim "   \t\n   " @?= ""
-    , testCase "preserves internal whitespace" $
-        trim "  hello   world  " @?= "hello   world"
-    ]
-  , testGroup "splitBy function"
-    [ testCase "splits by comma preserving empty segments" $
-        splitBy ',' "a,,b" @?= ["a", "", "b"]
-    , testCase "handles leading and trailing delimiters" $
-        splitBy ',' ",a," @?= ["", "a", ""]
-    , testCase "handles empty string" $
-        splitBy ',' "" @?= [""]
-    , testCase "handles no delimiters" $
-        splitBy ',' "abc" @?= ["abc"]
-    ]
-  , testGroup "splitByCollapsed function"
-    [ testCase "splits by comma collapsing empty segments" $
-        splitByCollapsed ',' "a,,b" @?= ["a", "b"]
-    , testCase "handles leading and trailing delimiters" $
-        splitByCollapsed ',' ",a," @?= ["a"]
-    , testCase "handles empty string" $
-        splitByCollapsed ',' "" @?= []
-    ]
-  , testGroup "removeLineComments function"
-    [ testCase "removes single line comments" $
-        removeLineComments "hello // comment\nworld" @?= "hello \nworld"
-    , testCase "preserves comments in strings" $
-        removeLineComments "print(\"// not a comment\") // real comment" @?= "print(\"// not a comment\") "
-    , testCase "preserves comments in chars" $
-        removeLineComments "let c = '/' // not comment" @?= "let c = '/' "
-    , testCase "handles escaped quotes in strings" $
-        removeLineComments "print(\"\\\"// not comment\") // comment" @?= "print(\"\\\"// not comment\") "
-    ]
-  , testGroup "normalizeIndentation function"
-    [ testCase "removes common prefix indentation" $
-        normalizeIndentation "    foo\n      bar" @?= "foo\n  bar"
-    , testCase "handles mixed indentation" $
-        normalizeIndentation "\tfoo\n\t\tbar" @?= "foo\n\tbar"
-    , testCase "preserves empty lines" $
-        normalizeIndentation "  foo\n\n  bar" @?= "foo\n\nbar"
-    ]
-  , testGroup "breakOn function"
-    [ testCase "breaks on substring" $
-        breakOn "ll" "hello" @?= ("he", "o")
-    , testCase "handles not found" $
-        breakOn "xyz" "hello" @?= ("hello", "")
-    , testCase "handles empty pattern" $
-        breakOn "" "hello" @?= ("", "hello")
-    , testCase "handles pattern at start" $
-        breakOn "he" "hello" @?= ("", "llo")
-    ]
-  , testGroup "QuickCheck properties"
-    [ testProperty "splitBy preserves total length" $
-        \c s -> length (concat (splitBy c s)) == length s
-    , testProperty "splitByCollapsed never produces empty strings" $
-        \c s -> all (not . null) (splitByCollapsed c s)
-    , testProperty "trim . trim = trim" $
-        \s -> trim (trim s) == trim s
-    , testProperty "breakOn pattern pattern = (\"\", pattern)" $
-        \p -> not (null p) ==> breakOn p p == ("", "")
-    ]
-  ]
+tests =
+  testGroup "Core Utils Tests"
+    [ testGroup "String manipulation functions"
+        [ testCase "trim handles various whitespace combinations" $ do
+            trim "  hello  " @?= "hello"
+            trim "\t\n  hello world  \n\t" @?= "hello world"
+            trim "" @?= ""
+            trim "   " @?= ""
+            trim "no-whitespace" @?= "no-whitespace"
 
--- Note: Arbitrary instances for Char and String are provided by QuickCheck
+        , testCase "splitBy handles edge cases correctly" $ do
+            splitBy ',' "" @?= [""]
+            splitBy ',' "a" @?= ["a"]
+            splitBy ',' "," @?= ["", ""]
+            splitBy ',' "a,b,c" @?= ["a", "b", "c"]
+            splitBy ',' "a,,b" @?= ["a", "", "b"]
+            splitBy '," ",a,b," @?= ["", "a", "b", ""]
+
+        , testCase "splitByCollapsed removes empty segments" $ do
+            splitByCollapsed ',' "" @?= []
+            splitByCollapsed ',' "," @?= []
+            splitByCollapsed ',' ",," @?= []
+            splitByCollapsed ',' "a,b,c" @?= ["a", "b", "c"]
+            splitByCollapsed ',' "a,,b" @?= ["a", "b"]
+            splitByCollapsed ',' ",a,b," @?= ["a", "b"]
+
+        , testProperty "splitBy length is >= splitByCollapsed length" $ 
+            \str -> length (splitBy ',' str) >= length (splitByCollapsed ',' str)
+        ]
+
+    , testGroup "Comment handling functions"
+        [ testCase "removeLineComments handles basic cases" $ do
+            removeLineComments "hello // comment" @?= "hello "
+            removeLineComments "// full line comment\nnext line" @?= "\nnext line"
+            removeLineComments "no comment here" @?= "no comment here"
+
+        , testCase "removeLineComments respects string literals" $ do
+            removeLineComments "text := \"http://example.com//path\" // comment" @?= "text := \"http://example.com//path\" "
+            removeLineComments "char := '/' // comment" @?= "char := '/' "
+            removeLineComments "escaped := \"She said \\\"// not comment\\\"\" // comment" @?= "escaped := \"She said \\\"// not comment\\\"\" "
+
+        , testCase "removeComments handles block comments" $ do
+            removeComments "before /* comment */ after" @?= "before  after"
+            removeComments "/* multi\nline\ncomment */ done" @?= "\n\ndone"
+            removeComments "/* nested /* not supported */ */" @?= " "
+
+        , testCase "removeComments respects string literals in blocks" $ do
+            removeComments "text := \"/* not comment */\" /* real comment */" @?= "text := \"/* not comment */\" "
+            removeComments "path := \"C://tmp/*\" /* comment */" @?= "path := \"C://tmp/*\" "
+        ]
+
+    , testGroup "Indentation functions"
+        [ testCase "normalizeIndentation removes common prefix" $ do
+            let input = "    line1\n      line2\n    line3\n"
+                expected = "line1\n  line2\nline3\n"
+            normalizeIndentation input @?= expected
+
+        , testCase "normalizeIndentation handles empty lines" $ do
+            let input = "\n    line1\n\n    line2\n"
+                expected = "\nline1\n\nline2\n"
+            normalizeIndentation input @?= expected
+
+        , testCase "forceSingleTabIndentation converts to tabs" $ do
+            let input = "  line1\n    line2\nline3\n"
+                expected = "\tline1\n\tline2\n\tline3\n"
+            forceSingleTabIndentation input @?= expected
+
+        , testCase "fixIndentation is alias for normalizeIndentation" $ do
+            let input = "  test\n    line\n"
+            fixIndentation input @?= normalizeIndentation input
+        ]
+
+    , testGroup "Search functions"
+        [ testCase "breakOn finds patterns correctly" $ do
+            breakOn "world" "hello world" @?= ("hello ", "")
+            breakOn "ll" "hello" @?= ("he", "o")
+            breakOn "abc" "abc" @?= ("", "")
+            breakOn "xyz" "hello" @?= ("hello", "")
+            breakOn "" "test" @?= ("", "test")
+
+        , testProperty "breakOn pattern not found returns original string" $
+            \str pat -> not (pat `isInfixOf` str) ==> breakOn pat str == (str, "")
+          where
+            isInfixOf needle haystack = needle `T.isInfixOf` T.pack haystack
+        ]
+
+    , testGroup "Property-based tests for core functions"
+        [ testProperty "trim is idempotent" $
+            \str -> trim (trim str) == trim str
+
+        , testProperty "splitBy followed by join preserves delimiters" $
+            \str -> unlines (splitBy '\n' str) == str
+
+        , testProperty "removeComments doesn't change strings without comments" $
+            \str -> not (hasCommentMarkers str) ==> removeComments str == str
+          where
+            hasCommentMarkers s = "//" `isInfixOf` s || "/*" `isInfixOf` s
+            isInfixOf needle haystack = needle `T.isInfixOf` T.pack haystack
+        ]
+    ]

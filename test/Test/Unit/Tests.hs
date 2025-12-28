@@ -20,6 +20,14 @@ import qualified Test.Unit.ValueAnalysisSpec
 import qualified Test.Unit.VerbositySpec
 import qualified Test.Unit.UtilsSpec
 
+-- New Core Test Modules Added
+import qualified Test.Unit.CoreUtilsSpec
+import qualified Test.Unit.CoreSourceLocationSpec
+import qualified Test.Unit.CoreSyntaxValidatorSpec
+import qualified Test.Unit.CoreErrorHandlerSpec
+import qualified Test.Unit.CoreParserSpec
+import qualified Test.Unit.CoreCompilerSpec
+
 -- New Basic Test Modules Added
 import qualified Test.Unit.SourceLocationBasicPropertiesSpec
 import qualified Test.Unit.ParserBasicFunctionsSpec
@@ -1290,6 +1298,16 @@ tests =
         , Test.Unit.ValueAnalysisBasicSpec.tests
         , Test.Unit.ErrorHandlerRecoverySpec.tests
         , Test.Unit.SyntaxValidatorValidationSpec.tests
+        ]
+    
+    -- New Core Test Modules
+    , testGroup "Core Test Modules"
+        [ Test.Unit.CoreUtilsSpec.tests
+        , Test.Unit.CoreSourceLocationSpec.tests
+        , Test.Unit.CoreSyntaxValidatorSpec.tests
+        , Test.Unit.CoreErrorHandlerSpec.tests
+        , Test.Unit.CoreParserSpec.tests
+        , Test.Unit.CoreCompilerSpec.tests
         ]
     , Test.Unit.EnhancedQuickCheckSpec.tests
     , Test.Unit.EnhancedParserTestSpec.tests
