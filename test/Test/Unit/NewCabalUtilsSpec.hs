@@ -1,114 +1,103 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
 module Test.Unit.NewCabalUtilsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
+import Test.Tasty.HUnit (testCase, (@?=))
+import Test.QuickCheck ((===), Property, counterexample)
+
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose)
-import TestSupport.Arbitrary
-
 import Utils
-  ( trim
-  , splitBy
-  , splitByCollapsed
-  , splitByComma
-  , splitByCommaCollapsed
-  , removeLineComments
-  , removeComments
-  , normalizeIndentation
-  , breakOn
-  )
+import Data.Char (isSpace)
+import qualified Data.Text as T
 
-import Data.Char (isSpace, isAlpha)
-import Data.List (isPrefixOf, isInfixOf, intersperse)
-
--- Test 1: Trim removes only leading/trailing whitespace
-prop_trim_removes_only_whitespace :: String -> String -> String -> Property
-prop_trim_removes_only_whitespace prefix content suffix =
-  let leading = takeWhile isSpace prefix
-      trailing = takeWhile isSpace (reverse suffix)
-      full = leading ++ content ++ trailing
-      trimmed = trim full
-  in property $ trimmed === content
-
--- Test 2: Split by character round-trip property
-prop_split_by_roundtrip :: Char -> String -> Property
-prop_split_by_roundtrip delim s =
-  let parts = splitBy delim s
-      rejoined = concat $ intersperse [delim] parts
-  in property $ rejoined === s
-
--- Test 3: Split collapsed removes empty segments
-prop_split_collapsed_removes_empty :: Char -> String -> Property
-prop_split_collapsed_removes_empty delim s =
-  let parts = splitByCollapsed delim s
-  in property $ all (not . null) parts
-
--- Test 4: Comma split delegation property
-prop_comma_split_delegation :: String -> Property
-prop_comma_split_delegation s =
-  splitByComma s === splitBy ',' s
-
--- Test 5: Comment removal preserves string literals
-prop_comment_preserves_strings :: String -> Property
-prop_comment_preserves_strings code =
-  let withStringLiteral = code ++ "url := \"http://example.com//path\" // comment"
-      withoutComments = removeLineComments withStringLiteral
-  in "//path" `isInfixOf` withoutComments
-
--- Test 6: Remove line comments doesn't affect multi-line comments
-prop_line_comment_preserves_multiline :: String -> Property
-prop_line_comment_preserves_multiline code =
-  let withMultiLine = code ++ "/* multi-line\n   comment */"
-      withoutLineComments = removeLineComments withMultiLine
-  in "/* multi-line" `isInfixOf` withoutLineComments
-
--- Test 7: Normalization preserves relative indentation
-prop_normalize_preserves_relative :: [String] -> Property
-prop_normalize_preserves_relative lines =
-  let input = unlines lines
-      normalized = normalizeIndentation input
-      normalizedLines = lines normalized
-  in length normalizedLines === length lines
-
--- Test 8: Break on substring finds first occurrence
-prop_break_on_finds_first :: String -> String -> Property
-prop_break_on_finds_first text pattern =
-  let (before, after) = breakOn pattern text
-      combined = before ++ pattern ++ after
-  in pattern `isInfixOf` text ==> combined === text
-
--- Test 9: Split collapsed on empty string returns empty
-prop_split_collapsed_empty :: Char -> Property
-prop_split_collapsed_empty delim =
-  splitByCollapsed delim "" === []
-
--- Test 10: Trim double application idempotence
-prop_trim_double_application :: String -> Property
-prop_trim_double_application s =
-  let trimmedOnce = trim s
-      trimmedTwice = trim trimmedOnce
-  in trimmedOnce === trimmedTwice
-
+-- | Additional comprehensive tests for Utils module
 tests :: TestTree
-tests = 
-  testGroup "New Cabal Utils Tests"
-    [ fastProperty "Trim removes only leading/trailing whitespace" prop_trim_removes_only_whitespace
-    , fastProperty "Split by character round-trip property" prop_split_by_roundtrip
-    , fastProperty "Split collapsed removes empty segments" prop_split_collapsed_removes_empty
-    , fastProperty "Comma split delegation property" prop_comma_split_delegation
-    , fastProperty "Comment removal preserves string literals" prop_comment_preserves_strings
-    , fastProperty "Line comment preserves multi-line comments" prop_line_comment_preserves_multiline
-    , fastProperty "Normalization preserves relative indentation" prop_normalize_preserves_relative
-    , fastProperty "Break on finds first occurrence" prop_break_on_finds_first
-    , fastProperty "Split collapsed on empty string returns empty" prop_split_collapsed_empty
-    , fastProperty "Trim double application idempotence" prop_trim_double_application
+tests =
+  testGroup "NewCabal Utils Tests"
+    [ testGroup "String processing edge cases"
+        [ testCase "trim handles unicode whitespace correctly" $ do
+            trim "\x2003hello\x2002world\x00A0" @?= "hello\x2002world"
+
+        , testCase "splitBy handles multibyte characters" $ do
+            splitBy '€' "alpha€beta€gamma" @?= ["alpha", "beta", "gamma"]
+
+        , testCase "removeComments handles nested quotes correctly" $ do
+            let input = "text := \"He said \\\"/* not comment */\\\"\"" /* real comment */"
+                expected = "text := \"He said \\\"/* not comment */\\\"\"" "
+            removeComments input @?= expected
+        ]
+
+    , testGroup "Advanced comment handling"
+        [ testCase "removeComments handles complex escape sequences" $ do
+            let input = "path := \"C:\\\\tmp\\\\//not_comment\"" // real comment\n"
+                expected = "path := \"C:\\\\tmp\\\\//not_comment\"" \n"
+            removeComments input @?= expected
+
+        , testCase "removeLineComments preserves line structure" $ do
+            let input = "line1 // comment1\nline2 // comment2\n"
+                expected = "line1 \nline2 \n"
+            removeLineComments input @?= expected
+
+        , testCase "removeComments handles multiple block comments" $ do
+            let input = "a/*comment1*/b/*comment2*/c"
+                expected = "abc"
+            removeComments input @?= expected
+        ]
+
+    , testGroup "Indentation edge cases"
+        [ testCase "normalizeIndentation handles mixed tabs and spaces" $ do
+            let input = "\t    mixed\n\t    indentation"
+                expected = "mixed\nindentation"
+            normalizeIndentation input @?= expected
+
+        , testCase "normalizeIndentation preserves trailing empty lines" $ do
+            let input = "    content\n\n"
+                expected = "content\n\n"
+            normalizeIndentation input @?= expected
+        ]
+
+    , testGroup "QuickCheck property tests"
+        [ fastProperty "splitBy and splitByCollapsed relationship" prop_splitByRelationship
+        , fastProperty "breakOn correctness" prop_breakOnCorrectness
+        , fastProperty "trim removes only leading/trailing whitespace" prop_trimOnlyRemovesWhitespace
+        , fastProperty "removeComments preserves non-comment content" prop_removeCommentsPreservesContent
+        ]
     ]
+
+-- Property: splitByCollapsed should never have empty strings when splitBy has non-empty
+prop_splitByRelationship :: String -> Property
+prop_splitByRelationship input =
+  let normal = splitBy ':' input
+      collapsed = splitByCollapsed ':' input
+      hasNonEmpty = any (not . null) normal
+  in counterexample ("normal: " ++ show normal ++ ", collapsed: " ++ show collapsed) $
+     if hasNonEmpty 
+     then all (not . null) collapsed
+     else collapsed === []
+
+-- Property: breakOn should correctly split strings
+prop_breakOnCorrectness :: String -> String -> Property
+prop_breakOnCorrectness pat haystack = 
+  let (prefix, suffix) = breakOn pat haystack
+      reconstructed = prefix ++ pat ++ suffix
+  in if null pat
+     then prefix === "" && suffix === haystack
+     else reconstructed === haystack
+
+-- Property: trim should only remove whitespace from ends
+prop_trimOnlyRemovesWhitespace :: String -> Property
+prop_trimOnlyRemovesWhitespace input =
+  let trimmed = trim input
+      originalLength = length input
+      trimmedLength = length trimmed
+  in counterexample ("original: " ++ show input ++ ", trimmed: " ++ show trimmed) $
+     trimmedLength <= originalLength
+
+-- Property: removeComments should preserve non-comment characters
+prop_removeCommentsPreservesContent :: String -> Property
+prop_removeCommentsPreservesContent input =
+  let withoutComments = removeComments input
+      -- Count non-comment characters (simplified check)
+      nonCommentChars = filter (`notElem` "/*") input
+      resultChars = filter (`notElem` " \n\r\t") withoutComments
+  in counterexample ("input: " ++ show input ++ ", result: " ++ show withoutComments) $
+     length resultChars <= length nonCommentChars

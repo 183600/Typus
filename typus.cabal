@@ -980,6 +980,16 @@ test-suite typus-test
         , Test.Unit.NewCabalQuickCheckSpec9
         , Test.Unit.NewCabalQuickCheckSpec10
 
+        -- New Comprehensive Test Modules (2025) - 8 Additional Tests
+        , Test.Unit.SourceLocationMathPropertiesSpec
+        , Test.Unit.ParserBoundaryConditionsSpec
+        , Test.Unit.ErrorHandlingConsistencySpec
+        , Test.Unit.UtilsUnicodePerformanceSpec
+        , Test.Unit.ModuleIntegrationPropertiesSpec
+        , Test.Unit.ConcurrentSafetySpec
+        , Test.Unit.BoundaryConditionSpec
+        , Test.Unit.RegressionComprehensiveSpec
+
         -- New Comprehensive Core Test Module
         , Test.Unit.NewCabalCoreTestsSpec
         
