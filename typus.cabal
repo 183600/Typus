@@ -968,6 +968,18 @@ test-suite typus-test
         , Test.Unit.ConciseCompilerIRQuickCheckSpec
         , Test.Unit.ConciseIntegrationQuickCheckSpec
         
+        -- New Cabal QuickCheck Test Modules (2025) - 10 Comprehensive Tests
+        , Test.Unit.NewCabalQuickCheckSpec1
+        , Test.Unit.NewCabalQuickCheckSpec2
+        , Test.Unit.NewCabalQuickCheckSpec3
+        , Test.Unit.NewCabalQuickCheckSpec4
+        , Test.Unit.NewCabalQuickCheckSpec5
+        , Test.Unit.NewCabalQuickCheckSpec6
+        , Test.Unit.NewCabalQuickCheckSpec7
+        , Test.Unit.NewCabalQuickCheckSpec8
+        , Test.Unit.NewCabalQuickCheckSpec9
+        , Test.Unit.NewCabalQuickCheckSpec10
+        
     other-modules:
             Test.Dependencies.Arbitrary
     build-depends:
