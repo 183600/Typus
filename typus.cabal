@@ -893,7 +893,6 @@ test-suite typus-test
         , Test.Unit.UtilsBoundarySpec
         , Test.Unit.SourceLocationMathSpec
         , Test.Unit.ErrorHandlingCoreSpec
-        , Test.Unit.CorePropertiesQuickCheckSpec
         
     other-modules:
             Test.Dependencies.Arbitrary

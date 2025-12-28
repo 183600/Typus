@@ -12,510 +12,544 @@ module Test.Unit.NewDependenciesQuickCheckTestsSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, sized)
-import Data.List (sort, nub, intercalate)
-import Data.Maybe (isJust, isNothing)
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose)
+import Test.QuickCheck.Gen (Gen(..), vectorOf)
 
-import Dependencies
-  ( DependentTypeChecker
-  , DependentTypeError(..)
-  , AST(..)
-  , Statement(..)
-  , TypeExpr(..)
-  , Constraint(..)
-  , TypeVar(..)
+import Dependencies.TypeSystem
+  ( TypeVar(..)
   , TypeConstraint(..)
+  , DependentTypeError(..)
+  , TypeDef(..)
+  , TypeEnv(..)
+  , DependentTypeChecker(..)
   , Substitution
-  , TypeScheme(..)
-  , TypeEnvironment(..)
-  , TypeInferenceState(..)
-  , TypeInferenceError(..)
   , newDependentTypeChecker
   , newDependentTypeCheckerWithTypes
-  , analyzeDependentTypes
-  , analyzeAST
-  , validateASTSemantics
-  , validateStatement
-  , checkType
+  , preludeTypeDefs
   , addType
   , addConstraint
+  , lookupTypeDef
+  , checkType
   , checkTypeInstantiation
   , solveConstraints
+  , checkTypeConstraint
+  , validateConstraint
   , getDependentTypeErrors
   , unify
-  , inferType
-  , inferStatement
-  , inferProgram
-  , generalize
-  , instantiate
-  , unifyTypes
-  , applyTypeSubstitution
-  , newTypeVariable
-  , getFreshTypeVar
-  , initialTypeEnvironment
-  , instantiateScheme
-  , generalizeInContext
-  , checkPolyType
-  , solveTypeConstraints
-  , simplifyConstraints
-  , pushScope
-  , popScope
-  , inNewScope
-  , grammarDefinition
-  , parseProgram
-  , runParser
   )
 
+import Dependencies.AST (TypeExpr(..), Constraint(..))
+
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Either (isLeft, isRight)
+import Data.List (sort, nub)
+
 -- ============================================================================
--- Arbitrary Instances
+-- Arbitrary instances
 -- ============================================================================
 
 instance Arbitrary TypeVar where
-  arbitrary = sized $ \n -> if n == 0
-    then TVCon <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")
-    else oneof
-      [ TVCon <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")
-      , TVVar <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")
-      , TVApp <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") <*> listOf arbitrary
+  arbitrary = do
+    oneof
+      [ TVCon <$> listOf (elements ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_'])
+      , TVVar <$> listOf (elements ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_'])
+      , TVApp <$> listOf (elements ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_']) <*> listOf arbitrary
       , TVFun <$> listOf arbitrary <*> arbitrary
       , TVTuple <$> listOf arbitrary
       ]
 
 instance Arbitrary TypeConstraint where
-  arbitrary = oneof
-    [ Equal <$> arbitrary <*> arbitrary
-    , Subtype <$> arbitrary <*> arbitrary
-    , Predicate <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") <*> listOf arbitrary
-    , TypeSizeGE <$> arbitrary <*> choose (0, 100)
-    , TypeSizeGT <$> arbitrary <*> choose (0, 100)
-    , TypeRange <$> arbitrary <*> choose (0, 100) <*> choose (0, 100)
-    ]
+  arbitrary = do
+    oneof
+      [ Equal <$> arbitrary <*> arbitrary
+      , Subtype <$> arbitrary <*> arbitrary
+      , Predicate <$> listOf (elements ['a'..'z'] ++ ['A'..'Z']) <*> listOf arbitrary
+      , TypeSizeGE <$> arbitrary <*> choose (0, 100)
+      , TypeSizeGT <$> arbitrary <*> choose (0, 100)
+      , TypeRange <$> arbitrary <*> choose (0, 100) <*> choose (0, 100)
+      ]
 
 instance Arbitrary DependentTypeError where
-  arbitrary = oneof
-    [ DependentTypeMismatch <$> arbitrary <*> arbitrary
-    , ConstraintViolation <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") <*> arbitrary
-    , TypeNotFound <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")
-    , InvalidTypeArgument <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")
-    , UnsolvableConstraint <$> arbitrary
-    , DependentInfiniteType <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") <*> arbitrary
-    , AmbiguousType <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")
-    , ParseError <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " ")
-    , SemanticError <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " ")
-    ]
+  arbitrary = do
+    oneof
+      [ DependentTypeMismatch <$> arbitrary <*> arbitrary
+      , ConstraintViolation <$> listOf (elements ['a'..'z']) <*> arbitrary
+      , TypeNotFound <$> listOf (elements ['a'..'z'])
+      , InvalidTypeArgument <$> listOf (elements ['a'..'z'])
+      , UnsolvableConstraint <$> arbitrary
+      , DependentInfiniteType <$> listOf (elements ['a'..'z']) <*> arbitrary
+      , AmbiguousType <$> listOf (elements ['a'..'z'])
+      , ParseError <$> listOf (elements ['a'..'z'] ++ [' '])
+      , SemanticError <$> listOf (elements ['a'..'z'] ++ [' '])
+      ]
 
-instance Arbitrary TypeExpr where
-  arbitrary = oneof
-    [ SimpleT <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")
-    , GenericT <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") <*> listOf arbitrary
-    , RefineT <$> arbitrary <*> arbitrary
-    , FuncT <$> listOf arbitrary <*> arbitrary
-    ]
+instance Arbitrary TypeDef where
+  arbitrary = do
+    params <- listOf $ listOf (elements ['a'..'z'])
+    constraints <- listOf arbitrary
+    return $ TypeDefDecl params constraints
 
-instance Arbitrary Constraint where
-  arbitrary = oneof
-    [ RangeC <$> arbitrary <*> choose (0, 100) <*> choose (0, 100)
-    , PredC <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") <*> listOf arbitrary
-    , SizeGE <$> arbitrary <*> choose (0, 100)
-    , SizeGT <$> arbitrary <*> choose (0, 100)
-    ]
+instance Arbitrary TypeEnv where
+  arbitrary = do
+    typeDefs <- arbitrary
+    pendingConstraints <- listOf arbitrary
+    return $ TypeEnv typeDefs pendingConstraints
 
-instance Arbitrary Statement where
-  arbitrary = oneof
-    [ VarDecl <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") <*> arbitrary
-    , FuncDecl <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") <*> listOf arbitrary <*> arbitrary <*> listOf arbitrary
-    , TypeDecl <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") <*> listOf arbitrary <*> arbitrary
-    , ConstraintDecl <$> arbitrary
-    , ExprStmt <$> arbitrary
-    ]
+instance Arbitrary DependentTypeChecker where
+  arbitrary = do
+    typeEnv <- arbitrary
+    errors <- listOf arbitrary
+    return $ DependentTypeChecker typeEnv errors
 
-instance Arbitrary AST where
-  arbitrary = AST <$> listOf arbitrary
+instance Arbitrary Substitution where
+  arbitrary = Map.fromList <$> listOf ((,) <$> listOf (elements ['a'..'z']) <*> arbitrary)
 
--- Generate valid type names for testing
-genTypeName :: Gen String
-genTypeName = listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")
+-- Generate valid type name
+validTypeName :: Gen String
+validTypeName = do
+  first <- elements ['a'..'z']
+  rest <- listOf $ elements ['a'..'z'] ++ ['0'..'9'] ++ ['_']
+  return $ first : rest
 
--- Generate simple type expressions
-genSimpleTypeExpr :: Gen TypeExpr
-genSimpleTypeExpr = SimpleT <$> genTypeName
+-- Generate valid constraint name
+validConstraintName :: Gen String
+validConstraintName = listOf $ elements ['a'..'z'] ++ ['A'..'Z']
 
--- Generate function type expressions
-genFuncTypeExpr :: Gen TypeExpr
-genFuncTypeExpr = FuncT <$> listOf genSimpleTypeExpr <*> genSimpleTypeExpr
-
--- Generate constraint expressions
-genConstraintExpr :: Gen Constraint
-genConstraintExpr = oneof
-  [ RangeC <$> genSimpleTypeExpr <*> choose (0, 100) <*> choose (0, 100)
-  , PredC <$> genTypeName <*> listOf genSimpleTypeExpr
-  , SizeGE <$> genSimpleTypeExpr <*> choose (0, 100)
-  , SizeGT <$> genSimpleTypeExpr <*> choose (0, 100)
-  ]
+-- Generate valid error message
+validErrorMessage :: Gen String
+validErrorMessage = listOf $ elements ['a'..'z'] ++ [' ']
 
 -- ============================================================================
--- Property Tests
+-- TypeVar Property Tests
 -- ============================================================================
 
--- Property: newDependentTypeChecker creates checker
-prop_new_dependent_type_checker_creates :: Property
-prop_new_dependent_type_checker_creates =
-  let checker = newDependentTypeChecker
-  in True  -- Just test that it doesn't crash
+-- Property: TypeVar equality is reflexive
+prop_typevar_equality_reflexive :: TypeVar -> Property
+prop_typevar_equality_reflexive tv =
+  tv === tv
 
--- Property: newDependentTypeCheckerWithTypes creates checker with types
-prop_new_dependent_type_checker_with_types :: [(String, String)] -> Property
-prop_new_dependent_type_checker_with_types types =
-  let checker = newDependentTypeCheckerWithTypes types
-  in True  -- Just test that it doesn't crash
+-- Property: TypeVar equality is symmetric
+prop_typevar_equality_symmetric :: TypeVar -> TypeVar -> Property
+prop_typevar_equality_symmetric tv1 tv2 =
+  (tv1 == tv2) === (tv2 == tv1)
 
--- Property: TypeVar equality works correctly
-prop_type_var_equality :: TypeVar -> TypeVar -> Property
-prop_type_var_equality var1 var2 =
-  let same = var1 == var2
-      different = var1 /= var2
-  in same .||. different  -- Test that equality works
+-- Property: TypeVar equality is transitive
+prop_typevar_equality_transitive :: TypeVar -> TypeVar -> TypeVar -> Property
+prop_typevar_equality_transitive tv1 tv2 tv3 =
+  (tv1 == tv2 && tv2 == tv3) ==> (tv1 == tv3)
 
--- Property: TypeConstraint equality works correctly
-prop_type_constraint_equality :: TypeConstraint -> TypeConstraint -> Property
-prop_type_constraint_equality constraint1 constraint2 =
-  let same = constraint1 == constraint2
-      different = constraint1 /= constraint2
-  in same .||. different  -- Test that equality works
+-- Property: TypeVar ordering is consistent
+prop_typevar_ordering_consistent :: TypeVar -> TypeVar -> Property
+prop_typevar_ordering_consistent tv1 tv2 =
+  let ord1 = compare tv1 tv2
+      ord2 = compare (show tv1) (show tv2)
+  in property $ (ord1 == EQ) === (ord2 == EQ) .&&.
+               (ord1 == LT) === (ord2 == LT) .&&.
+               (ord1 == GT) === (ord2 == GT)
 
--- Property: DependentTypeError equality works correctly
-prop_dependent_type_error_equality :: DependentTypeError -> DependentTypeError -> Property
-prop_dependent_type_error_equality error1 error2 =
-  let same = error1 == error2
-      different = error1 /= error2
-  in same .||. different  -- Test that equality works
+-- Property: TVCon preserves constructor name
+prop_tvcon_preserves_name :: String -> Property
+prop_tvcon_preserves_name name =
+  let tv = TVCon name
+  in case tv of
+    TVCon n -> n === name
+    _ -> property False
 
--- Property: TypeExpr equality works correctly
-prop_type_expr_equality :: TypeExpr -> TypeExpr -> Property
-prop_type_expr_equality expr1 expr2 =
-  let same = expr1 == expr2
-      different = expr1 /= expr2
-  in same .||. different  -- Test that equality works
+-- Property: TVVar preserves variable name
+prop_tvvar_preserves_name :: String -> Property
+prop_tvvar_preserves_name name =
+  let tv = TVVar name
+  in case tv of
+    TVVar n -> n === name
+    _ -> property False
 
--- Property: analyzeDependentTypes handles simple AST
-prop_analyze_dependent_types_simple :: AST -> Property
-prop_analyze_dependent_types_simple ast =
-  let checker = newDependentTypeChecker
-      result = analyzeDependentTypes checker ast
-  in True  -- Just test that it doesn't crash
+-- Property: TVApp preserves constructor name and arguments
+prop_tvapp_preserves_name_args :: String -> [TypeVar] -> Property
+prop_tvapp_preserves_name_args name args =
+  let tv = TVApp name args
+  in case tv of
+    TVApp n a -> n === name .&&. a === args
+    _ -> property False
 
--- Property: analyzeAST handles simple AST
-prop_analyze_ast_simple :: AST -> Property
-prop_analyze_ast_simple ast =
-  let checker = newDependentTypeChecker
-      result = analyzeAST checker ast
-  in True  -- Just test that it doesn't crash
+-- Property: TVFun preserves parameters and return type
+prop_tvfun_preserves_params_return :: [TypeVar] -> TypeVar -> Property
+prop_tvfun_preserves_params_return params ret =
+  let tv = TVFun params ret
+  in case tv of
+    TVFun p r -> p === params .&&. r === ret
+    _ -> property False
 
--- Property: validateASTSemantics handles AST
-prop_validate_ast_semantics :: AST -> Property
-prop_validate_ast_semantics ast =
-  let checker = newDependentTypeChecker
-      result = validateASTSemantics checker ast
-  in True  -- Just test that it doesn't crash
+-- Property: TVTuple preserves elements
+prop_tvtuple_preserves_elements :: [TypeVar] -> Property
+prop_tvtuple_preserves_elements elems =
+  let tv = TVTuple elems
+  in case tv of
+    TVTuple e -> e === elems
+    _ -> property False
 
--- Property: validateStatement handles statement
-prop_validate_statement :: Statement -> Property
-prop_validate_statement stmt =
-  let checker = newDependentTypeChecker
-      result = validateStatement checker stmt
-  in True  -- Just test that it doesn't crash
+-- ============================================================================
+-- TypeConstraint Property Tests
+-- ============================================================================
 
--- Property: checkType handles type expressions
-prop_check_type :: TypeExpr -> Property
-prop_check_type typeExpr =
-  let checker = newDependentTypeChecker
-      result = checkType checker typeExpr
-  in True  -- Just test that it doesn't crash
+-- Property: TypeConstraint equality is reflexive
+prop_typeconstraint_equality_reflexive :: TypeConstraint -> Property
+prop_typeconstraint_equality_reflexive tc =
+  tc === tc
 
--- Property: addType adds type to checker
-prop_add_type :: String -> TypeExpr -> Property
-prop_add_type typeName typeExpr =
-  not (null typeName) ==>
-  let checker = newDependentTypeChecker
-      result = addType checker typeName typeExpr
-  in True  -- Just test that it doesn't crash
+-- Property: TypeConstraint equality is symmetric
+prop_typeconstraint_equality_symmetric :: TypeConstraint -> TypeConstraint -> Property
+prop_typeconstraint_equality_symmetric tc1 tc2 =
+  (tc1 == tc2) === (tc2 == tc1)
 
--- Property: addConstraint adds constraint to checker
-prop_add_constraint :: Constraint -> Property
-prop_add_constraint constraint =
-  let checker = newDependentTypeChecker
-      result = addConstraint checker constraint
-  in True  -- Just test that it doesn't crash
+-- Property: TypeConstraint equality is transitive
+prop_typeconstraint_equality_transitive :: TypeConstraint -> TypeConstraint -> TypeConstraint -> Property
+prop_typeconstraint_equality_transitive tc1 tc2 tc3 =
+  (tc1 == tc2 && tc2 == tc3) ==> (tc1 == tc3)
 
--- Property: checkTypeInstantiation handles instantiation
-prop_check_type_instantiation :: TypeExpr -> TypeExpr -> Property
-prop_check_type_instantiation typeExpr instantiation =
-  let checker = newDependentTypeChecker
-      result = checkTypeInstantiation checker typeExpr instantiation
-  in True  -- Just test that it doesn't crash
+-- Property: Equal constraint preserves both types
+prop_equal_preserves_types :: TypeVar -> TypeVar -> Property
+prop_equal_preserves_types tv1 tv2 =
+  let tc = Equal tv1 tv2
+  in case tc of
+    Equal t1 t2 -> t1 === tv1 .&&. t2 === tv2
+    _ -> property False
 
--- Property: solveConstraints handles constraints
-prop_solve_constraints :: [Constraint] -> Property
-prop_solve_constraints constraints =
-  let checker = newDependentTypeChecker
-      result = solveConstraints checker constraints
-  in True  -- Just test that it doesn't crash
+-- Property: Subtype constraint preserves both types
+prop_subtype_preserves_types :: TypeVar -> TypeVar -> Property
+prop_subtype_preserves_types tv1 tv2 =
+  let tc = Subtype tv1 tv2
+  in case tc of
+    Subtype t1 t2 -> t1 === tv1 .&&. t2 === tv2
+    _ -> property False
 
--- Property: getDependentTypeErrors returns errors
-prop_get_dependent_type_errors :: DependentTypeError -> Property
-prop_get_dependent_type_errors error =
-  let checker = newDependentTypeChecker
-      result = getDependentTypeErrors checker
-  in True  -- Just test that it doesn't crash
+-- Property: Predicate constraint preserves name and types
+prop_predicate_preserves_name_types :: String -> [TypeVar] -> Property
+prop_predicate_preserves_name_types name tvs =
+  let tc = Predicate name tvs
+  in case tc of
+    Predicate n t -> n === name .&&. t === tvs
+    _ -> property False
 
--- Property: unify handles type variables
-prop_unify :: TypeVar -> TypeVar -> Property
-prop_unify var1 var2 =
-  let result = unify var1 var2
-  in True  -- Just test that it doesn't crash
+-- Property: TypeSizeGE constraint preserves type and size
+prop_typesizege_preserves_type_size :: TypeVar -> Int -> Property
+prop_typesizege_preserves_type_size tv size =
+  let tc = TypeSizeGE tv size
+  in case tc of
+    TypeSizeGE t s -> t === tv .&&. s === size
+    _ -> property False
 
--- Property: inferType handles statements
-prop_infer_type :: Statement -> Property
-prop_infer_type stmt =
-  let result = inferType stmt
-  in True  -- Just test that it doesn't crash
+-- Property: TypeSizeGT constraint preserves type and size
+prop_typesizegt_preserves_type_size :: TypeVar -> Int -> Property
+prop_typesizegt_preserves_type_size tv size =
+  let tc = TypeSizeGT tv size
+  in case tc of
+    TypeSizeGT t s -> t === tv .&&. s === size
+    _ -> property False
 
--- Property: inferStatement handles statements
-prop_infer_statement :: Statement -> Property
-prop_infer_statement stmt =
-  let result = inferStatement stmt
-  in True  -- Just test that it doesn't crash
+-- Property: TypeRange constraint preserves type and range
+prop_typerange_preserves_type_range :: TypeVar -> Int -> Int -> Property
+prop_typerange_preserves_type_range tv min max ->
+  let tc = TypeRange tv min max
+  in case tc of
+    TypeRange t mn mx -> t === tv .&&. mn === min .&&. mx === max
+    _ -> property False
 
--- Property: inferProgram handles AST
-prop_infer_program :: AST -> Property
-prop_infer_program ast =
-  let result = inferProgram ast
-  in True  -- Just test that it doesn't crash
+-- ============================================================================
+-- DependentTypeError Property Tests
+-- ============================================================================
 
--- Property: generalize handles types
-prop_generalize :: TypeVar -> Property
-prop_generalize typeVar =
-  let result = generalize typeVar
-  in True  -- Just test that it doesn't crash
+-- Property: DependentTypeError equality is reflexive
+prop_dependenttypeerror_equality_reflexive :: DependentTypeError -> Property
+prop_dependenttypeerror_equality_reflexive err =
+  err === err
 
--- Property: instantiate handles type schemes
-prop_instantiate :: TypeVar -> Property
-prop_instantiate typeVar =
-  let result = instantiate typeVar
-  in True  -- Just test that it doesn't crash
+-- Property: DependentTypeError equality is symmetric
+prop_dependenttypeerror_equality_symmetric :: DependentTypeError -> DependentTypeError -> Property
+prop_dependenttypeerror_equality_symmetric err1 err2 =
+  (err1 == err2) === (err2 == err1)
 
--- Property: unifyTypes handles type variables
-prop_unify_types :: TypeVar -> TypeVar -> Property
-prop_unify_types var1 var2 =
-  let result = unifyTypes var1 var2
-  in True  -- Just test that it doesn't crash
+-- Property: DependentTypeError equality is transitive
+prop_dependenttypeerror_equality_transitive :: DependentTypeError -> DependentTypeError -> DependentTypeError -> Property
+prop_dependenttypeerror_equality_transitive err1 err2 err3 =
+  (err1 == err2 && err2 == err3) ==> (err1 == err3)
 
--- Property: applyTypeSubstitution applies substitution
-prop_apply_type_substitution :: TypeVar -> [(String, TypeVar)] -> Property
-prop_apply_type_substitution typeVar substitutions =
-  let result = applyTypeSubstitution typeVar substitutions
-  in True  -- Just test that it doesn't crash
+-- Property: DependentTypeMismatch preserves both types
+prop_dependenttypemismatch_preserves_types :: TypeVar -> TypeVar -> Property
+prop_dependenttypemismatch_preserves_types tv1 tv2 =
+  let err = DependentTypeMismatch tv1 tv2
+  in case err of
+    DependentTypeMismatch t1 t2 -> t1 === tv1 .&&. t2 === tv2
+    _ -> property False
 
--- Property: newTypeVariable creates new variable
-prop_new_type_variable :: Property
-prop_new_type_variable =
-  let result = newTypeVariable
-  in True  -- Just test that it doesn't crash
+-- Property: ConstraintViolation preserves constraint and type
+prop_constraintviolation_preserves_constraint_type :: String -> TypeVar -> Property
+prop_constraintviolation_preserves_constraint_type constraint tv =
+  let err = ConstraintViolation constraint tv
+  in case err of
+    ConstraintViolation c t -> c === constraint .&&. t === tv
+    _ -> property False
 
--- Property: getFreshTypeVar creates fresh variable
-prop_get_fresh_type_var :: Property
-prop_get_fresh_type_var =
-  let result = getFreshTypeVar
-  in True  -- Just test that it doesn't crash
+-- Property: TypeNotFound preserves type name
+prop_typenotfound_preserves_name :: String -> Property
+prop_typenotfound_preserves_name name =
+  let err = TypeNotFound name
+  in case err of
+    TypeNotFound n -> n === name
+    _ -> property False
 
--- Property: initialTypeEnvironment creates environment
-prop_initial_type_environment :: Property
-prop_initial_type_environment =
-  let result = initialTypeEnvironment
-  in True  -- Just test that it doesn't crash
+-- Property: InvalidTypeArgument preserves argument
+prop_invalidtypeargument_preserves_argument :: String -> Property
+prop_invalidtypeargument_preserves_argument arg =
+  let err = InvalidTypeArgument arg
+  in case err of
+    InvalidTypeArgument a -> a === arg
+    _ -> property False
 
--- Property: instantiateScheme handles schemes
-prop_instantiate_scheme :: TypeVar -> Property
-prop_instantiate_scheme typeVar =
-  let result = instantiateScheme typeVar
-  in True  -- Just test that it doesn't crash
+-- Property: UnsolvableConstraint preserves constraint
+prop_unsolvableconstraint_preserves_constraint :: TypeConstraint -> Property
+prop_unsolvableconstraint_preserves_constraint tc =
+  let err = UnsolvableConstraint tc
+  in case err of
+    UnsolvableConstraint c -> c === tc
+    _ -> property False
 
--- Property: generalizeInContext handles context
-prop_generalize_in_context :: TypeVar -> Property
-prop_generalize_in_context typeVar =
-  let result = generalizeInContext typeVar
-  in True  -- Just test that it doesn't crash
+-- ============================================================================
+-- TypeDef Property Tests
+-- ============================================================================
 
--- Property: checkPolyType handles polymorphic types
-prop_check_poly_type :: TypeVar -> Property
-prop_check_poly_type typeVar =
-  let result = checkPolyType typeVar
-  in True  -- Just test that it doesn't crash
+-- Property: TypeDef equality is reflexive
+prop_typedef_equality_reflexive :: TypeDef -> Property
+prop_typedef_equality_reflexive td =
+  td === td
 
--- Property: solveTypeConstraints handles constraints
-prop_solve_type_constraints :: [TypeConstraint] -> Property
-prop_solve_type_constraints constraints =
-  let result = solveTypeConstraints constraints
-  in True  -- Just test that it doesn't crash
+-- Property: TypeDef equality is symmetric
+prop_typedef_equality_symmetric :: TypeDef -> TypeDef -> Property
+prop_typedef_equality_symmetric td1 td2 =
+  (td1 == td2) === (td2 == td1)
 
--- Property: simplifyConstraints simplifies constraints
-prop_simplify_constraints :: [TypeConstraint] -> Property
-prop_simplify_constraints constraints =
-  let result = simplifyConstraints constraints
-  in True  -- Just test that it doesn't crash
+-- Property: TypeDef equality is transitive
+prop_typedef_equality_transitive :: TypeDef -> TypeDef -> TypeDef -> Property
+prop_typedef_equality_transitive td1 td2 td3 =
+  (td1 == td2 && td2 == td3) ==> (td1 == td3)
 
--- Property: pushScope manages scope
-prop_push_scope :: Property
-prop_push_scope =
-  let result = pushScope
-  in True  -- Just test that it doesn't crash
+-- Property: TypeDef preserves parameters and constraints
+prop_typedef_preserves_params_constraints :: [String] -> [TypeConstraint] -> Property
+prop_typedef_preserves_params_constraints params constraints =
+  let td = TypeDefDecl params constraints
+  in case td of
+    TypeDefDecl p c -> p === params .&&. c === constraints
+    _ -> property False
 
--- Property: popScope manages scope
-prop_pop_scope :: Property
-prop_pop_scope =
-  let result = popScope
-  in True  -- Just test that it doesn't crash
+-- ============================================================================
+-- TypeEnv Property Tests
+-- ============================================================================
 
--- Property: inNewScope manages scope
-prop_in_new_scope :: Property
-prop_in_new_scope =
-  let result = inNewScope
-  in True  -- Just test that it doesn't crash
+-- Property: TypeEnv equality is reflexive
+prop_typeenv_equality_reflexive :: TypeEnv -> Property
+prop_typeenv_equality_reflexive env =
+  env === env
 
--- Property: grammarDefinition provides grammar
-prop_grammar_definition :: Property
-prop_grammar_definition =
-  let result = grammarDefinition
-  in True  -- Just test that it doesn't crash
+-- Property: TypeEnv equality is symmetric
+prop_typeenv_equality_symmetric :: TypeEnv -> TypeEnv -> Property
+prop_typeenv_equality_symmetric env1 env2 =
+  (env1 == env2) === (env2 == env1)
 
--- Property: parseProgram handles input
-prop_parse_program :: String -> Property
-prop_parse_program input =
-  not (any (== '\0') input) ==>
-  let result = parseProgram input
-  in True  -- Just test that it doesn't crash
+-- Property: TypeEnv equality is transitive
+prop_typeenv_equality_transitive :: TypeEnv -> TypeEnv -> TypeEnv -> Property
+prop_typeenv_equality_transitive env1 env2 env3 =
+  (env1 == env2 && env2 == env3) ==> (env1 == env3)
 
--- Property: runParser handles parsing
-prop_run_parser :: String -> Property
-prop_run_parser input =
-  not (any (== '\0') input) ==>
-  let result = runParser input
-  in True  -- Just test that it doesn't crash
+-- Property: TypeEnv preserves type definitions and constraints
+prop_typeenv_preserves_defs_constraints :: Map.Map String TypeDef -> [TypeConstraint] -> Property
+prop_typeenv_preserves_defs_constraints typeDefs constraints =
+  let env = TypeEnv typeDefs constraints
+  in case env of
+    TypeEnv td pc -> td === typeDefs .&&. pc === constraints
+    _ -> property False
 
--- Property: TypeVar show is readable
-prop_type_var_show_readable :: TypeVar -> Property
-prop_type_var_show_readable typeVar =
-  let shown = show typeVar
-  in not (null shown)
+-- ============================================================================
+-- DependentTypeChecker Property Tests
+-- ============================================================================
 
--- Property: TypeConstraint show is readable
-prop_type_constraint_show_readable :: TypeConstraint -> Property
-prop_type_constraint_show_readable constraint =
-  let shown = show constraint
-  in not (null shown)
+-- Property: DependentTypeChecker equality is reflexive
+prop_dependenttypechecker_equality_reflexive :: DependentTypeChecker -> Property
+prop_dependenttypechecker_equality_reflexive dtc =
+  dtc === dtc
 
--- Property: DependentTypeError show is readable
-prop_dependent_type_error_show_readable :: DependentTypeError -> Property
-prop_dependent_type_error_show_readable error =
-  let shown = show error
-  in not (null shown)
+-- Property: DependentTypeChecker equality is symmetric
+prop_dependenttypechecker_equality_symmetric :: DependentTypeChecker -> DependentTypeChecker -> Property
+prop_dependenttypechecker_equality_symmetric dtc1 dtc2 =
+  (dtc1 == dtc2) === (dtc2 == dtc1)
 
--- Property: TypeExpr show is readable
-prop_type_expr_show_readable :: TypeExpr -> Property
-prop_type_expr_show_readable expr =
-  let shown = show expr
-  in not (null shown)
+-- Property: DependentTypeChecker equality is transitive
+prop_dependenttypechecker_equality_transitive :: DependentTypeChecker -> DependentTypeChecker -> DependentTypeChecker -> Property
+prop_dependenttypechecker_equality_transitive dtc1 dtc2 dtc3 =
+  (dtc1 == dtc2 && dtc2 == dtc3) ==> (dtc1 == dtc3)
 
--- Property: Constraint show is readable
-prop_constraint_show_readable :: Constraint -> Property
-prop_constraint_show_readable constraint =
-  let shown = show constraint
-  in not (null shown)
+-- Property: DependentTypeChecker preserves type environment and errors
+prop_dependenttypechecker_preserves_env_errors :: TypeEnv -> [DependentTypeError] -> Property
+prop_dependenttypechecker_preserves_env_errors typeEnv errors =
+  let dtc = DependentTypeChecker typeEnv errors
+  in case dtc of
+    DependentTypeChecker te e -> te === typeEnv .&&. e === errors
+    _ -> property False
 
--- Property: Type analysis is deterministic
-prop_type_analysis_deterministic :: AST -> Property
-prop_type_analysis_deterministic ast =
-  let checker1 = newDependentTypeChecker
-      checker2 = newDependentTypeChecker
-      result1 = analyzeDependentTypes checker1 ast
-      result2 = analyzeDependentTypes checker2 ast
-  in True  -- Just test that both runs complete
+-- ============================================================================
+-- Constructor Property Tests
+-- ============================================================================
 
--- Property: Constraint solving is consistent
-prop_constraint_solving_consistent :: [Constraint] -> Property
-prop_constraint_solving_consistent constraints =
-  let result1 = solveTypeConstraints constraints
-      result2 = solveTypeConstraints constraints
-  in True  -- Just test that both runs complete
+-- Property: newDependentTypeChecker creates checker with prelude types
+prop_new_dependenttypechecker_prelude :: Property
+prop_new_dependenttypechecker_prelude =
+  let dtc = newDependentTypeChecker
+      typeEnv = dtcTypeEnv dtc
+      typeDefs = typeDefinitions typeEnv
+  in property $ Map.member "int" typeDefs .&&.
+               Map.member "string" typeDefs .&&.
+               Map.member "bool" typeDefs .&&.
+               Map.member "float64" typeDefs .&&.
+               null (tcErrors dtc)
 
--- Property: Type inference handles complex expressions
-prop_type_inference_complex :: [Statement] -> Property
-prop_type_inference_complex statements =
-  let ast = AST statements
-      result = inferProgram ast
-  in True  -- Just test that it doesn't crash
+-- Property: newDependentTypeCheckerWithTypes creates checker with custom types
+prop_new_dependenttypechecker_with_types :: [(String, [String], [TypeConstraint])] -> Property
+prop_new_dependenttypechecker_with_types typeDefs =
+  let dtc = newDependentTypeCheckerWithTypes typeDefs
+      typeEnv = dtcTypeEnv dtc
+      allDefs = typeDefinitions typeEnv
+  in property $ all (\(name, _, _) -> Map.member name allDefs) typeDefs .&&.
+               null (tcErrors dtc)
 
--- Property: Scope management is consistent
-prop_scope_management_consistent :: Property
-prop_scope_management_consistent =
-  let pushResult = pushScope
-      popResult = popScope
-      newScopeResult = inNewScope
-  in True  -- Just test that scope operations don't crash
+-- Property: preludeTypeDefs contains expected types
+prop_prelude_typedefs_contains_expected :: Property
+prop_prelude_typedefs_contains_expected =
+  property $ Map.member "int" preludeTypeDefs .&&.
+               Map.member "string" preludeTypeDefs .&&.
+               Map.member "bool" preludeTypeDefs .&&.
+               Map.member "float64" preludeTypeDefs
+
+-- ============================================================================
+-- Advanced Property Tests
+-- ============================================================================
+
+-- Property: Different TypeVar constructors create unequal values
+prop_typevar_different_constructors_unequal :: String -> [TypeVar] -> TypeVar -> Property
+prop_typevar_different_constructors_unequal name args ret =
+  let con = TVCon name
+      app = TVApp name args
+      fun = TVFun args ret
+  in property $ con /= app .&&. con /= fun .&&. app /= fun
+
+-- Property: Different TypeConstraint constructors create unequal values
+prop_typeconstraint_different_constructors_unequal :: TypeVar -> TypeVar -> String -> [TypeVar] -> Int -> Property
+prop_typeconstraint_different_constructors_unequal tv1 tv2 name tvs size =
+  let equal = Equal tv1 tv2
+      subtype = Subtype tv1 tv2
+      predicate = Predicate name tvs
+      sizeGE = TypeSizeGE tv1 size
+  in property $ equal /= subtype .&&. equal /= predicate .&&. equal /= sizeGE .&&.
+               subtype /= predicate .&&. subtype /= sizeGE .&&. predicate /= sizeGE
+
+-- Property: Different DependentTypeError constructors create unequal values
+prop_dependenttypeerror_different_constructors_unequal :: TypeVar -> TypeVar -> String -> Property
+prop_dependenttypeerror_different_constructors_unequal tv1 tv2 name =
+  let mismatch = DependentTypeMismatch tv1 tv2
+      violation = ConstraintViolation name tv1
+      notFound = TypeNotFound name
+  in property $ mismatch /= violation .&&. mismatch /= notFound .&&. violation /= notFound
+
+-- Property: TypeVar ordering is total
+prop_typevar_ordering_total :: TypeVar -> TypeVar -> Property
+prop_typevar_ordering_total tv1 tv2 =
+  let ord = compare tv1 tv2
+  in property $ ord == EQ || ord == LT || ord == GT
+
+-- Property: TypeConstraint ordering is total
+prop_typeconstraint_ordering_total :: TypeConstraint -> TypeConstraint -> Property
+prop_typeconstraint_ordering_total tc1 tc2 =
+  let ord = compare tc1 tc2
+  in property $ ord == EQ || ord == LT || ord == GT
+
+-- Property: DependentTypeError ordering is total
+prop_dependenttypeerror_ordering_total :: DependentTypeError -> DependentTypeError -> Property
+prop_dependenttypeerror_ordering_total err1 err2 =
+  let ord = compare err1 err2
+  in property $ ord == EQ || ord == LT || ord == GT
+
+-- Property: TypeDef ordering is total
+prop_typedef_ordering_total :: TypeDef -> TypeDef -> Property
+prop_typedef_ordering_total td1 td2 =
+  let ord = compare td1 td2
+  in property $ ord == EQ || ord == LT || ord == GT
+
+-- Property: TypeEnv ordering is total
+prop_typeenv_ordering_total :: TypeEnv -> TypeEnv -> Property
+prop_typeenv_ordering_total env1 env2 =
+  let ord = compare env1 env2
+  in property $ ord == EQ || ord == LT || ord == GT
+
+-- Property: DependentTypeChecker ordering is total
+prop_dependenttypechecker_ordering_total :: DependentTypeChecker -> DependentTypeChecker -> Property
+prop_dependenttypechecker_ordering_total dtc1 dtc2 =
+  let ord = compare dtc1 dtc2
+  in property $ ord == EQ || ord == LT || ord == GT
 
 -- ============================================================================
 -- Test Collection
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "Dependencies QuickCheck Tests"
-  [ fastProperty "newDependentTypeChecker creates checker" prop_new_dependent_type_checker_creates
-  , fastProperty "newDependentTypeCheckerWithTypes creates checker with types" prop_new_dependent_type_checker_with_types
-  , fastProperty "TypeVar equality works correctly" prop_type_var_equality
-  , fastProperty "TypeConstraint equality works correctly" prop_type_constraint_equality
-  , fastProperty "DependentTypeError equality works correctly" prop_dependent_type_error_equality
-  , fastProperty "TypeExpr equality works correctly" prop_type_expr_equality
-  , fastProperty "analyzeDependentTypes handles simple AST" prop_analyze_dependent_types_simple
-  , fastProperty "analyzeAST handles simple AST" prop_analyze_ast_simple
-  , fastProperty "validateASTSemantics handles AST" prop_validate_ast_semantics
-  , fastProperty "validateStatement handles statement" prop_validate_statement
-  , fastProperty "checkType handles type expressions" prop_check_type
-  , fastProperty "addType adds type to checker" prop_add_type
-  , fastProperty "addConstraint adds constraint to checker" prop_add_constraint
-  , fastProperty "checkTypeInstantiation handles instantiation" prop_check_type_instantiation
-  , fastProperty "solveConstraints handles constraints" prop_solve_constraints
-  , fastProperty "getDependentTypeErrors returns errors" prop_get_dependent_type_errors
-  , fastProperty "unify handles type variables" prop_unify
-  , fastProperty "inferType handles statements" prop_infer_type
-  , fastProperty "inferStatement handles statements" prop_infer_statement
-  , fastProperty "inferProgram handles AST" prop_infer_program
-  , fastProperty "generalize handles types" prop_generalize
-  , fastProperty "instantiate handles type schemes" prop_instantiate
-  , fastProperty "unifyTypes handles type variables" prop_unify_types
-  , fastProperty "applyTypeSubstitution applies substitution" prop_apply_type_substitution
-  , fastProperty "newTypeVariable creates new variable" prop_new_type_variable
-  , fastProperty "getFreshTypeVar creates fresh variable" prop_get_fresh_type_var
-  , fastProperty "initialTypeEnvironment creates environment" prop_initial_type_environment
-  , fastProperty "instantiateScheme handles schemes" prop_instantiate_scheme
-  , fastProperty "generalizeInContext handles context" prop_generalize_in_context
-  , fastProperty "checkPolyType handles polymorphic types" prop_check_poly_type
-  , fastProperty "solveTypeConstraints handles constraints" prop_solve_type_constraints
-  , fastProperty "simplifyConstraints simplifies constraints" prop_simplify_constraints
-  , fastProperty "pushScope manages scope" prop_push_scope
-  , fastProperty "popScope manages scope" prop_pop_scope
-  , fastProperty "inNewScope manages scope" prop_in_new_scope
-  , fastProperty "grammarDefinition provides grammar" prop_grammar_definition
-  , fastProperty "parseProgram handles input" prop_parse_program
-  , fastProperty "runParser handles parsing" prop_run_parser
-  , fastProperty "TypeVar show is readable" prop_type_var_show_readable
-  , fastProperty "TypeConstraint show is readable" prop_type_constraint_show_readable
-  , fastProperty "DependentTypeError show is readable" prop_dependent_type_error_show_readable
-  , fastProperty "TypeExpr show is readable" prop_type_expr_show_readable
-  , fastProperty "Constraint show is readable" prop_constraint_show_readable
-  , fastProperty "Type analysis is deterministic" prop_type_analysis_deterministic
-  , fastProperty "Constraint solving is consistent" prop_constraint_solving_consistent
-  , fastProperty "Type inference handles complex expressions" prop_type_inference_complex
-  , fastProperty "Scope management is consistent" prop_scope_management_consistent
+tests = testGroup "New Dependencies QuickCheck Tests"
+  [ fastProperty "TypeVar equality is reflexive" prop_typevar_equality_reflexive
+  , fastProperty "TypeVar equality is symmetric" prop_typevar_equality_symmetric
+  , fastProperty "TypeVar equality is transitive" prop_typevar_equality_transitive
+  , fastProperty "TypeVar ordering is consistent" prop_typevar_ordering_consistent
+  , fastProperty "TVCon preserves constructor name" prop_tvcon_preserves_name
+  , fastProperty "TVVar preserves variable name" prop_tvvar_preserves_name
+  , fastProperty "TVApp preserves constructor name and arguments" prop_tvapp_preserves_name_args
+  , fastProperty "TVFun preserves parameters and return type" prop_tvfun_preserves_params_return
+  , fastProperty "TVTuple preserves elements" prop_tvtuple_preserves_elements
+  , fastProperty "TypeConstraint equality is reflexive" prop_typeconstraint_equality_reflexive
+  , fastProperty "TypeConstraint equality is symmetric" prop_typeconstraint_equality_symmetric
+  , fastProperty "TypeConstraint equality is transitive" prop_typeconstraint_equality_transitive
+  , fastProperty "Equal constraint preserves both types" prop_equal_preserves_types
+  , fastProperty "Subtype constraint preserves both types" prop_subtype_preserves_types
+  , fastProperty "Predicate constraint preserves name and types" prop_predicate_preserves_name_types
+  , fastProperty "TypeSizeGE constraint preserves type and size" prop_typesizege_preserves_type_size
+  , fastProperty "TypeSizeGT constraint preserves type and size" prop_typesizegt_preserves_type_size
+  , fastProperty "TypeRange constraint preserves type and range" prop_typerange_preserves_type_range
+  , fastProperty "DependentTypeError equality is reflexive" prop_dependenttypeerror_equality_reflexive
+  , fastProperty "DependentTypeError equality is symmetric" prop_dependenttypeerror_equality_symmetric
+  , fastProperty "DependentTypeError equality is transitive" prop_dependenttypeerror_equality_transitive
+  , fastProperty "DependentTypeMismatch preserves both types" prop_dependenttypemismatch_preserves_types
+  , fastProperty "ConstraintViolation preserves constraint and type" prop_constraintviolation_preserves_constraint_type
+  , fastProperty "TypeNotFound preserves type name" prop_typenotfound_preserves_name
+  , fastProperty "InvalidTypeArgument preserves argument" prop_invalidtypeargument_preserves_argument
+  , fastProperty "UnsolvableConstraint preserves constraint" prop_unsolvableconstraint_preserves_constraint
+  , fastProperty "TypeDef equality is reflexive" prop_typedef_equality_reflexive
+  , fastProperty "TypeDef equality is symmetric" prop_typedef_equality_symmetric
+  , fastProperty "TypeDef equality is transitive" prop_typedef_equality_transitive
+  , fastProperty "TypeDef preserves parameters and constraints" prop_typedef_preserves_params_constraints
+  , fastProperty "TypeEnv equality is reflexive" prop_typeenv_equality_reflexive
+  , fastProperty "TypeEnv equality is symmetric" prop_typeenv_equality_symmetric
+  , fastProperty "TypeEnv equality is transitive" prop_typeenv_equality_transitive
+  , fastProperty "TypeEnv preserves type definitions and constraints" prop_typeenv_preserves_defs_constraints
+  , fastProperty "DependentTypeChecker equality is reflexive" prop_dependenttypechecker_equality_reflexive
+  , fastProperty "DependentTypeChecker equality is symmetric" prop_dependenttypechecker_equality_symmetric
+  , fastProperty "DependentTypeChecker equality is transitive" prop_dependenttypechecker_equality_transitive
+  , fastProperty "DependentTypeChecker preserves type environment and errors" prop_dependenttypechecker_preserves_env_errors
+  , fastProperty "newDependentTypeChecker creates checker with prelude types" prop_new_dependenttypechecker_prelude
+  , fastProperty "newDependentTypeCheckerWithTypes creates checker with custom types" prop_new_dependenttypechecker_with_types
+  , fastProperty "preludeTypeDefs contains expected types" prop_prelude_typedefs_contains_expected
+  , fastProperty "Different TypeVar constructors create unequal values" prop_typevar_different_constructors_unequal
+  , fastProperty "Different TypeConstraint constructors create unequal values" prop_typeconstraint_different_constructors_unequal
+  , fastProperty "Different DependentTypeError constructors create unequal values" prop_dependenttypeerror_different_constructors_unequal
+  , fastProperty "TypeVar ordering is total" prop_typevar_ordering_total
+  , fastProperty "TypeConstraint ordering is total" prop_typeconstraint_ordering_total
+  , fastProperty "DependentTypeError ordering is total" prop_dependenttypeerror_ordering_total
+  , fastProperty "TypeDef ordering is total" prop_typedef_ordering_total
+  , fastProperty "TypeEnv ordering is total" prop_typeenv_ordering_total
+  , fastProperty "DependentTypeChecker ordering is total" prop_dependenttypechecker_ordering_total
   ]

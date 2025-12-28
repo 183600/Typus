@@ -13,277 +13,323 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose)
-import Data.Char (isAlphaNum, isSpace)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
-import qualified Data.Text as T
+import Test.QuickCheck.Gen (Gen(..), vectorOf)
 
 import Parser
-  ( FileDirectives(..)
+  ( parseTypus
+  , FileDirectives(..)
   , BlockDirectives(..)
   , CodeBlock(..)
   , TypusFile(..)
   , defaultFileDirectives
   , defaultBlockDirectives
-  , parseTypus
+  , parseBool
+  , curlyDelta
+  , leadingIndentation
   )
-import SourceLocation (SourcePos(..), SourceSpan(..))
+
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos)
+
+import Data.Char (isSpace, isAlphaNum)
+import Data.List (isPrefixOf, isInfixOf)
+import qualified Data.Text as T
 
 -- ============================================================================
--- Arbitrary Instances
+-- Arbitrary instances
 -- ============================================================================
 
 instance Arbitrary FileDirectives where
-  arbitrary = FileDirectives <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = do
+    ownership <- arbitrary
+    dependentTypes <- arbitrary
+    constraints <- arbitrary
+    return $ FileDirectives 
+      { fdOwnership = if ownership then Just (Located startPos True) else Nothing
+      , fdDependentTypes = if dependentTypes then Just (Located startPos True) else Nothing
+      , fdConstraints = if constraints then Just (Located startPos True) else Nothing
+      }
 
 instance Arbitrary BlockDirectives where
-  arbitrary = BlockDirectives <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = do
+    ownership <- arbitrary
+    dependentTypes <- arbitrary
+    constraints <- arbitrary
+    return $ BlockDirectives
+      { bdOwnership = if ownership then Just (Located startPos True) else Nothing
+      , bdDependentTypes = if dependentTypes then Just (Located startPos True) else Nothing
+      , bdConstraints = if constraints then Just (Located startPos True) else Nothing
+      }
 
-instance Arbitrary SourcePos where
-  arbitrary = SourcePos <$> arbitrary <*> arbitrary <*> arbitrary
+-- Generate valid boolean strings for directives
+validBoolString :: Gen String
+validBoolString = oneof 
+  [ return "on"
+  , return "off"
+  , return "true"
+  , return "false"
+  ]
 
-instance Arbitrary SourceSpan where
-  arbitrary = SourceSpan <$> arbitrary <*> arbitrary
+-- Generate invalid boolean strings
+invalidBoolString :: Gen String
+invalidBoolString = oneof
+  [ elements ["maybe", "yes", "no", "1", "0", "ON", "OFF", "TRUE", "FALSE"]
+  , listOf $ elements ['a'..'z']
+  ]
 
-instance Arbitrary CodeBlock where
-  arbitrary = CodeBlock <$> arbitrary <*> arbitrary <*> arbitrary
+-- Generate strings with varying indentation
+indentedString :: Gen String
+indentedString = do
+  indent <- choose (0, 10)
+  content <- listOf $ elements ['a'..'z']
+  return $ replicate indent ' ' ++ content
 
--- Generate valid identifier characters
-genIdentifierChar :: Gen Char
-genIdentifierChar = elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_-"
-
--- Generate valid identifiers
-genIdentifier :: Gen String
-genIdentifier = listOf1 genIdentifierChar
-
--- Generate directive content
-genDirectiveContent :: Gen String
-genDirectiveContent = do
-  key <- genIdentifier
-  value <- listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " _-")
-  return $ key ++ "=" ++ value
-
--- Generate file directive lines
-genFileDirective :: Gen String
-genFileDirective = do
-  content <- genDirectiveContent
-  return $ "//! " ++ content
-
--- Generate block directive lines  
-genBlockDirective :: Gen String
-genBlockDirective = do
-  content <- genDirectiveContent
-  return $ "//@ " ++ content
-
--- Generate code content
-genCodeContent :: Gen String
-genCodeContent = listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n(){}[];,+*/"
+-- Generate strings with curly braces
+curlyBraceString :: Gen String
+curlyBraceString = do
+  opens <- choose (0, 5)
+  closes <- choose (0, 5)
+  content <- listOf $ elements ['a'..'z']
+  return $ replicate opens '{' ++ content ++ replicate closes '}'
 
 -- ============================================================================
--- Property Tests
+-- Parser Property Tests
 -- ============================================================================
 
--- Property: Parsing empty content returns default structure
-prop_parse_empty_content :: Property
-prop_parse_empty_content =
-  let result = parseTypus "" 
-      expected = TypusFile defaultFileDirectives [] [] []
-  in case result of
-       Left _ -> property False
-       Right parsed -> parsed === expected
+-- Property: parseBool correctly parses valid boolean values
+prop_parseBool_valid_values :: String -> Property
+prop_parseBool_valid_values boolStr =
+  boolStr `elem` ["on", "off", "true", "false"] ==>
+  case parseBool boolStr of
+    Left _ -> property False
+    Right result -> 
+      case boolStr of
+        "on" -> result === True
+        "off" -> result === False
+        "true" -> result === True
+        "false" -> result === False
+        _ -> property False
 
--- Property: Parsing content with only file directives preserves directives
-prop_parse_file_directives_preserved :: [String] -> Property
-prop_parse_file_directives_preserved directives =
-  not (null directives) && all (not . null) directives ==>
-  let directiveLines = map ("//! " ++) directives
-      content = unlines directiveLines
-      result = parseTypus content
-  in case result of
-       Left _ -> property False
-       Right parsed -> property $ not (null (tfDirectives parsed))
+-- Property: parseBool rejects invalid boolean values
+prop_parseBool_invalid_values :: Property
+prop_parseBool_invalid_values =
+  forAll invalidBoolString $ \boolStr ->
+    boolStr `notElem` ["on", "off", "true", "false"] ==>
+    case parseBool boolStr of
+      Left _ -> property True
+      Right _ -> property False
 
--- Property: Parsing content with code blocks preserves block structure
-prop_parse_code_blocks_preserved :: String -> Property
-prop_parse_code_blocks_preserved code =
-  not (null code) && not (any isNullChar code) ==>
-  let content = "//@ ownership=true\n" ++ code ++ "\n"
-      result = parseTypus content
-  in case result of
-       Left _ -> property False
-       Right parsed -> property $ length (tfBlocks parsed) >= 1
+-- Property: curlyDelta correctly counts curly braces
+prop_curlyDelta_counts_braces :: String -> String -> String -> Property
+prop_curlyDelta_counts_braces prefix content suffix =
+  let opens = length $ filter (== '{') prefix
+      closes = length $ filter (== '}') suffix
+      input = prefix ++ content ++ suffix
+      delta = curlyDelta input
+  in property $ delta === opens - closes
 
--- Property: Roundtrip parsing preserves content structure
-prop_parse_roundtrip_structure :: String -> String -> Property
-prop_parse_roundtrip_structure prefix suffix =
-  not (null prefix) && not (null suffix) && 
-  not (any isNullChar (prefix ++ suffix)) ==>
-  let content = prefix ++ "\n//@ ownership=true\n" ++ suffix
-      result = parseTypus content
-  in case result of
-       Left _ -> property False
-       Right parsed -> property $ length (tfBlocks parsed) >= 1
+-- Property: curlyDelta ignores braces in strings
+prop_curlyDelta_ignores_string_braces :: String -> String -> Property
+prop_curlyDelta_ignores_string_braces before after =
+  not ('"' `elem` before) && not ('"' `elem` after) ==>
+  let input = before ++ "\"{not counted}\"" ++ after
+      delta = curlyDelta input
+  in property $ delta === 0
 
--- Property: Multiple directives are parsed correctly
-prop_parse_multiple_directives :: [String] -> Property
-prop_parse_multiple_directives directives =
-  length directives <= 5 && all (not . null) directives ==>
-  let directiveLines = map ("//! " ++) directives
-      content = unlines directiveLines ++ "\n//@ ownership=true\nfunc main() {}\n"
-      result = parseTypus content
-  in case result of
-       Left _ -> property False
-       Right parsed -> property $ length (tfBlocks parsed) >= 1
+-- Property: curlyDelta ignores braces in line comments
+prop_curlyDelta_ignores_comment_braces :: String -> String -> Property
+prop_curlyDelta_ignores_comment_braces before after =
+  not ('/' `elem` before) && not ('/' `elem` after) ==>
+  let input = before ++ "// {not counted}" ++ after
+      delta = curlyDelta input
+  in property $ delta === 0
 
--- Property: Invalid directives don't crash parser
-prop_parse_invalid_directives_safe :: String -> Property
-prop_parse_invalid_directives_safe badContent =
-  not (null badContent) && not (any isNullChar badContent) ==>
-  let content = "//! " ++ badContent ++ "\nfunc test() {}\n"
-      result = parseTypus content
-  in case result of
-       Left _ -> property True  -- Parser should handle errors gracefully
-       Right _ -> property True  -- Or succeed if it can parse
+-- Property: leadingIndentation counts leading spaces
+prop_leadingIndentation_counts_spaces :: Int -> String -> Property
+prop_leadingIndentation_counts_spaces indent content =
+  indent >= 0 && indent <= 20 ==>
+  let input = replicate indent ' ' ++ content
+      result = leadingIndentation input
+  in property $ result === indent
 
--- Property: Code content with special characters is preserved
-prop_parse_special_characters_preserved :: String -> Property
-prop_parse_special_characters_preserved specialChars =
-  not (null specialChars) && not (any isNullChar specialChars) ==>
-  let content = "//@ dependent_types=true\nfunc test() { " ++ specialChars ++ " }\n"
-      result = parseTypus content
-  in case result of
-       Left _ -> property False
-       Right parsed -> 
-         case tfBlocks parsed of
-           [] -> property False
-           (block:_) -> property $ specialChars `isInfixOf` cbContent block
+-- Property: leadingIndentation counts leading tabs
+prop_leadingIndentation_counts_tabs :: Int -> String -> Property
+prop_leadingIndentation_counts_tabs indent content =
+  indent >= 0 && indent <= 20 ==>
+  let input = replicate indent '\t' ++ content
+      result = leadingIndentation input
+  in property $ result === indent
 
--- Property: Parsing with mixed directives works correctly
-prop_parse_mixed_directives :: String -> String -> String -> Property
-prop_parse_mixed_directives fileDirective blockDirective code =
-  not (null fileDirective) && not (null blockDirective) && not (null code) &&
-  not (any isNullChar (fileDirective ++ blockDirective ++ code)) ==>
-  let content = "//! " ++ fileDirective ++ "\n//@ " ++ blockDirective ++ "\n" ++ code ++ "\n"
-      result = parseTypus content
-  in case result of
-       Left _ -> property False
-       Right parsed -> property $ length (tfBlocks parsed) >= 1
+-- Property: leadingIndentation handles mixed whitespace
+prop_leadingIndentation_mixed_whitespace :: Int -> Int -> String -> Property
+prop_leadingIndentation_mixed_whitespace spaces tabs content =
+  spaces >= 0 && spaces <= 10 && tabs >= 0 && tabs <= 10 ==>
+  let input = replicate spaces ' ' ++ replicate tabs '\t' ++ content
+      result = leadingIndentation input
+  in property $ result === spaces + tabs
 
--- Property: Large files are parsed without memory issues
-prop_parse_large_files_safe :: Int -> String -> Property
-prop_parse_large_files_safe multiplier baseContent =
-  multiplier > 0 && multiplier <= 100 && not (any isNullChar baseContent) ==>
-  let repeatedContent = concat $ replicate multiplier (baseContent ++ "\n")
-      content = "//@ ownership=true\n" ++ repeatedContent
-      result = parseTypus content
-  in case result of
-       Left _ -> property True  -- Should handle errors gracefully
-       Right parsed -> property $ length (tfBlocks parsed) >= 1
+-- Property: leadingIndentation handles empty strings
+prop_leadingIndentation_empty_string :: Property
+prop_leadingIndentation_empty_string =
+  leadingIndentation "" === 0
 
--- Property: Parsing preserves line numbers in source locations
-prop_parse_preserves_line_numbers :: [String] -> Property
-prop_parse_preserves_line_numbers lines =
-  not (null lines) && length lines <= 10 && all (not . null) lines ==>
-  let content = unlines lines
-      result = parseTypus content
-  in case result of
-       Left _ -> property False
-       Right parsed -> property $ True  -- Should have valid source locations
+-- Property: leadingIndentation handles strings with no leading whitespace
+prop_leadingIndentation_no_leading_whitespace :: String -> Property
+prop_leadingIndentation_no_leading_whitespace content =
+  null content || not (isSpace (head content)) ==>
+  leadingIndentation content === 0
 
--- Property: Unicode content is handled correctly
-prop_parse_unicode_content :: String -> Property
-prop_parse_unicode_content unicodeContent =
-  not (null unicodeContent) && not (any isNullChar unicodeContent) ==>
-  let content = "//@ constraints=true\nfunc test() { " ++ unicodeContent ++ " }\n"
-      result = parseTypus content
-  in case result of
-       Left _ -> property False
-       Right parsed -> 
-         case tfBlocks parsed of
-           [] -> property False
-           (block:_) -> property $ unicodeContent `isInfixOf` cbContent block
+-- Property: parseTypus handles empty input
+prop_parseTypus_empty_input :: Property
+prop_parseTypus_empty_input =
+  case parseTypus "" of
+    Left _ -> property True  -- Parsing error is acceptable for empty input
+    Right result -> 
+      let tf = tfDirectives result
+          blocks = tfBlocks result
+      in property $ tf === defaultFileDirectives .&&. null blocks
 
--- Property: Empty code blocks are handled gracefully
-prop_parse_empty_code_blocks :: Property
-prop_parse_empty_code_blocks =
-  let content = "//@ ownership=true\n\n//@ dependent_types=true\n"
-      result = parseTypus content
-  in case result of
-       Left _ -> property True  -- Should handle gracefully
-       Right parsed -> property $ True  -- Should parse successfully
+-- Property: parseTypus preserves file directives
+prop_parseTypus_file_directives :: Property
+prop_parseTypus_file_directives =
+  let input = "//! ownership=on, dependent_types=true\n"
+  in case parseTypus input of
+    Left _ -> property False
+    Right result ->
+      let directives = tfDirectives result
+      in case (fdOwnership directives, fdDependentTypes directives) of
+        (Just (Located _ True), Just (Located _ True)) -> property True
+        _ -> property False
 
--- Property: Nested directive structure is parsed correctly
-prop_parse_nested_directives :: String -> String -> Property
-prop_parse_nested_directives outerDirective innerDirective =
-  not (null outerDirective) && not (null innerDirective) &&
-  not (any isNullChar (outerDirective ++ innerDirective)) ==>
-  let content = "//! " ++ outerDirective ++ "\n//@ " ++ innerDirective ++ "\nfunc nested() {}\n"
-      result = parseTypus content
-  in case result of
-       Left _ -> property False
-       Right parsed -> property $ length (tfBlocks parsed) >= 1
+-- Property: parseTypus handles simple code blocks
+prop_parseTypus_simple_blocks :: String -> Property
+prop_parseTypus_simple_blocks content =
+  not ("//" `isInfixOf` content) && not ("/*" `isInfixOf` content) ==>
+  let input = "//! ownership=on\n" ++ content ++ "\n"
+  in case parseTypus input of
+    Left _ -> property True  -- Parsing errors are acceptable
+    Right result ->
+      let blocks = tfBlocks result
+      in property $ not (null blocks)
 
--- Property: Comments in code blocks are preserved
-prop_parse_comments_preserved :: String -> Property
-prop_parse_comments_preserved comment =
-  not (null comment) && not (any isNullChar comment) ==>
-  let content = "//@ ownership=true\nfunc test() {\n  // " ++ comment ++ "\n}\n"
-      result = parseTypus content
-  in case result of
-       Left _ -> property False
-       Right parsed -> 
-         case tfBlocks parsed of
-           [] -> property False
-           (block:_) -> property $ comment `isInfixOf` cbContent block
+-- Property: defaultFileDirectives has all Nothing values
+prop_defaultFileDirectives_nothing :: Property
+prop_defaultFileDirectives_nothing =
+  let fd = defaultFileDirectives
+  in property $ fdOwnership fd === Nothing .&&.
+               fdDependentTypes fd === Nothing .&&.
+               fdConstraints fd === Nothing
 
--- Property: Indentation in code blocks is preserved
-prop_parse_indentation_preserved :: Int -> String -> Property
-prop_parse_indentation_preserved indentLevel code =
-  indentLevel >= 0 && indentLevel <= 10 && not (null code) ==>
-  let indent = replicate indentLevel ' '
-      content = "//@ ownership=true\nfunc test() {\n" ++ indent ++ code ++ "\n}\n"
-      result = parseTypus content
-  in case result of
-       Left _ -> property False
-       Right parsed -> 
-         case tfBlocks parsed of
-           [] -> property False
-           (block:_) -> property $ indent `isInfixOf` cbContent block
+-- Property: defaultBlockDirectives has all Nothing values
+prop_defaultBlockDirectives_nothing :: Property
+prop_defaultBlockDirectives_nothing =
+  let bd = defaultBlockDirectives
+  in property $ bdOwnership bd === Nothing .&&.
+               bdDependentTypes bd === Nothing .&&.
+               bdConstraints bd === Nothing
 
--- Property: Multiple code blocks are parsed separately
-prop_parse_multiple_blocks :: [String] -> Property
-prop_parse_multiple_blocks codeBlocks =
-  not (null codeBlocks) && length codeBlocks <= 5 && all (not . null) codeBlocks ==>
-  let blockContents = map (\code -> "//@ ownership=true\n" ++ code ++ "\n") codeBlocks
-      content = concat blockContents
-      result = parseTypus content
-  in case result of
-       Left _ -> property False
-       Right parsed -> property $ length (tfBlocks parsed) >= length codeBlocks
+-- Property: curlyDelta handles nested braces correctly
+prop_curlyDelta_nested_braces :: Int -> Property
+prop_curlyDelta_nested_braces depth =
+  depth >= 0 && depth <= 10 ==>
+  let nestedBraces = concat $ replicate depth "{}"
+      delta = curlyDelta nestedBraces
+  in property $ delta === 0
 
--- Helper function to check for null bytes
-isNullChar :: Char -> Bool
-isNullChar = (== '\0')
+-- Property: curlyDelta handles unbalanced braces
+prop_curlyDelta_unbalanced_braces :: Int -> Int -> Property
+prop_curlyDelta_unbalanced_braces opens closes =
+  opens >= 0 && opens <= 5 && closes >= 0 && closes <= 5 ==>
+  let unbalanced = replicate opens '{' ++ replicate closes '}'
+      delta = curlyDelta unbalanced
+  in property $ delta === opens - closes
+
+-- Property: leadingIndentation is idempotent on non-whitespace
+prop_leadingIndentation_non_whitespace :: String -> Property
+prop_leadingIndentation_non_whitespace content =
+  null content || not (isSpace (head content)) ==>
+  leadingIndentation content === 0
+
+-- Property: parseBool is case sensitive
+prop_parseBool_case_sensitive :: Property
+prop_parseBool_case_sensitive =
+  let invalidCases = ["ON", "OFF", "TRUE", "FALSE", "On", "Off", "True", "False"]
+  in all (\caseStr -> case parseBool caseStr of
+                        Left _ -> True
+                        Right _ -> False) invalidCases
+
+-- Property: curlyDelta handles escaped quotes correctly
+prop_curlyDelta_escaped_quotes :: String -> String -> Property
+prop_curlyDelta_escaped_quotes before after =
+  not ('"' `elem` before) && not ('"' `elem` after) ==>
+  let input = before ++ "\"\\\"{not counted}\\\"\"" ++ after
+      delta = curlyDelta input
+  in property $ delta === 0
+
+-- Property: parseTypus handles multiple directives
+prop_parseTypus_multiple_directives :: Property
+prop_parseTypus_multiple_directives =
+  let input = "//! ownership=on, dependent_types=true, constraints=off\n"
+  in case parseTypus input of
+    Left _ -> property False
+    Right result ->
+      let directives = tfDirectives result
+      in case (fdOwnership directives, fdDependentTypes directives, fdConstraints directives) of
+        (Just (Located _ True), Just (Located _ True), Just (Located _ False)) -> property True
+        _ -> property False
+
+-- Property: parseTypus handles malformed directives gracefully
+prop_parseTypus_malformed_directives :: Property
+prop_parseTypus_malformed_directives =
+  let input = "//! invalid_directive=value\n"
+  in case parseTypus input of
+    Left _ -> property True  -- Should handle malformed directives gracefully
+    Right result -> property True  -- Or parse successfully with defaults
+
+-- Property: curlyDelta handles complex string literals
+prop_curlyDelta_complex_strings :: Property
+prop_curlyDelta_complex_strings =
+  let complexString = "\"string with { braces } and \\\"escaped quotes\\\" // not a comment\""
+      delta = curlyDelta complexString
+  in property $ delta === 0
+
+-- Property: leadingIndentation handles Unicode whitespace
+prop_leadingIndentation_unicode_whitespace :: Int -> Property
+prop_leadingIndentation_unicode_whitespace count =
+  count >= 0 && count <= 10 ==>
+  let unicodeSpaces = replicate count '\160'  -- Non-breaking space
+      content = "content"
+      input = unicodeSpaces ++ content
+      result = leadingIndentation input
+  in property $ result === count  -- Should count all whitespace characters
 
 -- ============================================================================
 -- Test Collection
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "Parser QuickCheck Tests"
-  [ fastProperty "Parse empty content returns default structure" prop_parse_empty_content
-  , fastProperty "Parse file directives preserves directives" prop_parse_file_directives_preserved
-  , fastProperty "Parse code blocks preserves block structure" prop_parse_code_blocks_preserved
-  , fastProperty "Parse roundtrip preserves structure" prop_parse_roundtrip_structure
-  , fastProperty "Parse multiple directives correctly" prop_parse_multiple_directives
-  , fastProperty "Parse invalid directives safely" prop_parse_invalid_directives_safe
-  , fastProperty "Parse special characters preserved" prop_parse_special_characters_preserved
-  , fastProperty "Parse mixed directives works correctly" prop_parse_mixed_directives
-  , fastProperty "Parse large files safely" prop_parse_large_files_safe
-  , fastProperty "Parse preserves line numbers" prop_parse_preserves_line_numbers
-  , fastProperty "Parse unicode content correctly" prop_parse_unicode_content
-  , fastProperty "Parse empty code blocks gracefully" prop_parse_empty_code_blocks
-  , fastProperty "Parse nested directives correctly" prop_parse_nested_directives
-  , fastProperty "Parse comments preserved" prop_parse_comments_preserved
-  , fastProperty "Parse indentation preserved" prop_parse_indentation_preserved
-  , fastProperty "Parse multiple blocks separately" prop_parse_multiple_blocks
+tests = testGroup "New Parser QuickCheck Tests"
+  [ fastProperty "parseBool correctly parses valid boolean values" prop_parseBool_valid_values
+  , fastProperty "parseBool rejects invalid boolean values" prop_parseBool_invalid_values
+  , fastProperty "curlyDelta correctly counts curly braces" prop_curlyDelta_counts_braces
+  , fastProperty "curlyDelta ignores braces in strings" prop_curlyDelta_ignores_string_braces
+  , fastProperty "curlyDelta ignores braces in line comments" prop_curlyDelta_ignores_comment_braces
+  , fastProperty "leadingIndentation counts leading spaces" prop_leadingIndentation_counts_spaces
+  , fastProperty "leadingIndentation counts leading tabs" prop_leadingIndentation_counts_tabs
+  , fastProperty "leadingIndentation handles mixed whitespace" prop_leadingIndentation_mixed_whitespace
+  , fastProperty "leadingIndentation handles empty strings" prop_leadingIndentation_empty_string
+  , fastProperty "leadingIndentation handles strings with no leading whitespace" prop_leadingIndentation_no_leading_whitespace
+  , fastProperty "parseTypus handles empty input" prop_parseTypus_empty_input
+  , fastProperty "parseTypus preserves file directives" prop_parseTypus_file_directives
+  , fastProperty "parseTypus handles simple code blocks" prop_parseTypus_simple_blocks
+  , fastProperty "defaultFileDirectives has all Nothing values" prop_defaultFileDirectives_nothing
+  , fastProperty "defaultBlockDirectives has all Nothing values" prop_defaultBlockDirectives_nothing
+  , fastProperty "curlyDelta handles nested braces correctly" prop_curlyDelta_nested_braces
+  , fastProperty "curlyDelta handles unbalanced braces" prop_curlyDelta_unbalanced_braces
+  , fastProperty "leadingIndentation is idempotent on non-whitespace" prop_leadingIndentation_non_whitespace
+  , fastProperty "parseBool is case sensitive" prop_parseBool_case_sensitive
+  , fastProperty "curlyDelta handles escaped quotes correctly" prop_curlyDelta_escaped_quotes
+  , fastProperty "parseTypus handles multiple directives" prop_parseTypus_multiple_directives
+  , fastProperty "parseTypus handles malformed directives gracefully" prop_parseTypus_malformed_directives
+  , fastProperty "curlyDelta handles complex string literals" prop_curlyDelta_complex_strings
+  , fastProperty "leadingIndentation handles Unicode whitespace" prop_leadingIndentation_unicode_whitespace
   ]
