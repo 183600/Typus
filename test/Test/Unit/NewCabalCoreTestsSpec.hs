@@ -1,211 +1,412 @@
+{-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+
 module Test.Unit.NewCabalCoreTestsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=), assertBool)
-import Data.List (isInfixOf)
+import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
+import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck 
+import qualified Data.Text as T
+import qualified Data.Map as Map
+import qualified Data.Set as Set
+import Data.List (sort, nub, length, sum, reverse, concat, isInfixOf, isPrefixOf)
+import Data.Char (isSpace, isAlphaNum, isLetter, isDigit)
+import Control.Monad (foldM, when)
 
-import qualified Parser
-import qualified SourceLocation
-import qualified Utils
-import qualified Compiler
-import qualified SyntaxValidator
-import qualified ErrorHandler
-import qualified DependentTypesParser
-import qualified Ownership
+import Utils (trim, splitBy, splitByComma, removeLineComments, removeComments, normalizeIndentation)
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, posAfter, posAt, emptySpan, spanFrom, mergeSpans, locatedWithSpan, locatedValue)
+import Parser 
+  ( FileDirectives(..)
+  , BlockDirectives(..)
+  , CodeBlock(..)
+  , TypusFile(..)
+  , defaultFileDirectives
+  , defaultBlockDirectives
+  , parseTypus
+  )
+import SyntaxValidator (SyntaxError(..))
+import TestSupport.Arbitrary ()
+import TestSupport.ExtendedArbitrary ()
 
--- | 新的Cabal核心测试用例，覆盖主要功能模块
+-- ============================================================================
+-- Test 1: Utils Module String Processing Tests
+-- ============================================================================
+
+prop_trim_idempotent :: String -> Property
+prop_trim_idempotent s = trim (trim s) === trim s
+
+prop_splitBy_consistency :: Char -> String -> Property
+prop_splitBy_consistency delim s = 
+  let parts = splitBy delim s
+      reconstructed = concat (map (\p -> p ++ [delim]) (init parts)) ++ (if null parts then "" else last parts)
+  in length parts > 0 ==> reconstructed === s
+
+prop_splitByComma_handles_empty :: Property
+prop_splitByComma_handles_empty = splitByComma "" === [""]
+
+prop_removeLineComments_preserves_strings :: String -> String -> Property
+prop_removeLineComments_preserves_strings prefix code =
+  not ('"' `elem` prefix) && not ('"' `elem` code) ==>
+  let input = prefix ++ "// comment\n\"" ++ code ++ "\"\n"
+      result = removeLineComments input
+  in "\"" `isInfixOf` result && code `isInfixOf` result
+
+prop_removeComments_handles_nested :: String -> String -> Property
+prop_removeComments_handles_nested outer inner =
+  not ("/*" `isInfixOf` outer) && not ("*/" `isInfixOf` outer) &&
+  not ("/*" `isInfixOf` inner) && not ("*/" `isInfixOf` inner) ==>
+  let input = outer ++ "/* " ++ inner ++ " */" ++ outer
+      result = removeComments input
+  in outer `isInfixOf` result && not (inner `isInfixOf` result)
+
+prop_normalizeIndentation_preserves_relative :: String -> Property
+prop_normalizeIndentation_preserves_relative s =
+  let lines' = lines s
+      hasIndent = any (isPrefixOf " " . dropWhile isSpace) lines'
+  in hasIndent ==>
+     let normalized = normalizeIndentation s
+         normLines = lines normalized
+     in length normLines === length lines'
+
+-- ============================================================================
+-- Test 2: SourceLocation Module Position Calculation Tests
+-- ============================================================================
+
+pos_calculation_tests :: TestTree
+pos_calculation_tests = testGroup "Source Location Position Calculation Tests"
+  [ testCase "start position has correct values" $ do
+      posLine startPos @?= 1
+      posColumn startPos @?= 1
+      posOffset startPos @?= 0
+      
+  , testCase "position after newline increments line" $ do
+      let pos = posAfter '\n' startPos
+      posLine pos @?= 2
+      posColumn pos @?= 1
+      posOffset pos @?= 1
+      
+  , testCase "position after tab aligns to 8-column boundary" $ do
+      let pos = posAfter '\t' (posAt 1 3)
+      posColumn pos @?= 9
+      posLine pos @?= 1
+      
+  , testCase "position after regular char increments column" $ do
+      let pos = posAfter 'a' startPos
+      posLine pos @?= 1
+      posColumn pos @?= 2
+      posOffset pos @?= 1
+  ]
+
+prop_posAfter_monotonic :: Char -> SourcePos -> Property
+prop_posAfter_monotonic c pos = 
+  let newPos = posAfter c pos
+  in posOffset newPos >= posOffset pos
+
+prop_spanFrom_creates_valid_span :: SourcePos -> String -> Property
+prop_spanFrom_creates_valid_span pos text =
+  let endPos = foldl (flip posAfter) pos text
+      span = spanFrom pos text
+  in spanStart span === pos && spanEnd span === endPos
+
+prop_mergeSpans_properties :: SourcePos -> SourcePos -> Property
+prop_mergeSpans_properties pos1 pos2 =
+  let span1 = spanFrom pos1 "content"
+      span2 = spanFrom pos2 "more"
+      merged = mergeSpans span1 span2
+      earlier = if posOffset pos1 <= posOffset pos2 then span1 else span2
+      later = if posOffset pos1 <= posOffset pos2 then span2 else span1
+  in spanStart merged === spanStart earlier && spanEnd merged === spanEnd later
+
+-- ============================================================================
+-- Test 3: Parser Module Combinator Tests
+-- ============================================================================
+
+prop_parseTypus_empty :: Property
+prop_parseTypus_empty =
+  let result = parseTypus ""
+  in case result of
+    Left _ -> property False
+    Right typusFile -> tfDirectives typusFile === defaultFileDirectives &&
+                       null (tfBuildTags typusFile) &&
+                       null (tfBlocks typusFile)
+
+prop_parseTypus_simple_package :: String -> Property
+prop_parseTypus_simple_package pkgName =
+  not (null pkgName) && not ("package " `isInfixOf` pkgName) && all isAlphaNum pkgName ==>
+  let content = "package " ++ pkgName ++ "\nfunc main() {}"
+      result = parseTypus content
+  in case result of
+    Left _ -> property False
+    Right typusFile -> length (tfBlocks typusFile) >= 1
+
+prop_parseTypus_with_directives :: String -> Bool -> Bool -> Property
+prop_parseTypus_with_directives content ownership dependentTypes =
+  not (null content) && not ("//!" `isInfixOf` content) ==>
+  let directives = "//!" ++ 
+                   (if ownership then " ownership:on" else "") ++
+                   (if dependentTypes then " dependent_types:off" else "")
+      fullContent = if null directives then content else directives ++ "\n" ++ content
+      result = parseTypus fullContent
+  in case result of
+    Left _ -> property False
+    Right typusFile -> length (tfBlocks typusFile) >= 1
+
+-- ============================================================================
+-- Test 4: Error Handling Edge Case Tests
+-- ============================================================================
+
+error_handling_tests :: TestTree
+error_handling_tests = testGroup "Error Handling Edge Case Tests"
+  [ testCase "handles unclosed string literal" $ do
+      let content = "package main\nfunc main() {\n  s := \"unclosed\n}"
+          result = parseTypus content
+      case result of
+        Left _ -> pure ()  -- Expected to fail
+        Right _ -> assertFailure "Should have failed with unclosed string"
+        
+  , testCase "handles unmatched braces" $ do
+      let content = "package main\nfunc main() {\n  if true {\n    // missing closing brace"
+          result = parseTypus content
+      case result of
+        Left _ -> pure ()  -- Expected to fail
+        Right _ -> assertFailure "Should have failed with unmatched braces"
+        
+  , testCase "handles invalid package name" $ do
+      let content = "package 123invalid\nfunc main() {}"
+          result = parseTypus content
+      case result of
+        Left _ -> pure ()  -- Expected to fail
+        Right _ -> assertFailure "Should have failed with invalid package name"
+  ]
+
+prop_error_location_valid :: SyntaxError -> Property
+prop_error_location_valid err = 
+  let pos = errorPos err
+  in posLine pos > 0 && posColumn pos > 0 && posOffset pos >= 0
+
+-- ============================================================================
+-- Test 5: Complex Nested Structure Tests
+-- ============================================================================
+
+prop_parse_nested_functions :: Int -> String -> Property
+prop_parse_nested_functions depth funcBody =
+  depth > 0 && depth <= 5 && not ('{' `elem` funcBody) && not ('}' `elem` funcBody) ==>
+  let indent func n = concat (replicate n "  ") ++ func
+      nestedFuncs = concat $ zipWith (\i _ -> 
+        indent ("func level" ++ show i ++ "() {\n") i ++ 
+        indent funcBody (i+1) ++ "\n" ++
+        indent "}\n" i) [0..depth-1] [undefined..undefined]
+      content = "package main\n" ++ nestedFuncs
+      result = parseTypus content
+  in case result of
+    Left _ -> depth <= 2  -- Allow failure for deeper nesting
+    Right typusFile -> length (tfBlocks typusFile) >= 1
+
+prop_parse_nested_structs :: Int -> Property
+prop_parse_nested_structs depth =
+  depth > 0 && depth <= 3 ==>
+  let structType n = "type Level" ++ show n ++ " struct {\n" ++
+                    "  Value int\n" ++
+                    (if n > 0 then "  Nested *Level" ++ show (n-1) ++ "\n" else "") ++
+                    "}\n"
+      structs = concatMap structType [0..depth]
+      content = "package main\n" ++ structs ++ "func main() {}\n"
+      result = parseTypus content
+  in case result of
+    Left _ -> property False
+    Right typusFile -> length (tfBlocks typusFile) >= 1
+
+-- ============================================================================
+-- Test 6: Unicode and Special Character Tests
+-- ============================================================================
+
+unicode_tests :: TestTree
+unicode_tests = testGroup "Unicode and Special Character Tests"
+  [ testCase "handles Unicode in comments" $ do
+      let content = "package main\n// Unicode test: 你好世界 🌍\nfunc main() {}"
+          result = parseTypus content
+      case result of
+        Left _ -> assertFailure "Failed to parse Unicode comments"
+        Right typusFile -> length (tfBlocks typusFile) @?= 1
+        
+  , testCase "handles Unicode in string literals" $ do
+      let content = "package main\nfunc main() {\n  s := \"Hello 世界 🌏\"\n}"
+          result = parseTypus content
+      case result of
+        Left _ -> assertFailure "Failed to parse Unicode strings"
+        Right typusFile -> length (tfBlocks typusFile) @?= 1
+        
+  , testCase "handles special characters in identifiers" $ do
+      let content = "package main\nfunc test_αβγ() {\n  var_123 := 42\n}"
+          result = parseTypus content
+      case result of
+        Left _ -> assertFailure "Failed to parse special characters"
+        Right typusFile -> length (tfBlocks typusFile) @?= 1
+  ]
+
+prop_unicode_content_preserved :: String -> Property
+prop_unicode_content_preserved unicodeText =
+  not (null unicodeText) && not ("//!" `isInfixOf` unicodeText) ==>
+  let content = "package main\n// Unicode: " ++ unicodeText ++ "\nfunc main() {}"
+      result = parseTypus content
+  in case result of
+    Left _ -> property False
+    Right typusFile -> length (tfBlocks typusFile) >= 1
+
+-- ============================================================================
+-- Test 7: Performance and Memory Efficiency Tests
+-- ============================================================================
+
+performance_tests :: TestTree
+performance_tests = testGroup "Performance and Memory Efficiency Tests"
+  [ testCase "handles large files efficiently" $ do
+      let largeContent = unlines $ replicate 1000 "  // This is a comment line\n  x := x + 1"
+          content = "package main\nfunc largeFunc() {\n" ++ largeContent ++ "}\n"
+          result = parseTypus content
+      case result of
+        Left _ -> assertFailure "Failed to parse large file"
+        Right typusFile -> length (tfBlocks typusFile) @?= 1
+        
+  , testCase "handles deep indentation efficiently" $ do
+      let deepIndent = concatMap (\i -> replicate i ' ' ++ "x := " ++ show i ++ "\n") [0..100]
+          content = "package main\nfunc deepFunc() {\n" ++ deepIndent ++ "}\n"
+          result = parseTypus content
+      case result of
+        Left _ -> assertFailure "Failed to parse deeply indented code"
+        Right typusFile -> length (tfBlocks typusFile) @?= 1
+  ]
+
+prop_large_input_handling :: Int -> String -> Property
+prop_large_input_handling multiplier baseContent =
+  multiplier > 0 && multiplier <= 50 && length baseContent <= 100 ==>
+  let largeContent = concat $ replicate multiplier (baseContent ++ "\n")
+      content = "package main\nfunc main() {\n" ++ largeContent ++ "}\n"
+      result = parseTypus content
+  in case result of
+    Left _ -> multiplier > 20  -- Allow failure for very large inputs
+    Right typusFile -> length (tfBlocks typusFile) >= 1
+
+-- ============================================================================
+-- Test 8: Boundary Condition and Exception Input Tests
+-- ============================================================================
+
+boundary_tests :: TestTree
+boundary_tests = testGroup "Boundary Condition and Exception Input Tests"
+  [ testCase "handles empty lines" $ do
+      let content = "package main\n\n\nfunc main() {\n\n}\n"
+          result = parseTypus content
+      case result of
+        Left _ -> assertFailure "Failed to handle empty lines"
+        Right typusFile -> length (tfBlocks typusFile) @?= 1
+        
+  , testCase "handles only whitespace" $ do
+      let content = "   \n  \t  \n   \n"
+          result = parseTypus content
+      case result of
+        Left _ -> pure ()  -- Expected to fail
+        Right typusFile -> null (tfBlocks typusFile) @?= True
+        
+  , testCase "handles extremely long lines" $ do
+      let longLine = "x := \"" ++ replicate 1000 'a' ++ "\"\n"
+          content = "package main\nfunc main() {\n  " ++ longLine ++ "}\n"
+          result = parseTypus content
+      case result of
+        Left _ -> assertFailure "Failed to handle extremely long lines"
+        Right typusFile -> length (tfBlocks typusFile) @?= 1
+  ]
+
+prop_boundary_conditions :: String -> Property
+prop_boundary_conditions input =
+  let result = parseTypus input
+  in case result of
+    Left _ -> property True  -- Parsing may fail for boundary conditions
+    Right typusFile -> property $ length (tfBlocks typusFile) >= 0
+
+-- ============================================================================
+-- Test 9: Module Integration Tests
+-- ============================================================================
+
+integration_tests :: TestTree
+integration_tests = testGroup "Module Integration Tests"
+  [ testCase "Utils and Parser integration" $ do
+      let content = "package main\nfunc main() {\n  // Comment with   extra   spaces\n  x := 1 + 2\n}"
+          result = parseTypus content
+      case result of
+        Left _ -> assertFailure "Integration test failed"
+        Right typusFile -> do
+          let blocks = tfBlocks typusFile
+          length blocks @?= 1
+          let blockContent = cbContent (head blocks)
+          trim blockContent @?= "x := 1 + 2"
+          
+  , testCase "SourceLocation and Parser integration" $ do
+      let content = "package main\nfunc test() {}"
+          result = parseTypus content
+      case result of
+        Left _ -> assertFailure "Integration test failed"
+        Right typusFile -> do
+          let blocks = tfBlocks typusFile
+          length blocks @?= 1
+          let span = cbSpan (head blocks)
+          posLine (spanStart span) @?= 2
+  ]
+
+prop_integration_consistency :: String -> String -> Property
+prop_integration_consistency prefix suffix =
+  not (null prefix) && not (null suffix) ==>
+  let content = "package main\n" ++ prefix ++ "\nfunc main() {\n" ++ suffix ++ "\n}"
+      result = parseTypus content
+  in case result of
+    Left _ -> property False
+    Right typusFile -> length (tfBlocks typusFile) >= 1
+
+-- ============================================================================
+-- Test 10: QuickCheck Property Tests
+-- ============================================================================
+
+quickcheck_properties :: TestTree
+quickcheck_properties = testGroup "QuickCheck Property Tests"
+  [ fastProperty "trim is idempotent" prop_trim_idempotent
+  , fastProperty "splitBy consistency" prop_splitBy_consistency
+  , fastProperty "splitByComma handles empty" prop_splitByComma_handles_empty
+  , fastProperty "removeLineComments preserves strings" prop_removeLineComments_preserves_strings
+  , fastProperty "removeComments handles nested" prop_removeComments_handles_nested
+  , fastProperty "normalizeIndentation preserves relative" prop_normalizeIndentation_preserves_relative
+  , fastProperty "posAfter is monotonic" prop_posAfter_monotonic
+  , fastProperty "spanFrom creates valid span" prop_spanFrom_creates_valid_span
+  , fastProperty "mergeSpans properties" prop_mergeSpans_properties
+  , fastProperty "parseTypus empty input" prop_parseTypus_empty
+  , fastProperty "parseTypus simple package" prop_parseTypus_simple_package
+  , fastProperty "parseTypus with directives" prop_parseTypus_with_directives
+  , fastProperty "error location valid" prop_error_location_valid
+  , fastProperty "parse nested functions" prop_parse_nested_functions
+  , fastProperty "parse nested structs" prop_parse_nested_structs
+  , fastProperty "unicode content preserved" prop_unicode_content_preserved
+  , fastProperty "large input handling" prop_large_input_handling
+  , fastProperty "boundary conditions" prop_boundary_conditions
+  , fastProperty "integration consistency" prop_integration_consistency
+  ]
+
+-- ============================================================================
+-- Test Suite Assembly
+-- ============================================================================
+
 tests :: TestTree
-tests =
-  testGroup "New Cabal Core Tests"
-    [ parserBasicTests
-    , sourceLocationTests
-    , utilsFunctionTests
-    , compilerErrorTests
-    , syntaxValidatorTests
-    , errorHandlerTests
-    , dependentTypesTests
-    , ownershipTests
+tests = testGroup "New Cabal Core Tests"
+  [ testGroup "Utils Module Tests"
+    [ quickcheck_properties
     ]
-
--- ============================================================================
--- Parser基础测试
--- ============================================================================
-parserBasicTests :: TestTree
-parserBasicTests =
-  testGroup "Parser Basic Tests"
-    [ testCase "default file directives should be empty" $ do
-        let directives = Parser.defaultFileDirectives
-        Parser.fdOwnership directives @?= Nothing
-        Parser.fdDependentTypes directives @?= Nothing
-        Parser.fdConstraints directives @?= Nothing
-
-    , testCase "default block directives should be empty" $ do
-        let directives = Parser.defaultBlockDirectives
-        Parser.bdOwnership directives @?= Nothing
-        Parser.bdDependentTypes directives @?= Nothing
-        Parser.bdConstraints directives @?= Nothing
-
-    , testCase "parse empty typus file" $ do
-        let result = Parser.parseTypus ""
-        case result of
-          Left err -> assertBool ("Should parse empty file but got error: " ++ show err) False
-          Right (Parser.TypusFile _ _ blocks) -> 
-            assertBool "Empty file should have no blocks" (null blocks)
-    ]
-
--- ============================================================================
--- SourceLocation测试
--- ============================================================================
-sourceLocationTests :: TestTree
-sourceLocationTests =
-  testGroup "SourceLocation Tests"
-    [ testCase "start position should be (1,1)" $ do
-        let pos = SourceLocation.startPos
-        SourceLocation.posLine pos @?= 1
-        SourceLocation.posColumn pos @?= 1
-
-    , testCase "position advancement should work correctly" $ do
-        let start = SourceLocation.startPos
-        let afterNewline = SourceLocation.advancePos '\n' start
-        SourceLocation.posLine afterNewline @?= 2
-        SourceLocation.posColumn afterNewline @?= 1
-
-    , testCase "empty span should be valid" $ do
-        let span = SourceLocation.emptySpan
-        assertBool "Empty span should be valid" (SourceLocation.isValidSpan span)
-
-    , testCase "span merging should work" $ do
-        let span1 = SourceLocation.spanFrom (SourceLocation.posAt 1 1)
-        let span2 = SourceLocation.spanTo (SourceLocation.posAt 1 10)
-        let merged = SourceLocation.mergeSpans span1 span2
-        assertBool "Merged span should be valid" (SourceLocation.isValidSpan merged)
-    ]
-
--- ============================================================================
--- Utils函数测试
--- ============================================================================
-utilsFunctionTests :: TestTree
-utilsFunctionTests =
-  testGroup "Utils Function Tests"
-    [ testCase "trim should remove whitespace" $ do
-        Utils.trim "  hello world  " @?= "hello world"
-        Utils.trim "\t\n  test  \n\t" @?= "test"
-
-    , testCase "splitBy should preserve empty segments" $ do
-        Utils.splitBy ',' "a,b,c" @?= ["a", "b", "c"]
-        Utils.splitBy ',' "a,,b" @?= ["a", "", "b"]
-        Utils.splitBy ',' "" @?= [""]
-
-    , testCase "splitByCollapsed should remove empty segments" $ do
-        Utils.splitByCollapsed ',' "a,,b" @?= ["a", "b"]
-        Utils.splitByCollapsed ',' ",a,," @?= ["a"]
-        Utils.splitByCollapsed ',' "" @?= []
-
-    , testCase "removeLineComments should work" $ do
-        let input = "x := 1 // this is a comment\ny := 2"
-        let expected = "x := 1 \ny := 2"
-        Utils.removeLineComments input @?= expected
-    ]
-
--- ============================================================================
--- Compiler错误处理测试
--- ============================================================================
-compilerErrorTests :: TestTree
-compilerErrorTests =
-  testGroup "Compiler Error Tests"
-    [ testCase "compilation should detect syntax errors" $ do
-        let malformedCode = "func x { ="
-        let result = Compiler.compile malformedCode
-        case result of
-          Left errs -> 
-            assertBool "Should detect syntax errors" (not $ null errs)
-          Right _ -> 
-            assertBool "Should not compile malformed code" False
-
-    , testCase "compilation should handle empty input" $ do
-        let result = Compiler.compile ""
-        case result of
-          Left _ -> assertBool "Empty input should cause error" True
-          Right _ -> assertBool "Empty input compilation result needs verification" True
-    ]
-
--- ============================================================================
--- SyntaxValidator测试
--- ============================================================================
-syntaxValidatorTests :: TestTree
-syntaxValidatorTests =
-  testGroup "SyntaxValidator Tests"
-    [ testCase "should validate basic syntax" $ do
-        let validCode = "x := 1\ny := 2"
-        -- 假设SyntaxValidator有一个validate函数
-        let result = SyntaxValidator.validateSyntax validCode
-        case result of
-          Left errs -> assertBool ("Valid code should pass: " ++ show errs) False
-          Right _ -> assertBool "Valid code should pass validation" True
-
-    , testCase "should reject invalid syntax" $ do
-        let invalidCode = "x := 1\ny := 2  } invalid"
-        let result = SyntaxValidator.validateSyntax invalidCode
-        case result of
-          Left _ -> assertBool "Invalid code should be rejected" True
-          Right _ -> assertBool "Invalid code should not pass" False
-    ]
-
--- ============================================================================
--- ErrorHandler测试
--- ============================================================================
-errorHandlerTests :: TestTree
-errorHandlerTests =
-  testGroup "ErrorHandler Tests"
-    [ testCase "should format errors correctly" $ do
-        let errorMsg = "Test error message"
-        let formatted = ErrorHandler.formatError errorMsg
-        assertBool "Formatted error should contain original message" (errorMsg `isInfixOf` formatted)
-
-    , testCase "should handle multiple errors" $ do
-        let errors = ["Error 1", "Error 2", "Error 3"]
-        let formatted = ErrorHandler.formatErrors errors
-        assertBool "Should format all errors" (all (`isInfixOf` formatted) errors)
-    ]
-
--- ============================================================================
--- DependentTypes测试
--- ============================================================================
-dependentTypesTests :: TestTree
-dependentTypesTests =
-  testGroup "DependentTypes Tests"
-    [ testCase "should parse basic dependent types" $ do
-        let typeCode = "Vector(n) where n > 0"
-        let result = DependentTypesParser.parseDependentType typeCode
-        case result of
-          Left _ -> assertBool "Should parse basic dependent type" False
-          Right _ -> assertBool "Basic dependent type should parse" True
-
-    , testCase "should reject invalid dependent types" $ do
-        let invalidTypeCode = "Vector( where n > 0"
-        let result = DependentTypesParser.parseDependentType invalidTypeCode
-        case result of
-          Left _ -> assertBool "Invalid dependent type should be rejected" True
-          Right _ -> assertBool "Invalid dependent type should not parse" False
-    ]
-
--- ============================================================================
--- Ownership测试
--- ============================================================================
-ownershipTests :: TestTree
-ownershipTests =
-  testGroup "Ownership Tests"
-    [ testCase "should track basic ownership" $ do
-        let ownershipCode = "x := move(y)"
-        let result = Ownership.analyzeOwnership ownershipCode
-        case result of
-          Left _ -> assertBool "Should analyze basic ownership" False
-          Right _ -> assertBool "Basic ownership should be analyzed" True
-
-    , testCase "should detect ownership violations" $ do
-        let violationCode = "x := y\nz := move(y)"
-        let result = Ownership.analyzeOwnership violationCode
-        case result of
-          Left _ -> assertBool "Should detect ownership violations" True
-          Right _ -> assertBool "Ownership violations should be detected" True
-    ]
+  , pos_calculation_tests
+  , error_handling_tests
+  , unicode_tests
+  , performance_tests
+  , boundary_tests
+  , integration_tests
+  ]

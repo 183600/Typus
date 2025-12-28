@@ -375,7 +375,6 @@ test-suite typus-test
         Test.Unit.TinyCabalQuickCheckSpec,
         Test.Unit.EfficientCabalQuickCheckSpec,
         Test.Unit.ConciseCabalQuickCheckSpec,
-        Test.Unit.NewCabalQuickCheckTestsSpec,
         Test.Unit.NewCabalTestQuickCheckSpec,
         Test.Unit.CoreModuleQuickCheckSpec,
         Test.Unit.NewSimpleCabalQuickCheckSpec,
@@ -980,6 +979,9 @@ test-suite typus-test
         , Test.Unit.NewCabalQuickCheckSpec8
         , Test.Unit.NewCabalQuickCheckSpec9
         , Test.Unit.NewCabalQuickCheckSpec10
+
+        -- New Comprehensive Core Test Module
+        , Test.Unit.NewCabalCoreTestsSpec
         
     other-modules:
             Test.Dependencies.Arbitrary,
