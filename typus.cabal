@@ -448,6 +448,7 @@ test-suite typus-test
         Test.Unit.NewSyntaxValidatorQuickCheckSpec,
         Test.Unit.NewGoToolchainQuickCheckSpec,
         Test.Unit.SimpleCoreTestSpec,
+        Test.Unit.NewCabalQuickCheckTestSuite,
 
         -- New comprehensive QuickCheck test modules added for enhanced coverage
         Test.Unit.CompilerErrorRecoveryQuickCheckSpec,
