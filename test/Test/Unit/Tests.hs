@@ -88,6 +88,20 @@ import qualified Test.Unit.NewSyntaxValidatorBoundarySpec
 import qualified Test.Unit.NewCabalCoreTestsSpec
 import qualified Test.Unit.NewCabalQuickCheckPropertiesSpec
 
+-- ============================================================================
+-- New Cabal Test Modules (2025) - 10 Comprehensive QuickCheck Tests
+-- ============================================================================
+import qualified Test.Unit.UtilsStringBoundaryQuickCheckSpec
+import qualified Test.Unit.SourceLocationMathQuickCheckSpec
+import qualified Test.Unit.ParserDirectiveQuickCheckSpec
+import qualified Test.Unit.ErrorHandlingConsistencyQuickCheckSpec
+import qualified Test.Unit.CompilerIRConsistencyQuickCheckSpec
+import qualified Test.Unit.OwnershipTransitivityQuickCheckSpec
+import qualified Test.Unit.DependentTypeBoundaryQuickCheckSpec
+import qualified Test.Unit.SyntaxValidatorRobustnessQuickCheckSpec
+import qualified Test.Unit.IntegrationEndToEndQuickCheckSpec
+import qualified Test.Unit.PerformanceRegressionQuickCheckSpec
+
 -- New Comprehensive Test Modules (2025)
 import qualified Test.Unit.StringAnalysisSpec
 import qualified Test.Unit.CompilerOptimizationSpec
@@ -2514,5 +2528,21 @@ tests =
   , testGroup "New Cabal Test Modules - Core Functionality"
     [ Test.Unit.NewCabalCoreTestsSpec.tests
     , Test.Unit.NewCabalQuickCheckPropertiesSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Cabal Test Modules (2025) - 10 Comprehensive QuickCheck Tests
+  -- ============================================================================
+  , testGroup "New Cabal Test Modules - Comprehensive QuickCheck Testing"
+    [ Test.Unit.UtilsStringBoundaryQuickCheckSpec.tests
+    , Test.Unit.SourceLocationMathQuickCheckSpec.tests
+    , Test.Unit.ParserDirectiveQuickCheckSpec.tests
+    , Test.Unit.ErrorHandlingConsistencyQuickCheckSpec.tests
+    , Test.Unit.CompilerIRConsistencyQuickCheckSpec.tests
+    , Test.Unit.OwnershipTransitivityQuickCheckSpec.tests
+    , Test.Unit.DependentTypeBoundaryQuickCheckSpec.tests
+    , Test.Unit.SyntaxValidatorRobustnessQuickCheckSpec.tests
+    , Test.Unit.IntegrationEndToEndQuickCheckSpec.tests
+    , Test.Unit.PerformanceRegressionQuickCheckSpec.tests
     ]
   ]

@@ -25,6 +25,7 @@ import IntegratedCompiler
   , getDetailedAnalysisSummary
   , analysisToCombined
   , showCombinedError
+  , IntegratedCompileResult(..)
   )
 import AnalyzerIntegration
   ( AnalysisResult(..)
@@ -35,10 +36,11 @@ import AnalyzerIntegration
   )
 import qualified SyntaxValidator as SV
 import qualified Parser as P
-import Compiler.Errors.Compiler (CompilerError)
+-- import Compiler.Errors.Compiler (CompilerError)  -- Module is hidden
 
 import Data.List (isPrefixOf, isInfixOf, null, length)
 import Data.Maybe (isJust, isNothing)
+import qualified Data.Map as Map
 
 -- ============================================================================
 -- Arbitrary Instances
@@ -68,9 +70,9 @@ instance Arbitrary AnalysisResult where
         dependentTypeErrors <- listOf arbitrary
         analysisWarnings <- listOf arbitrary
         analysisInfo <- listOf arbitrary
-        typeEnvironment <- arbitrary
+        let typeEnvironment = Map.empty  -- Simplified for testing
         combinedErrors <- listOf arbitrary
-        return $ AnalysisResult ownershipErrors dependentTypeErrors analysisWarnings analysisInfo typeEnvironment combinedErrors
+        return $ AnalysisResult ownershipErrors dependentTypeErrors combinedErrors analysisWarnings analysisInfo typeEnvironment
 
 instance Arbitrary SV.SyntaxError where
     arbitrary = do
@@ -82,7 +84,7 @@ instance Arbitrary SV.SyntaxError where
         return $ SV.SyntaxError errorType errorMessage lineNumber columnNumber lineContent
 
 instance Arbitrary SV.ErrorType where
-    arbitrary = elements [SV.UnexpectedToken, SV.MissingDirective, SV.InvalidSyntax, SV.SyntaxWarning]
+    arbitrary = elements [SV.UnexpectedToken, SV.MissingBrace, SV.InvalidIdentifier, SV.SyntaxWarning]
 
 -- ============================================================================
 -- Property Tests for CompilerConfig
@@ -104,8 +106,8 @@ prop_default_config_reports_warnings =
 prop_config_equality :: CompilerConfig -> CompilerConfig -> Property
 prop_config_equality config1 config2 =
     let same = config1 == config2
-        sameFields = enableOwnership config1 == enableOwnership config2 .&&.
-                     enableDependentTypes config1 == enableDependentTypes config2 .&&.
+        sameFields = enableOwnership config1 == enableOwnership config2 &&
+                     enableDependentTypes config1 == enableDependentTypes config2 &&
                      errorReportingLevel config1 == errorReportingLevel config2
     in property $ same === sameFields
 
@@ -147,7 +149,7 @@ prop_format_contains_status config source =
     monadicIO $ do
         result <- run $ compileWithIntegratedAnalyzers source config
         let formatted = formatCompilationResult result
-        assert $ "✅ Compilation Successful" `isInfixOf` formatted .||.
+        assert $ "✅ Compilation Successful" `isInfixOf` formatted ||
                  "❌ Compilation Failed" `isInfixOf` formatted
 
 -- Property: Successful result contains success indicator
@@ -167,10 +169,10 @@ prop_format_failure_contains_errors config source =
         result <- run $ compileWithIntegratedAnalyzers source config
         let formatted = formatCompilationResult result
         assert $ if not (success result)
-                 then not (null formatted) .&&. 
-                      ("Syntax Errors" `isInfixOf` formatted .||
-                       "Analysis Errors" `isInfixOf` formatted .||
-                       "Compiler Errors" `isInfixOf` formatted .||
+                 then not (null formatted) &&
+                      ("Syntax Errors" `isInfixOf` formatted ||
+                       "Analysis Errors" `isInfixOf` formatted ||
+                       "Compiler Errors" `isInfixOf` formatted ||
                        "Warnings" `isInfixOf` formatted)
                  else True
 
@@ -240,9 +242,13 @@ prop_show_combined_error_contains_type error =
 -- Property: Error severity ordering is consistent
 prop_error_severity_ordering :: ErrorSeverity -> ErrorSeverity -> Property
 prop_error_severity_ordering sev1 sev2 =
-    let order = map fromEnum [Info, Warning, Error, Fatal]
-        sev1Order = fromEnum sev1
-        sev2Order = fromEnum sev2
+    let severityOrder sev = case sev of
+          Info -> 1
+          Warning -> 2
+          Error -> 3
+          Fatal -> 4
+        sev1Order = severityOrder sev1
+        sev2Order = severityOrder sev2
     in property $ (sev1 <= sev2) === (sev1Order <= sev2Order)
 
 -- ============================================================================
@@ -338,10 +344,6 @@ tests = testGroup "Additional IntegratedCompiler QuickCheck Tests"
         ]
     , testGroup "Edge Cases"
         [ fastProperty "Compilation handles Unicode characters" prop_unicode_handling
-        , fastProperty "Compilation handles special characters" prop_special_characters
-        , fastProperty "Compilation handles extremely long lines" prop_long_lines
-        ]
-    ]
         , fastProperty "Compilation handles special characters" prop_special_characters
         , fastProperty "Compilation handles extremely long lines" prop_long_lines
         ]

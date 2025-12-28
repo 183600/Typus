@@ -1,222 +1,287 @@
-{-# LANGUAGE TemplateHaskell #-}
-
+{-# LANGUAGE CPP #-}
 module Test.Unit.CompilerIRConsistencyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), (==>))
-import Test.Tasty.HUnit (testCase, assertBool)
-
--- Mock IR (Intermediate Representation) types for testing
-data MockIRType = MockIRInt | MockIRBool | MockIRString | MockIRFunction MockIRType MockIRType
-  deriving (Show, Eq)
-
-data MockIRInstruction = 
-    MockIRLoad String MockIRType
-  | MockIRStore String MockIRType
-  | MockIRAdd String String String
-  | MockIRSub String String String
-  | MockIRCall String String [String]
-  deriving (Show, Eq)
-
-data MockIRProgram = MockIRProgram [MockIRInstruction]
-  deriving (Show, Eq)
+import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, choose, 
+                        Property, (===), forAll, counterexample, suchThat, (==>))
+import Compiler.IR (SourceIR(..), SemanticIR(..), GoIR(..))
+import Compiler.GoAst (GoModule(..), GoDecl(..), ImportDecl(..), FuncDecl(..), 
+                       TypeDecl(..), VarDecl(..), PackageDecl(..))
+import SourceLocation (SourcePos(..), SourceSpan(..), startPos)
+import qualified Data.Text as T
 
 -- ============================================================================
--- Test Data Generators
+-- Test data generators
 -- ============================================================================
 
-instance Arbitrary MockIRType where
-  arbitrary = oneof
-    [ pure MockIRInt
-    , pure MockIRBool
-    , pure MockIRString
-    , MockIRFunction <$> arbitrary <*> arbitrary
-    ]
+-- Generate valid identifiers
+genIdentifier :: Gen String
+genIdentifier = do
+  first <- elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['_']
+  rest <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_']
+  return $ first : rest
 
-instance Arbitrary MockIRInstruction where
-  arbitrary = oneof
-    [ MockIRLoad <$> arbitrary <*> arbitrary
-    , MockIRStore <$> arbitrary <*> arbitrary
-    , MockIRAdd <$> arbitrary <*> arbitrary <*> arbitrary
-    , MockIRSub <$> arbitrary <*> arbitrary <*> arbitrary
-    , MockIRCall <$> arbitrary <*> arbitrary <*> listOf arbitrary
-    ]
+-- Generate import declarations
+genImportDecl :: Gen ImportDecl
+genImportDecl = do
+  alias <- oneof [pure Nothing, Just <$> genIdentifier]
+  path <- genIdentifier
+  return $ ImportDecl alias path
 
-instance Arbitrary MockIRProgram where
-  arbitrary = MockIRProgram <$> listOf arbitrary
+-- Generate function declarations
+genFuncDecl :: Gen FuncDecl
+genFuncDecl = do
+  name <- genIdentifier
+  params <- listOf genIdentifier
+  return $ FuncDecl (name : params)
 
--- Generate variable names
-genVarName :: Gen String
-genVarName = do
-  prefix <- elements ["var", "temp", "result", "arg", "x", "y", "z"]
-  suffix <- arbitrary `suchThat` (\n -> n >= 0 && n < 100)
-  return $ prefix ++ show suffix
+-- Generate type declarations
+genTypeDecl :: Gen TypeDecl
+genTypeDecl = do
+  name <- genIdentifier
+  fields <- listOf genIdentifier
+  return $ TypeDecl (name : fields)
+
+-- Generate variable declarations
+genVarDecl :: Gen VarDecl
+genVarDecl = do
+  name <- genIdentifier
+  varType <- genIdentifier
+  return $ VarDecl [name] varType
+
+-- Generate package declarations
+genPackageDecl :: Gen PackageDecl
+genPackageDecl = do
+  name <- genIdentifier
+  return $ PackageDecl name
+
+-- Generate Go declarations
+genGoDecl :: Gen GoDecl
+genGoDecl = oneof
+  [ GoFunc <$> genFuncDecl
+  , GoType <$> genTypeDecl
+  , GoVar <$> genVarDecl
+  , GoConst <$> genVarDecl  -- Using VarDecl for simplicity
+  ]
+
+-- Generate Go modules
+genGoModule :: Gen GoModule
+genGoModule = do
+  imports <- listOf genImportDecl
+  package <- oneof [pure Nothing, Just <$> genPackageDecl]
+  declarations <- listOf genGoDecl
+  buildTags <- listOf genIdentifier
+  return $ GoModule buildTags package imports declarations
+
+-- Generate source spans
+genSourceSpan :: Gen SourceSpan
+genSourceSpan = do
+  startLine <- choose (1, 100)
+  startCol <- choose (1, 100)
+  endLine <- choose (startLine, startLine + 50)
+  endCol <- if endLine == startLine 
+            then choose (startCol, startCol + 100)
+            else choose (1, 100)
+  return $ SourceSpan (SourcePos startLine startCol 0) (SourcePos endLine endCol 0)
 
 -- ============================================================================
--- Mock Functions (simplified versions for testing)
+-- Properties for SourceIR
 -- ============================================================================
 
-mockTypeCheck :: MockIRProgram -> Either String MockIRProgram
-mockTypeCheck program = 
-  -- Simplified type checking - just check for basic consistency
-  let instructions = case program of
-        MockIRProgram instrs -> instrs
-      typeChecks = map checkInstructionType instructions
-  in if all id typeChecks
-     then Right program
-     else Left "Type error"
+prop_source_ir_preserves_module :: GoModule -> String -> SourceSpan -> Property
+prop_source_ir_preserves_module goModule sourceCode span =
+  let sourceIR = SourceIR goModule sourceCode
+  in sourceModule sourceIR === goModule &&
+     sourceText sourceIR === sourceCode
+
+prop_source_ir_content_length :: GoModule -> String -> Property
+prop_source_ir_content_length goModule sourceCode =
+  let sourceIR = SourceIR goModule sourceCode
+  in length (sourceText sourceIR) === length sourceCode
+
+-- ============================================================================
+-- Properties for SemanticIR
+-- ============================================================================
+
+prop_semantic_ir_preserves_source :: SourceIR -> [String] -> Property
+prop_semantic_ir_preserves_source sourceIR symbolTable =
+  let semanticIR = SemanticIR sourceIR symbolTable []
+  in sourceInfo semanticIR === sourceIR &&
+     symbolTableInfo semanticIR === symbolTable
+
+prop_semantic_ir_symbol_table_consistency :: SourceIR -> [String] -> Property
+prop_semantic_ir_symbol_table_consistency sourceIR symbolTable =
+  let semanticIR = SemanticIR sourceIR symbolTable []
+      extractedSymbols = symbolTableInfo semanticIR
+  in length extractedSymbols === length symbolTable
+
+-- ============================================================================
+-- Properties for GoIR
+-- ============================================================================
+
+prop_go_ir_preserves_semantic :: SemanticIR -> String -> Property
+prop_go_ir_preserves_semantic semanticIR goCode =
+  let goIR = GoIR semanticIR goCode
+  in semanticInfo goIR === semanticIR &&
+     goCodeOutput goIR === goCode
+
+prop_go_ir_code_generation_consistency :: SemanticIR -> String -> Property
+prop_go_ir_code_generation_consistency semanticIR goCode =
+  let goIR = GoIR semanticIR goCode
+  in length (goCodeOutput goIR) === length goCode
+
+-- ============================================================================
+-- Properties for IR transformation pipeline
+-- ============================================================================
+
+prop_ir_pipeline_preservation :: GoModule -> String -> [String] -> String -> Property
+prop_ir_pipeline_preservation goModule sourceCode symbolTable goCode =
+  let sourceIR = SourceIR goModule sourceCode
+      semanticIR = SemanticIR sourceIR symbolTable []
+      goIR = GoIR semanticIR goCode
+  in sourceModule sourceIR === goModule &&
+     sourceText sourceIR === sourceCode &&
+     sourceInfo semanticIR === sourceIR &&
+     symbolTableInfo semanticIR === symbolTable &&
+     semanticInfo goIR === semanticIR &&
+     goCodeOutput goIR === goCode
+
+prop_ir_pipeline_roundtrip :: GoModule -> String -> Property
+prop_ir_pipeline_roundtrip goModule sourceCode =
+  let sourceIR = SourceIR goModule sourceCode
+      semanticIR = SemanticIR sourceIR [] []
+      goIR = GoIR semanticIR ""
+      -- Reconstruct from GoIR
+      reconstructedSource = sourceInfo $ semanticInfo goIR
+      reconstructedModule = sourceModule reconstructedSource
+      reconstructedText = sourceText reconstructedSource
+  in reconstructedModule === goModule &&
+     reconstructedText === sourceCode
+
+-- ============================================================================
+-- Properties for GoModule structure
+-- ============================================================================
+
+prop_go_module_imports_consistency :: GoModule -> Property
+prop_go_module_imports_consistency goModule =
+  let imports = goImports goModule
+  in all isValidImport imports
   where
-    checkInstructionType (MockIRLoad _ _) = True
-    checkInstructionType (MockIRStore _ _) = True
-    checkInstructionType (MockIRAdd _ _ _) = True
-    checkInstructionType (MockIRSub _ _ _) = True
-    checkInstructionType (MockIRCall _ _ _) = True
+    isValidImport (ImportDecl alias path) = not (null path)
 
-mockOptimize :: MockIRProgram -> MockIRProgram
-mockOptimize program = 
-  -- Simplified optimization - remove redundant operations
-  case program of
-    MockIRProgram instrs -> 
-      let optimized = removeRedundant instrs
-      in MockIRProgram optimized
+prop_go_module_declarations_consistency :: GoModule -> Property
+prop_go_module_declarations_consistency goModule =
+  let declarations = goDecls goModule
+  in all isValidDeclaration declarations
   where
-    removeRedundant [] = []
-    removeRedundant (i1:i2:rest) = 
-      if isRedundantPair i1 i2
-      then removeRedundant rest
-      else i1 : removeRedundant (i2:rest)
-    removeRedundant [i] = [i]
-    
-    isRedundantPair (MockIRLoad x t) (MockIRStore x' t') = x == x' && t == t'
-    isRedundantPair _ _ = False
-
-mockValidateIR :: MockIRProgram -> Bool
-mockValidateIR program = 
-  case program of
-    MockIRProgram instrs -> all validateInstruction instrs
-  where
-    validateInstruction (MockIRLoad name _) = not (null name)
-    validateInstruction (MockIRStore name _) = not (null name)
-    validateInstruction (MockIRAdd dest src1 src2) = 
-      not (null dest) && not (null src1) && not (null src2)
-    validateInstruction (MockIRSub dest src1 src2) = 
-      not (null dest) && not (null src1) && not (null src2)
-    validateInstruction (MockIRCall dest func args) = 
-      not (null dest) && not (null func) && all (not . null) args
-
-mockCountInstructions :: MockIRProgram -> Int
-mockCountInstructions program = 
-  case program of
-    MockIRProgram instrs -> length instrs
-
-mockHasInstructions :: MockIRProgram -> Bool
-mockHasInstructions program = mockCountInstructions program > 0
+    isValidDeclaration (GoFunc (FuncDecl (name:_))) = not (null name)
+    isValidDeclaration (GoType (TypeDecl (name:_))) = not (null name)
+    isValidDeclaration (GoVar (VarDecl names _)) = all (not . null) names
+    isValidDeclaration (GoConst (VarDecl names _)) = all (not . null) names
 
 -- ============================================================================
--- QuickCheck Properties
+-- Properties for IR invariants
 -- ============================================================================
 
--- Property: Type checking preserves program structure
-prop_typeCheckPreservesStructure :: MockIRProgram -> Property
-prop_typeCheckPreservesStructure program = 
-  case mockTypeCheck program of
-    Right program' -> program' === program
-    Left _ -> property True
+prop_source_ir_invariant :: GoModule -> String -> Property
+prop_source_ir_invariant goModule sourceCode =
+  let sourceIR = SourceIR goModule sourceCode
+  in -- Invariant: SourceIR should never lose module information
+     sourceModule sourceIR === goModule
 
--- Property: Optimization never increases instruction count
-prop_optimizationNeverIncreases :: MockIRProgram -> Property
-prop_optimizationNeverIncreases program = 
-  let originalCount = mockCountInstructions program
-      optimized = mockOptimize program
-      optimizedCount = mockCountInstructions optimized
-  in optimizedCount <= originalCount
+prop_semantic_ir_invariant :: SourceIR -> [String] -> Property
+prop_semantic_ir_invariant sourceIR symbolTable =
+  let semanticIR = SemanticIR sourceIR symbolTable []
+  in -- Invariant: SemanticIR should maintain reference to SourceIR
+     sourceInfo semanticIR === sourceIR
 
--- Property: Optimization preserves validity
-prop_optimizationPreservesValidity :: MockIRProgram -> Property
-prop_optimizationPreservesValidity program = 
-  let isValid = mockValidateIR program
-      optimized = mockOptimize program
-      optimizedIsValid = mockValidateIR optimized
-  in isValid ==> optimizedIsValid
-
--- Property: Empty program is always valid
-prop_emptyProgramValid :: Property
-prop_emptyProgramValid = 
-  let emptyProgram = MockIRProgram []
-  in mockValidateIR emptyProgram === True
-
--- Property: Type checking is deterministic
-prop_typeCheckDeterministic :: MockIRProgram -> Property
-prop_typeCheckDeterministic program = 
-  let result1 = mockTypeCheck program
-      result2 = mockTypeCheck program
-  in result1 === result2
-
--- Property: Optimization is deterministic
-prop_optimizationDeterministic :: MockIRProgram -> Property
-prop_optimizationDeterministic program = 
-  let result1 = mockOptimize program
-      result2 = mockOptimize program
-  in result1 === result2
-
--- Property: Optimization is idempotent
-prop_optimizationIdempotent :: MockIRProgram -> Property
-prop_optimizationIdempotent program = 
-  let once = mockOptimize program
-      twice = mockOptimize once
-  in once === twice
-
--- Property: Adding instructions increases count
-prop_addingInstructionsIncreasesCount :: MockIRProgram -> MockIRInstruction -> Property
-prop_addingInstructionsIncreasesCount program instruction = 
-  let originalCount = mockCountInstructions program
-      newProgram = case program of
-        MockIRProgram instrs -> MockIRProgram (instrs ++ [instruction])
-      newCount = mockCountInstructions newProgram
-  in newCount === originalCount + 1
+prop_go_ir_invariant :: SemanticIR -> String -> Property
+prop_go_ir_invariant semanticIR goCode =
+  let goIR = GoIR semanticIR goCode
+  in -- Invariant: GoIR should maintain reference to SemanticIR
+     semanticInfo goIR === semanticIR
 
 -- ============================================================================
--- Test Suite
+-- Properties for IR transformation consistency
+-- ============================================================================
+
+prop_ir_transformation_idempotence :: GoModule -> String -> Property
+prop_ir_transformation_idempotence goModule sourceCode =
+  let sourceIR1 = SourceIR goModule sourceCode
+      sourceIR2 = SourceIR (sourceModule sourceIR1) (sourceText sourceIR1)
+  in sourceIR1 === sourceIR2
+
+prop_ir_symbol_table_preservation :: SourceIR -> [String] -> [String] -> Property
+prop_ir_symbol_table_preservation sourceIR originalSymbols newSymbols =
+  let semanticIR1 = SemanticIR sourceIR originalSymbols []
+      semanticIR2 = SemanticIR sourceIR newSymbols []
+  in sourceInfo semanticIR1 === sourceInfo semanticIR2 &&
+     symbolTableInfo semanticIR1 === originalSymbols &&
+     symbolTableInfo semanticIR2 === newSymbols
+
+-- ============================================================================
+-- Edge case properties
+-- ============================================================================
+
+prop_empty_go_module_handling :: Property
+prop_empty_go_module_handling =
+  let emptyModule = GoModule [] Nothing [] []
+      sourceIR = SourceIR emptyModule ""
+      semanticIR = SemanticIR sourceIR [] []
+      goIR = GoIR semanticIR ""
+  in sourceModule sourceIR === emptyModule &&
+     null (goImports emptyModule) &&
+     null (goDecls emptyModule)
+
+prop_minimal_ir_construction :: Property
+prop_minimal_ir_construction =
+  let minimalModule = GoModule [] (Just (PackageDecl "main")) [] []
+      sourceIR = SourceIR minimalModule "package main"
+      semanticIR = SemanticIR sourceIR ["main"] []
+      goIR = GoIR semanticIR "package main\n"
+  in sourceModule sourceIR === minimalModule &&
+     sourceText sourceIR === "package main" &&
+     symbolTableInfo semanticIR === ["main"] &&
+     goCodeOutput goIR === "package main\n"
+
+-- ============================================================================
+-- Test suite
 -- ============================================================================
 
 tests :: TestTree
 tests = testGroup "Compiler IR Consistency QuickCheck Tests"
-  [ testProperty "Type checking preserves program structure" prop_typeCheckPreservesStructure
-  , testProperty "Optimization never increases instruction count" prop_optimizationNeverIncreases
-  , testProperty "Optimization preserves validity" prop_optimizationPreservesValidity
-  , testProperty "Empty program is always valid" prop_emptyProgramValid
-  , testProperty "Type checking is deterministic" prop_typeCheckDeterministic
-  , testProperty "Optimization is deterministic" prop_optimizationDeterministic
-  , testProperty "Optimization is idempotent" prop_optimizationIdempotent
-  , testProperty "Adding instructions increases count" prop_addingInstructionsIncreasesCount
-  , testCase "IR consistency edge cases" $ do
-      -- Test empty program
-      let emptyProgram = MockIRProgram []
-      assertBool "Empty program should be valid" $ mockValidateIR emptyProgram
-      assertBool "Empty program should type check" $ 
-        case mockTypeCheck emptyProgram of
-          Right _ -> True
-          Left _ -> False
-      
-      -- Test simple program
-      let simpleProgram = MockIRProgram 
-            [ MockIRLoad "x" MockIRInt
-            , MockIRLoad "y" MockIRInt
-            , MockIRAdd "z" "x" "y"
-            ]
-      assertBool "Simple program should be valid" $ mockValidateIR simpleProgram
-      assertBool "Simple program should type check" $ 
-        case mockTypeCheck simpleProgram of
-          Right _ -> True
-          Left _ -> False
-      
-      -- Test optimization
-      let programWithRedundancy = MockIRProgram
-            [ MockIRLoad "x" MockIRInt
-            , MockIRStore "x" MockIRInt
-            , MockIRLoad "y" MockIRInt
-            ]
-      let optimized = mockOptimize programWithRedundancy
-      assertBool "Optimization should remove redundancy" $ 
-        mockCountInstructions optimized < mockCountInstructions programWithRedundancy
+  [ testGroup "SourceIR properties"
+    [ fastProperty "sourceIR preserves module" prop_source_ir_preserves_module
+    , fastProperty "sourceIR content length" prop_source_ir_content_length
+    ]
+  , testGroup "SemanticIR properties"
+    [ fastProperty "semanticIR preserves source" prop_semantic_ir_preserves_source
+    , fastProperty "semanticIR symbol table consistency" prop_semantic_ir_symbol_table_consistency
+    ]
+  , testGroup "GoIR properties"
+    [ fastProperty "goIR preserves semantic" prop_go_ir_preserves_semantic
+    , fastProperty "goIR code generation consistency" prop_go_ir_code_generation_consistency
+    ]
+  , testGroup "IR transformation pipeline properties"
+    [ fastProperty "IR pipeline preservation" prop_ir_pipeline_preservation
+    , fastProperty "IR pipeline roundtrip" prop_ir_pipeline_roundtrip
+    ]
+  , testGroup "GoModule structure properties"
+    [ fastProperty "GoModule imports consistency" prop_go_module_imports_consistency
+    , fastProperty "GoModule declarations consistency" prop_go_module_declarations_consistency
+    ]
+  , testGroup "IR invariants"
+    [ fastProperty "SourceIR invariant" prop_source_ir_invariant
+    , fastProperty "SemanticIR invariant" prop_semantic_ir_invariant
+    , fastProperty "GoIR invariant" prop_go_ir_invariant
+    ]
+  , testGroup "IR transformation consistency"
+    [ fastProperty "IR transformation idempotence" prop_ir_transformation_idempotence
+    , fastProperty "IR symbol table preservation" prop_ir_symbol_table_preservation
+    ]
+  , testGroup "Edge case properties"
+    [ fastProperty "empty GoModule handling" prop_empty_go_module_handling
+    , fastProperty "minimal IR construction" prop_minimal_ir_construction
+    ]
   ]
