@@ -957,6 +957,18 @@ test-suite typus-test
         , Test.Unit.NewDependentTypeValidationSpec
         , Test.Unit.NewIntegrationEndToEndSpec
         
+        -- New Concise QuickCheck Test Modules (2025) - 10 focused tests
+        , Test.Unit.ConciseUtilsQuickCheckSpec
+        , Test.Unit.ConciseParserQuickCheckSpec
+        , Test.Unit.ConciseSourceLocationQuickCheckSpec
+        , Test.Unit.ConciseErrorHandlerQuickCheckSpec
+        , Test.Unit.ConciseDependenciesQuickCheckSpec
+        , Test.Unit.ConciseOwnershipQuickCheckSpec
+        , Test.Unit.ConciseTypeSystemQuickCheckSpec
+        , Test.Unit.ConciseSyntaxValidatorQuickCheckSpec
+        , Test.Unit.ConciseCompilerIRQuickCheckSpec
+        , Test.Unit.ConciseIntegrationQuickCheckSpec
+        
     other-modules:
             Test.Dependencies.Arbitrary
     build-depends:
