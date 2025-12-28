@@ -15,6 +15,7 @@ import qualified Test.Unit.ParserSpec
 import qualified Test.Unit.TypeSystemSpec
 import qualified Test.Unit.SymbolTableSpec
 import qualified Test.Unit.SourceLocationSpec
+import qualified Test.Unit.SourceLocationAdvancedPropertiesSpec
 import qualified Test.Unit.SyntaxValidatorSpec
 import qualified Test.Unit.ValueAnalysisSpec
 import qualified Test.Unit.VerbositySpec
@@ -1371,6 +1372,7 @@ tests =
     , Test.Unit.TypeSystemSpec.tests
     , Test.Unit.SymbolTableSpec.tests
     , Test.Unit.SourceLocationSpec.tests
+    , Test.Unit.SourceLocationAdvancedPropertiesSpec.tests
     , Test.Unit.SyntaxValidatorSpec.tests
     , Test.Unit.CompilerSpec.tests
     , Test.Unit.ValueAnalysisSpec.tests
