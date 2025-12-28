@@ -875,6 +875,18 @@ test-suite typus-test
         , Test.Unit.AdvancedErrorHandlerQuickCheckSpec
         , Test.Unit.AdvancedGoToolchainQuickCheckSpec
         , Test.Unit.AdvancedSyntaxValidatorQuickCheckSpec
+
+        -- New Comprehensive Test Modules (2025) - 10 cabal tests
+        , Test.Unit.NewTextProcessingBoundarySpec
+        , Test.Unit.NewSourceLocationMathPropertiesSpec
+        , Test.Unit.NewParserRobustnessSpec
+        , Test.Unit.NewCompilerOptimizationInvariantSpec
+        , Test.Unit.NewOwnershipTransitivitySpec
+        , Test.Unit.NewDependentTypeBoundarySpec
+        , Test.Unit.NewSyntaxValidatorRobustnessSpec
+        , Test.Unit.NewEndToEndCompilationSpec
+        , Test.Unit.NewPerformanceRegressionSpec
+        , Test.Unit.NewErrorHandlingConsistencySpec
         
         -- New Test Modules Added (2025) - Comprehensive Test Coverage
         , Test.Unit.NewParserErrorRecoverySpec
@@ -884,7 +896,6 @@ test-suite typus-test
         , Test.Unit.NewUtilsStringBoundarySpec
         , Test.Unit.NewErrorHandlerConsistencySpec
         , Test.Unit.NewDependentTypeValidationSpec
-        , Test.Unit.NewEndToEndCompilationSpec
         
         -- New Comprehensive Test Modules (2025)
         , Test.Unit.AdvancedSourceLocationTestSpec
@@ -915,6 +926,9 @@ test-suite typus-test
         , Test.Unit.NewTypusUtilsQuickCheckSpec
         , Test.Unit.NewTypusIntegrationQuickCheckSpec
         , Test.Unit.NewTypusSyntaxValidatorQuickCheckSpec
+        
+        -- New Comprehensive Cabal Test Suite (10 comprehensive tests)
+        , Test.Unit.NewComprehensiveCabalTestSuiteSpec
         
     other-modules:
             Test.Dependencies.Arbitrary

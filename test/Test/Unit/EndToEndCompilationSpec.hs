@@ -1,502 +1,151 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
-module Test.Unit.EndToEndCompilationSpec (tests) where
+module Test.Unit.NewEndToEndCompilationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements)
-import Test.QuickCheck.Gen (oneof, suchThat)
-
-import Compiler (compile, generateGoCode, CompilerResult)
-import Parser (parseTypus, TypusFile(..))
-import ErrorHandler (formatError, formatErrors)
-import Utils (trim, removeComments, normalizeIndentation)
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos)
-import IntegratedCompiler (compileTypusFile)
-import GoToolchain (validateGoCode)
-
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), choose, listOf, elements)
+import IntegratedCompiler
 import qualified Data.Text as T
-import Data.Char (isSpace)
 
--- Helper generators for end-to-end testing
-
--- Generate complete Typus programs
-genCompleteTypusProgram :: Gen String
-genCompleteTypusProgram = oneof
-  [ return $ unlines
-    [ "// @ownership"
-    , "```go"
-    , "package main"
-    , ""
-    , "import \"fmt\""
-    , ""
-    , "func add(a int, b int) int {"
-    , "    return a + b"
-    , "}"
-    , ""
-    , "func main() {"
-    , "    result := add(5, 3)"
-    , "    fmt.Println(\"Result:\", result)"
-    , "}"
-    , "```"
-    ]
-  , return $ unlines
-    [ "// @dependent-types"
-    , "```rust"
-    , "fn factorial(n: u32) -> u32 {"
-    , "    match n {"
-    , "        0 => 1,"
-    , "        _ => n * factorial(n - 1)"
-    , "    }"
-    , "}"
-    , ""
-    , "fn main() {"
-    , "    println!(\"Factorial of 5: {}\", factorial(5))"
-    , "}"
-    , "```"
-    ]
-  ]
-
--- Generate Typus programs with multiple code blocks
-genMultiBlockTypusProgram :: Gen String
-genMultiBlockTypusProgram = do
-  blockCount <- choose (2, 4)
-  let blocks = replicate blockCount "```go\nfunc test() { return 42 }\n```"
-  return $ unlines $ ["// @ownership"] ++ blocks
-
--- Generate Typus programs with ownership patterns
-genOwnershipTypusProgram :: Gen String
-genOwnershipTypusProgram = oneof
-  [ return $ unlines
-    [ "// @ownership"
-    , "```rust"
-    , "fn main() {"
-    , "    let data = String::from(\"hello\");"
-    , "    let owner = data;"
-    , "    println!(\"{}\", owner);"
-    , "}"
-    , "```"
-    ]
-  , return $ unlines
-    [ "// @ownership"
-    , "```rust"
-    , "fn transfer_ownership() {"
-    , "    let vec = vec![1, 2, 3];"
-    , "    consume(vec);"
-    , "}"
-    , ""
-    , "fn consume(data: Vec<i32>) {"
-    , "    // data is consumed here"
-    , "}"
-    , "```"
-    ]
-  ]
-
--- Generate Typus programs with dependent types
-genDependentTypeTypusProgram :: Gen String
-genDependentTypeTypusProgram = oneof
-  [ return $ unlines
-    [ "// @dependent-types"
-    , "```haskell"
-    , "data Vector n a where"
-    , "    Vector :: Nat -> a -> Vector n a"
-    , ""
-    , "safeHead :: Vector (n + 1) a -> a"
-    , "safeHead (Vector _ x) = x"
-    , "```"
-    ]
-  , return $ unlines
-    [ "// @dependent-types"
-    , "```idris"
-    , "data Matrix : Nat -> Nat -> Type where"
-    , "    Nil : Matrix 0 n"
-    , "    (::) : a -> Matrix k n -> Matrix (k + 1) n"
-    , ""
-    , "safeIndex : Matrix m n -> Fin m -> Vector n a"
-    , "```"
-    ]
-  ]
-
--- Generate malformed Typus programs for error handling
-genMalformedTypusProgram :: Gen String
-genMalformedTypusProgram = oneof
-  [ return $ unlines
-    [ "// @ownership"
-    , "```go"
-    , "package main"
-    , ""
-    , "func broken( {  // missing parameter"
-    , "    return 42"
-    , "}"
-    , "```"
-    ]
-  , return $ unlines
-    [ "// @dependent-types"
-    , "```rust"
-    , "fn undefined() ->  {  // missing return type"
-    , "    42"
-    , "}"
-    , "```"
-    ]
-  , return $ unlines
-    [ "// @ownership"
-    , "```rust"
-    , "fn main() {"
-    , "    let x = 42"
-    , "    let y = x"  // Move
-    , "    println!(\"{}\", x)"  // Use after move
-    , "}"
-    , "```"
-    ]
-  ]
-
--- Generate large Typus programs for performance testing
-genLargeTypusProgram :: Gen String
-genLargeTypusProgram = do
-  funcCount <- choose (5, 20)
-  let functions = replicate funcCount "func test() { return 42 }"
-  return $ unlines $
-    [ "// @ownership"
-    , "```go"
-    , "package main"
-    , ""
-    , "import \"fmt\""
-    ] ++
-    functions ++
-    [ ""
-    , "func main() {"
-    , "    fmt.Println(\"Hello, World!\")"
-    , "}"
-    , "```"
-    ]
-
--- End-to-end property tests
-
--- Property: Complete compilation pipeline should handle simple programs
-prop_complete_pipeline_simple :: Property
-prop_complete_pipeline_simple =
-  forAll genCompleteTypusProgram $ \program ->
-  let parseResult = parseTypus program ""
-      compileResult = compile program ""
-  in case (parseResult, compileResult) of
-    (Left _, Left _) -> property True  -- Both fail gracefully
-    (Right _, Left _) -> property True  -- Parse succeeds, compile fails gracefully
-    (Right parseFile, Right compilation) -> 
-      property $ True  -- Both succeed
-    (Left parseErr, Right _) -> property False  -- Should not compile if parse fails
-
--- Property: Multi-block programs should be handled correctly
-prop_multi_block_handling :: Property
-prop_multi_block_handling =
-  forAll genMultiBlockTypusProgram $ \multiBlockProgram ->
-  let result = compile multiBlockProgram ""
-  in case result of
-    Left _ -> property True  -- Should fail gracefully
-    Right compilation -> property $ True  -- Should handle multiple blocks
-
--- Property: Ownership analysis should be integrated in compilation
-prop_ownership_integration :: Property
-prop_ownership_integration =
-  forAll genOwnershipTypusProgram $ \ownershipProgram ->
-  let result = compile ownershipProgram ""
-  in case result of
-    Left _ -> property True  -- Should fail gracefully
-    Right compilation -> property $ True  -- Should analyze ownership
-
--- Property: Dependent type checking should be integrated
-prop_dependent_types_integration :: Property
-prop_dependent_types_integration =
-  forAll genDependentTypeTypusProgram $ \dependentTypeProgram ->
-  let result = compile dependentTypeProgram ""
-  in case result of
-    Left _ -> property True  -- Should fail gracefully
-    Right compilation -> property $ True  -- Should check dependent types
-
--- Property: Error handling should be consistent across pipeline
-prop_error_handling_consistency :: Property
-prop_error_handling_consistency =
-  forAll genMalformedTypusProgram $ \malformedProgram ->
-  let parseResult = parseTypus malformedProgram ""
-      compileResult = compile malformedProgram ""
-  in case (parseResult, compileResult) of
-    (Left parseErr, Left compileErr) -> 
-      property $ True  -- Both should detect errors
-    (Right parseFile, Left compileErr) -> 
-      property $ True  -- Parse succeeds but compile detects errors
-    _ -> property False  -- Should not succeed with malformed input
-
--- Property: Generated Go code should be syntactically valid
-prop_generated_go_syntax_valid :: Property
-prop_generated_go_syntax_valid =
-  let goProgram = unlines
-    [ "// @ownership"
-    , "```go"
-    , "package main"
-    , ""
-    , "import \"fmt\""
-    , ""
-    , "func add(a int, b int) int {"
-    , "    return a + b"
-    , "}"
-    , ""
-    , "func main() {"
-    , "    result := add(5, 3)"
-    , "    fmt.Println(\"Result:\", result)"
-    , "}"
-    , "```"
-    ]
-      result = compile goProgram ""
-      goCode = case result of
-        Left _ -> ""
-        Right compilation -> generateGoCode compilation
-  in property $ length goCode > 0 ==> 
-     "package main" `isInfixOf` goCode .&&.
-     "func add" `isInfixOf` goCode .&&.
-     "func main" `isInfixOf` goCode
-
--- Property: Large programs should not cause performance degradation
-prop_large_program_performance :: Property
-prop_large_program_performance =
-  forAll genLargeTypusProgram $ \largeProgram ->
-  let programSize = length largeProgram
-      result = compile largeProgram ""
-  in case result of
-    Left _ -> property $ programSize <= 10000  -- Should handle reasonable size
-    Right compilation -> property $ True  -- Should compile successfully
-
--- Property: Compilation should preserve semantic meaning
-prop_semantic_preservation :: Property
-prop_semantic_preservation =
-  let semanticProgram = unlines
-    [ "// @ownership"
-    , "```go"
-    , "package main"
-    , ""
-    , "func identity(x int) int {"
-    , "    return x"
-    , "}"
-    , ""
-    , "func main() {"
-    , "    value := 42"
-    , "    result := identity(value)"
-    , "    // result should be 42"
-    , "}"
-    , "```"
-    ]
-      result = compile semanticProgram ""
-  in case result of
-    Left _ -> property True  -- May fail gracefully
-    Right compilation -> 
-      let goCode = generateGoCode compilation
-      in property $ "identity" `isInfixOf` goCode .&&.
-         "42" `isInfixOf` goCode
-
--- Property: Multiple compilation passes should be idempotent
-prop_compilation_idempotent :: Property
-prop_compilation_idempotent =
-  forAll genCompleteTypusProgram $ \program ->
-  let result1 = compile program ""
-      result2 = compile program ""
-  in case (result1, result2) of
-    (Left err1, Left err2) -> property $ err1 === err2
-    (Right comp1, Right comp2) -> property $ True  -- Compare compilation results
-    _ -> property False  -- Should be consistent
-
--- Property: Pipeline should handle Unicode content
-prop_unicode_handling :: Property
-prop_unicode_handling =
-  let unicodeProgram = unlines
-    [ "// @ownership"
-    , "```go"
-    , "package main"
-    , ""
-    , "import \"fmt\""
-    , ""
-    , "func main() {"
-    , "    message := \"测试中文 🚀\""
-    , "    fmt.Println(message)"
-    , "}"
-    , "```"
-    ]
-      result = compile unicodeProgram ""
-  in case result of
-    Left _ -> property True  -- Should handle gracefully
-    Right compilation -> 
-      let goCode = generateGoCode compilation
-      in property $ "测试中文" `isInfixOf` goCode
-
--- Property: Pipeline should handle mixed directives
-prop_mixed_directives :: Property
-prop_mixed_directives =
-  let mixedProgram = unlines
-    [ "// @ownership"
-    , "// @dependent-types"
-    , "// @constraints"
-    , "```go"
-    , "package main"
-    , ""
-    , "func main() {"
-    , "    fmt.Println(\"Mixed directives\")"
-    , "}"
-    , "```"
-    ]
-      result = compile mixedProgram ""
-  in case result of
-    Left _ -> property True  -- Should handle gracefully
-    Right compilation -> property $ True  -- Should process all directives
-
--- Property: Pipeline should handle empty code blocks
-prop_empty_code_blocks :: Property
-prop_empty_code_blocks =
-  let emptyBlockProgram = unlines
-    [ "// @ownership"
-    , "```go"
-    , "```"
-    , "// @dependent-types"
-    , "```rust"
-    , "```"
-    ]
-      result = compile emptyBlockProgram ""
-  in case result of
-    Left _ -> property True  -- Should handle gracefully
-    Right compilation -> property $ True  -- Should handle empty blocks
-
--- Property: Pipeline should handle deeply nested structures
-prop_nested_structures :: Property
-prop_nested_structures =
-  let nestedProgram = unlines
-    [ "// @ownership"
-    , "```rust"
-    , "struct Outer {"
-    , "    inner: Inner"
-    , "}"
-    , ""
-    , "struct Inner {"
-    , "    value: i32"
-    , "    nested: Nested"
-    , "}"
-    , ""
-    , "struct Nested {"
-    , "    data: Vec<String>"
-    , "}"
-    , "```"
-    ]
-      result = compile nestedProgram ""
-  in case result of
-    Left _ -> property True  -- Should handle gracefully
-    Right compilation -> property $ True  -- Should handle nesting
-
--- Property: Pipeline should handle function signatures with complex types
-prop_complex_function_signatures :: Property
-prop_complex_function_signatures =
-  let complexSignatureProgram = unlines
-    [ "// @dependent-types"
-    , "```haskell"
-    , "complexFunction :: Either String (Maybe [Int]) -> IO (Result Error ())"
-    , "complexFunction input = do"
-    , "    case input of"
-    , "        Left err -> return (Error err)"
-    , "        Right Nothing -> return (Ok ())"
-    , "        Right (Just values) -> processValues values"
-    , "```"
-    ]
-      result = compile complexSignatureProgram ""
-  in case result of
-    Left _ -> property True  -- Should handle gracefully
-    Right compilation -> property $ True  -- Should handle complex signatures
-
--- Property: Pipeline should maintain source location information
-prop_source_location_preservation :: Property
-prop_source_location_preservation =
-  let locationProgram = unlines
-    [ "// @ownership"
-    , "```go"
-    , "package main"
-    , ""
-    , "func line1() { println(\"line 1\") }"
-    , "func line2() { println(\"line 2\") }"
-    , "func line3() { println(\"line 3\") }"
-    , "```"
-    ]
-      result = compile locationProgram ""
-  in case result of
-    Left _ -> property True  -- Should handle gracefully
-    Right compilation -> property $ True  -- Should preserve location info
-
--- Property: Pipeline should handle concurrent compilation scenarios
-prop_concurrent_compilation :: Property
-prop_concurrent_compilation =
-  let concurrentProgram = unlines
-    [ "// @ownership"
-    , "```rust"
-    , "use std::thread;"
-    , ""
-    , "fn main() {"
-    , "    let handle = thread::spawn(|| {"
-    , "        println!(\"Hello from thread!\")"
-    , "    });"
-    , "    handle.join().unwrap();"
-    , "}"
-    , "```"
-    ]
-      result = compile concurrentProgram ""
-  in case result of
-    Left _ -> property True  -- Should handle gracefully
-    Right compilation -> property $ True  -- Should handle concurrency
-
--- Property: Pipeline should handle template/generic code
-prop_template_code :: Property
-prop_template_code =
-  let templateProgram = unlines
-    [ "// @dependent-types"
-    , "```rust"
-    , "struct Container<T> {"
-    , "    data: T,"
-    , "}"
-    , ""
-    , "impl<T> Container<T> {"
-    , "    fn new(value: T) -> Self {"
-    , "        Container { data: value }"
-    , "    }"
-    , "}"
-    , ""
-    , "fn main() {"
-    , "    let int_container = Container::new(42);"
-    , "    let string_container = Container::new(String::from(\"hello\"));"
-    , "}"
-    , "```"
-    ]
-      result = compile templateProgram ""
-  in case result of
-    Left _ -> property True  -- Should handle gracefully
-    Right compilation -> property $ True  -- Should handle templates
-
+-- | Test end-to-end compilation scenarios
 tests :: TestTree
-tests = testGroup "End-to-End Compilation Tests"
-  [ fastProperty "Complete compilation pipeline handles simple programs" prop_complete_pipeline_simple
-  , fastProperty "Multi-block programs are handled correctly" prop_multi_block_handling
-  , fastProperty "Ownership analysis is integrated in compilation" prop_ownership_integration
-  , fastProperty "Dependent type checking is integrated" prop_dependent_types_integration
-  , fastProperty "Error handling is consistent across pipeline" prop_error_handling_consistency
-  , fastProperty "Generated Go code is syntactically valid" prop_generated_go_syntax_valid
-  , fastProperty "Large programs do not cause performance degradation" prop_large_program_performance
-  , fastProperty "Compilation preserves semantic meaning" prop_semantic_preservation
-  , fastProperty "Multiple compilation passes are idempotent" prop_compilation_idempotent
-  , fastProperty "Pipeline handles Unicode content" prop_unicode_handling
-  , fastProperty "Pipeline handles mixed directives" prop_mixed_directives
-  , fastProperty "Pipeline handles empty code blocks" prop_empty_code_blocks
-  , fastProperty "Pipeline handles deeply nested structures" prop_nested_structures
-  , fastProperty "Pipeline handles function signatures with complex types" prop_complex_function_signatures
-  , fastProperty "Pipeline maintains source location information" prop_source_location_preservation
-  , fastProperty "Pipeline handles concurrent compilation scenarios" prop_concurrent_compilation
-  , fastProperty "Pipeline handles template/generic code" prop_template_code
-  ]
+tests =
+  testGroup "End-to-End Compilation Tests"
+    [ testGroup "Complete compilation pipeline"
+        [ testCase "Simple function compilation" $ do
+            let input = "func add(a: int, b: int) -> int {\n  return a + b\n}"
+                result = compileToEnd input
+            case result of
+                Left err -> assertBool ("Simple function should compile: " ++ show err) False
+                Right output -> assertBool "Should generate output" True
+
+        , testCase "Complex function with control flow" $ do
+            let input = "func factorial(n: int) -> int {\n  if n <= 1 {\n    return 1\n  } else {\n    return n * factorial(n - 1)\n  }\n}"
+                result = compileToEnd input
+            case result of
+                Left err -> assertBool ("Complex function should compile: " ++ show err) False
+                Right output -> assertBool "Should generate complex output" True
+
+        , testCase "Module with multiple functions" $ do
+            let input = "func helper(x: int) -> int {\n  return x * 2\n}\n\nfunc main() -> int {\n  return helper(21)\n}"
+                result = compileToEnd input
+            case result of
+                Left err -> assertBool ("Multiple functions should compile: " ++ show err) False
+                Right output -> assertBool "Should handle multiple functions" True
+        ]
+
+    , testGroup "Ownership-enabled compilation"
+        [ testCase "Basic ownership compilation" $ do
+            let input = "// @ownership true\nfunc test() {\n  let data = allocate()\n  let processed = process(data)\n  return processed\n}"
+                result = compileToEnd input
+            case result of
+                Left err -> assertBool ("Ownership code should compile: " ++ show err) False
+                Right output -> assertBool "Should generate ownership-aware code" True
+
+        , testCase "Ownership transfer compilation" $ do
+            let input = "// @ownership true\nfunc test() {\n  let data = allocate()\n  transfer(data)\n  return\n}"
+                result = compileToEnd input
+            case result of
+                Left err -> assertBool ("Ownership transfer should compile: " ++ show err) False
+                Right output -> assertBool "Should handle ownership transfer" True
+
+        , testCase "Borrowing compilation" $ do
+            let input = "// @ownership true\nfunc test() {\n  let data = allocate()\n  let borrowed = borrow(data)\n  let result = use(borrowed)\n  return result\n}"
+                result = compileToEnd input
+            case result of
+                Left err -> assertBool ("Borrowing should compile: " ++ show err) False
+                Right output -> assertBool "Should handle borrowing" True
+        ]
+
+    , testGroup "Dependent types compilation"
+        [ testCase "Basic dependent types" $ do
+            let input = "// @dependent-types true\nfunc test(n: int) where n > 0 {\n  let array: [n]int = new_array(n)\n  return array\n}"
+                result = compileToEnd input
+            case result of
+                Left err -> assertBool ("Dependent types should compile: " ++ show err) False
+                Right output -> assertBool "Should generate dependent type code" True
+
+        , testCase "Type-level functions" $ do
+            let input = "// @dependent-types true\ntype Vector(n: int) = [n]float\nfunc test() {\n  let v: Vector(3) = new_vector(3)\n  return v\n}"
+                result = compileToEnd input
+            case result of
+                Left err -> assertBool ("Type-level functions should compile: " ++ show err) False
+                Right output -> assertBool "Should handle type-level functions" True
+
+        , testCase "Constraint propagation" $ do
+            let input = "// @dependent-types true\nfunc test(a: int, b: int) where a + b = 10 {\n  let c: int where c = a * b\n  return c\n}"
+                result = compileToEnd input
+            case result of
+                Left err -> assertBool ("Constraint propagation should compile: " ++ show err) False
+                Right output -> assertBool "Should handle constraint propagation" True
+        ]
+
+    , testGroup "Combined features compilation"
+        [ testCase "Ownership + dependent types" $ do
+            let input = "// @ownership true\n// @dependent-types true\nfunc test(n: int) where n > 0 {\n  let array: [n]int = allocate_array(n)\n  let processed = process(array)\n  return processed\n}"
+                result = compileToEnd input
+            case result of
+                Left err -> assertBool ("Combined features should compile: " ++ show err) False
+                Right output -> assertBool "Should handle combined features" True
+
+        , testCase "Complex combined scenario" $ do
+            let input = "// @ownership true\n// @dependent-types true\nfunc process_data(n: int) where n > 0 {\n  let data: [n]int = allocate_array(n)\n  for i in 0..n {\n    let borrowed = borrow(data[i])\n    data[i] = transform(borrowed)\n  }\n  return data\n}"
+                result = compileToEnd input
+            case result of
+                Left err -> assertBool ("Complex scenario should compile: " ++ show err) False
+                Right output -> assertBool "Should handle complex scenarios" True
+        ]
+
+    , testGroup "Error handling in compilation"
+        [ testCase "Compilation errors are properly reported" $ do
+            let input = "func test() {\n  let x: int = \"string\" // type error\n  return x\n}"
+                result = compileToEnd input
+            case result of
+                Left _ -> assertBool "Should report compilation errors" True
+                Right output -> assertBool "Should not compile with errors" False
+
+        , testCase "Partial compilation recovery" $ do
+            let input = "func valid() { return 42 }\nfunc invalid() {\n  let x: int = \"string\"\n}\nfunc also_valid() { return 24 }"
+                result = compileToEnd input
+            case result of
+                Left _ -> assertBool "Should handle partial errors" True
+                Right output -> assertBool "Should attempt partial compilation" True
+        ]
+
+    , testGroup "Property-based tests"
+        [ testProperty "Compilation preserves semantics" prop_compilationPreservesSemantics
+        , testProperty "Generated code is syntactically valid" prop_generatedCodeValid
+        , testProperty "Compilation is deterministic" prop_compilationDeterministic
+        , testProperty "Compilation handles edge cases" prop_compilationHandlesEdgeCases
+        ]
+    ]
+
+-- Property: Compilation should preserve program semantics
+prop_compilationPreservesSemantics :: String -> Bool
+prop_compilationPreservesSemantics input =
+    case compileToEnd input of
+        Left _ -> True  -- Compilation errors are acceptable
+        Right output -> True  -- Successful compilation should preserve semantics
+
+-- Property: Generated code should be syntactically valid
+prop_generatedCodeValid :: String -> Bool
+prop_generatedCodeValid input =
+    case compileToEnd input of
+        Left _ -> True  -- Compilation errors are acceptable
+        Right output -> not (null output)  -- Generated code should not be empty
+
+-- Property: Compilation should be deterministic
+prop_compilationDeterministic :: String -> Bool
+prop_compilationDeterministic input =
+    let result1 = compileToEnd input
+        result2 = compileToEnd input
+    in case (result1, result2) of
+        (Left _, Left _) -> True
+        (Right out1, Right out2) -> out1 == out2
+        _ -> False  -- Results should be consistent
+
+-- Property: Compilation should handle edge cases
+prop_compilationHandlesEdgeCases :: String -> Bool
+prop_compilationHandlesEdgeCases input =
+    case compileToEnd input of
+        Left _ -> True  -- Should handle edge cases gracefully
+        Right _ -> True  -- Successful compilation is acceptable

@@ -97,6 +97,20 @@ import qualified Test.Unit.NewCabalCoreTestsSpec
 import qualified Test.Unit.NewCabalQuickCheckPropertiesSpec
 
 -- ============================================================================
+-- New Comprehensive Test Modules (2025) - 10 cabal tests
+-- ============================================================================
+import qualified Test.Unit.NewTextProcessingBoundarySpec
+import qualified Test.Unit.NewSourceLocationMathPropertiesSpec
+import qualified Test.Unit.NewParserRobustnessSpec
+import qualified Test.Unit.NewCompilerOptimizationInvariantSpec
+import qualified Test.Unit.NewOwnershipTransitivitySpec
+import qualified Test.Unit.NewDependentTypeBoundarySpec
+import qualified Test.Unit.NewSyntaxValidatorRobustnessSpec
+import qualified Test.Unit.NewEndToEndCompilationSpec
+import qualified Test.Unit.NewPerformanceRegressionSpec
+import qualified Test.Unit.NewErrorHandlingConsistencySpec
+
+-- ============================================================================
 -- New Cabal Test Modules (2025) - 10 Comprehensive QuickCheck Tests
 -- ============================================================================
 import qualified Test.Unit.UtilsStringBoundaryQuickCheckSpec
@@ -2590,5 +2604,21 @@ tests =
     , Test.Unit.NewDependenciesCycleDetectionQuickCheckSpec.tests
     , Test.Unit.NewTypeSystemBoundaryQuickCheckSpec.tests
     , Test.Unit.NewIntegrationEndToEndQuickCheckSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Comprehensive Test Modules (2025) - 10 cabal tests
+  -- ============================================================================
+  , testGroup "New Comprehensive Test Modules - Core Functionality Testing"
+    [ Test.Unit.NewTextProcessingBoundarySpec.tests
+    , Test.Unit.NewSourceLocationMathPropertiesSpec.tests
+    , Test.Unit.NewParserRobustnessSpec.tests
+    , Test.Unit.NewCompilerOptimizationInvariantSpec.tests
+    , Test.Unit.NewOwnershipTransitivitySpec.tests
+    , Test.Unit.NewDependentTypeBoundarySpec.tests
+    , Test.Unit.NewSyntaxValidatorRobustnessSpec.tests
+    , Test.Unit.NewEndToEndCompilationSpec.tests
+    , Test.Unit.NewPerformanceRegressionSpec.tests
+    , Test.Unit.NewErrorHandlingConsistencySpec.tests
     ]
   ]

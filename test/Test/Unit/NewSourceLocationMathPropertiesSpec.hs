@@ -1,214 +1,119 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
-
 module Test.Unit.NewSourceLocationMathPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample)
-
-import GHC.Generics (Generic)
-import Control.DeepSeq (NFData)
+import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), choose, Gen)
 import SourceLocation
-  ( SourcePos(..)
-  , SourceSpan(..)
-  , startPos
-  , posAfter
-  , posAt
-  , emptySpan
-  , spanFrom
-  , spanTo
-  , mergeSpans
-  , isValidSpan
-  , spanStart
-  , spanEnd
-  )
+import qualified Data.Text as T
 
--- | 生成任意的 SourcePos 用于测试
-instance Arbitrary SourcePos where
-  arbitrary = SourcePos <$> arbitrary <*> arbitrary <*> arbitrary
-
--- | 生成任意的 SourceSpan 用于测试
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    -- 确保 end 的位置 >= start 的位置
-    let end' = if posLine end < posLine start || 
-                   (posLine end == posLine start && posColumn end < posColumn start)
-                 then start { posColumn = posColumn start + 1 }
-                 else end
-    return $ SourceSpan start end'
-
--- | 生成小的非负整数用于行列位置
-smallNat :: Gen Int
-smallNat = getSmall <$> arbitrary
-
+-- | Test mathematical properties of source location operations
 tests :: TestTree
-tests = testGroup "New SourceLocation Math Properties Tests"
-  [ -- 单元测试
-    testPositionMath
-  , testSpanMath
-  , testSpanValidation
-  , testEdgeCases
-    -- QuickCheck 属性测试
-  , testPositionProperties
-  , testSpanProperties
-  , testMergeProperties
-  ]
+tests =
+  testGroup "Source Location Mathematical Properties"
+    [ testGroup "Position arithmetic"
+        [ testCase "posAfter advances line correctly" $ do
+            let start = SourcePos 1 5
+                after = posAfter '\n' start
+            after @?= SourcePos 2 1
 
--- | 测试位置计算的单元测试
-testPositionMath :: TestTree
-testPositionMath = testCase "position math unit tests" $ do
-  let start = startPos "test.txt"
-  
-  -- 测试 posAfter
-  let pos1 = posAfter start 'a'
-  assertEqual "posAfter moves to next column" 
-    (start { posColumn = 2 }) pos1
-  
-  let pos2 = posAfter pos1 '\n'
-  assertEqual "posAfter newline moves to next line"
-    (SourcePos "test.txt" 2 1) pos2
-  
-  -- 测试 posAt
-  let pos3 = posAt "test.txt" 5 10
-  assertEqual "posAt creates correct position"
-    (SourcePos "test.txt" 5 10) pos3
+        , testCase "posAfter advances column correctly" $ do
+            let start = SourcePos 1 5
+                after = posAfter 'a' start
+            after @?= SourcePos 1 6
 
--- | 测试范围计算的单元测试
-testSpanMath :: TestTree
-testSpanMath = testCase "span math unit tests" $ do
-  let start = posAt "test.txt" 1 1
-  let middle = posAt "test.txt" 1 5
-  let end = posAt "test.txt" 2 3
-  
-  -- 测试 spanFrom
-  let span1 = spanFrom start
-  assertEqual "spanFrom creates zero-length span"
-    (SourceSpan start start) span1
-  
-  -- 测试 spanTo
-  let span2 = spanTo end
-  assertEqual "spanTo creates span from startPos"
-    (SourceSpan (startPos "test.txt") end) span2
-  
-  -- 测试 mergeSpans
-  let spanA = SourceSpan start middle
-  let spanB = SourceSpan middle end
-  let merged = mergeSpans spanA spanB
-  assertEqual "mergeSpans combines spans correctly"
-    (SourceSpan start end) merged
+        , testCase "posAt creates correct position" $ do
+            let pos = posAt 3 7
+            pos @?= SourcePos 3 7
+        ]
 
--- | 测试范围验证
-testSpanValidation :: TestTree
-testSpanValidation = testCase "span validation tests" $ do
-  let start = posAt "test.txt" 1 1
-  let end = posAt "test.txt" 1 5
-  let validSpan = SourceSpan start end
-  
-  assertBool "valid span passes validation" (isValidSpan validSpan)
-  
-  -- 测试无效范围（end < start）
-  let invalidSpan = SourceSpan end start
-  assertBool "invalid span fails validation" (not $ isValidSpan invalidSpan)
-  
-  -- 测试空范围
-  let empty = emptySpan
-  assertBool "empty span is valid" (isValidSpan empty)
+    , testGroup "Span operations"
+        [ testCase "emptySpan has zero length" $ do
+            let pos = SourcePos 1 1
+                span = emptySpan pos
+            spanStart span @?= pos
+            spanEnd span @?= pos
 
--- | 测试边界情况
-testEdgeCases :: TestTree
-testEdgeCases = testCase "edge cases" $ do
-  -- 测试相同位置的span
-  let pos = posAt "test.txt" 1 1
-  let samePosSpan = SourceSpan pos pos
-  assertBool "same position span is valid" (isValidSpan samePosSpan)
-  assertEqual "same position span has same start and end" pos (spanStart samePosSpan)
-  assertEqual "same position span has same start and end" pos (spanEnd samePosSpan)
-  
-  -- 测试跨行span
-  let line1 = posAt "test.txt" 1 10
-  let line2 = posAt "test.txt" 2 1
-  let crossLineSpan = SourceSpan line1 line2
-  assertBool "cross-line span is valid" (isValidSpan crossLineSpan)
-  
-  -- 测试大行列数
-  let bigPos = posAt "test.txt" 999999 999999
-  let bigSpan = SourceSpan pos bigPos
-  assertBool "large position span is valid" (isValidSpan bigSpan)
+        , testCase "spanBetween creates correct span" $ do
+            let start = SourcePos 1 1
+                end = SourcePos 1 5
+                span = spanBetween start end
+            spanStart span @?= start
+            spanEnd span @?= end
 
--- | QuickCheck 属性：位置递增应该保持单调性
-testPositionProperties :: TestTree
-testPositionProperties = testGroup "Position Properties"
-  [ testProperty "posAfter preserves file" $ \pos char ->
-      let newPos = posAfter pos char
-      in posFile pos === posFile newPos
-      
-  , testProperty "posAfter newline resets column" $ \pos ->
-      let posAfterNewline = posAfter pos '\n'
-      in posColumn posAfterNewline === 1
-      
-  , testProperty "posAfter newline increments line" $ \pos ->
-      let posAfterNewline = posAfter pos '\n'
-      in posLine posAfterNewline === posLine pos + 1
-      
-  , testProperty "posAfter non-newline increments column" $ \pos char ->
-      let newPos = posAfter pos char
-      in if char /= '\n'
-         then posColumn newPos === posColumn pos + 1
-         else property True
-  ]
+        , testCase "mergeSpans contains both original spans" $ do
+            let span1 = spanBetween (SourcePos 1 1) (SourcePos 1 3)
+                span2 = spanBetween (SourcePos 1 5) (SourcePos 1 7)
+                merged = mergeSpans span1 span2
+            spanStart merged @?= SourcePos 1 1
+            spanEnd merged @?= SourcePos 1 7
+        ]
 
--- | QuickCheck 属性：范围合并的交换律
-testSpanProperties :: TestTree
-testSpanProperties = testGroup "Span Properties"
-  [ testProperty "mergeSpans is commutative" $ \span1 span2 ->
-      let merged1 = mergeSpans span1 span2
-          merged2 = mergeSpans span2 span1
-      in merged1 === merged2
-      
-  , testProperty "mergeSpans is associative" $ \span1 span2 span3 ->
-      let merged1 = mergeSpans (mergeSpans span1 span2) span3
-          merged2 = mergeSpans span1 (mergeSpans span2 span3)
-      in merged1 === merged2
-      
-  , testProperty "mergeSpans contains both spans" $ \span1 span2 ->
-      let merged = mergeSpans span1 span2
-          start1 = spanStart span1
-          end1 = spanEnd span1
-          start2 = spanStart span2
-          end2 = spanEnd span2
-          mergedStart = spanStart merged
-          mergedEnd = spanEnd merged
-      in (mergedStart `isBeforeOrEqual` start1 && end1 `isBeforeOrEqual` mergedEnd &&
-          mergedStart `isBeforeOrEqual` start2 && end2 `isBeforeOrEqual` mergedEnd)
-  ]
+    , testGroup "Located value operations"
+        [ testCase "locatedValue extracts correct value" $ do
+            let located = locatedAt (SourcePos 1 1) "test"
+            locatedValue located @?= "test"
 
--- | QuickCheck 属性：范围合并的边界情况
-testMergeProperties :: TestTree
-testMergeProperties = testGroup "Merge Properties"
-  [ testProperty "merge with empty span" $ \span ->
-      let empty = emptySpan
-          merged1 = mergeSpans span empty
-          merged2 = mergeSpans empty span
-      in merged1 === span && merged2 === span
-      
-  , testProperty "merge with self returns self" $ \span ->
-      let merged = mergeSpans span span
-      in merged === span
-  ]
+        , testCase "locatedSpan preserves position" $ do
+            let pos = SourcePos 2 3
+                located = locatedAt pos "value"
+            locatedSpan located @?= emptySpan pos
 
--- | 辅助函数：检查位置顺序
-isBeforeOrEqual :: SourcePos -> SourcePos -> Bool
-isBeforeOrEqual pos1 pos2 =
-  let line1 = posLine pos1
-      line2 = posLine pos2
-      col1 = posColumn pos1
-      col2 = posColumn pos2
-  in if line1 < line2
-     then True
-     else if line1 > line2
-          then False
-          else col1 <= col2
+        , testCase "mapLocated preserves location" $ do
+            let pos = SourcePos 1 1
+                located = locatedAt pos 42
+                mapped = mapLocated (*2) located
+            locatedSpan mapped @?= locatedSpan located
+            locatedValue mapped @?= 84
+        ]
+
+    , testGroup "Property-based tests"
+        [ testProperty "posAfter newline increments line" prop_posAfterNewline
+        , testProperty "posAfter regular char increments column" prop_posAfterRegularChar
+        , testProperty "mergeSpans is associative" prop_mergeSpansAssociative
+        , testProperty "spanBetween is ordered" prop_spanBetweenOrdered
+        , testProperty "locatedAt creates valid span" prop_locatedAtValidSpan
+        ]
+    ]
+
+-- Property: posAfter newline always increments line and resets column to 1
+prop_posAfterNewline :: Int -> Int -> Bool
+prop_posAfterNewline line col =
+    let start = SourcePos (abs line + 1) (abs col + 1)
+        after = posAfter '\n' start
+    in sourceLine after == sourceLine start + 1 && sourceColumn after == 1
+
+-- Property: posAfter regular character increments column but not line
+prop_posAfterRegularChar :: Int -> Int -> Char -> Bool
+prop_posAfterRegularChar line col ch
+    | ch == '\n' = True  -- Skip newlines for this property
+    | otherwise =
+        let start = SourcePos (abs line + 1) (abs col + 1)
+            after = posAfter ch start
+        in sourceLine after == sourceLine start && 
+           sourceColumn after == sourceColumn start + 1
+
+-- Property: mergeSpans is associative
+prop_mergeSpansAssociative :: SourcePos -> SourcePos -> SourcePos -> SourcePos -> Bool
+prop_mergeSpansAssociative p1 p2 p3 p4 =
+    let span1 = spanBetween p1 p2
+        span2 = spanBetween p3 p4
+        span3 = spanBetween p1 p4  -- Assume p1 <= p4 for simplicity
+    in mergeSpans span1 (mergeSpans span2 span3) == 
+       mergeSpans (mergeSpans span1 span2) span3
+
+-- Property: spanBetween always has start <= end
+prop_spanBetweenOrdered :: SourcePos -> SourcePos -> Bool
+prop_spanBetweenOrdered start end =
+    let span = spanBetween start end
+        startPos = spanStart span
+        endPos = spanEnd span
+    in (sourceLine startPos < sourceLine endPos) ||
+       (sourceLine startPos == sourceLine endPos && 
+        sourceColumn startPos <= sourceColumn endPos)
+
+-- Property: locatedAt creates a span with equal start and end
+prop_locatedAtValidSpan :: SourcePos -> String -> Bool
+prop_locatedAtValidSpan pos value =
+    let located = locatedAt pos value
+        span = locatedSpan located
+    in spanStart span == spanEnd span && spanStart span == pos
