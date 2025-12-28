@@ -1,136 +1,145 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
 module Test.Unit.NewCabalSourceLocationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose)
-import TestSupport.Arbitrary
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+import Test.QuickCheck ((===), Property, counterexample, forAll)
 
+import TestSupport.QuickCheck (fastProperty)
 import SourceLocation
   ( SourcePos(..)
   , SourceSpan(..)
   , Located(..)
   , startPos
   , posAfter
-  , posAt
-  , emptySpan
-  , spanFrom
-  , spanTo
-  , mergeSpans
-  , isValidSpan
-  , locatedAt
-  , locatedWithSpan
-  , locatedValue
-  , locatedSpan
-  , advancePos
   , advancePosBy
-  , spanStart
-  , spanEnd
-  , posLine
-  , posCol
+  , advancePosByText
+  , mergeSpans
+  , spanBetween
+  , emptySpan
+  , locatedAt
+  , isValidSpan
+  , toErrorLocation
+  , toErrorLocationWithSpan
   )
+import Compiler.Errors.Core (ErrorLocation(..))
+import qualified Data.Text as T
+import Data.Ord (comparing)
 
-import Data.List (sort)
-
--- Test 1: Source position ordering properties
-prop_source_pos_ordering :: SourcePos -> SourcePos -> Property
-prop_source_pos_ordering pos1 pos2 =
-  let line1 = posLine pos1
-      col1 = posCol pos1
-      line2 = posLine pos2
-      col2 = posCol pos2
-  in (line1 < line2) || (line1 == line2 && col1 <= col2) ==> 
-     property $ True -- Valid position ordering
-
--- Test 2: Span validity properties
-prop_span_validity :: SourcePos -> SourcePos -> Property
-prop_span_validity start end =
-  let span = SourceSpan start end
-      valid = isValidSpan span
-  in (posLine start <= posLine end && posCol start <= posCol end) ==> valid === True
-
--- Test 3: Empty span properties
-prop_empty_span_properties :: SourcePos -> Property
-prop_empty_span_properties pos =
-  let empty = emptySpan pos
-  in spanStart empty === spanEnd empty .&&. spanStart empty === pos
-
--- Test 4: Span merging properties
-prop_span_merging :: SourcePos -> SourcePos -> SourcePos -> Property
-prop_span_merging start1 end1 start2 =
-  let span1 = spanFrom start1 end1
-      span2 = spanFrom start2 (posAfter start2 10)
-      merged = mergeSpans span1 span2
-  in isValidSpan span1 && isValidSpan span2 ==> 
-     property $ isValidSpan merged
-
--- Test 5: Position advancement properties
-prop_position_advancement :: SourcePos -> Int -> Property
-prop_position_advancement pos offset =
-  let offset' = abs offset
-      advanced = posAfter pos offset'
-  in offset' >= 0 ==> 
-     property $ posLine advanced >= posLine pos
-
--- Test 6: Located value properties
-prop_located_value_properties :: String -> SourcePos -> Property
-prop_located_value_properties value pos =
-  let located = locatedAt pos value
-      span = locatedSpan located
-  in property $ locatedValue located === value .&&. spanStart span === pos
-
--- Test 7: Span position consistency
-prop_span_position_consistency :: SourcePos -> Int -> Property
-prop_span_position_consistency start offset =
-  let offset' = abs offset
-      end = posAfter start offset'
-      span = spanFrom start end
-  in offset' >= 0 ==> 
-     property $ spanStart span === start .&&. spanEnd span === end
-
--- Test 8: Position advancement by character count
-prop_position_advancement_by_chars :: SourcePos -> String -> Property
-prop_position_advancement_by_chars pos text =
-  let advanced = advancePos pos text
-  in property $ posLine advanced >= posLine pos
-
--- Test 9: Span ordering after merging
-prop_span_ordering_after_merge :: SourcePos -> SourcePos -> SourcePos -> Property
-prop_span_ordering_after_merge start1 end1 start2 =
-  let span1 = spanFrom start1 end1
-      span2 = spanFrom start2 (posAfter start2 5)
-      merged = mergeSpans span1 span2
-  in isValidSpan span1 && isValidSpan span2 ==> 
-     property $ spanStart merged `seq` spanEnd merged `seq` True
-
--- Test 10: Located span consistency
-prop_located_span_consistency :: String -> SourcePos -> SourcePos -> Property
-prop_located_span_consistency value start end =
-  let span = spanFrom start end
-      located = locatedWithSpan span value
-  in isValidSpan span ==> 
-     property $ locatedSpan located === span .&&. locatedValue located === value
-
+-- | Additional comprehensive tests for SourceLocation module
 tests :: TestTree
-tests = 
-  testGroup "New Cabal SourceLocation Tests"
-    [ fastProperty "Source position ordering properties" prop_source_pos_ordering
-    , fastProperty "Span validity properties" prop_span_validity
-    , fastProperty "Empty span properties" prop_empty_span_properties
-    , fastProperty "Span merging properties" prop_span_merging
-    , fastProperty "Position advancement properties" prop_position_advancement
-    , fastProperty "Located value properties" prop_located_value_properties
-    , fastProperty "Span position consistency" prop_span_position_consistency
-    , fastProperty "Position advancement by character count" prop_position_advancement_by_chars
-    , fastProperty "Span ordering after merge" prop_span_ordering_after_merge
-    , fastProperty "Located span consistency" prop_located_span_consistency
+tests =
+  testGroup "NewCabal SourceLocation Tests"
+    [ testGroup "Position arithmetic edge cases"
+        [ testCase "posAfter handles carriage return correctly" $ do
+            let initial = SourcePos 1 5 4
+                next = posAfter '\r' initial
+            next @?= SourcePos 1 6 5
+
+        , testCase "advancePosByText handles empty text" $ do
+            let result = advancePosByText T.empty startPos
+            result @?= startPos
+
+        , testCase "advancePosByText handles tabs at different positions" $ do
+            let pos1 = SourcePos 1 3 2
+                pos2 = advancePosBy "\t" pos1
+            pos2 @?= SourcePos 1 9 3  -- Should jump to next tab stop (position 9)
+
+        , testCase "advancePosByText handles mixed newlines and tabs" $ do
+            let result = advancePosByText (T.pack "a\t\nb\tc") startPos
+            result @?= SourcePos 2 10 6
+        ]
+
+    , testGroup "Span operations"
+        [ testCase "mergeSpans handles identical spans" $ do
+            let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 5 4)
+                result = mergeSpans span span
+            result @?= span
+
+        , testCase "mergeSpans handles nested spans" $ do
+            let outer = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
+                inner = SourceSpan (SourcePos 1 3 2) (SourcePos 1 7 6)
+                result = mergeSpans outer inner
+            result @?= outer
+
+        , testCase "spanBetween creates valid span when start <= end" $ do
+            let start = SourcePos 2 3 10
+                end = SourcePos 4 5 20
+                span = spanBetween start end
+            span @?= SourceSpan start end
+            assertBool "span should be valid" $ isValidSpan span
+        ]
+
+    , testGroup "Located values"
+        [ testCase "locatedAt creates zero-length span" $ do
+            let pos = SourcePos 5 10 45
+                located = locatedAt pos "test"
+            locatedSpan located @?= SourceSpan pos pos
+
+        , testCase "Located values maintain order" $ do
+            let pos1 = SourcePos 1 1 0
+                pos2 = SourcePos 1 2 1
+                loc1 = locatedAt pos1 "first"
+                loc2 = locatedAt pos2 "second"
+            assertBool "locations should be ordered" $ loc1 < loc2
+        ]
+
+    , testGroup "Error location conversion"
+        [ testCase "toErrorLocation handles large line numbers" $ do
+            let pos = SourcePos 999999 1000 50000
+                errLoc = toErrorLocation pos
+            line errLoc @?= 999999
+            column errLoc @?= 1000
+
+        , testCase "toErrorLocationWithSpan handles multi-line spans" $ do
+            let span = SourceSpan (SourcePos 1 5 4) (SourcePos 3 2 20)
+                errLoc = toErrorLocationWithSpan span
+            line errLoc @?= 1
+            column errLoc @?= 5
+            endLine errLoc @?= Just 3
+            endColumn errLoc @?= Just 2
+        ]
+
+    , testGroup "QuickCheck property tests"
+        [ fastProperty "posAfter advances offset by 1" prop_posAfterAdvancesOffset
+        , fastProperty "mergeSpans is commutative" prop_mergeSpansCommutative
+        , fastProperty "mergeSpans is associative" prop_mergeSpansAssociative
+        , fastProperty "spanBetween start <= end implies valid span" prop_spanBetweenValid
+        , fastProperty "advancePosByText is consistent with advancePosBy" prop_advancePosConsistency
+        ]
     ]
+
+-- Property: posAfter should always advance offset by exactly 1
+prop_posAfterAdvancesOffset :: Char -> SourcePos -> Property
+prop_posAfterAdvancesOffset c pos =
+  let result = posAfter c pos
+  in counterexample ("pos: " ++ show pos ++ ", char: " ++ show c ++ ", result: " ++ show result) $
+     posOffset result === posOffset pos + 1
+
+-- Property: mergeSpans should be commutative
+prop_mergeSpansCommutative :: SourceSpan -> SourceSpan -> Property
+prop_mergeSpansCommutative span1 span2 =
+  let merged1 = mergeSpans span1 span2
+      merged2 = mergeSpans span2 span1
+  in merged1 === merged2
+
+-- Property: mergeSpans should be associative
+prop_mergeSpansAssociative :: SourceSpan -> SourceSpan -> SourceSpan -> Property
+prop_mergeSpansAssociative span1 span2 span3 =
+  let merged1 = mergeSpans (mergeSpans span1 span2) span3
+      merged2 = mergeSpans span1 (mergeSpans span2 span3)
+  in merged1 === merged2
+
+-- Property: spanBetween should create valid span when start <= end
+prop_spanBetweenValid :: SourcePos -> SourcePos -> Property
+prop_spanBetweenValid start end =
+  let span = spanBetween start end
+      valid = isValidSpan span
+  in counterexample ("start: " ++ show start ++ ", end: " ++ show end ++ ", span: " ++ show span) $
+     if start <= end then valid else True  -- Only check when start <= end
+
+-- Property: advancePosByText should be consistent with advancePosBy
+prop_advancePosConsistency :: String -> SourcePos -> Property
+prop_advancePosConsistency text pos =
+  let byText = advancePosByText (T.pack text) pos
+      byString = advancePosBy text pos
+  in byText === byString

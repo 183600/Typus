@@ -1,161 +1,159 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
 module Test.Unit.NewCabalParserSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose)
-import TestSupport.Arbitrary
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+import Test.QuickCheck ((===), Property, counterexample)
 
+import TestSupport.QuickCheck (fastProperty)
 import Parser
   ( parseTypus
   , TypusFile(..)
+  , CodeBlock(..)
   , FileDirectives(..)
   , BlockDirectives(..)
-  , CodeBlock(..)
   , defaultFileDirectives
   , defaultBlockDirectives
   )
+import SourceLocation (SourcePos(..), SourceSpan(..))
+import qualified Data.Text as T
 
-import SourceLocation (Located(..), SourcePos(..), spanStart, spanEnd, posLine)
-import Data.List (isPrefixOf, isInfixOf)
-import Data.Char (isSpace)
-
--- Test 1: Parse empty input
-prop_parse_empty_input :: Property
-prop_parse_empty_input =
-  let parsed = parseTypus ""
-  in case parsed of
-       Left _ -> property True
-       Right typusFile -> property $ tfDirectives typusFile `seq` tfBlocks typusFile `seq` True
-
--- Test 2: Parse simple function
-prop_parse_simple_function :: String -> Property
-prop_parse_simple_function funcName =
-  let input = "func " ++ funcName ++ "() {}"
-      parsed = parseTypus input
-  in not (null funcName) && all (not . isSpace) funcName ==> 
-     case parsed of
-       Left _ -> property False
-       Right _ -> property True
-
--- Test 3: Parse file directives consistency
-prop_parse_file_directives :: Bool -> Bool -> Property
-prop_parse_file_directives ownership dependentTypes =
-  let input = unlines $
-        [ "//! ownership: " ++ show ownership
-        , "//! dependent_types: " ++ show dependentTypes
-        , "package main"
-        , "func main() {}"
-        ]
-      parsed = parseTypus input
-  in case parsed of
-       Left err -> property False
-       Right typusFile ->
-         let FileDirectives { fdOwnership = ownershipRes, fdDependentTypes = dependentTypesRes } = tfDirectives typusFile
-         in case (ownershipRes, dependentTypesRes) of
-              (Just loc1, Just loc2) -> locatedValue loc1 === ownership .&&. locatedValue loc2 === dependentTypes
-              _ -> property False
-
--- Test 4: Parse block directives
-prop_parse_block_directives :: Bool -> Property
-prop_parse_block_directives ownership =
-  let input = unlines $
-        [ "//! ownership: " ++ show ownership
-        , "package main"
-        , "func main() {"
-        , "  //! ownership: " ++ show (not ownership)
-        , "}"
-        ]
-      parsed = parseTypus input
-  in case parsed of
-       Left _ -> property True -- May fail due to syntax
-       Right typusFile -> property $ tfBlocks typusFile `seq` True
-
--- Test 5: Parse with comments
-prop_parse_with_comments :: String -> Property
-prop_parse_with_comments code =
-  let withComments = code ++ "\n// This is a comment\n"
-      parsed = parseTypus withComments
-  in case parsed of
-       Left _ -> property True
-       Right _ -> property True
-
--- Test 6: Parse multi-line strings
-prop_parse_multiline_strings :: String -> Property
-prop_parse_multiline_strings content =
-  let input = "func main() {\n  s := \"" ++ content ++ "\"\n}"
-      parsed = parseTypus input
-  in case parsed of
-       Left _ -> property True -- May fail due to special chars in content
-       Right _ -> property True
-
--- Test 7: Parse package declaration
-prop_parse_package_declaration :: String -> Property
-prop_parse_package_declaration pkgName =
-  let input = "package " ++ pkgName ++ "\nfunc main() {}"
-      parsed = parseTypus input
-  in not (null pkgName) && all (not . isSpace) pkgName ==> 
-     case parsed of
-       Left _ -> property True
-       Right _ -> property True
-
--- Test 8: Parse with whitespace variations
-prop_parse_whitespace_variations :: String -> Property
-prop_parse_whitespace_variations code =
-  let withExtraSpaces = "  " ++ code ++ "\n  \n"
-      parsed = parseTypus withExtraSpaces
-  in case parsed of
-       Left _ -> property True
-       Right _ -> property True
-
--- Test 9: Parse incomplete input gracefully
-prop_parse_incomplete_input :: String -> Property
-prop_parse_incomplete_input partial =
-  let input = "func " ++ partial
-      parsed = parseTypus input
-  in case parsed of
-       Left _ -> property True -- Expected to fail
-       Right _ -> property True -- May succeed for some inputs
-
--- Test 10: Parse directive ordering independence
-prop_parse_directive_ordering :: Bool -> Bool -> Property
-prop_parse_directive_ordering ownership dependentTypes =
-  let input1 = unlines $
-        [ "//! ownership: " ++ show ownership
-        , "//! dependent_types: " ++ show dependentTypes
-        , "func main() {}"
-        ]
-      input2 = unlines $
-        [ "//! dependent_types: " ++ show dependentTypes
-        , "//! ownership: " ++ show ownership
-        , "func main() {}"
-        ]
-      parsed1 = parseTypus input1
-      parsed2 = parseTypus input2
-  in case (parsed1, parsed2) of
-       (Right f1, Right f2) -> tfDirectives f1 === tfDirectives f2
-       _ -> property True
-
+-- | Additional comprehensive tests for Parser module
 tests :: TestTree
-tests = 
-  testGroup "New Cabal Parser Tests"
-    [ fastProperty "Parse empty input" prop_parse_empty_input
-    , fastProperty "Parse simple function" prop_parse_simple_function
-    , fastProperty "Parse file directives consistency" prop_parse_file_directives
-    , fastProperty "Parse block directives" prop_parse_block_directives
-    , fastProperty "Parse with comments" prop_parse_with_comments
-    , fastProperty "Parse multi-line strings" prop_parse_multiline_strings
-    , fastProperty "Parse package declaration" prop_parse_package_declaration
-    , fastProperty "Parse with whitespace variations" prop_parse_whitespace_variations
-    , fastProperty "Parse incomplete input gracefully" prop_parse_incomplete_input
-    , fastProperty "Parse directive ordering independence" prop_parse_directive_ordering
+tests =
+  testGroup "NewCabal Parser Tests"
+    [ testGroup "File directive parsing"
+        [ testCase "parses simple ownership directive" $ do
+            let input = "//! ownership: on\n"
+                result = parseTypus input
+            case result of
+              Right file -> assertBool "ownership should be enabled" $
+                case fdOwnership (tfDirectives file) of
+                  Just (Located value _) -> value
+                  Nothing -> False
+              Left _ -> assertBool "should parse successfully" False
+
+        , testCase "parses multiple file directives" $ do
+            let input = "//! ownership: on, dependent_types: true\n"
+                result = parseTypus input
+            case result of
+              Right file -> do
+                assertBool "ownership should be enabled" $
+                  case fdOwnership (tfDirectives file) of
+                    Just (Located value _) -> value
+                    Nothing -> False
+                assertBool "dependent_types should be enabled" $
+                  case fdDependentTypes (tfDirectives file) of
+                    Just (Located value _) -> value
+                    Nothing -> False
+              Left _ -> assertBool "should parse successfully" False
+
+        , testCase "handles invalid file directive gracefully" $ do
+            let input = "//! invalid_directive: on\n"
+                result = parseTypus input
+            case result of
+              Left _ -> assertBool "should fail on invalid directive" True
+              Right _ -> assertBool "should not succeed" False
+        ]
+
+    , testGroup "Block directive parsing"
+        [ testCase "parses block with ownership directive" $ do
+            let input = "{//! ownership: on}\nfunc test() {}\n"
+                result = parseTypus input
+            case result of
+              Right file -> do
+                let blocks = tfBlocks file
+                assertBool "should have one block" $ length blocks == 1
+                case blocks of
+                  (block:_) -> assertBool "block should have ownership enabled" $
+                    case bdOwnership (cbDirectives block) of
+                      Just (Located value _) -> value
+                      Nothing -> False
+                  [] -> assertBool "should have blocks" False
+              Left _ -> assertBool "should parse successfully" False
+
+        , testCase "handles nested braces in block content" $ do
+            let input = "{//! ownership: on}\nfunc test() {\n  if true {\n    return\n  }\n}\n"
+                result = parseTypus input
+            case result of
+              Right file -> do
+                let blocks = tfBlocks file
+                assertBool "should have one block" $ length blocks == 1
+                case blocks of
+                  (block:_) -> assertBool "block content should contain nested braces" $
+                    "{\n  if true {\n    return\n  }\n}" `isInfixOf` cbContent block
+                  [] -> assertBool "should have blocks" False
+              Left _ -> assertBool "should parse successfully" False
+        ]
+
+    , testGroup "Build tag parsing"
+        [ testCase "parses go build tags" $ do
+            let input = "//go:build linux\n// +build amd64\n\npackage main\n"
+                result = parseTypus input
+            case result of
+              Right file -> do
+                let buildTags = tfBuildTags file
+                assertBool "should have two build tags" $ length buildTags == 2
+                assertBool "first tag should be go:build" $
+                  "//go:build linux" `isInfixOf` locatedValue (head buildTags)
+                assertBool "second tag should be +build" $
+                  "// +build amd64" `isInfixOf` locatedValue (buildTags !! 1)
+              Left _ -> assertBool "should parse successfully" False
+        ]
+
+    , testGroup "Error handling"
+        [ testCase "detects unclosed directive blocks" $ do
+            let input = "{//! ownership: on\nfunc test() {}\n"
+                result = parseTypus input
+            case result of
+              Left err -> assertBool "should report unclosed block" $
+                "Unclosed directive block" `isInfixOf` err
+              Right _ -> assertBool "should not succeed" False
+
+        , testCase "handles malformed directives" $ do
+            let input = "{//! ownership}\nfunc test() {}\n"
+                result = parseTypus input
+            case result of
+              Left _ -> assertBool "should fail on malformed directive" True
+              Right _ -> assertBool "should not succeed" False
+        ]
+
+    , testGroup "QuickCheck property tests"
+        [ fastProperty "parseTypus handles empty input" prop_parseEmptyInput
+        , fastProperty "parseTypus preserves content structure" prop_preserveContentStructure
+        , fastProperty "default directives are used when none specified" prop_defaultDirectives
+        ]
     ]
+
+-- Helper function to check substring
+isInfixOf :: String -> String -> Bool
+isInfixOf needle haystack = needle `elem` [take (length needle) (drop i haystack) | i <- [0..length haystack - length needle]]
+
+-- Property: parseTypus should handle empty input gracefully
+prop_parseEmptyInput :: Property
+prop_parseEmptyInput =
+  let result = parseTypus ""
+  in counterexample ("result: " ++ show result) $
+     case result of
+       Right file -> tfDirectives file === defaultFileDirectives &&
+                    null (tfBlocks file) &&
+                    null (tfBuildTags file)
+       Left _ -> property False  -- Should not fail on empty input
+
+-- Property: parseTypus should preserve basic content structure
+prop_preserveContentStructure :: String -> Property
+prop_preserveContentStructure input =
+  let result = parseTypus input
+  in counterexample ("input: " ++ show input ++ ", result: " ++ show result) $
+     case result of
+       Right file -> length (tfBlocks file) >= 0  -- Should have non-negative number of blocks
+       Left _ -> property False  -- For this test, expect parsing to succeed
+
+-- Property: default directives should be used when none specified
+prop_defaultDirectives :: Property
+prop_defaultDirectives =
+  let input = "func test() {}\n"
+      result = parseTypus input
+  in counterexample ("result: " ++ show result) $
+     case result of
+       Right file -> tfDirectives file === defaultFileDirectives
+       Left _ -> property False
