@@ -2,14 +2,21 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module Test.Unit.NewParserQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import TestSupport.Arbitrary
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, sized, vector)
+import Data.Char (isSpace, isAlphaNum, isLetter)
+import qualified Data.List as Data.List
+import Data.List (isPrefixOf, isInfixOf, sort, nub)
+import qualified Data.Text as T
 
 import Parser
   ( parseTypus
@@ -20,267 +27,344 @@ import Parser
   , defaultFileDirectives
   , defaultBlockDirectives
   )
+import SourceLocation (SourcePos(..), SourceSpan(..))
 
-import SourceLocation (SourcePos(..), startPos)
-import Data.List (isPrefixOf, isInfixOf)
-import Data.Char (isSpace)
+-- ============================================================================
+-- Arbitrary Instances for Parser Types
+-- ============================================================================
 
--- | 新的语法解析器QuickCheck测试套件
-tests :: TestTree
-tests =
-  testGroup "New Parser QuickCheck Tests"
-    [ fastProperty "parseTypus handles empty input" prop_parseTypus_empty
-    , fastProperty "parseTypus handles simple code" prop_parseTypus_simple_code
-    , fastProperty "parseTypus handles file directives" prop_parseTypus_file_directives
-    , fastProperty "parseTypus handles block directives" prop_parseTypus_block_directives
-    , fastProperty "parseTypus preserves code content" prop_parseTypus_preserves_content
-    , fastProperty "parseTypus handles build tags" prop_parseTypus_build_tags
-    , fastProperty "parseTypus handles multiple blocks" prop_parseTypus_multiple_blocks
-    , fastProperty "parseTypus handles comments" prop_parseTypus_comments
-    , fastProperty "parseTypus handles malformed directives gracefully" prop_parseTypus_malformed_directives
-    , fastProperty "curlyDelta counts braces correctly" prop_curlyDelta_correct
-    ]
+instance Arbitrary FileDirectives where
+  arbitrary = do
+    ownership <- arbitrary
+    dependentTypes <- arbitrary
+    constraints <- arbitrary
+    return $ FileDirectives ownership dependentTypes constraints
 
--- Property: parseTypus handles empty input
-prop_parseTypus_empty :: Property
-prop_parseTypus_empty =
+instance Arbitrary BlockDirectives where
+  arbitrary = do
+    ownership <- arbitrary
+    dependentTypes <- arbitrary
+    constraints <- arbitrary
+    return $ BlockDirectives ownership dependentTypes constraints
+
+-- Generate valid directive keys
+genDirectiveKey :: Gen String
+genDirectiveKey = elements ["ownership", "dependent_types", "constraints"]
+
+-- Generate valid directive values (on/off)
+genDirectiveValue :: Gen String
+genDirectiveValue = elements ["on", "off", "true", "false"]
+
+-- Generate file directive lines
+genFileDirectiveLine :: Gen String
+genFileDirectiveLine = do
+  key <- genDirectiveKey
+  value <- genDirectiveValue
+  return $ "//! " ++ key ++ ": " ++ value
+
+-- Generate block directive lines
+genBlockDirectiveLine :: Gen String
+genBlockDirectiveLine = do
+  keys <- listOf genDirectiveKey
+  values <- listOf genDirectiveValue
+  let pairs = zipWith (\k v -> k ++ ": " ++ v) keys values
+      joined = Data.List.intercalate ", " pairs
+  return $ "{//! " ++ joined ++ "}"
+
+-- Generate simple code content without directives
+genCodeContent :: Gen String
+genCodeContent = do
+  lines' <- listOf $ listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t(){}[];,+"
+  return $ unlines lines'
+
+-- Generate build tag lines
+genBuildTagLine :: Gen String
+genBuildTagLine = do
+  tag <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"
+  return $ "//go:build " ++ tag
+
+-- ============================================================================
+-- Parser Properties
+-- ============================================================================
+
+-- Property: Empty input parses to file with no blocks
+prop_empty_input_parses :: Property
+prop_empty_input_parses =
   let result = parseTypus ""
   in case result of
     Left _ -> property False
-    Right typusFile -> property $ 
-      tfDirectives typusFile === defaultFileDirectives .&&.
-      null (tfBuildTags typusFile) .&&.
-      null (tfBlocks typusFile)
+    Right file -> property $ null (tfBlocks file) .&&.
+                        tfDirectives file === defaultFileDirectives .&&.
+                        null (tfBuildTags file)
 
--- Property: parseTypus handles simple code
-prop_parseTypus_simple_code :: String -> Property
-prop_parseTypus_simple_code code =
-  not (null code) && length code <= 100 && not (any (`isInfixOf` code) ["//!", "{//!"]) ==>
-  let result = parseTypus code
+-- Property: Simple code without directives parses
+prop_simple_code_parses :: String -> Property
+prop_simple_code_parses content =
+  not ("{//!" `isInfixOf` content) && not ("//!" `isPrefixOf` content) ==>
+  let result = parseTypus content
   in case result of
     Left _ -> property False
-    Right typusFile -> property $ 
-      tfDirectives typusFile === defaultFileDirectives .&&.
-      null (tfBuildTags typusFile) .&&.
-      length (tfBlocks typusFile) >= 1
+    Right file -> property $ not (null (tfBlocks file)) ==> 
+                              all (\block -> cbDirectives block === defaultBlockDirectives) (tfBlocks file)
 
--- Property: parseTypus handles file directives
-prop_parseTypus_file_directives :: String -> Property
-prop_parseTypus_file_directives directiveContent =
-  not (null directiveContent) && length directiveContent <= 50 ==>
-  let code = "//! ownership: " ++ directiveContent ++ "\nfunc main() {}\n"
-      result = parseTypus code
+-- Property: File directives are parsed correctly
+prop_file_directives_parsed :: String -> String -> String -> Property
+prop_file_directives_parsed ownershipVal dependentTypesVal constraintsVal =
+  ownershipVal `elem` ["on", "off"] && dependentTypesVal `elem` ["on", "off"] && constraintsVal `elem` ["on", "off"] ==>
+  let input = "//! ownership: " ++ ownershipVal ++ "\n" ++
+              "//! dependent_types: " ++ dependentTypesVal ++ "\n" ++
+              "//! constraints: " ++ constraintsVal ++ "\n" ++
+              "some code here"
+      result = parseTypus input
   in case result of
     Left _ -> property False
-    Right typusFile -> property $ 
-      case fdOwnership (tfDirectives typusFile) of
-        Nothing -> property False
-        Just _ -> property True
+    Right file -> property $ case (fdOwnership (tfDirectives file), 
+                                   fdDependentTypes (tfDirectives file), 
+                                   fdConstraints (tfDirectives file)) of
+                              (Just ownership, Just dependentTypes, Just constraints) ->
+                                locatedValue ownership === (ownershipVal == "on" || ownershipVal == "true") .&&.
+                                locatedValue dependentTypes === (dependentTypesVal == "on" || dependentTypesVal == "true") .&&.
+                                locatedValue constraints === (constraintsVal == "on" || constraintsVal == "true")
+                              _ -> property False
 
--- Property: parseTypus handles block directives
-prop_parseTypus_block_directives :: String -> Property
-prop_parseTypus_block_directives directiveContent =
-  not (null directiveContent) && length directiveContent <= 50 ==>
-  let code = "{//! ownership: " ++ directiveContent ++ "}\nfunc main() {}\n"
-      result = parseTypus code
+-- Property: Block directives are parsed correctly
+prop_block_directives_parsed :: String -> String -> String -> Property
+prop_block_directives_parsed ownershipVal dependentTypesVal constraintsVal =
+  ownershipVal `elem` ["on", "off"] && dependentTypesVal `elem` ["on", "off"] && constraintsVal `elem` ["on", "off"] ==>
+  let input = "{//! ownership: " ++ ownershipVal ++ ", dependent_types: " ++ dependentTypesVal ++ ", constraints: " ++ constraintsVal ++ "}\n" ++
+              "code block content"
+      result = parseTypus input
   in case result of
     Left _ -> property False
-    Right typusFile -> property $ 
-      case tfBlocks typusFile of
-        [] -> property False
-        (block:_) -> case bdOwnership (cbDirectives block) of
-          Nothing -> property False
-          Just _ -> property True
+    Right file -> property $ case tfBlocks file of
+                              [block] -> case (bdOwnership (cbDirectives block),
+                                              bdDependentTypes (cbDirectives block),
+                                              bdConstraints (cbDirectives block)) of
+                                (Just ownership, Just dependentTypes, Just constraints) ->
+                                  locatedValue ownership === (ownershipVal == "on" || ownershipVal == "true") .&&.
+                                  locatedValue dependentTypes === (dependentTypesVal == "on" || dependentTypesVal == "true") .&&.
+                                  locatedValue constraints === (constraintsVal == "on" || constraintsVal == "true")
+                                _ -> property False
+                              _ -> property False
 
--- Property: parseTypus preserves code content
-prop_parseTypus_preserves_content :: String -> Property
-prop_parseTypus_preserves_content codeContent =
-  not (null codeContent) && length codeContent <= 100 &&
-  not (any (`isInfixOf` codeContent) ["//!", "{//!"]) ==>
-  let code = codeContent ++ "\n"
-      result = parseTypus code
+-- Property: Mixed file and block directives
+prop_mixed_directives_parsed :: String -> String -> Property
+prop_mixed_directives_parsed fileOwnership blockOwnership =
+  fileOwnership `elem` ["on", "off"] && blockOwnership `elem` ["on", "off"] ==>
+  let input = "//! ownership: " ++ fileOwnership ++ "\n" ++
+              "regular code\n" ++
+              "{//! ownership: " ++ blockOwnership ++ "}\n" ++
+              "block code"
+      result = parseTypus input
   in case result of
     Left _ -> property False
-    Right typusFile -> case tfBlocks typusFile of
-      [] -> property False
-      (block:_) -> property $ cbContent block `isInfixOf` codeContent
+    Right file -> property $ case (fdOwnership (tfDirectives file), tfBlocks file) of
+                              (Just fileDir, [block]) -> case bdOwnership (cbDirectives block) of
+                                Just blockDir -> property $ locatedValue fileDir === (fileOwnership == "on" || fileOwnership == "true") .&&.
+                                                              locatedValue blockDir === (blockOwnership == "on" || blockOwnership == "true")
+                                _ -> property False
+                              _ -> property False
 
--- Property: parseTypus handles build tags
-prop_parseTypus_build_tags :: String -> Property
-prop_parseTypus_build_tags tagContent =
-  not (null tagContent) && length tagContent <= 30 ==>
-  let code = "//go:build " ++ tagContent ++ "\nfunc main() {}\n"
-      result = parseTypus code
+-- Property: Build tags are preserved
+prop_build_tags_preserved :: [String] -> Property
+prop_build_tags_preserved tags =
+  all (not . null) tags && all (not . any isSpace) tags ==>
+  let tagLines = map (\tag -> "//go:build " ++ tag) tags
+      input = unlines tagLines ++ "\nsome code"
+      result = parseTypus input
   in case result of
     Left _ -> property False
-    Right typusFile -> property $ 
-      not (null (tfBuildTags typusFile))
+    Right file -> property $ length (tfBuildTags file) === length tags .&&.
+                        all (`elem` map locatedValue (tfBuildTags file)) tags
 
--- Property: parseTypus handles multiple blocks
-prop_parseTypus_multiple_blocks :: [String] -> Property
-prop_parseTypus_multiple_blocks codeBlocks =
-  not (null codeBlocks) && length codeBlocks <= 5 &&
-  all (\block -> not (null block) && length block <= 50) codeBlocks ==>
-  let code = unlines (concatMap (\block -> [block, ""]) codeBlocks)
-      result = parseTypus code
+-- Property: Multiple code blocks are parsed
+prop_multiple_blocks_parsed :: [String] -> Property
+prop_multiple_blocks_parsed contents =
+  all (not . null) contents && all (not . any (`elem` "{}/") contents ==>
+  let blockTemplate content = "{//! ownership: on}\n" ++ content
+      blocks = map blockTemplate contents
+      input = unlines $ intersperse "" blocks
+      result = parseTypus input
   in case result of
     Left _ -> property False
-    Right typusFile -> property $ 
-      length (tfBlocks typusFile) >= length codeBlocks
-
--- Property: parseTypus handles comments
-prop_parseTypus_comments :: String -> String -> Property
-prop_parseTypus_comments code comment =
-  not (null code) && not (null comment) &&
-  length code <= 50 && length comment <= 30 ==>
-  let codeWithComment = code ++ "\n// " ++ comment ++ "\n"
-      result = parseTypus codeWithComment
-  in case result of
-    Left _ -> property False
-    Right typusFile -> property $ 
-      length (tfBlocks typusFile) >= 1
-
--- Property: parseTypus handles malformed directives gracefully
-prop_parseTypus_malformed_directives :: String -> Property
-prop_parseTypus_malformed_directives malformedDirective =
-  not (null malformedDirective) && length malformedDirective <= 30 ==>
-  let code = malformedDirective ++ "\nfunc main() {}\n"
-      result = parseTypus code
-  in case result of
-    Left _ -> property True  -- Malformed directives should cause parsing errors
-    Right typusFile -> property $ True  -- Or they might be ignored, still valid
-
--- Property: curlyDelta counts braces correctly
-prop_curlyDelta_correct :: String -> Property
-prop_curlyDelta_correct codeString =
-  let openCount = length $ filter (== '{') codeString
-      closeCount = length $ filter (== '}') codeString
-      expectedDelta = openCount - closeCount
-      actualDelta = curlyDelta codeString
-  in property $ actualDelta === expectedDelta
-
--- Additional properties for parser testing
-
--- Property: parseTypus handles nested blocks
-prop_parseTypus_nested_blocks :: String -> Property
-prop_parseTypus_nested_blocks innerCode =
-  not (null innerCode) && length innerCode <= 50 ==>
-  let code = "func main() {\n  " ++ innerCode ++ "\n}\n"
-      result = parseTypus code
-  in case result of
-    Left _ -> property False
-    Right typusFile -> property $ 
-      length (tfBlocks typusFile) >= 1
-
--- Property: parseTypus handles whitespace correctly
-prop_parseTypus_whitespace :: String -> Property
-prop_parseTypus_whitespace code =
-  not (null code) && length code <= 30 ==>
-  let codeWithWhitespace = "  \n  " ++ code ++ "\n  \n"
-      result = parseTypus codeWithWhitespace
-  in case result of
-    Left _ -> property False
-    Right typusFile -> property $ 
-      length (tfBlocks typusFile) >= 1
-
--- Property: parseTypus handles package declarations
-prop_parseTypus_package :: String -> Property
-prop_parseTypus_package packageName =
-  not (null packageName) && length packageName <= 20 && all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") packageName ==>
-  let code = "package " ++ packageName ++ "\nfunc main() {}\n"
-      result = parseTypus code
-  in case result of
-    Left _ -> property False
-    Right typusFile -> property $ 
-      length (tfBlocks typusFile) >= 1
-
--- Property: parseTypus handles function declarations
-prop_parseTypus_functions :: String -> Property
-prop_parseTypus_functions funcName =
-  not (null funcName) && length funcName <= 20 && all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") funcName ==>
-  let code = "func " ++ funcName ++ "() {\n  // function body\n}\n"
-      result = parseTypus code
-  in case result of
-    Left _ -> property False
-    Right typusFile -> property $ 
-      length (tfBlocks typusFile) >= 1
-
--- Property: parseTypus handles multiple file directives
-prop_parseTypus_multiple_file_directives :: [(String, Bool)] -> Property
-prop_parseTypus_multiple_file_directives directives =
-  not (null directives) && length directives <= 3 ==>
-  let directiveLines = map (\(key, value) -> "//! " ++ key ++ ": " ++ if value then "on" else "off") directives
-      code = unlines directiveLines ++ "\nfunc main() {}\n"
-      result = parseTypus code
-  in case result of
-    Left _ -> property False
-    Right typusFile -> property $ 
-      tfDirectives typusFile /= defaultFileDirectives
-
--- Property: parseTypus handles multiple block directives
-prop_parseTypus_multiple_block_directives :: [(String, Bool)] -> Property
-prop_parseTypus_multiple_block_directives directives =
-  not (null directives) && length directives <= 3 ==>
-  let directiveContent = unlines $ map (\(key, value) -> key ++ ": " ++ if value then "on" else "off") directives
-      code = "{//! " ++ directiveContent ++ "}\nfunc main() {}\n"
-      result = parseTypus code
-  in case result of
-    Left _ -> property False
-    Right typusFile -> property $ 
-      case tfBlocks typusFile of
-        [] -> property False
-        (block:_) -> property $ 
-          cbDirectives block /= defaultBlockDirectives
-
--- Property: parseTypus handles mixed directives
-prop_parseTypus_mixed_directives :: String -> String -> Property
-prop_parseTypus_mixed_directives fileDirective blockDirective =
-  not (null fileDirective) && not (null blockDirective) &&
-  length fileDirective <= 20 && length blockDirective <= 20 ==>
-  let code = "//! ownership: " ++ fileDirective ++ "\n{//! dependent_types: " ++ blockDirective ++ "}\nfunc main() {}\n"
-      result = parseTypus code
-  in case result of
-    Left _ -> property False
-    Right typusFile -> property $ 
-      case fdOwnership (tfDirectives typusFile) of
-        Nothing -> property False
-        Just _ -> case tfBlocks typusFile of
-          [] -> property False
-          (block:_) -> case bdDependentTypes (cbDirectives block) of
-            Nothing -> property False
-            Just _ -> property True
-
--- Property: parseTypus preserves line structure
-prop_parseTypus_preserves_lines :: [String] -> Property
-prop_parseTypus_preserves_lines lines =
-  not (null lines) && length lines <= 5 &&
-  all (\line -> length line <= 30) lines ==>
-  let code = unlines lines
-      result = parseTypus code
-  in case result of
-    Left _ -> property False
-    Right typusFile -> 
-      let blockContents = concatMap cbContent (tfBlocks typusFile)
-          originalLines = lines code
-          blockLines = lines blockContents
-      in property $ length blockLines >= 1
-
--- Helper function to count curly braces (from Parser module)
-curlyDelta :: String -> Int
-curlyDelta = go False False 0
+    Right file -> property $ length (tfBlocks file) === length contents .&&.
+                        all (\block -> cbDirectives block /= defaultBlockDirectives) (tfBlocks file)
   where
-    go :: Bool -> Bool -> Int -> String -> Int
-    go _ _ acc [] = acc
-    go inStr _ acc ('/' : '/' : _) | not inStr = acc
-    go inStr esc acc (c:cs)
-        | inStr =
-            case c of
-                '"' | not esc -> go False False acc cs
-                '\\'         -> go True True acc cs
-                _              -> go True False acc cs
-        | otherwise =
-            case c of
-                '"' -> go True False acc cs
-                '{' -> go False False (acc + 1) cs
-                '}' -> go False False (acc - 1) cs
-                _   -> go False False acc cs
+    intersperse _ [] = []
+    intersperse _ [x] = [x]
+    intersperse sep (x:y:xs) = x : sep : intersperse sep (y:xs)
+
+-- Property: Parsing is idempotent for parsed content
+prop_parsing_idempotent :: String -> Property
+prop_parsing_idempotent content =
+  not ("{//!" `isInfixOf` content) && not ("//!" `isPrefixOf` content) ==>
+  case parseTypus content of
+    Left _ -> property False
+    Right file -> 
+      let reconstructed = unlines $ map cbContent (tfBlocks file)
+          result2 = parseTypus reconstructed
+      in case result2 of
+        Left _ -> property False
+        Right file2 -> property $ length (tfBlocks file) === length (tfBlocks file2)
+
+-- Property: Invalid directives are handled gracefully
+prop_invalid_directives_handled :: String -> Property
+prop_invalid_directives_handled invalidKey =
+  not (null invalidKey) && not (any isSpace invalidKey) && not (invalidKey `elem` ["ownership", "dependent_types", "constraints"]) ==>
+  let input = "//! " ++ invalidKey ++ ": on\nsome code"
+      result = parseTypus input
+  in case result of
+    Left _ -> property True  -- Expected to fail
+    Right _ -> property False -- Should not succeed with invalid directives
+
+-- Property: Comments in code are preserved (except directive comments)
+prop_comments_preserved :: String -> Property
+prop_comments_preserved content =
+  not ("//!" `isInfixOf` content) && not ("{//!" `isInfixOf` content) ==>
+  let withComments = content ++ "\n// regular comment\n/* block comment */\nmore code"
+      result = parseTypus withComments
+  in case result of
+    Left _ -> property False
+    Right file -> property $ any (isInfixOf "// regular comment") (map cbContent (tfBlocks file)) .&&.
+                        any (isInfixOf "/* block comment */") (map cbContent (tfBlocks file))
+
+-- Property: Whitespace handling in directives
+prop_whitespace_directives :: String -> String -> Property
+prop_whitespace_directives key value =
+  key `elem` ["ownership", "dependent_types", "constraints"] && value `elem` ["on", "off"] ==>
+  let inputs = [ "//! " ++ key ++ ":" ++ value
+               , "//! " ++ key ++ " : " ++ value
+               , "//!\t" ++ key ++ ":\t" ++ value
+               , "//!  " ++ key ++ "  :  " ++ value
+               ]
+      results = map parseTypus inputs
+      successes = [file | Right file <- results]
+  in property $ length successes === length inputs -- All should parse successfully
+
+-- Property: Complex nested structures
+prop_complex_nested_structures :: String -> String -> String -> Property
+prop_complex_nested_structures prefix middle suffix =
+  not (any (`elem` "{}/") prefix) && not (any (`elem` "{}/") middle) && not (any (`elem` "{}/") suffix) ==>
+  let input = prefix ++ "\n" ++
+              "{//! ownership: on, dependent_types: true}\n" ++
+              middle ++ "\n" ++
+              "{//! constraints: off}\n" ++
+              suffix
+      result = parseTypus input
+  in case result of
+    Left _ -> property False
+    Right file -> property $ length (tfBlocks file) === 2 .&&.
+                        case cbDirectives (head (tfBlocks file)) of
+                          BlockDirectives (Just ownership) (Just dependentTypes) Nothing ->
+                            locatedValue ownership .&&. locatedValue dependentTypes
+                          _ -> property False
+
+-- Property: Empty blocks are handled
+prop_empty_blocks_handled :: Property
+prop_empty_blocks_handled =
+  let input = "{//! ownership: on}\n{//! dependent_types: true}\nregular code"
+      result = parseTypus input
+  in case result of
+    Left _ -> property False
+    Right file -> property $ length (tfBlocks file) >= 1 -- At least the non-empty block
+
+-- Property: Line endings are preserved
+prop_line_endings_preserved :: String -> Property
+prop_line_endings_preserved content =
+  not ("{//!" `isInfixOf` content) && not ("//!" `isPrefixOf` content) ==>
+  let withLineEndings = content ++ "\n\n"  -- Ensure line endings
+      result = parseTypus withLineEndings
+  in case result of
+    Left _ -> property False
+    Right file -> property $ any (isInfixOf "\n") (map cbContent (tfBlocks file))
+
+-- ============================================================================
+-- Error Handling Properties
+-- ============================================================================
+
+-- Property: Malformed directives are rejected
+prop_malformed_directives_rejected :: String -> Property
+prop_malformed_directives_rejected malformed =
+  not (null malformed) && not ("//! ownership: on" `isPrefixOf` malformed) ==>
+  let input = malformed ++ "\nsome code"
+      result = parseTypus input
+  in case result of
+    Left _ -> property True  -- Expected to fail
+    Right _ -> property False -- Should not succeed with malformed directives
+
+-- Property: Unclosed block directives are handled
+prop_unclosed_blocks_handled :: String -> Property
+prop_unclosed_blocks_handled content =
+  not ("}" `isInfixOf` content) ==>
+  let input = "{//! ownership: on}\n" ++ content
+      result = parseTypus input
+  in case result of
+    Left _ -> property True  -- Expected to fail
+    Right _ -> property False -- Should not succeed with unclosed blocks
+
+-- ============================================================================
+-- Performance and Edge Cases
+-- ============================================================================
+
+-- Property: Large file parsing performance (bounded)
+prop_large_file_parsing :: Int -> String -> Property
+prop_large_file_parsing multiplier base =
+  multiplier > 0 && multiplier <= 100 ==> -- Bounded for performance
+  let largeContent = concat $ replicate multiplier (base ++ "\n")
+      result = parseTypus largeContent
+  in case result of
+    Left _ -> property False
+    Right file -> property $ not (null (tfBlocks file)) || null (trim base)
+
+-- Property: Unicode content in code blocks
+prop_unicode_content :: String -> Property
+prop_unicode_content content =
+  let unicodeContent = content ++ " café naïve 🚀 测试"
+      input = "{//! ownership: on}\n" ++ unicodeContent
+      result = parseTypus input
+  in case result of
+    Left _ -> property False
+    Right file -> property $ case tfBlocks file of
+                              [block] -> "café naïve 🚀 测试" `isInfixOf` cbContent block
+                              _ -> property False
+
+-- ============================================================================
+-- Helper Functions
+-- ============================================================================
+
+trim :: String -> String
+trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
+
+-- ============================================================================
+-- Test Collection
+-- ============================================================================
+
+tests :: TestTree
+tests = testGroup "New Parser QuickCheck Tests"
+  [ testGroup "Basic Parsing Properties"
+    [ fastProperty "empty input parses to file with no blocks" prop_empty_input_parses
+    , fastProperty "simple code without directives parses" prop_simple_code_parses
+    , fastProperty "file directives are parsed correctly" prop_file_directives_parsed
+    , fastProperty "block directives are parsed correctly" prop_block_directives_parsed
+    , fastProperty "mixed file and block directives" prop_mixed_directives_parsed
+    , fastProperty "build tags are preserved" prop_build_tags_preserved
+    ]
+  , testGroup "Complex Parsing Properties"
+    [ fastProperty "multiple code blocks are parsed" prop_multiple_blocks_parsed
+    , fastProperty "parsing is idempotent for parsed content" prop_parsing_idempotent
+    , fastProperty "comments in code are preserved" prop_comments_preserved
+    , fastProperty "whitespace handling in directives" prop_whitespace_directives
+    , fastProperty "complex nested structures" prop_complex_nested_structures
+    , fastProperty "empty blocks are handled" prop_empty_blocks_handled
+    , fastProperty "line endings are preserved" prop_line_endings_preserved
+    ]
+  , testGroup "Error Handling Properties"
+    [ fastProperty "invalid directives are handled gracefully" prop_invalid_directives_handled
+    , fastProperty "malformed directives are rejected" prop_malformed_directives_rejected
+    , fastProperty "unclosed block directives are handled" prop_unclosed_blocks_handled
+    ]
+  , testGroup "Performance and Edge Cases"
+    [ fastProperty "large file parsing performance" prop_large_file_parsing
+    , fastProperty "unicode content in code blocks" prop_unicode_content
+    ]
+  ]
