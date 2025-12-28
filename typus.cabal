@@ -982,7 +982,8 @@ test-suite typus-test
         , Test.Unit.NewCabalQuickCheckSpec10
         
     other-modules:
-            Test.Dependencies.Arbitrary
+            Test.Dependencies.Arbitrary,
+            Test.Unit.NewCabalQuickCheckTestSuite
     build-depends:
         base >=4.7 && <5,
         typus,

@@ -99,6 +99,9 @@ import qualified Test.Unit.EndToEndIntegrationQuickCheckSpec
 -- New Comprehensive Cabal QuickCheck Test Suite (2025)
 import qualified Test.Unit.NewComprehensiveCabalQuickCheckTestSuite
 
+-- New Cabal QuickCheck Test Suite (2025) - 10 comprehensive tests
+import qualified Test.Unit.NewCabalQuickCheckTestSuite
+
 -- New Comprehensive Test Modules Added (2025)
 import qualified Test.Unit.NewParserPropertiesSpec
 import qualified Test.Unit.NewSourceLocationMathSpec
@@ -2832,5 +2835,12 @@ tests =
     , Test.Unit.NewCabalQuickCheckSpec9.tests
     , Test.Unit.NewCabalQuickCheckSpec10.tests
     , Test.Unit.AdditionalCabalQuickCheckTestSuite.tests
+    ]
+
+  -- ============================================================================
+  -- New Cabal QuickCheck Test Suite (2025) - 10 comprehensive tests
+  -- ============================================================================
+  , testGroup "New Cabal QuickCheck Test Suite - Enhanced Property Testing"
+    [ Test.Unit.NewCabalQuickCheckTestSuite.tests
     ]
   ]
