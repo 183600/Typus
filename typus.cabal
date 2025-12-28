@@ -945,6 +945,18 @@ test-suite typus-test
         , Test.Unit.NewParserEnhancedQuickCheckSpec
         , Test.Unit.NewErrorHandlerEnhancedQuickCheckSpec
         
+        -- New Cabal Test Modules (10 comprehensive tests added)
+        , Test.Unit.NewUtilsStringProcessingSpec
+        , Test.Unit.NewSourceLocationCalculationSpec
+        , Test.Unit.NewParserBasicPropertiesSpec
+        , Test.Unit.NewErrorHandlerPropertiesSpec
+        , Test.Unit.NewOwnershipTransferPropertiesSpec
+        , Test.Unit.NewDependenciesAnalysisPropertiesSpec
+        , Test.Unit.NewCompilerOptimizationPropertiesSpec
+        , Test.Unit.NewSyntaxValidatorRobustnessSpec
+        , Test.Unit.NewDependentTypeValidationSpec
+        , Test.Unit.NewIntegrationEndToEndSpec
+        
     other-modules:
             Test.Dependencies.Arbitrary
     build-depends:

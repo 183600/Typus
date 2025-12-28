@@ -700,6 +700,20 @@ import qualified Test.Unit.NewCabalTestSpec
 import qualified Test.Unit.NewTextProcessingQuickCheckSpec
 
 -- ============================================================================
+-- New Cabal Test Modules (10 comprehensive tests added) - Imports
+-- ============================================================================
+import qualified Test.Unit.NewUtilsStringProcessingSpec
+import qualified Test.Unit.NewSourceLocationCalculationSpec
+import qualified Test.Unit.NewParserBasicPropertiesSpec
+import qualified Test.Unit.NewErrorHandlerPropertiesSpec
+import qualified Test.Unit.NewOwnershipTransferPropertiesSpec
+import qualified Test.Unit.NewDependenciesAnalysisPropertiesSpec
+import qualified Test.Unit.NewCompilerOptimizationPropertiesSpec
+import qualified Test.Unit.NewSyntaxValidatorRobustnessSpec
+import qualified Test.Unit.NewDependentTypeValidationSpec
+import qualified Test.Unit.NewIntegrationEndToEndSpec
+
+-- ============================================================================
 -- New Comprehensive QuickCheck Test Modules (2025) - 10 Enhanced Tests
 -- ============================================================================
 import qualified Test.Unit.NewUtilsStringProcessingQuickCheckSpec
@@ -2696,6 +2710,22 @@ tests =
     , Test.Unit.NewSourceLocationEnhancedQuickCheckSpec.test_SourceLocationEnhancedQuickCheck
     , Test.Unit.NewParserEnhancedQuickCheckSpec.test_ParserEnhancedQuickCheck
     , Test.Unit.NewErrorHandlerEnhancedQuickCheckSpec.test_ErrorHandlerEnhancedQuickCheck
+    ]
+
+  -- ============================================================================
+  -- New Cabal Test Modules (10 comprehensive tests added)
+  -- ============================================================================
+  , testGroup "New Cabal Test Modules - Enhanced Testing Coverage"
+    [ Test.Unit.NewUtilsStringProcessingSpec.tests
+    , Test.Unit.NewSourceLocationCalculationSpec.tests
+    , Test.Unit.NewParserBasicPropertiesSpec.tests
+    , Test.Unit.NewErrorHandlerPropertiesSpec.tests
+    , Test.Unit.NewOwnershipTransferPropertiesSpec.tests
+    , Test.Unit.NewDependenciesAnalysisPropertiesSpec.tests
+    , Test.Unit.NewCompilerOptimizationPropertiesSpec.tests
+    , Test.Unit.NewSyntaxValidatorRobustnessSpec.tests
+    , Test.Unit.NewDependentTypeValidationSpec.tests
+    , Test.Unit.NewIntegrationEndToEndSpec.tests
     ]
 
   -- ============================================================================
