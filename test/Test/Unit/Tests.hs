@@ -698,6 +698,19 @@ import qualified Test.Unit.NewCabalTestSpec
 
 -- New Test Modules Added for Enhanced Testing (2025)
 import qualified Test.Unit.NewTextProcessingQuickCheckSpec
+
+-- ============================================================================
+-- New Comprehensive QuickCheck Test Modules (2025) - 10 Enhanced Tests
+-- ============================================================================
+import qualified Test.Unit.NewUtilsStringProcessingQuickCheckSpec
+import qualified Test.Unit.NewSourceLocationTrackingQuickCheckSpec
+import qualified Test.Unit.NewParserQuickCheckSpec
+import qualified Test.Unit.NewCompilerIRQuickCheckSpec
+import qualified Test.Unit.NewOwnershipQuickCheckSpec
+import qualified Test.Unit.NewErrorHandlerQuickCheckSpec
+import qualified Test.Unit.NewDependenciesQuickCheckSpec
+import qualified Test.Unit.NewIntegrationQuickCheckSpec
+import qualified Test.Unit.NewDependentTypesQuickCheckSpec
 import qualified Test.Unit.NewSourceLocationTrackingQuickCheckSpec
 import qualified Test.Unit.NewErrorHandlingQuickCheckSpec
 import qualified Test.Unit.NewCompilerIRQuickCheckSpec
@@ -2693,5 +2706,20 @@ tests =
     , Test.Unit.NewSourceLocationQuickCheckSpec.tests
     , Test.Unit.NewParserQuickCheckSpec.tests
     , Test.Unit.NewComprehensiveQuickCheckSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Comprehensive QuickCheck Test Modules (2025) - 10 Enhanced Tests
+  -- ============================================================================
+  , testGroup "New Comprehensive QuickCheck Test Modules - Enhanced Testing Coverage"
+    [ Test.Unit.NewUtilsStringProcessingQuickCheckSpec.tests
+    , Test.Unit.NewSourceLocationTrackingQuickCheckSpec.tests
+    , Test.Unit.NewParserQuickCheckSpec.tests
+    , Test.Unit.NewCompilerIRQuickCheckSpec.tests
+    , Test.Unit.NewOwnershipQuickCheckSpec.tests
+    , Test.Unit.NewErrorHandlerQuickCheckSpec.tests
+    , Test.Unit.NewDependenciesQuickCheckSpec.tests
+    , Test.Unit.NewIntegrationQuickCheckSpec.tests
+    , Test.Unit.NewDependentTypesQuickCheckSpec.tests
     ]
   ]
