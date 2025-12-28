@@ -614,6 +614,9 @@ import qualified Test.Unit.IntegrationEndToEndSpec
 
 -- New Comprehensive Cabal Test Modules (2025)
 import qualified Test.Unit.NewComprehensiveCabalTestsSpec
+
+-- Additional Cabal QuickCheck Test Suite (2025)
+import qualified Test.Unit.AdditionalCabalQuickCheckTestSuite
 import qualified Test.Unit.UtilsEnhancedQuickCheckSpec
 import qualified Test.Unit.ParserBoundaryConditionsQuickCheckSpec
 import qualified Test.Unit.OwnershipPropertiesQuickCheckSpec
@@ -2828,5 +2831,6 @@ tests =
     , Test.Unit.NewCabalQuickCheckSpec8.tests
     , Test.Unit.NewCabalQuickCheckSpec9.tests
     , Test.Unit.NewCabalQuickCheckSpec10.tests
+    , Test.Unit.AdditionalCabalQuickCheckTestSuite.tests
     ]
   ]

@@ -345,6 +345,7 @@ test-suite typus-test
         Test.Unit.AdditionalQuickCheckSpec,
         Test.Unit.NewQuickCheckTestCasesSpec,
         Test.Unit.NewCabalQuickCheckTestSpec,
+        Test.Unit.NewCabalQuickCheckTestsSpec,
         Test.Unit.NewCabalQuickCheckTestCasesSpec,
         Test.Unit.NewCabalQuickCheckPropertiesSpec,
         Test.Unit.WorkingQuickCheckTestSpec,
