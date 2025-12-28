@@ -931,6 +931,9 @@ test-suite typus-test
         -- New Comprehensive Cabal Test Suite (2025) - 10 Additional Tests
         , Test.Unit.NewComprehensiveCabalTestSpec
         
+        -- New Core Functionality Test Suite (2025) - 10 comprehensive tests
+        , Test.Unit.NewCabalCoreFunctionalitySpec
+        
     other-modules:
             Test.Dependencies.Arbitrary
     build-depends:

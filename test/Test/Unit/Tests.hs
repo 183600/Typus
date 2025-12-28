@@ -300,6 +300,20 @@ import qualified Test.Unit.CabalSyntaxValidatorQuickCheckSpec
 import qualified Test.Unit.CabalAnalyzerQuickCheckSpec
 import qualified Test.Unit.CabalIntegrationQuickCheckSpec
 
+-- ============================================================================
+-- New Cabal Test Modules - 10 Comprehensive QuickCheck Tests (2025)
+-- ============================================================================
+import qualified Test.Unit.TextProcessingPropertiesSpec
+import qualified Test.Unit.SourceLocationCalculationSpec
+import qualified Test.Unit.ParserCombinatorsSpec
+import qualified Test.Unit.ErrorHandlerConsistencySpec
+import qualified Test.Unit.UtilsStringFunctionsSpec
+import qualified Test.Unit.CompilerIRPropertiesSpec
+import qualified Test.Unit.OwnershipTransferSpec
+import qualified Test.Unit.DependencyAnalysisSpec
+import qualified Test.Unit.TypeInferenceSpec
+import qualified Test.Unit.IntegrationPropertiesSpec
+
 -- Additional Cabal Test Modules (2025)
 import qualified Test.Unit.NewCabalTestSuiteSpec
 import qualified Test.Unit.SourceLocationCabalTestsSpec
@@ -2629,5 +2643,21 @@ tests =
   -- ============================================================================
   , testGroup "New Comprehensive Cabal Test Suite - Enhanced Coverage"
     [ Test.Unit.NewComprehensiveCabalTestSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Cabal Test Modules - 10 Comprehensive QuickCheck Tests (2025)
+  -- ============================================================================
+  , testGroup "New Cabal Test Modules - Enhanced QuickCheck Coverage"
+    [ Test.Unit.TextProcessingPropertiesSpec.tests
+    , Test.Unit.SourceLocationCalculationSpec.tests
+    , Test.Unit.ParserCombinatorsSpec.tests
+    , Test.Unit.ErrorHandlerConsistencySpec.tests
+    , Test.Unit.UtilsStringFunctionsSpec.tests
+    , Test.Unit.CompilerIRPropertiesSpec.tests
+    , Test.Unit.OwnershipTransferSpec.tests
+    , Test.Unit.DependencyAnalysisSpec.tests
+    , Test.Unit.TypeInferenceSpec.tests
+    , Test.Unit.IntegrationPropertiesSpec.tests
     ]
   ]
