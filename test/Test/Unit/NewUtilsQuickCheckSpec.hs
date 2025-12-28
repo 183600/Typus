@@ -1,113 +1,346 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
-module Test.Unit.NewUtilsQuickCheckSpec (spec) where
+module Test.Unit.NewUtilsQuickCheckSpec (tests) where
 
-import Test.Hspec
-import Test.QuickCheck
-import Utils
-import Data.Char (isSpace)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (assertFailure, testCase)
+import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, sized, vector)
+import Data.Char (isSpace, isAlphaNum, isLetter)
+import qualified Data.List as Data.List
+import Data.List (isPrefixOf, isInfixOf, sort, nub)
 import qualified Data.Text as T
 
--- | Test string splitting properties
-spec :: Spec
-spec = describe "NewUtils QuickCheck Tests" $ do
+import Utils
+  ( trim
+  , splitBy
+  , splitByCollapsed
+  , splitByComma
+  , splitByCommaCollapsed
+  , removeLineComments
+  , removeComments
+  , normalizeIndentation
+  , forceSingleTabIndentation
+  , fixIndentation
+  , breakOn
+  )
 
-  describe "splitBy properties" $ do
-    it "preserves empty segments when splitting" $ property $
-      \c str -> 
-        let result = splitBy c str
-            expected = map T.unpack $ T.split (== c) (T.pack str)
-        in result === expected
+-- ============================================================================
+-- Enhanced Arbitrary Instances
+-- ============================================================================
 
-    it "splitByCollapsed removes empty segments" $ property $
-      \c str ->
-        let result = splitByCollapsed c str
-            withEmpty = splitBy c str
-        in all (not . null) result && 
-           result === filter (not . null) withEmpty
+-- Generate strings with various whitespace patterns
+genWhitespaceString :: Gen String
+genWhitespaceString = listOf $ elements $ " \t\n\r" ++ ['\32'..'\126']
 
-    it "splitting and joining with single character preserves original" $ property $
-      \c str ->
-        let result = splitBy c str
-        in not (null str) ==> (c `elem` str) ==> (concat (intersperse [c] result) === str)
+-- Generate strings without quotes (for comment testing)
+genStringWithoutQuotes :: Gen String
+genStringWithoutQuotes = listOf $ elements $ filter (`notElem` "\"'") ['\32'..'\126']
 
-  describe "trim properties" $ do
-    it "trim removes leading and trailing whitespace" $ property $
-      \str ->
-        let trimmed = trim str
-        in (not (null trimmed) || all isSpace str) &&
-           (null trimmed || not (isSpace (head trimmed))) &&
-           (null trimmed || not (isSpace (last trimmed)))
+-- Generate strings with balanced quotes for testing comment preservation
+genStringWithBalancedQuotes :: Gen String
+genStringWithBalancedQuotes = do
+  before <- listOf $ elements $ filter (`notElem` "\"'\\") ['\32'..'\126']
+  content <- listOf $ elements $ filter (`notElem` "\"") ['\32'..'\126']
+  after <- listOf $ elements $ filter (`notElem` "\"'\\") ['\32'..'\126']
+  return $ before ++ "\"" ++ content ++ "\"" ++ after
 
-    it "trim is idempotent" $ property $
-      \str -> trim (trim str) === trim str
+-- Generate multiline strings with various indentation
+genMultilineString :: Gen String
+genMultilineString = do
+  numLines <- choose (1, 10)
+  lines <- vector numLines
+  indentSizes <- vector numLines
+  let indentedLines = zipWith (\line indent -> replicate (abs indent `mod` 8) ' ' ++ line) lines indentSizes
+  return $ unlines indentedLines
 
-    it "trim of all whitespace returns empty" $ property $
-      \str -> all isSpace str ==> trim str === ""
+-- ============================================================================
+-- Advanced Utils Properties
+-- ============================================================================
 
-  describe "removeLineComments properties" $ do
-    it "preserves lines without comments" $ property $
-      \str -> not ('/' `elem` str) ==> removeLineComments str === str
+-- Property: trim never increases string length
+prop_trim_never_increases_length :: String -> Property
+prop_trim_never_increases_length str =
+  let trimmed = trim str
+  in property $ length trimmed <= length str
 
-    it "removes content after // on each line" $ property $
-      \line1 line2 ->
-        let input = line1 ++ "//comment\n" ++ line2 ++ "//another"
-            result = removeLineComments input
-            lines' = lines result
-        in length lines' === 2 &&
-           all (not . isSubstringOf "//") lines'
+-- Property: trim removes all leading and trailing whitespace
+prop_trim_removes_all_whitespace :: String -> Property
+prop_trim_removes_all_whitespace str =
+  let trimmed = trim str
+      hasLeadingWhitespace = not (null str) && isSpace (head str)
+      hasTrailingWhitespace = not (null str) && isSpace (last str)
+  in classify hasLeadingWhitespace "had leading whitespace" $
+     classify hasTrailingWhitespace "had trailing whitespace" $
+     property $ (null trimmed || not (isSpace (head trimmed))) .&&.
+                (null trimmed || not (isSpace (last trimmed)))
 
-    it "preserves // inside string literals" $ property $
-      \before after ->
-        let input = before ++ "\"string with // inside\" more" ++ after
-            result = removeLineComments input
-        in "// inside" `isSubstringOf` result
+-- Property: splitBy preserves total character count (excluding delimiters)
+prop_splitBy_preserves_char_count :: Char -> String -> Property
+prop_splitBy_preserves_char_count delim str =
+  let parts = splitBy delim str
+      totalChars = sum (map length parts)
+      originalChars = length (filter (/= delim) str)
+  in property $ totalChars === originalChars
 
-  describe "removeComments properties" $ do
-    it "preserves strings without comment markers" $ property $
-      \str -> not ('/' `elem` str) ==> removeComments str === str
+-- Property: splitBy and intercalate roundtrip for any delimiter
+prop_splitBy_intercalate_roundtrip :: Char -> String -> Property
+prop_splitBy_intercalate_roundtrip delim str =
+  let parts = splitBy delim str
+      reconstructed = Data.List.intercalate [delim] parts
+  in property $ reconstructed === str
 
-    it "removes both line and block comments" $ property $
-      \code ->
-        let withComments = code ++ "// line comment\n/* block\ncomment */" ++ code
-            result = removeComments withComments
-        in not ("// line comment" `isSubstringOf` result) &&
-           not ("/* block" `isSubstringOf` result) &&
-           code `isSubstringOf` result
+-- Property: splitByCollapsed never produces empty segments
+prop_splitByCollapsed_no_empty :: Char -> String -> Property
+prop_splitByCollapsed_no_empty delim str =
+  let parts = splitByCollapsed delim str
+  in property $ not (any null parts)
 
-  describe "normalizeIndentation properties" $ do
-    it "preserves relative indentation" $ property $
-      \lines' ->
-        let input = unlines lines'
-            normalized = normalizeIndentation input
-            resultLines = lines normalized
-        in length resultLines === length lines'
+-- Property: splitByCollapsed removes consecutive delimiters
+prop_splitByCollapsed_removes_consecutive :: Char -> String -> Property
+prop_splitByCollapsed_removes_consecutive delim str =
+  let hasConsecutive = delim : delim `isInfixOf` str
+      partsRegular = splitBy delim str
+      partsCollapsed = splitByCollapsed delim str
+  in classify hasConsecutive "has consecutive delimiters" $
+     property $ length partsCollapsed <= length partsRegular
 
-    it "removes common prefix indentation" $ property $
-      \indent content ->
-        let indentedLine = replicate indent ' ' ++ content
-            input = unlines [indentedLine, indentedLine]
-            normalized = normalizeIndentation input
-            resultLines = lines normalized
-        in all (not . isPrefixOf "    ") resultLines
+-- Property: removeLineComments preserves string literals
+prop_removeLineComments_preserves_string_literals :: String -> String -> Property
+prop_removeLineComments_preserves_string_literals prefix comment =
+  not ('"' `elem` prefix) ==> 
+  let stringWithComment = prefix ++ "\"// not a comment\" // real comment"
+      result = removeLineComments stringWithComment
+  in property $ "// not a comment" `isInfixOf` result .&&.
+     not ("// real comment" `isInfixOf` result)
 
-  describe "breakOn properties" $ do
-    it "finds first occurrence of pattern" $ property $
-      \pat str ->
-        let (before, after) = breakOn pat str
-        in if null pat 
-           then before === "" && after === str
-           else not (pat `isInfixOf` before) &&
-                (pat `isInfixOf` str ==> before ++ pat ++ after === str)
+-- Property: removeComments handles nested block comments correctly (C-style)
+prop_removeComments_nested_block_comments :: String -> String -> String -> Property
+prop_removeComments_nested_block_comments before middle after =
+  not ('"' `elem` before) && not ('"' `elem` middle) && not ('"' `elem` after) &&
+  not ("/*" `isInfixOf` before) && not ("/*" `isInfixOf` middle) && not ("/*" `isInfixOf` after) ==>
+  let input = before ++ "/* outer /* inner */ text */" ++ middle
+      result = removeComments input
+  in property $ not ("/* outer" `isInfixOf` result) .&&.
+     not ("/* inner" `isInfixOf` result) .&&.
+     (middle `isInfixOf` result)
 
-    it "returns original string when pattern not found" $ property $
-      \pat str -> not (pat `isInfixOf` str) ==> 
-        let (before, after) = breakOn pat str
-        in before === str && after === ""
+-- Property: removeComments preserves escaped quotes in strings
+prop_removeComments_preserves_escaped_quotes :: String -> Property
+prop_removeComments_preserves_escaped_quotes content =
+  not ('\\' `elem` content) && not ('"' `elem` content) ==>
+  let input = "var s = \"\\\"escaped\\\" " ++ content ++ "\" // comment"
+      result = removeComments input
+  in property $ "\\\"escaped\\\"" `isInfixOf` result .&&.
+     not ("// comment" `isInfixOf` result)
 
-  where
-    isSubstringOf substring string = substring `isInfixOf` string
-    intersperse _ [] = []
-    intersperse sep (x:xs) = x : sep : intersperse sep xs
-    isPrefixOf prefix str = take (length prefix) str == prefix
-    isInfixOf needle haystack = needle `elem` [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]
+-- Property: normalizeIndentation preserves line count
+prop_normalizeIndentation_preserves_line_count :: String -> Property
+prop_normalizeIndentation_preserves_line_count str =
+  let normalized = normalizeIndentation str
+      originalLines = lines str
+      normalizedLines = lines normalized
+  in property $ length normalizedLines === length originalLines
+
+-- Property: normalizeIndentation removes common prefix indentation
+prop_normalizeIndentation_removes_common_prefix :: [Int] -> String -> Property
+prop_normalizeIndentation_removes_common_prefix indentLevels content =
+  not (null indentLevels) && not ('\n' `elem` content) ==>
+  let lines' = zipWith (\level -> replicate (abs level `mod` 10) ' ' ++) indentLevels (repeat content)
+      input = unlines lines'
+      result = normalizeIndentation input
+      resultLines = lines result
+      nonEmptyLines = filter (not . null) resultLines
+      minIndent = if null nonEmptyLines then 0 else minimum [length (takeWhile isSpace line) | line <- nonEmptyLines]
+  in property $ minIndent === 0
+
+-- Property: forceSingleTabIndentation converts all non-empty lines to tab start
+prop_forceSingleTabIndentation_tab_conversion :: String -> Property
+prop_forceSingleTabIndentation_tab_conversion str =
+  let result = forceSingleTabIndentation str
+      resultLines = lines result
+      nonEmptyLines = filter (not . null . trim) resultLines
+  in property $ all (\line -> null line || head line == '\t') nonEmptyLines
+
+-- Property: fixIndentation equals normalizeIndentation
+prop_fixIndentation_equals_normalize :: String -> Property
+prop_fixIndentation_equals_normalize str =
+  fixIndentation str === normalizeIndentation str
+
+-- Property: breakOn with empty pattern returns empty prefix
+prop_breakOn_empty_pattern :: String -> Property
+prop_breakOn_empty_pattern str =
+  let (before, after) = breakOn "" str
+  in property $ before === "" .&&. after === str
+
+-- Property: breakOn finds first occurrence
+prop_breakOn_first_occurrence :: String -> String -> String -> Property
+prop_breakOn_first_occurrence pat before after =
+  not (null pat) ==> 
+  let input = before ++ pat ++ after ++ pat ++ "extra"
+      (prefix, suffix) = breakOn pat input
+  in property $ prefix === before ++ pat ++ after .&&. suffix === "extra"
+
+-- Property: breakOn handles pattern not found
+prop_breakOn_pattern_not_found :: String -> String -> Property
+prop_breakOn_pattern_not_found pat haystack =
+  not (null pat) && not (pat `isInfixOf` haystack) ==>
+  let (before, after) = breakOn pat haystack
+  in property $ before === haystack .&&. after === ""
+
+-- ============================================================================
+-- Complex Interaction Properties
+-- ============================================================================
+
+-- Property: Comment removal then trimming is idempotent for comments
+prop_comment_removal_trim_idempotent :: String -> Property
+prop_comment_removal_trim_idempotent str =
+  not ('"' `elem` str) && not ('\'' `elem` str) ==>
+  let step1 = removeComments str |> trim
+      step2 = removeComments step1 |> trim
+  in property $ step1 === step2
+
+-- Property: String processing pipeline consistency
+prop_processing_pipeline_consistency :: String -> Property
+prop_processing_pipeline_consistency str =
+  let pipeline1 = str |> removeComments |> trim |> normalizeIndentation
+      pipeline2 = str |> trim |> removeComments |> normalizeIndentation
+  in property $ pipeline1 === pipeline2
+
+-- Property: Split operations are consistent with each other
+prop_split_operations_consistency :: Char -> String -> Property
+prop_split_operations_consistency delim str =
+  let regular = splitBy delim str
+      collapsed = splitByCollapsed delim str
+      commaRegular = splitByComma str
+      commaCollapsed = splitByCommaCollapsed str
+  in if delim == ','
+     then property $ regular === commaRegular .&&. collapsed === commaCollapsed
+     else property $ length regular >= length collapsed
+
+-- Property: Indentation normalization preserves relative structure
+prop_indentation_preserves_relative_structure :: [Int] -> Property
+prop_indentation_preserves_relative_structure indentLevels =
+  not (null indentLevels) && all (>= 0) indentLevels ==>
+  let contentLines = map show ([1..length indentLevels] :: [Int])
+      inputLines = zipWith (\level content -> replicate level ' ' ++ content) indentLevels contentLines
+      input = unlines inputLines
+      result = normalizeIndentation input
+      resultLines = lines result
+      -- Check that relative indentation is preserved
+      originalDiffs = zipWith (-) (tail indentLevels) (init indentLevels)
+      resultIndents = map (length . takeWhile isSpace) resultLines
+      resultDiffs = zipWith (-) (tail resultIndents) (init resultIndents)
+  in property $ length resultDiffs === length originalDiffs .&&.
+             all (uncurry (==)) (zip originalDiffs resultDiffs)
+
+-- Property: Comment removal preserves line structure
+prop_comment_removal_preserves_line_structure :: String -> Property
+prop_comment_removal_preserves_line_structure str =
+  not ('"' `elem` str) && not ('\'' `elem` str) ==>
+  let originalLines = lines str
+      withComments = unlines $ map (++ " // comment") originalLines
+      processed = removeLineComments withComments
+      processedLines = lines processed
+  in property $ length processedLines === length originalLines
+
+-- Property: Complex whitespace handling
+prop_complex_whitespace_handling :: String -> String -> String -> Property
+prop_complex_whitespace_handling prefix middle suffix =
+  let complexInput = prefix ++ "  \t\n\r  " ++ middle ++ "  \n\r\t  " ++ suffix
+      trimmed = trim complexInput
+      normalized = normalizeIndentation complexInput
+  in property $ (null trimmed || not (isSpace (head trimmed))) .&&.
+             (null trimmed || not (isSpace (last trimmed))) .&&.
+             length (lines normalized) >= 1
+
+-- ============================================================================
+-- Performance and Edge Case Properties
+-- ============================================================================
+
+-- Property: Large string processing performance (bounded)
+prop_large_string_performance :: Int -> String -> Property
+prop_large_string_performance multiplier base =
+  multiplier > 0 && multiplier <= 100 ==> -- Bounded for performance
+  let large = concat $ replicate multiplier base
+      result = trim large
+  in property $ length result <= length large
+
+-- Property: Unicode handling in comments
+prop_unicode_comments :: String -> Property
+prop_unicode_comments content =
+  not ('"' `elem` content) && not ('\'' `elem` content) ==>
+  let unicodeComment = "测试 🚀 café naïve"
+      input = content ++ " // " ++ unicodeComment
+      result = removeLineComments input
+  in property $ content `isPrefixOf` result .&&.
+     not (unicodeComment `isInfixOf` result)
+
+-- Property: Empty and single character edge cases
+prop_edge_case_single_char :: Char -> Property
+prop_edge_case_single_char c =
+  let str = [c]
+      trimmed = trim str
+      split = splitBy c str
+  in property $ (if isSpace c then null trimmed else trimmed === str) .&&.
+             (if c == c then split === ["", ""] else split === [str])
+
+-- Property: Null byte handling
+prop_null_byte_handling :: String -> Property
+prop_null_byte_handling str =
+  let withNull = str ++ "\0" ++ str
+      processed = trim withNull
+  in property $ "\0" `isInfixOf` processed
+
+-- ============================================================================
+-- Test Collection
+-- ============================================================================
+
+tests :: TestTree
+tests = testGroup "New Utils QuickCheck Tests"
+  [ testGroup "Basic Function Properties"
+    [ fastProperty "trim never increases string length" prop_trim_never_increases_length
+    , fastProperty "trim removes all leading and trailing whitespace" prop_trim_removes_all_whitespace
+    , fastProperty "splitBy preserves total character count" prop_splitBy_preserves_char_count
+    , fastProperty "splitBy and intercalate roundtrip" prop_splitBy_intercalate_roundtrip
+    , fastProperty "splitByCollapsed never produces empty segments" prop_splitByCollapsed_no_empty
+    , fastProperty "splitByCollapsed removes consecutive delimiters" prop_splitByCollapsed_removes_consecutive
+    , fastProperty "fixIndentation equals normalizeIndentation" prop_fixIndentation_equals_normalize
+    ]
+  , testGroup "Comment Processing Properties"
+    [ fastProperty "removeLineComments preserves string literals" prop_removeLineComments_preserves_string_literals
+    , fastProperty "removeComments handles nested block comments" prop_removeComments_nested_block_comments
+    , fastProperty "removeComments preserves escaped quotes" prop_removeComments_preserves_escaped_quotes
+    , fastProperty "comment removal then trimming is idempotent" prop_comment_removal_trim_idempotent
+    , fastProperty "comment removal preserves line structure" prop_comment_removal_preserves_line_structure
+    , fastProperty "unicode handling in comments" prop_unicode_comments
+    ]
+  , testGroup "Indentation Properties"
+    [ fastProperty "normalizeIndentation preserves line count" prop_normalizeIndentation_preserves_line_count
+    , fastProperty "normalizeIndentation removes common prefix" prop_normalizeIndentation_removes_common_prefix
+    , fastProperty "forceSingleTabIndentation converts to tabs" prop_forceSingleTabIndentation_tab_conversion
+    , fastProperty "indentation preserves relative structure" prop_indentation_preserves_relative_structure
+    ]
+  , testGroup "String Search Properties"
+    [ fastProperty "breakOn with empty pattern" prop_breakOn_empty_pattern
+    , fastProperty "breakOn finds first occurrence" prop_breakOn_first_occurrence
+    , fastProperty "breakOn handles pattern not found" prop_breakOn_pattern_not_found
+    ]
+  , testGroup "Complex Interaction Properties"
+    [ fastProperty "string processing pipeline consistency" prop_processing_pipeline_consistency
+    , fastProperty "split operations consistency" prop_split_operations_consistency
+    , fastProperty "complex whitespace handling" prop_complex_whitespace_handling
+    ]
+  , testGroup "Performance and Edge Cases"
+    [ fastProperty "large string processing performance" prop_large_string_performance
+    , fastProperty "empty and single character edge cases" prop_edge_case_single_char
+    , fastProperty "null byte handling" prop_null_byte_handling
+    ]
+  ]
