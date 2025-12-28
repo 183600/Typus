@@ -49,6 +49,9 @@ import qualified Test.Unit.NewCabalBoundaryConditionsSpec
 import qualified Test.Unit.UtilsEnhancedQuickCheckSpec
 import qualified Test.Unit.SourceLocationEnhancedQuickCheckSpec
 
+-- New Comprehensive Cabal QuickCheck Test Suite (2025)
+import qualified Test.Unit.NewComprehensiveCabalQuickCheckTestSuite
+
 -- New Comprehensive Test Modules Added (2025)
 import qualified Test.Unit.NewParserPropertiesSpec
 import qualified Test.Unit.NewSourceLocationMathSpec
@@ -2415,4 +2418,9 @@ tests =
     , Test.Unit.NewOwnershipQuickCheckTestsSpec.tests
     , Test.Unit.NewDependenciesQuickCheckTestsSpec.tests
     ]
+
+  -- ============================================================================
+  -- New Comprehensive Cabal QuickCheck Test Suite (2025)
+  -- ============================================================================
+  , Test.Unit.NewComprehensiveCabalQuickCheckTestSuite.tests
   ]
