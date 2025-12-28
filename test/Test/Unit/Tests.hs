@@ -49,6 +49,15 @@ import qualified Test.Unit.NewCabalBoundaryConditionsSpec
 import qualified Test.Unit.UtilsEnhancedQuickCheckSpec
 import qualified Test.Unit.SourceLocationEnhancedQuickCheckSpec
 
+-- ============================================================================
+-- New Comprehensive Test Modules Created (2025)
+-- ============================================================================
+import qualified Test.Unit.ComprehensiveCoreQuickCheckSpec
+import qualified Test.Unit.CompilerOwnershipQuickCheckSpec
+import qualified Test.Unit.DependenciesErrorHandlingQuickCheckSpec
+import qualified Test.Unit.SyntaxValidatorGoToolchainQuickCheckSpec
+import qualified Test.Unit.EndToEndIntegrationQuickCheckSpec
+
 -- New Comprehensive Cabal QuickCheck Test Suite (2025)
 import qualified Test.Unit.NewComprehensiveCabalQuickCheckTestSuite
 
@@ -2453,4 +2462,15 @@ tests =
   -- New Comprehensive Cabal QuickCheck Test Suite (2025)
   -- ============================================================================
   , Test.Unit.NewComprehensiveCabalQuickCheckTestSuite.tests
+
+  -- ============================================================================
+  -- New Comprehensive Test Modules Created (2025) - 10 cabal tests
+  -- ============================================================================
+  , testGroup "New Comprehensive Test Modules - Core Functionality Testing"
+    [ Test.Unit.ComprehensiveCoreQuickCheckSpec.tests
+    , Test.Unit.CompilerOwnershipQuickCheckSpec.tests
+    , Test.Unit.DependenciesErrorHandlingQuickCheckSpec.tests
+    , Test.Unit.SyntaxValidatorGoToolchainQuickCheckSpec.tests
+    , Test.Unit.EndToEndIntegrationQuickCheckSpec.tests
+    ]
   ]

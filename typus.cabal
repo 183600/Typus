@@ -820,6 +820,13 @@ test-suite typus-test
         , Test.Unit.NewCabalTestSpec
         , Test.Unit.NewComprehensiveCabalTestSpec
 
+        -- New Comprehensive Test Modules Created (2025) - 10 cabal tests
+        , Test.Unit.ComprehensiveCoreQuickCheckSpec
+        , Test.Unit.CompilerOwnershipQuickCheckSpec
+        , Test.Unit.DependenciesErrorHandlingQuickCheckSpec
+        , Test.Unit.SyntaxValidatorGoToolchainQuickCheckSpec
+        , Test.Unit.EndToEndIntegrationQuickCheckSpec
+
         -- New Cabal Test Modules (10 comprehensive tests)
         , Test.Unit.CabalParserQuickCheckSpec
         , Test.Unit.CabalCompilerQuickCheckSpec
