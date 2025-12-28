@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
 
-module Test.Unit.NewComprehensiveCabalQuickCheckSpec (tests) where
+module Test.Unit.NewEnhancedCabalQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -18,7 +18,7 @@ import Data.List (isPrefixOf, isInfixOf, nub)
 -- | 10个新的QuickCheck测试用例，覆盖Typus项目的核心功能
 tests :: TestTree
 tests =
-  testGroup "New Comprehensive Cabal QuickCheck Tests"
+  testGroup "New Enhanced Cabal QuickCheck Tests"
     [ -- Utils模块测试
       testGroup "Utils Module Properties"
         [ fastProperty "trim: 双重应用等于单次应用" propTrimIdempotent

@@ -894,6 +894,9 @@ test-suite typus-test
         , Test.Unit.SourceLocationMathSpec
         , Test.Unit.ErrorHandlingCoreSpec
         
+        -- New Comprehensive Cabal QuickCheck Tests (10 tests)
+        , Test.Unit.NewEnhancedCabalQuickCheckTestSpec
+        
     other-modules:
             Test.Dependencies.Arbitrary
     build-depends:
