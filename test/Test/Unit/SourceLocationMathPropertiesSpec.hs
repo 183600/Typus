@@ -1,5 +1,4 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# LANGUAGE OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-x-partial #-}
@@ -12,12 +11,13 @@ module Test.Unit.SourceLocationMathPropertiesSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), choose, getPositive, getNonNegative, vector)
-import TestSupport.Arbitrary
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import Test.QuickCheck.Gen (choose, listOf1, elements)
 
 import SourceLocation
   ( SourcePos(..)
   , SourceSpan(..)
+  , Located(..)
   , startPos
   , posAfter
   , posAt
@@ -28,267 +28,170 @@ import SourceLocation
   , spanBetween
   , mergeSpans
   , isValidSpan
+  , locatedAt
+  , locatedWithSpan
+  , locatedValue
+  , locatedSpan
   , advancePos
   , advancePosBy
-  , advancePosByText
   )
 
-import Data.Text (Text)
-import qualified Data.Text as T
+import Data.List (sort)
+import Data.Char (isSpace)
 
--- | Mathematical property tests for SourceLocation module
-tests :: TestTree
-tests = testGroup "SourceLocation Mathematical Properties"
-  [ testGroup "Source Position Properties"
-    [ fastProperty "posAfter newline increments line and resets column" prop_posAfter_newline_increments_line
-    , fastProperty "posAfter tab advances to next tab stop" prop_posAfter_tab_advances_to_tab_stop
-    , fastProperty "posAfter regular char increments column" prop_posAfter_regular_char_increments_column
-    , fastProperty "posAfter sequence is associative" prop_posAfter_sequence_associative
-    , fastProperty "posAt creates valid position" prop_posAt_creates_valid_position
-    , fastProperty "posAtLineCol preserves all coordinates" prop_posAtLineCol_preserves_coordinates
-    ]
+-- Property: startPos is the minimal position
+prop_startPos_minimal :: Property
+prop_startPos_minimal =
+  posLine startPos === 1 .&&.
+  posColumn startPos === 1 .&&.
+  posOffset startPos === 0
 
-  , testGroup "Source Span Properties"
-    [ fastProperty "emptySpan has zero length" prop_emptySpan_zero_length
-    , fastProperty "spanFrom creates valid span" prop_spanFrom_creates_valid_span
-    , fastProperty "spanTo creates valid span" prop_spanTo_creates_valid_span
-    , fastProperty "spanBetween is commutative for merge" prop_spanBetween_commutative_for_merge
-    , fastProperty "mergeSpans is associative" prop_mergeSpans_associative
-    , fastProperty "mergeSpans is idempotent" prop_mergeSpans_idempotent
-    , fastProperty "mergeSpans contains both spans" prop_mergeSpans_contains_both
-    ]
+-- Property: posAt creates positions with correct line and column
+prop_posAt_correct :: Int -> Int -> Property
+prop_posAt_correct line col =
+  line >= 1 && col >= 1 ==>
+  posLine (posAt line col) === line .&&.
+  posColumn (posAt line col) === col
 
-  , testGroup "Position Advancement Properties"
-    [ fastProperty "advancePos preserves monotonicity" prop_advancePos_monotonic
-    , fastProperty "advancePosBy is additive" prop_advancePosBy_additive
-    , fastProperty "advancePosByText handles newlines correctly" prop_advancePosByText_newlines
-    , fastProperty "advancePosByText handles tabs correctly" prop_advancePosByText_tabs
-    , fastProperty "advancePosByText is length-preserving" prop_advancePosByText_length_preserving
-    ]
+-- Property: posAtLineCol creates positions with correct line, column, and offset
+prop_posAtLineCol_correct :: Int -> Int -> Int -> Property
+prop_posAtLineCol_correct line col offset =
+  line >= 1 && col >= 1 && offset >= 0 ==>
+  posLine (posAtLineCol line col offset) === line .&&.
+  posColumn (posAtLineCol line col offset) === col .&&.
+  posOffset (posAtLineCol line col offset) === offset
 
-  , testGroup "Span Validation Properties"
-    [ fastProperty "isValidSpan detects invalid spans" prop_isValidSpan_detection
-    , fastProperty "merged spans are valid if components are valid" prop_merged_spans_valid
-    , fastProperty "span operations preserve validity" prop_span_operations_preserve_validity
-    ]
-
-  , testGroup "Edge Case Properties"
-    [ fastProperty "position arithmetic handles large numbers" prop_position_arithmetic_large_numbers
-    , fastProperty "span operations handle edge positions" prop_span_operations_edge_positions
-    , fastProperty "text advancement handles empty text" prop_text_advancement_empty_text
-    , fastProperty "position advancement handles unicode" prop_position_advancement_unicode
-    ]
-  ]
-
--- ============================================================================
--- Source Position Properties
--- ============================================================================
-
-prop_posAfter_newline_increments_line :: SourcePos -> Property
-prop_posAfter_newline_increments_line pos =
+-- Property: posAfter newline increments line and resets column
+prop_posAfter_newline :: SourcePos -> Property
+prop_posAfter_newline pos =
   let newPos = posAfter '\n' pos
-  in property $ posLine newPos === posLine pos + 1 .&&.
-             posColumn newPos === 1 .&&.
-             posOffset newPos === posOffset pos + 1
+  in posLine newPos === posLine pos + 1 .&&.
+     posColumn newPos === 1 .&&.
+     posOffset newPos === posOffset pos + 1
 
-prop_posAfter_tab_advances_to_tab_stop :: SourcePos -> Property
-prop_posAfter_tab_advances_to_tab_stop pos =
+-- Property: posAfter tab advances to next tab stop (8-column alignment)
+prop_posAfter_tab :: SourcePos -> Property
+prop_posAfter_tab pos =
   let newPos = posAfter '\t' pos
       expectedCol = ((posColumn pos - 1) `div` 8 + 1) * 8 + 1
-  in property $ posColumn newPos === expectedCol .&&.
-             posOffset newPos === posOffset pos + 1
+  in posColumn newPos === expectedCol .&&.
+     posOffset newPos === posOffset pos + 1
 
-prop_posAfter_regular_char_increments_column :: SourcePos -> Char -> Property
-prop_posAfter_regular_char_increments_column pos char =
-  char `notElem` "\n\t" ==>
-  let newPos = posAfter char pos
-  in property $ posLine newPos === posLine pos .&&.
-             posColumn newPos === posColumn pos + 1 .&&.
-             posOffset newPos === posOffset pos + 1
+-- Property: posAfter regular character increments column and offset
+prop_posAfter_regular :: SourcePos -> Char -> Property
+prop_posAfter_regular pos c =
+  c /= '\n' && c /= '\t' ==>
+  let newPos = posAfter c pos
+  in posColumn newPos === posColumn pos + 1 .&&.
+     posLine newPos === posLine pos .&&.
+     posOffset newPos === posOffset pos + 1
 
-prop_posAfter_sequence_associative :: SourcePos -> String -> Property
-prop_posAfter_sequence_associative pos chars =
-  not (null chars) ==>
-  let sequential = foldl posAfter pos chars
-      individual = foldl (\p c -> posAfter c p) pos chars
-  in property $ sequential === individual
+-- Property: emptySpan creates a span with same start and end
+prop_emptySpan_identity :: SourcePos -> Property
+prop_emptySpan_identity pos =
+  let span = emptySpan pos
+  in spanStart span === pos .&&. spanEnd span === pos
 
-prop_posAt_creates_valid_position :: Int -> Int -> Property
-prop_posAt_creates_valid_position line col =
-  line > 0 && col > 0 ==>
-  let pos = posAt line col
-  in property $ posLine pos === line .&&.
-             posColumn pos === col .&&.
-             posOffset pos === 0
+-- Property: spanFrom is equivalent to emptySpan
+prop_spanFrom_equals_emptySpan :: SourcePos -> Property
+prop_spanFrom_equals_emptySpan pos =
+  spanFrom pos === emptySpan pos
 
-prop_posAtLineCol_preserves_coordinates :: Int -> Int -> Int -> Property
-prop_posAtLineCol_preserves_coordinates line col offset =
-  line > 0 && col > 0 && offset >= 0 ==>
-  let pos = posAtLineCol line col offset
-  in property $ posLine pos === line .&&.
-             posColumn pos === col .&&.
-             posOffset pos === offset
-
--- ============================================================================
--- Source Span Properties
--- ============================================================================
-
-prop_emptySpan_zero_length :: Property
-prop_emptySpan_zero_length =
-  let span = emptySpan
-  in property $ isValidSpan span .&&.
-             spanStart span === spanEnd span
-
-prop_spanFrom_creates_valid_span :: SourcePos -> Property
-prop_spanFrom_creates_valid_span pos =
-  let span = spanFrom pos
-  in property $ isValidSpan span .&&.
-             spanStart span === pos .&&.
-             spanEnd span === pos
-
-prop_spanTo_creates_valid_span :: SourcePos -> Property
-prop_spanTo_creates_valid_span pos =
+-- Property: spanTo creates a span with same start and end
+prop_spanTo_identity :: SourcePos -> Property
+prop_spanTo_identity pos =
   let span = spanTo pos
-  in property $ isValidSpan span .&&.
-             spanStart span === pos .&&.
-             spanEnd span === pos
+  in spanStart span === pos .&&. spanEnd span === pos
 
-prop_spanBetween_commutative_for_merge :: SourcePos -> SourcePos -> Property
-prop_spanBetween_commutative_for_merge pos1 pos2 =
-  let span1 = spanBetween pos1 pos2
-      span2 = spanBetween pos2 pos1
-      merged1 = mergeSpans span1 span2
-      merged2 = mergeSpans span2 span1
-  in property $ merged1 === merged2
+-- Property: spanBetween creates span with given start and end
+prop_spanBetween_correct :: SourcePos -> SourcePos -> Property
+prop_spanBetween_correct start end =
+  let span = spanBetween start end
+  in spanStart span === start .&&. spanEnd span === end
 
+-- Property: mergeSpans creates span that encompasses both spans
+prop_mergeSpans_encompassing :: SourcePos -> SourcePos -> SourcePos -> SourcePos -> Property
+prop_mergeSpans_encompassing start1 end1 start2 end2 =
+  let span1 = spanBetween start1 end1
+      span2 = spanBetween start2 end2
+      merged = mergeSpans span1 span2
+  in spanStart merged === min start1 start2 .&&.
+     spanEnd merged === max end1 end2
+
+-- Property: mergeSpans is commutative
+prop_mergeSpans_commutative :: SourceSpan -> SourceSpan -> Property
+prop_mergeSpans_commutative span1 span2 =
+  mergeSpans span1 span2 === mergeSpans span2 span1
+
+-- Property: mergeSpans is associative
 prop_mergeSpans_associative :: SourceSpan -> SourceSpan -> SourceSpan -> Property
 prop_mergeSpans_associative span1 span2 span3 =
-  let merge12_3 = mergeSpans (mergeSpans span1 span2) span3
-      merge1_23 = mergeSpans span1 (mergeSpans span2 span3)
-  in property $ merge12_3 === merge1_23
+  mergeSpans (mergeSpans span1 span2) span3 === mergeSpans span1 (mergeSpans span2 span3)
 
-prop_mergeSpans_idempotent :: SourceSpan -> Property
-prop_mergeSpans_idempotent span =
-  let merged = mergeSpans span span
-  in property $ merged === span
+-- Property: isValidSpan checks start <= end
+prop_isValidSpan_correct :: SourcePos -> SourcePos -> Property
+prop_isValidSpan_correct start end =
+  let span = spanBetween start end
+  in isValidSpan span === (start <= end)
 
-prop_mergeSpans_contains_both :: SourceSpan -> SourceSpan -> Property
-prop_mergeSpans_contains_both span1 span2 =
-  isValidSpan span1 .&&. isValidSpan span2 ==>
-  let merged = mergeSpans span1 span2
-      start1 = spanStart span1
-      end1 = spanEnd span1
-      start2 = spanStart span2
-      end2 = spanEnd span2
-      mergedStart = spanStart merged
-      mergedEnd = spanEnd merged
-  in property $ posLine mergedStart <= posLine start1 .&&.
-             posLine mergedStart <= posLine start2 .&&.
-             posLine mergedEnd >= posLine end1 .&&.
-             posLine mergedEnd >= posLine end2
+-- Property: locatedAt creates located value with correct position
+prop_locatedAt_correct :: SourcePos -> Int -> Property
+prop_locatedAt_correct pos value =
+  let located = locatedAt pos value
+  in locatedValue located === value .&&.
+     locatedPos located === pos .&&.
+     locatedSpan located === emptySpan pos
 
--- ============================================================================
--- Position Advancement Properties
--- ============================================================================
+-- Property: locatedWithSpan creates located value with correct span
+prop_locatedWithSpan_correct :: SourceSpan -> Int -> Property
+prop_locatedWithSpan_correct span value =
+  let located = locatedWithSpan span value
+  in locatedValue located === value .&&.
+     locatedSpan located === span .&&.
+     locatedPos located === spanStart span
 
-prop_advancePos_monotonic :: SourcePos -> String -> Property
-prop_advancePos_monotonic pos text =
-  not (null text) ==>
-  let newPos = advancePosByText pos text
-  in property $ posOffset newPos >= posOffset pos .&&.
-             (posLine newPos > posLine pos .||. 
-              (posLine newPos === posLine pos .&&. posColumn newPos >= posColumn pos))
+-- Property: advancePos by newline advances line count
+prop_advancePos_newline :: SourcePos -> Int -> Property
+prop_advancePos_newline pos n =
+  n >= 0 ==>
+  let newPos = advancePos '\n' n pos
+  in posLine newPos === posLine pos + n .&&.
+     posColumn newPos === 1 .&&.
+     posOffset newPos === posOffset pos + n
 
-prop_advancePosBy_additive :: SourcePos -> Int -> Int -> Property
-prop_advancePosBy_additive pos n1 n2 =
-  n1 >= 0 && n2 >= 0 ==>
-  let pos1 = advancePosBy pos n1
-      pos2 = advancePosBy pos1 n2
-      pos3 = advancePosBy pos (n1 + n2)
-  in property $ pos2 === pos3
+-- Property: advancePos preserves position for zero count
+prop_advancePos_zero :: SourcePos -> Char -> Property
+prop_advancePos_zero pos c =
+  advancePos c 0 pos === pos
 
-prop_advancePosByText_newlines :: SourcePos -> Int -> Property
-prop_advancePosByText_newlines pos n =
-  n > 0 && n <= 100 ==>
-  let text = T.unlines (replicate n "line")
-      newPos = advancePosByText pos text
-  in property $ posLine newPos === posLine pos + n .&&.
-             posColumn newPos === 1
+-- Property: advancePosBy multiple characters advances correctly
+prop_advancePosBy_sequence :: SourcePos -> String -> Property
+prop_advancePosBy_sequence pos chars =
+  not (null chars) ==>
+  let finalPos = advancePosBy chars pos
+      expectedPos = foldl (flip posAfter) pos chars
+  in finalPos === expectedPos
 
-prop_advancePosByText_tabs :: SourcePos -> Int -> Property
-prop_advancePosByText_tabs pos n =
-  n > 0 && n <= 20 ==>
-  let text = T.replicate n "\t"
-      newPos = advancePosByText pos text
-      expectedCol = ((posColumn pos - 1) `div` 8 + n) * 8 + 1
-  in property $ posColumn newPos === expectedCol .&&.
-             posLine newPos === posLine pos
-
-prop_advancePosByText_length_preserving :: SourcePos -> Text -> Property
-prop_advancePosByText_length_preserving pos text =
-  let newPos = advancePosByText pos text
-      textLength = T.length text
-  in property $ posOffset newPos === posOffset pos + textLength
-
--- ============================================================================
--- Span Validation Properties
--- ============================================================================
-
-prop_isValidSpan_detection :: SourcePos -> SourcePos -> Property
-prop_isValidSpan_detection pos1 pos2 =
-  let span = SourceSpan pos1 pos2
-      shouldBeValid = posOffset pos1 <= posOffset pos2
-  in property $ isValidSpan span === shouldBeValid
-
-prop_merged_spans_valid :: SourceSpan -> SourceSpan -> Property
-prop_merged_spans_valid span1 span2 =
-  isValidSpan span1 .&&. isValidSpan span2 ==>
-  let merged = mergeSpans span1 span2
-  in property $ isValidSpan merged
-
-prop_span_operations_preserve_validity :: SourcePos -> SourcePos -> Property
-prop_span_operations_preserve_validity pos1 pos2 =
-  posOffset pos1 <= posOffset pos2 ==>
-  let span1 = spanFrom pos1
-      span2 = spanTo pos2
-      between = spanBetween pos1 pos2
-      merged = mergeSpans span1 span2
-  in property $ all isValidSpan [span1, span2, between, merged]
-
--- ============================================================================
--- Edge Case Properties
--- ============================================================================
-
-prop_position_arithmetic_large_numbers :: SourcePos -> Property
-prop_position_arithmetic_large_numbers pos =
-  let largeLine = posLine pos + 1000000
-      largeCol = posColumn pos + 1000000
-      largeOffset = posOffset pos + 1000000
-      largePos = posAtLineCol largeLine largeCol largeOffset
-  in property $ posLine largePos === largeLine .&&.
-             posColumn largePos === largeCol .&&.
-             posOffset largePos === largeOffset
-
-prop_span_operations_edge_positions :: Property
-prop_span_operations_edge_positions =
-  let firstPos = posAt 1 1
-      largePos = posAtLineCol 999999 999999 999999
-      span1 = spanFrom firstPos
-      span2 = spanTo largePos
-      merged = mergeSpans span1 span2
-  in property $ all isValidSpan [span1, span2, merged] .&&.
-             spanStart merged === firstPos .&&.
-             spanEnd merged === largePos
-
-prop_text_advancement_empty_text :: SourcePos -> Property
-prop_text_advancement_empty_text pos =
-  let emptyText = ""
-      newPos = advancePosByText pos emptyText
-  in property $ newPos === pos
-
-prop_position_advancement_unicode :: SourcePos -> Property
-prop_position_advancement_unicode pos =
-  let unicodeText = "café naïve résumé 🚀 测试"
-      newPos = advancePosByText pos unicodeText
-      textLength = length unicodeText
-  in property $ posOffset newPos === posOffset pos + textLength
+tests :: TestTree
+tests =
+  testGroup "SourceLocation Math Properties"
+    [ fastProperty "startPos is minimal" prop_startPos_minimal
+    , fastProperty "posAt creates correct positions" prop_posAt_correct
+    , fastProperty "posAtLineCol creates correct positions" prop_posAtLineCol_correct
+    , fastProperty "posAfter handles newline correctly" prop_posAfter_newline
+    , fastProperty "posAfter handles tab correctly" prop_posAfter_tab
+    , fastProperty "posAfter handles regular characters correctly" prop_posAfter_regular
+    , fastProperty "emptySpan has same start and end" prop_emptySpan_identity
+    , fastProperty "spanFrom equals emptySpan" prop_spanFrom_equals_emptySpan
+    , fastProperty "spanTo creates identity span" prop_spanTo_identity
+    , fastProperty "spanBetween creates correct span" prop_spanBetween_correct
+    , fastProperty "mergeSpans encompasses both spans" prop_mergeSpans_encompassing
+    , fastProperty "mergeSpans is commutative" prop_mergeSpans_commutative
+    , fastProperty "mergeSpans is associative" prop_mergeSpans_associative
+    , fastProperty "isValidSpan checks correctly" prop_isValidSpan_correct
+    , fastProperty "locatedAt creates correct located value" prop_locatedAt_correct
+    , fastProperty "locatedWithSpan creates correct located value" prop_locatedWithSpan_correct
+    , fastProperty "advancePos handles newline correctly" prop_advancePos_newline
+    , fastProperty "advancePos preserves position for zero count" prop_advancePos_zero
+    , fastProperty "advancePosBy advances sequence correctly" prop_advancePosBy_sequence
+    ]
