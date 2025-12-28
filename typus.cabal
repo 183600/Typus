@@ -817,7 +817,6 @@ test-suite typus-test
         -- New Comprehensive Cabal QuickCheck Test Module
         
         , Test.Unit.NewCabalTestSpec
-        , Test.Unit.NewComprehensiveCabalTestSpec
 
         -- New Comprehensive Test Modules Created (2025) - 10 cabal tests
         , Test.Unit.ComprehensiveCoreQuickCheckSpec
@@ -928,6 +927,9 @@ test-suite typus-test
         
         -- New Comprehensive Cabal Test Suite (10 comprehensive tests)
         , Test.Unit.NewComprehensiveCabalTestSuiteSpec
+        
+        -- New Comprehensive Cabal Test Suite (2025) - 10 Additional Tests
+        , Test.Unit.NewComprehensiveCabalTestSpec
         
     other-modules:
             Test.Dependencies.Arbitrary

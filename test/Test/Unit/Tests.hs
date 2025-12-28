@@ -96,6 +96,9 @@ import qualified Test.Unit.NewSyntaxValidatorBoundarySpec
 import qualified Test.Unit.NewCabalCoreTestsSpec
 import qualified Test.Unit.NewCabalQuickCheckPropertiesSpec
 
+-- New Comprehensive Cabal Test Suite (2025)
+import qualified Test.Unit.NewComprehensiveCabalTestSpec
+
 -- ============================================================================
 -- New Comprehensive Test Modules (2025) - 10 cabal tests
 -- ============================================================================
@@ -283,7 +286,7 @@ import qualified Test.Unit.PerformanceRegressionCabalsSpec
 import qualified Test.Unit.SecurityValidationCabalsSpec
 
 -- New Comprehensive Cabal Test Module
-import qualified Test.Unit.NewComprehensiveCabalTestSpec
+-- import qualified Test.Unit.NewComprehensiveCabalTestSpec
 
 -- New Cabal Test Modules (10 comprehensive tests)
 import qualified Test.Unit.CabalParserQuickCheckSpec
@@ -2227,7 +2230,6 @@ tests =
     , Test.Unit.ConcurrentSafetyAdvanced2025Spec.tests
     , Test.Unit.PerformanceOptimization2025Spec.tests
     , Test.Unit.BoundaryConditionsAdvanced2025Spec.tests
-    , Test.Unit.NewComprehensiveCabalTestSpec.tests
     , Test.Unit.NewCabalTestSpec.tests
     ]
 
@@ -2620,5 +2622,12 @@ tests =
     , Test.Unit.NewEndToEndCompilationSpec.tests
     , Test.Unit.NewPerformanceRegressionSpec.tests
     , Test.Unit.NewErrorHandlingConsistencySpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Comprehensive Cabal Test Suite (2025) - 10 Additional Tests
+  -- ============================================================================
+  , testGroup "New Comprehensive Cabal Test Suite - Enhanced Coverage"
+    [ Test.Unit.NewComprehensiveCabalTestSpec.tests
     ]
   ]
