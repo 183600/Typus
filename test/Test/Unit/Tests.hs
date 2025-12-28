@@ -5,6 +5,7 @@ import Test.Tasty (TestTree, testGroup)
 import qualified Test.Unit.CLISpec
 import qualified Test.Unit.CommandLineDebugSpec
 import qualified Test.Unit.CompilerSpec
+import qualified Test.Unit.CompilerIRConsistencyAdvancedSpec
 import qualified Test.Unit.DependentTypesSpec
 import qualified Test.Unit.EmbedAssetsSpec
 import qualified Test.Unit.ErrorHandlingSpec
@@ -1378,6 +1379,7 @@ tests =
     , Test.Unit.SourceLocationAdvancedPropertiesSpec.tests
     , Test.Unit.SyntaxValidatorSpec.tests
     , Test.Unit.CompilerSpec.tests
+    , Test.Unit.CompilerIRConsistencyAdvancedSpec.tests
     , Test.Unit.ValueAnalysisSpec.tests
     , Test.Unit.ErrorHandlingSpec.tests
     , Test.Unit.EmbedAssetsSpec.tests
