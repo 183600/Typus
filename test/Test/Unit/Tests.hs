@@ -4,6 +4,7 @@ import Test.Tasty (TestTree, testGroup)
 
 import qualified Test.Unit.CLISpec
 import qualified Test.Unit.CommandLineDebugSpec
+import qualified Test.Unit.CommandLineDebugIntegrationAdvancedSpec
 import qualified Test.Unit.CompilerSpec
 import qualified Test.Unit.CompilerIRConsistencyAdvancedSpec
 import qualified Test.Unit.DependentTypesSpec
@@ -1406,6 +1407,7 @@ tests =
     , Test.Unit.GoToolchainSpec.tests
     , Test.Unit.GoToolchainPropertiesAdvancedSpec.tests
     , Test.Unit.CommandLineDebugSpec.tests
+    , Test.Unit.CommandLineDebugIntegrationAdvancedSpec.tests
     , Test.Unit.CLISpec.tests
     , Test.Unit.VerbositySpec.tests
     , Test.Unit.UtilsSpec.tests
