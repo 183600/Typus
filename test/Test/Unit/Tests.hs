@@ -110,6 +110,19 @@ import qualified Test.Unit.SyntaxValidatorRobustnessQuickCheckSpec
 import qualified Test.Unit.IntegrationEndToEndQuickCheckSpec
 import qualified Test.Unit.PerformanceRegressionQuickCheckSpec
 
+-- ============================================================================
+-- New Enhanced Cabal Test Modules (2025) - 9 Additional QuickCheck Tests  
+-- ============================================================================
+import qualified Test.Unit.NewSourceLocationMathQuickCheckSpec
+import qualified Test.Unit.NewParserErrorRecoveryQuickCheckSpec
+import qualified Test.Unit.NewCompilerOptimizationQuickCheckSpec
+import qualified Test.Unit.NewOwnershipTransitivityQuickCheckSpec
+import qualified Test.Unit.NewUtilsStringBoundaryQuickCheckSpec
+import qualified Test.Unit.NewErrorHandlerConsistencyQuickCheckSpec
+import qualified Test.Unit.NewDependenciesCycleDetectionQuickCheckSpec
+import qualified Test.Unit.NewTypeSystemBoundaryQuickCheckSpec
+import qualified Test.Unit.NewIntegrationEndToEndQuickCheckSpec
+
 -- New Comprehensive Test Modules (2025)
 import qualified Test.Unit.StringAnalysisSpec
 import qualified Test.Unit.CompilerOptimizationSpec
@@ -2562,5 +2575,20 @@ tests =
     , Test.Unit.SyntaxValidatorRobustnessQuickCheckSpec.tests
     , Test.Unit.IntegrationEndToEndQuickCheckSpec.tests
     , Test.Unit.PerformanceRegressionQuickCheckSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Enhanced Cabal Test Modules (2025) - 10 Additional QuickCheck Tests  
+  -- ============================================================================
+  , testGroup "New Enhanced Cabal Test Modules - Additional QuickCheck Testing"
+    [ Test.Unit.NewSourceLocationMathQuickCheckSpec.tests
+    , Test.Unit.NewParserErrorRecoveryQuickCheckSpec.tests
+    , Test.Unit.NewCompilerOptimizationQuickCheckSpec.tests
+    , Test.Unit.NewOwnershipTransitivityQuickCheckSpec.tests
+    , Test.Unit.NewUtilsStringBoundaryQuickCheckSpec.tests
+    , Test.Unit.NewErrorHandlerConsistencyQuickCheckSpec.tests
+    , Test.Unit.NewDependenciesCycleDetectionQuickCheckSpec.tests
+    , Test.Unit.NewTypeSystemBoundaryQuickCheckSpec.tests
+    , Test.Unit.NewIntegrationEndToEndQuickCheckSpec.tests
     ]
   ]
