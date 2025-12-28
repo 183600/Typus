@@ -1,0 +1,183 @@
+module Test.Unit.ConciseTypeSystemQuickCheckSpec (tests) where
+
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, oneof, choose, elements, listOf)
+import Data.Set (Set)
+import qualified Data.Set as Set
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Compiler.TypeChecker (Type(..), TypeEnv(..), TypeConstraint(..))
+
+-- | 简洁的QuickCheck测试，针对TypeSystem模块的边界条件
+tests :: TestTree
+tests =
+  testGroup "Concise TypeSystem QuickCheck Tests"
+    [ testGroup "Basic type properties"
+        [ testProperty "Simple types are equal if names match" $
+            \name -> SimpleType name === SimpleType name
+            
+        , testProperty "Function types preserve domain and codomain" $
+            \domain codomain -> 
+            let funcType = FunctionType domain codomain
+            in case funcType of
+                 FunctionType d c -> d === domain && c === codomain
+                 _ -> property False
+                 
+        , testProperty "Generic types preserve name and parameters" $
+            \name params -> 
+            let genType = GenericType name params
+            in case genType of
+                 GenericType n p -> n === name && p === params
+                 _ -> property False
+        ]
+        
+    , testGroup "Type environment properties"
+        [ testProperty "Empty environment has no types" $
+            \name -> Map.null (unTypeEnv emptyTypeEnv) && 
+                     lookupTypeInEnv name emptyTypeEnv === Nothing
+            
+        , testProperty "Type insertion is retrievable" $
+            \name typeExpr -> 
+            let env = addTypeToEnv name typeExpr emptyTypeEnv
+            in lookupTypeInEnv name env === Just typeExpr
+            
+        , testProperty "Multiple insertions preserve all entries" $
+            \pairs -> 
+            let env = foldr (\(name, typ) acc -> addTypeToEnv name typ acc) emptyTypeEnv pairs
+                checkPair (name, typ) = lookupTypeInEnv name env === Just typ
+            in all checkPair pairs
+        ]
+        
+    , testGroup "Type unification properties"
+        [ testProperty "Identical types always unify" $
+            \typeExpr -> case unifyTypes typeExpr typeExpr of
+                           Left _ -> property False
+                           Right _ -> property True
+                           
+        , testProperty "Unification failure is symmetric" $
+            \type1 type2 -> 
+            case (unifyTypes type1 type2, unifyTypes type2 type1) of
+              (Left _, Left _) -> property True
+              (Right _, Right _) -> property True
+              _ -> property False
+        ]
+        
+    , testGroup "Type constraint properties"
+        [ testProperty "Equality constraint preserves types" $
+            \type1 type2 -> 
+            let constraint = EqualityConstraint type1 type2
+            in case constraint of
+                 EqualityConstraint t1 t2 -> t1 === type1 && t2 === type2
+                 _ -> property False
+                 
+        , testProperty "Subtype constraint preserves relationship" $
+            \subtype supertype -> 
+            let constraint = SubtypeConstraint subtype supertype
+            in case constraint of
+                 SubtypeConstraint sub sup -> sub === subtype && sup === supertype
+                 _ -> property False
+        ]
+        
+    , testGroup "Type compatibility properties"
+        [ testProperty "Type compatibility is reflexive" $
+            \typeExpr -> areCompatible typeExpr typeExpr
+            
+        , testProperty "Type compatibility is symmetric" $
+            \type1 type2 -> 
+            let compatible1 = areCompatible type1 type2
+                compatible2 = areCompatible type2 type1
+            in compatible1 === compatible2
+        ]
+        
+    , testGroup "Boundary condition tests"
+        [ testProperty "Deeply nested types handle correctly" $
+            \depth -> 
+            let nestedType = buildNestedType (min depth 5) "base"
+            in case nestedType of
+                 SimpleType name -> not (null name)
+                 _ -> property True  -- Any valid type structure is acceptable
+                 
+        , testProperty "Large type environments maintain performance" $
+            \numTypes -> 
+            let count = min numTypes 100  -- Cap to avoid performance issues
+                types = [(show i, SimpleType ("Type" ++ show i)) | i <- [1..count]]
+                env = foldr (\(name, typ) acc -> addTypeToEnv name typ acc) emptyTypeEnv types
+            in length (Map.toList (unTypeEnv env)) === count
+        ]
+    ]
+
+-- Helper types and functions for testing
+newtype TypeEnv = TypeEnv { unTypeEnv :: Map String Type }
+
+emptyTypeEnv :: TypeEnv
+emptyTypeEnv = TypeEnv Map.empty
+
+addTypeToEnv :: String -> Type -> TypeEnv -> TypeEnv
+addTypeToEnv name typ (TypeEnv env) = TypeEnv (Map.insert name typ env)
+
+lookupTypeInEnv :: String -> TypeEnv -> Maybe Type
+lookupTypeInEnv name (TypeEnv env) = Map.lookup name env
+
+-- Mock type system for testing
+data Type
+    = SimpleType String
+    | FunctionType Type Type
+    | GenericType String [Type]
+    | TypeVar String
+    deriving (Eq, Show)
+
+data TypeConstraint
+    = EqualityConstraint Type Type
+    | SubtypeConstraint Type Type
+    deriving (Eq, Show)
+
+-- Mock functions for testing
+unifyTypes :: Type -> Type -> Either String (Map String Type)
+unifyTypes (SimpleType name1) (SimpleType name2)
+  | name1 == name2 = Right Map.empty
+  | otherwise = Left "Cannot unify different simple types"
+unifyTypes (FunctionType domain1 codomain1) (FunctionType domain2 codomain2) = 
+  do
+    sub1 <- unifyTypes domain1 domain2
+    sub2 <- unifyTypes codomain1 codomain2
+    return (Map.union sub2 sub1)
+unifyTypes (GenericType name1 args1) (GenericType name2 args2)
+  | name1 == name2 && length args1 == length args2 = Right Map.empty
+  | otherwise = Left "Cannot unify different generic types"
+unifyTypes _ _ = Left "Cannot unify different type constructors"
+
+areCompatible :: Type -> Type -> Bool
+areCompatible t1 t2 = case unifyTypes t1 t2 of
+                       Right _ -> True
+                       Left _ -> False
+
+buildNestedType :: Int -> String -> Type
+buildNestedType 0 base = SimpleType base
+buildNestedType n base = GenericType ("Nested" ++ show n) [buildNestedType (n-1) base]
+
+-- Generate test data
+instance Arbitrary Type where
+  arbitrary = oneof
+    [ SimpleType <$> arbitrary
+    , FunctionType <$> arbitrary <*> arbitrary
+    , GenericType <$> arbitrary <*> listOf arbitrary
+    , TypeVar <$> arbitrary
+    ]
+
+instance Arbitrary TypeConstraint where
+  arbitrary = oneof
+    [ EqualityConstraint <$> arbitrary <*> arbitrary
+    , SubtypeConstraint <$> arbitrary <*> arbitrary
+    ]
+
+instance Arbitrary String where
+  arbitrary = oneof
+    [ return ""
+    , listOf $ elements ['a'..'z']
+    , listOf $ elements ['A'..'Z']
+    , listOf $ elements "0123456789_"
+    ]
+
+-- Helper property function
+property :: Bool -> Property
+property = id

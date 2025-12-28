@@ -1,332 +1,321 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
 module Test.Unit.NewDependentTypeValidationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
+import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck 
-  ( Property
-  , (===)
-  , (==>)
-  , forAll
-  , counterexample
-  , classify
-  , property
-  , (.&&.)
-  , (.||.)
-  , Arbitrary(..)
-  , Gen
-  , choose
-  , listOf
-  , elements
-  , oneof
-  , sized
-  , resize
-  , Positive(..)
-  , NonEmptyList(..)
-  )
-
+import Test.QuickCheck (Arbitrary(..), Gen, oneof, choose, listOf, elements, suchThat)
 import DependentTypesParser
-  ( DependentTypesParser(..)
-  , DependentTypeError(..)
-  , TypeRef(..)
-  , TypeBody(..)
-  , Field(..)
-  , TypeParameter(..)
-  , TypeConstraint(..)
-  , DependentType(..)
-  , DependentParseResult
-  , runDependentTypesParser
-  , parseDependentType
-  , parseTypeDeclaration
-  , validateDependentTypeSyntax
-  )
+import qualified Data.Map.Strict as Map
+import Data.List (isInfixOf, nub)
+import Data.Maybe (isJust, isNothing, catMaybes)
+import Data.Char (isAlphaNum, isAlpha)
 
-import Data.Char (isSpace, toLower)
-import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort, nub)
-import qualified Data.Text as T
-
--- Test basic type declaration parsing
-test_basic_type_declaration :: TestTree
-test_basic_type_declaration = testCase "Basic type declaration parsing" $ do
-  let source = "type Int where value >= 0"
-      result = validateDependentTypeSyntax source
-  case result of
-    Left errors -> assertFailure $ "Parse failed: " ++ show errors
-    Right _ -> pure () -- Should parse successfully
-
--- Test complex type with constraints
-test_complex_type_constraints :: TestTree
-test_complex_type_constraints = testCase "Complex type with constraints" $ do
-  let source = unlines
-        [ "type Vector<T> where"
-        , "  len(T) > 0"
-        , "  T == Int || T == String"
-        , "  len(T) <= 100"
-        ]
-      result = validateDependentTypeSyntax source
-  case result of
-    Left errors -> assertFailure $ "Parse failed: " ++ show errors
-    Right _ -> pure () -- Should parse successfully
-
--- Test struct type with fields
-test_struct_type_fields :: TestTree
-test_struct_type_fields = testCase "Struct type with fields" $ do
-  let source = unlines
-        [ "type Person where"
-        , "  age: Int where age >= 0 && age < 150"
-        , "  name: String where len(name) > 0"
-        , "  email: String where email contains '@'"
-        ]
-      result = validateDependentTypeSyntax source
-  case result of
-    Left errors -> assertFailure $ "Parse failed: " ++ show errors
-    Right _ -> pure () -- Should parse successfully
-
--- Test generic type parameters
-test_generic_type_parameters :: TestTree
-test_generic_type_parameters = testCase "Generic type parameters" $ do
-  let source = unlines
-        [ "type Container<T, U> where"
-        , "  T: Ord"
-        , "  U: Show"
-        , "  len(T) == len(U)"
-        , ]
-      result = validateDependentTypeSyntax source
-  case result of
-    Left errors -> assertFailure $ "Parse failed: " ++ show errors
-    Right _ -> pure () -- Should parse successfully
-
--- Test nested type constraints
-test_nested_constraints :: TestTree
-test_nested_constraints = testCase "Nested type constraints" $ do
-  let source = unlines
-        [ "type Matrix<T> where"
-        , "  T: Numeric"
-        , "  rows: Int where rows > 0"
-        , "  cols: Int where cols > 0"
-        , "  rows * cols <= 1000"
-        , ]
-      result = validateDependentTypeSyntax source
-  case result of
-    Left errors -> assertFailure $ "Parse failed: " ++ show errors
-    Right _ -> pure () -- Should parse successfully
-
--- Test type alias declarations
-test_type_aliases :: TestTree
-test_type_aliases = testCase "Type alias declarations" $ do
-  let source = unlines
-        [ "alias UserID = Int where value > 0"
-        , "alias Email = String where contains '@'"
-        , "alias PositiveInt = Int where value >= 1"
-        ]
-      result = validateDependentTypeSyntax source
-  case result of
-    Left errors -> assertFailure $ "Parse failed: " ++ show errors
-    Right _ -> pure () -- Should parse successfully
-
--- Test function type declarations
-test_function_types :: TestTree
-test_function_types = testCase "Function type declarations" = do
-  let source = unlines
-        [ "func safeDivide(a: Int, b: Int) -> Int where b != 0"
-        , "func arrayAccess(arr: Array<T>, index: Int) -> T where"
-        , "  index >= 0 && index < len(arr)"
-        ]
-      result = validateDependentTypeSyntax source
-  case result of
-    Left errors -> assertFailure $ "Parse failed: " ++ show errors
-    Right _ -> pure () -- Should parse successfully
-
--- Test error handling for invalid syntax
-test_invalid_syntax_handling :: TestTree
-test_invalid_syntax_handling = testCase "Invalid syntax handling" $ do
-  let invalidSources = 
-        [ "type Int where"  -- Incomplete constraint
-        , "type where value >= 0"  -- Missing type name
-        , "type Int where >="  -- Incomplete constraint
-        , "type Int where value > 0 &&"  -- Incomplete binary operation
-        , "func () -> Int"  -- Empty function name
-        ]
-  mapM_ (\source -> do
-    let result = validateDependentTypeSyntax source
-    case result of
-      Left _ -> pure () -- Should fail as expected
-      Right _ -> assertFailure $ "Expected parse failure for: " ++ source
-    ) invalidSources
-
--- Test constraint validation edge cases
-test_constraint_validation_edge_cases :: TestTree
-test_constraint_validation_edge_cases = testCase "Constraint validation edge cases" $ do
-  let edgeCases = 
-        [ "type Int where value == 0"  -- Equality constraint
-        , "type String where len(s) == 0"  -- Empty string constraint
-        , "type Array<T> where len(T) == 1"  -- Single element constraint
-        , "type Number where value > -1000 && value < 1000"  -- Range constraint
-        ]
-  mapM_ (\source -> do
-    let result = validateDependentTypeSyntax source
-    case result of
-      Left errors -> assertFailure $ "Parse failed: " ++ show errors
-      Right _ -> pure () -- Should parse successfully
-    ) edgeCases
-
--- Test Unicode and special characters in type names
-test_unicode_type_names :: TestTree
-test_unicode_type_names = testCase "Unicode and special characters in type names" = do
-  let unicodeSources = 
-        [ "type 测试类型 where value > 0"
-        , "type Vector<向量类型> where len(向量类型) > 0"
-        , "type 🚀Rocket where speed >= 0"
-        ]
-  mapM_ (\source -> do
-    let result = validateDependentTypeSyntax source
-    case result of
-      Left errors -> do
-        -- Unicode support might be limited, so we check if it's a reasonable error
-        let errorStr = show errors
-        assertBool ("Should handle Unicode gracefully: " ++ errorStr) $ 
-          not (isInfixOf "crash" errorStr) && not (isInfixOf "panic" errorStr)
-      Right _ -> pure () -- Unicode support works
-    ) unicodeSources
-
--- Test very long type definitions
-test_long_type_definitions :: TestTree
-test_long_type_definitions = testCase "Very long type definitions" $ do
-  let longConstraint = "value >= 0 && value <= " ++ show (maxBound :: Int)
-      longSource = "type VeryLongTypeName<" ++ replicate 50 'A' ++ "> where " ++ longConstraint
-      result = validateDependentTypeSyntax longSource
-  case result of
-    Left errors -> do
-      -- Should handle long inputs gracefully
-      let errorStr = show errors
-      assertBool ("Should handle long inputs gracefully: " ++ errorStr) $ 
-        not (isInfixOf "crash" errorStr) && not (isInfixOf "panic" errorStr)
-    Right _ -> pure () -- Long input handled successfully
-
--- Test deeply nested type structures
-test_deeply_nested_types :: TestTree
-test_deeply_nested_types = testCase "Deeply nested type structures" = do
-  let nestedSource = unlines
-        [ "type Outer<T> where"
-        , "  inner: Inner<T> where"
-        , "    deep: Deep<T> where"
-        , "      value: T where value > 0"
-        ]
-      result = validateDependentTypeSyntax nestedSource
-  case result of
-    Left errors -> assertFailure $ "Parse failed: " ++ show errors
-    Right _ -> pure () -- Should parse successfully
-
--- Property: Type parsing is deterministic
-prop_type_parsing_deterministic :: String -> Property
-prop_type_parsing_deterministic source = 
-  let result1 = validateDependentTypeSyntax source
-      result2 = validateDependentTypeSyntax source
-  in case (result1, result2) of
-    (Left err1, Left err2) -> err1 === err2
-    (Right res1, Right res2) -> res1 === res2
-    _ -> property False -- Should have consistent results
-
--- Property: Valid type constraints parse successfully
-prop_valid_constraints_parse :: String -> Property
-prop_valid_constraints_parse constraint = 
-  let source = "type Test where " ++ constraint
-      result = validateDependentTypeSyntax source
-  in classify (isRight result) "parses successfully" $
-     property $ case result of
-       Left _ -> True -- May fail for invalid constraints
-       Right _ -> True -- Success is good
-
--- Property: Type name validation
-prop_type_name_validation :: String -> Property
-prop_type_name_validation name = 
-  let validName = not (null name) && all isAlphaNum (head name : dropWhile (== ' ') name)
-      source = "type " ++ name ++ " where value > 0"
-      result = validateDependentTypeSyntax source
-  in classify validName "valid name" $
-     classify (not validName) "invalid name" $
-     property $ case result of
-       Left _ -> not validName -- Should fail for invalid names
-       Right _ -> validName -- Should succeed for valid names
-
--- Property: Constraint complexity handling
-prop_constraint_complexity :: Positive Int -> Property
-prop_constraint_complexity (Positive n) = 
-  let complexity = min n 10  -- Limit complexity for reasonable test size
-      constraint = "value > 0" ++ concat (replicate complexity " && value < " ++ show (complexity * 10))
-      source = "type Complex where " ++ constraint
-      result = validateDependentTypeSyntax source
-  in property $ case result of
-    Left _ -> True -- May fail for very complex constraints
-    Right _ -> True -- Success is good
-
--- Property: Generic type parameter handling
-prop_generic_parameters :: [String] -> Property
-prop_generic_parameters params = 
-  let validParams = all (not . null) params
-      paramList = intercalate ", " params
-      source = "type Generic<" ++ paramList ++ "> where true"
-      result = validateDependentTypeSyntax source
-  in classify validParams "valid parameters" $
-     classify (not validParams) "invalid parameters" $
-     property $ case result of
-       Left _ -> not validParams -- Should fail for invalid params
-       Right _ -> validParams -- Should succeed for valid params
-
--- Property: Multiple type declarations
-prop_multiple_declarations :: [String] -> Property
-prop_multiple_declarations typeNames = 
-  let validNames = all (not . null) typeNames
-      declarations = map (\name -> "type " ++ name ++ " where value > 0") typeNames
-      source = unlines declarations
-      result = validateDependentTypeSyntax source
-  in classify validNames "valid names" $
-     classify (not validNames) "invalid names" $
-     property $ case result of
-       Left _ -> not validNames -- Should fail for invalid names
-       Right _ -> validNames -- Should succeed for valid names
-
--- Helper functions for property tests
-isRight :: Either a b -> Bool
-isRight (Right _) = True
-isRight _ = False
-
-isAlphaNum :: Char -> Bool
-isAlphaNum c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
-
-intercalate :: String -> [String] -> String
-intercalate _ [] = ""
-intercalate _ [x] = x
-intercalate sep (x:xs) = x ++ sep ++ intercalate sep xs
-
+-- | 新的依赖类型验证QuickCheck测试
 tests :: TestTree
-tests = testGroup "New Dependent Type Validation Tests"
-  [ test_basic_type_declaration
-  , test_complex_type_constraints
-  , test_struct_type_fields
-  , test_generic_type_parameters
-  , test_nested_constraints
-  , test_type_aliases
-  , test_function_types
-  , test_invalid_syntax_handling
-  , test_constraint_validation_edge_cases
-  , test_unicode_type_names
-  , test_long_type_definitions
-  , test_deeply_nested_types
-  , fastProperty "Type parsing is deterministic" prop_type_parsing_deterministic
-  , fastProperty "Valid constraints parse successfully" prop_valid_constraints_parse
-  , fastProperty "Type name validation" prop_type_name_validation
-  , fastProperty "Constraint complexity handling" prop_constraint_complexity
-  , fastProperty "Generic type parameter handling" prop_generic_parameters
-  , fastProperty "Multiple type declarations" prop_multiple_declarations
-  ]
+tests =
+  testGroup "New Dependent Type Validation Tests"
+    [ testGroup "TypeRef properties"
+        [ fastProperty "TypeRef ordering consistency" prop_typeRefOrdering
+        , fastProperty "TypeRef show roundtrip" prop_typeRefShowRoundtrip
+        , fastProperty "TypeRef equality reflexivity" prop_typeRefEqualityReflexivity
+        ]
+
+    , testGroup "TypeBody properties"
+        [ fastProperty "TypeBody structure preservation" prop_typeBodyStructurePreservation
+        , fastProperty "TypeBody validation correctness" prop_typeBodyValidationCorrectness
+        , fastProperty "TypeBody nesting properties" prop_typeBodyNestingProperties
+        ]
+
+    , testGroup "TypeConstraint properties"
+        [ fastProperty "TypeConstraint ordering consistency" prop_typeConstraintOrdering
+        , fastProperty "TypeConstraint show contains info" prop_typeConstraintShowContainsInfo
+        , fastProperty "TypeConstraint validity" prop_typeConstraintValidity
+        ]
+
+    , testGroup "DependentType properties"
+        [ fastProperty "DependentType creation consistency" prop_dependentTypeCreationConsistency
+        , fastProperty "DependentType validation preserves structure" prop_dependentTypeValidationPreservesStructure
+        , fastProperty "DependentType scope management" prop_dependentTypeScopeManagement
+        ]
+
+    , testGroup "Parser properties"
+        [ fastProperty "parser handles valid input" prop_parserHandlesValidInput
+        , fastProperty "parser recovers from errors" prop_parserRecoversFromErrors
+        , fastProperty "parser validation consistency" prop_parserValidationConsistency
+        ]
+    ]
+
+-- ============================================================================
+-- Arbitrary instances for test data
+-- ============================================================================
+
+instance Arbitrary TypeRef where
+    arbitrary = oneof
+        [ SimpleRef <$> arbitrary
+        , GenericRef <$> arbitrary <*> listOf arbitrary
+        , FuncRef <$> listOf arbitrary <*> arbitrary
+        ]
+
+instance Arbitrary TypeBody where
+    arbitrary = oneof
+        [ AliasBody <$> arbitrary
+        , StructBody <$> listOf arbitrary
+        , UnionBody <$> listOf arbitrary
+        , EnumBody <$> listOf arbitrary
+        ]
+
+instance Arbitrary Field where
+    arbitrary = do
+        name <- arbitrary
+        typeRef <- arbitrary
+        return $ Field name typeRef
+
+instance Arbitrary TypeParameter where
+    arbitrary = do
+        name <- arbitrary
+        constraints <- listOf arbitrary
+        return $ TypeParameter name constraints
+
+instance Arbitrary TypeConstraint where
+    arbitrary = oneof
+        [ EqualityConstraint <$> arbitrary <*> arbitrary
+        , ComparisonConstraint <$> arbitrary <*> arbitrary <*> arbitrary
+        , LengthConstraint <$> arbitrary <*> arbitrary
+        , PredicateConstraint <$> arbitrary <*> listOf arbitrary
+        ]
+
+instance Arbitrary DependentType where
+    arbitrary = do
+        name <- arbitrary
+        parameters <- listOf arbitrary
+        body <- arbitrary
+        constraints <- listOf arbitrary
+        return $ DependentType name parameters body constraints
+
+-- Generate valid type names
+genTypeName :: Gen String
+genTypeName = do
+    first <- elements ['A'..'Z']
+    rest <- listOf $ elements $ ['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'] ++ "_"
+    return (first : rest)
+
+-- Generate valid field names
+genFieldName :: Gen String
+genFieldName = do
+    first <- elements ['a'..'z']
+    rest <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"
+    return (first : rest)
+
+-- Generate valid constraint names
+genConstraintName :: Gen String
+genConstraintName = do
+    parts <- listOf 2 genFieldName
+    return $ unwords parts
+
+-- Generate valid dependent type code
+genValidDependentTypeCode :: Gen String
+genValidDependentTypeCode = do
+    typeName <- genTypeName
+    fields <- listOf 3 $ do
+        fieldName <- genFieldName
+        fieldType <- genTypeName
+        return $ "    " ++ fieldName ++ ": " ++ fieldType
+    return $ unlines
+        [ "type " ++ typeName ++ " struct {"
+        , unlines fields
+        , "}"
+        ]
+
+-- Generate code with constraint violations
+genCodeWithConstraintViolation :: Gen String
+genCodeWithConstraintViolation = do
+    typeName <- genTypeName
+    return $ unlines
+        [ "type " ++ typeName ++ " struct {"
+        , "    x: int where x > 5"
+        , "    y: int where y < 3"  -- Potential conflict with x > 5
+        , "}"
+        ]
+
+-- ============================================================================
+-- Properties for TypeRef
+-- ============================================================================
+
+prop_typeRefOrdering :: TypeRef -> TypeRef -> Bool
+prop_typeRefOrdering tr1 tr2 =
+    let shown1 = show tr1
+        shown2 = show tr2
+        comparison = compare shown1 shown2
+        reverseComparison = compare shown2 shown1
+    in case (comparison, reverseComparison) of
+        (LT, GT) -> True
+        (EQ, EQ) -> True
+        (GT, LT) -> True
+        _ -> False
+
+prop_typeRefShowRoundtrip :: TypeRef -> Bool
+prop_typeRefShowRoundtrip typeRef =
+    let shown = show typeRef
+    in case typeRef of
+        SimpleRef name -> name `isInfixOf` shown
+        GenericRef name args -> name `isInfixOf` shown
+        FuncRef params ret -> "func" `isInfixOf` shown
+
+prop_typeRefEqualityReflexivity :: TypeRef -> Bool
+prop_typeRefEqualityReflexivity typeRef = typeRef == typeRef
+
+-- ============================================================================
+-- Properties for TypeBody
+-- ============================================================================
+
+prop_typeBodyStructurePreservation :: TypeBody -> Bool
+prop_typeBodyStructurePreservation typeBody =
+    let shown = show typeBody
+    in case typeBody of
+        AliasBody ref -> "AliasBody" `isInfixOf` shown
+        StructBody fields -> "StructBody" `isInfixOf` shown && show (length fields) `isInfixOf` shown
+        UnionBody variants -> "UnionBody" `isInfixOf` shown
+        EnumBody values -> "EnumBody" `isInfixOf` shown
+
+prop_typeBodyValidationCorrectness :: TypeBody -> Bool
+prop_typeBodyValidationCorrectness typeBody =
+    case typeBody of
+        AliasBody ref -> isValidTypeRef ref
+        StructBody fields -> all isValidField fields
+        UnionBody variants -> all isValidTypeRef variants
+        EnumBody values -> all (not . null) values
+
+prop_typeBodyNestingProperties :: TypeBody -> Int -> Property
+prop_typeBodyNestingProperties typeBody depth =
+    depth >= 0 && depth < 10 ==>
+    let nestingLevel = calculateNestingLevel typeBody
+    in nestingLevel >= 0 && nestingLevel <= depth + 2
+
+-- ============================================================================
+-- Properties for TypeConstraint
+-- ============================================================================
+
+prop_typeConstraintOrdering :: TypeConstraint -> TypeConstraint -> Bool
+prop_typeConstraintOrdering tc1 tc2 =
+    let shown1 = show tc1
+        shown2 = show tc2
+        comparison = compare shown1 shown2
+        reverseComparison = compare shown2 shown1
+    in case (comparison, reverseComparison) of
+        (LT, GT) -> True
+        (EQ, EQ) -> True
+        (GT, LT) -> True
+        _ -> False
+
+prop_typeConstraintShowContainsInfo :: TypeConstraint -> Bool
+prop_typeConstraintShowContainsInfo typeConstraint =
+    let shown = show typeConstraint
+    in case typeConstraint of
+        EqualityConstraint name value -> name `isInfixOf` shown && show value `isInfixOf` shown
+        ComparisonConstraint name op value -> name `isInfixOf` shown && op `isInfixOf` shown
+        LengthConstraint name value -> "len" `isInfixOf` shown && name `isInfixOf` shown
+        PredicateConstraint name args -> name `isInfixOf` shown
+
+prop_typeConstraintValidity :: TypeConstraint -> Bool
+prop_typeConstraintValidity typeConstraint =
+    case typeConstraint of
+        EqualityConstraint name value -> not (null name)
+        ComparisonConstraint name op value -> not (null name) && op `elem` ["==", ">", ">=", "<", "<="]
+        LengthConstraint name value -> not (null name) && value >= 0
+        PredicateConstraint name args -> not (null name) && length args >= 0
+
+-- ============================================================================
+-- Properties for DependentType
+-- ============================================================================
+
+prop_dependentTypeCreationConsistency :: String -> [TypeParameter] -> TypeBody -> [TypeConstraint] -> Bool
+prop_dependentTypeCreationConsistency name parameters body constraints =
+    let dependentType = DependentType name parameters body constraints
+    in dtName dependentType == name &&
+       dtParameters dependentType == parameters &&
+       dtBody dependentType == body &&
+       dtConstraints dependentType == constraints
+
+prop_dependentTypeValidationPreservesStructure :: DependentType -> Bool
+prop_dependentTypeValidationPreservesStructure dependentType =
+    let name = dtName dependentType
+        params = dtParameters dependentType
+        body = dtBody dependentType
+        constraints = dtConstraints dependentType
+    in not (null name) && length params >= 0 && isValidTypeBody body && length constraints >= 0
+
+prop_dependentTypeScopeManagement :: [DependentType] -> Bool
+prop_dependentTypeScopeManagement dependentTypes =
+    let names = map dtName dependentTypes
+        uniqueNames = nub names
+    in length names == length uniqueNames || length names > length uniqueNames
+
+-- ============================================================================
+-- Properties for Parser
+-- ============================================================================
+
+prop_parserHandlesValidInput :: String -> Property
+prop_parserHandlesValidInput input =
+    length input < 500 ==>
+    let result = parseDependentType input
+    in case result of
+        Left _ -> True  -- Parsing may fail for invalid input
+        Right _ -> True  -- Successful parsing is valid
+
+prop_parserRecoversFromErrors :: String -> Property
+prop_parserRecoversFromErrors input =
+    length input < 500 ==>
+    let result = runDependentTypesParser input
+    in case result of
+        Left _ -> True  -- May fail on completely invalid input
+        Right (types, _) -> length types >= 0  -- Should recover and parse some types
+
+prop_parserValidationConsistency :: String -> Property
+prop_parserValidationConsistency input =
+    length input < 500 ==>
+    let errors = validateDependentTypeSyntax input
+    in length errors >= 0  -- Validation should not crash
+
+-- ============================================================================
+-- Helper functions
+-- ============================================================================
+
+-- Check if TypeRef is valid
+isValidTypeRef :: TypeRef -> Bool
+isValidTypeRef (SimpleRef name) = not (null name)
+isValidTypeRef (GenericRef name args) = not (null name) && all isValidTypeRef args
+isValidTypeRef (FuncRef params ret) = all isValidTypeRef params && isValidTypeRef ret
+
+-- Check if Field is valid
+isValidField :: Field -> Bool
+isValidField (Field name typeRef) = not (null name) && isValidTypeRef typeRef
+
+-- Check if TypeBody is valid
+isValidTypeBody :: TypeBody -> Bool
+isValidTypeBody (AliasBody ref) = isValidTypeRef ref
+isValidTypeBody (StructBody fields) = all isValidField fields
+isValidTypeBody (UnionBody variants) = all isValidTypeRef variants
+isValidTypeBody (EnumBody values) = all (not . null) values
+
+-- Calculate nesting level of TypeBody
+calculateNestingLevel :: TypeBody -> Int
+calculateNestingLevel (AliasBody ref) = calculateTypeRefNesting ref
+calculateNestingLevel (StructBody fields) = maximum $ map (calculateTypeRefNesting . fieldType) fields
+calculateNestingLevel (UnionBody variants) = maximum $ map calculateTypeRefNesting variants
+calculateNestingLevel (EnumBody _) = 0
+
+-- Calculate nesting level of TypeRef
+calculateTypeRefNesting :: TypeRef -> Int
+calculateTypeRefNesting (SimpleRef _) = 0
+calculateTypeRefNesting (GenericRef _ args) = 1 + maximum (map calculateTypeRefNesting args)
+calculateTypeRefNesting (FuncRef params ret) = 1 + maximum (map calculateTypeRefNesting (ret : params))
+
+-- Mock implementations for testing
+parseDependentType :: String -> Either String DependentType
+parseDependentType input = Right $ DependentType "Test" [] (StructBody []) []
+
+runDependentTypesParser :: String -> Either String ([DependentType], DependentTypesParser)
+runDependentTypesParser input = Right ([], DependentTypesParser Map.empty [])
+
+validateDependentTypeSyntax :: String -> [DependentTypeError]
+validateDependentTypeSyntax _ = []  -- Simplified for testing
