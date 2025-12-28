@@ -50,6 +50,20 @@ import qualified Test.Unit.UtilsEnhancedQuickCheckSpec
 import qualified Test.Unit.SourceLocationEnhancedQuickCheckSpec
 
 -- ============================================================================
+-- New Typus QuickCheck Test Modules (2025) - Core Functionality Testing
+-- ============================================================================
+import qualified Test.Unit.NewTypusCoreQuickCheckSpec
+import qualified Test.Unit.NewTypusParserQuickCheckSpec
+import qualified Test.Unit.NewTypusOwnershipQuickCheckSpec
+import qualified Test.Unit.NewTypusDependentTypesQuickCheckSpec
+import qualified Test.Unit.NewTypusCompilerQuickCheckSpec
+import qualified Test.Unit.NewTypusSourceLocationQuickCheckSpec
+import qualified Test.Unit.NewTypusErrorHandlerQuickCheckSpec
+import qualified Test.Unit.NewTypusUtilsQuickCheckSpec
+import qualified Test.Unit.NewTypusIntegrationQuickCheckSpec
+import qualified Test.Unit.NewTypusSyntaxValidatorQuickCheckSpec
+
+-- ============================================================================
 -- New Comprehensive Test Modules Created (2025)
 -- ============================================================================
 import qualified Test.Unit.ComprehensiveCoreQuickCheckSpec
@@ -2472,5 +2486,21 @@ tests =
     , Test.Unit.DependenciesErrorHandlingQuickCheckSpec.tests
     , Test.Unit.SyntaxValidatorGoToolchainQuickCheckSpec.tests
     , Test.Unit.EndToEndIntegrationQuickCheckSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Typus QuickCheck Test Modules (2025) - Core Functionality Testing
+  -- ============================================================================
+  , testGroup "New Typus QuickCheck Test Modules - Core Functionality Testing"
+    [ Test.Unit.NewTypusCoreQuickCheckSpec.tests
+    , Test.Unit.NewTypusParserQuickCheckSpec.tests
+    , Test.Unit.NewTypusOwnershipQuickCheckSpec.tests
+    , Test.Unit.NewTypusDependentTypesQuickCheckSpec.tests
+    , Test.Unit.NewTypusCompilerQuickCheckSpec.tests
+    , Test.Unit.NewTypusSourceLocationQuickCheckSpec.tests
+    , Test.Unit.NewTypusErrorHandlerQuickCheckSpec.tests
+    , Test.Unit.NewTypusUtilsQuickCheckSpec.tests
+    , Test.Unit.NewTypusIntegrationQuickCheckSpec.tests
+    , Test.Unit.NewTypusSyntaxValidatorQuickCheckSpec.tests
     ]
   ]

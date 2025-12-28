@@ -904,6 +904,18 @@ test-suite typus-test
         -- New Comprehensive Cabal QuickCheck Tests (10 tests)
         , Test.Unit.NewEnhancedCabalQuickCheckTestSpec
         
+        -- New Typus QuickCheck Test Modules (2025) - Core Functionality Testing
+        , Test.Unit.NewTypusCoreQuickCheckSpec
+        , Test.Unit.NewTypusParserQuickCheckSpec
+        , Test.Unit.NewTypusOwnershipQuickCheckSpec
+        , Test.Unit.NewTypusDependentTypesQuickCheckSpec
+        , Test.Unit.NewTypusCompilerQuickCheckSpec
+        , Test.Unit.NewTypusSourceLocationQuickCheckSpec
+        , Test.Unit.NewTypusErrorHandlerQuickCheckSpec
+        , Test.Unit.NewTypusUtilsQuickCheckSpec
+        , Test.Unit.NewTypusIntegrationQuickCheckSpec
+        , Test.Unit.NewTypusSyntaxValidatorQuickCheckSpec
+        
     other-modules:
             Test.Dependencies.Arbitrary
     build-depends:
