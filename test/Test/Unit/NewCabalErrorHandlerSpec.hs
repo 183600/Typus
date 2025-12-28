@@ -1,129 +1,168 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
 module Test.Unit.NewCabalErrorHandlerSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+import Test.QuickCheck ((===), Property, counterexample)
+
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose)
-import TestSupport.Arbitrary
-
 import ErrorHandler
-  ( ErrorHandler
-  , ErrorType(..)
-  , ErrorSeverity(..)
+  ( ErrorHandler(..)
   , ErrorContext(..)
-  , ErrorMessage
-  , createErrorHandler
+  , ErrorSeverity(..)
+  , ErrorMessage(..)
+  , defaultErrorHandler
   , handleError
-  , hasErrors
-  , getErrors
-  , clearErrors
   , formatError
+  , collectErrors
   )
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
+import Compiler.Errors.Core (ErrorLocation(..))
+import Data.List (isPrefixOf, isInfixOf)
 
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), spanFrom)
-import Data.List (isPrefixOf, isInfixOf, sort)
-
--- Test 1: Error handler creation and initial state
-prop_error_handler_initial_state :: Property
-prop_error_handler_initial_state =
-  let handler = createErrorHandler
-  in property $ not (hasErrors handler) .&&. null (getErrors handler)
-
--- Test 2: Single error handling
-prop_single_error_handling :: ErrorType -> String -> Property
-prop_single_error_handling errorType message =
-  let handler = createErrorHandler
-      handler' = handleError handler errorType message
-  in property $ hasErrors handler' .&&. length (getErrors handler') === 1
-
--- Test 3: Multiple error accumulation
-prop_multiple_error_accumulation :: [ErrorType] -> [String] -> Property
-prop_multiple_error_accumulation errorTypes messages =
-  let handler = createErrorHandler
-      handler' = foldl (\h (et, msg) -> handleError h et msg) handler (zip errorTypes messages)
-  in length errorTypes > 0 ==> 
-     property $ hasErrors handler' .&&. length (getErrors handler') >= length errorTypes
-
--- Test 4: Error clearing
-prop_error_clearing :: ErrorType -> String -> Property
-prop_error_clearing errorType message =
-  let handler = createErrorHandler
-      handler' = handleError handler errorType message
-      handler'' = clearErrors handler'
-  in property $ not (hasErrors handler'') .&&. null (getErrors handler'')
-
--- Test 5: Error message formatting
-prop_error_formatting :: ErrorType -> String -> Property
-prop_error_formatting errorType message =
-  let handler = createErrorHandler
-      handler' = handleError handler errorType message
-      errors = getErrors handler'
-  in not (null errors) ==> 
-     property $ message `isInfixOf` formatError (head errors)
-
--- Test 6: Error type consistency
-prop_error_type_consistency :: ErrorType -> String -> Property
-prop_error_type_consistency errorType message =
-  let handler = createErrorHandler
-      handler' = handleError handler errorType message
-      errors = getErrors handler'
-  in not (null errors) ==> 
-     property $ True -- Error type should be preserved (implementation dependent)
-
--- Test 7: Error context preservation
-prop_error_context_preservation :: String -> String -> Property
-prop_error_context_preservation context message =
-  let handler = createErrorHandler
-      handler' = handleError handler (ParseError context) message
-      errors = getErrors handler'
-  in not (null errors) ==> 
-     property $ True -- Context should be preserved in error
-
--- Test 8: Error severity ordering
-prop_error_severity_ordering :: [ErrorType] -> Property
-prop_error_severity_ordering errorTypes =
-  let handler = createErrorHandler
-      handler' = foldl (\h et -> handleError h et "test message") handler errorTypes
-      errors = getErrors handler'
-  in length errorTypes > 0 ==> 
-     property $ length errors >= length errorTypes
-
--- Test 9: Empty message handling
-prop_empty_message_handling :: ErrorType -> Property
-prop_empty_message_handling errorType =
-  let handler = createErrorHandler
-      handler' = handleError handler errorType ""
-      errors = getErrors handler'
-  in property $ not (null errors) ==> length errors === 1
-
--- Test 10: Error handler state isolation
-prop_error_handler_state_isolation :: ErrorType -> String -> Property
-prop_error_handler_state_isolation errorType message =
-  let handler1 = createErrorHandler
-      handler2 = createErrorHandler
-      handler1' = handleError handler1 errorType message
-  in property $ not (hasErrors handler2) .&&. hasErrors handler1'
-
+-- | Additional comprehensive tests for ErrorHandler module
 tests :: TestTree
-tests = 
-  testGroup "New Cabal ErrorHandler Tests"
-    [ fastProperty "Error handler creation and initial state" prop_error_handler_initial_state
-    , fastProperty "Single error handling" prop_single_error_handling
-    , fastProperty "Multiple error accumulation" prop_multiple_error_accumulation
-    , fastProperty "Error clearing" prop_error_clearing
-    , fastProperty "Error message formatting" prop_error_formatting
-    , fastProperty "Error type consistency" prop_error_type_consistency
-    , fastProperty "Error context preservation" prop_error_context_preservation
-    , fastProperty "Error severity ordering" prop_error_severity_ordering
-    , fastProperty "Empty message handling" prop_empty_message_handling
-    , fastProperty "Error handler state isolation" prop_error_handler_state_isolation
+tests =
+  testGroup "NewCabal ErrorHandler Tests"
+    [ testGroup "Error creation and formatting"
+        [ testCase "formats simple error message correctly" $ do
+            let pos = SourcePos 5 10 45
+                span = SourceSpan pos pos
+                context = ErrorContext "parsing" span Nothing
+                message = ErrorMessage "syntax error" ErrorError context
+                formatted = formatError message
+            assertBool "should contain line number" $ "line 5" `isInfixOf` formatted
+            assertBool "should contain column number" $ "column 10" `isInfixOf` formatted
+            assertBool "should contain error message" $ "syntax error" `isInfixOf` formatted
+
+        , testCase "formats warning message with correct severity" $ do
+            let pos = SourcePos 2 3 8
+                span = SourceSpan pos pos
+                context = ErrorContext "type checking" span Nothing
+                message = ErrorMessage "unused variable" ErrorWarning context
+                formatted = formatError message
+            assertBool "should indicate warning" $ "warning" `isInfixOf` formatted
+            assertBool "should contain message" $ "unused variable" `isInfixOf` formatted
+
+        , testCase "formats multi-line span correctly" $ do
+            let start = SourcePos 1 5 4
+                end = SourcePos 3 2 20
+                span = SourceSpan start end
+                context = ErrorContext "compilation" span Nothing
+                message = ErrorMessage "multi-line error" ErrorError context
+                formatted = formatError message
+            assertBool "should contain start line" $ "line 1" `isInfixOf` formatted
+            assertBool "should contain end line" $ "line 3" `isInfixOf` formatted
+        ]
+
+    , testGroup "Error handling workflow"
+        [ testCase "handles single error correctly" $ do
+            let handler = defaultErrorHandler
+                pos = SourcePos 1 1 0
+                span = SourceSpan pos pos
+                context = ErrorContext "test" span Nothing
+                message = ErrorMessage "test error" ErrorError context
+                result = handleError handler message
+            assertBool "should handle error" $ result
+            let errors = collectErrors handler
+            assertBool "should have one error" $ length errors == 1
+            assertBool "error should be preserved" $ 
+              case errors of
+                (err:_) -> emMessage err == "test error"
+                [] -> False
+
+        , testCase "handles multiple errors in sequence" $ do
+            let handler = defaultErrorHandler
+                createError msg line = ErrorMessage msg ErrorError (ErrorContext "test" (SourceSpan (SourcePos line 1 0) (SourcePos line 1 5)) Nothing)
+                errors = [createError "error1" 1, createError "error2" 2, createError "error3" 3]
+                results = map (handleError handler) errors
+            assertBool "all errors should be handled" $ and results
+            let collected = collectErrors handler
+            assertBool "should have three errors" $ length collected == 3
+            assertBool "errors should be in order" $ 
+              map emMessage collected == ["error1", "error2", "error3"]
+        ]
+
+    , testGroup "Error context management"
+        [ testCase "preserves error context information" $ do
+            let pos = SourcePos 10 15 100
+                span = SourceSpan pos pos
+                additionalInfo = Just "additional context"
+                context = ErrorContext "validation" span additionalInfo
+                message = ErrorMessage "validation failed" ErrorError context
+                formatted = formatError message
+            assertBool "should contain context type" $ "validation" `isInfixOf` formatted
+            assertBool "should contain additional info" $ 
+              case additionalInfo of
+                Just info -> info `isInfixOf` formatted
+                Nothing -> True
+        ]
+
+    , testGroup "Error severity handling"
+        [ testCase "distinguishes between error and warning severity" $ do
+            let errorMsg = ErrorMessage "error" ErrorError (ErrorContext "test" (SourceSpan startPos startPos) Nothing)
+                warningMsg = ErrorMessage "warning" ErrorWarning (ErrorContext "test" (SourceSpan startPos startPos) Nothing)
+                errorFormatted = formatError errorMsg
+                warningFormatted = formatError warningMsg
+            assertBool "error should be marked as error" $ 
+              "error" `isInfixOf` errorFormatted && not ("warning" `isInfixOf` errorFormatted)
+            assertBool "warning should be marked as warning" $ 
+              "warning" `isInfixOf` warningFormatted
+        ]
+
+    , testGroup "QuickCheck property tests"
+        [ fastProperty "error formatting contains location information" prop_errorFormatContainsLocation
+        , fastProperty "collected errors preserve order" prop_collectedErrorsPreserveOrder
+        , fastProperty "error context is preserved in formatting" prop_errorContextPreserved
+        , fastProperty "error severity affects formatting" prop_errorSeverityAffectsFormatting
+        ]
     ]
+
+-- Property: error formatting should always contain location information
+prop_errorFormatContainsLocation :: String -> ErrorSeverity -> Int -> Int -> Property
+prop_errorFormatContainsLocation msg severity line col =
+  let pos = SourcePos (abs line `mod` 100 + 1) (abs col `mod` 100 + 1) (abs line + abs col)
+      span = SourceSpan pos pos
+      context = ErrorContext "test" span Nothing
+      message = ErrorMessage msg severity context
+      formatted = formatError message
+  in counterexample ("formatted: " ++ formatted) $
+     show line `isInfixOf` formatted && show col `isInfixOf` formatted
+
+-- Property: collected errors should preserve the order they were added
+prop_collectedErrorsPreserveOrder :: [String] -> Property
+prop_collectedErrorsPreserveOrder msgs =
+  let handler = defaultErrorHandler
+        createError msg line = ErrorMessage msg ErrorError (ErrorContext "test" (SourceSpan line 1 0) (SourcePos line 5 4)) Nothing
+        errors = zipWith createError (take 10 msgs) [1..]
+        results = map (handleError handler) errors
+  in counterexample ("results: " ++ show results) $
+     and results ==> 
+     let collected = collectErrors handler
+         actualMessages = map emMessage (take (length errors) collected)
+     in actualMessages === take (length errors) msgs
+
+-- Property: error context should be preserved in formatted output
+prop_errorContextPreserved :: String -> String -> Property
+prop_errorContextPreserved contextType additionalInfo =
+  let pos = SourcePos 1 1 0
+      span = SourceSpan pos pos
+      context = ErrorContext contextType span (if null additionalInfo then Nothing else Just additionalInfo)
+      message = ErrorMessage "test message" ErrorError context
+      formatted = formatError message
+  in counterexample ("formatted: " ++ formatted) $
+     contextType `isInfixOf` formatted &&
+     (if null additionalInfo then True else additionalInfo `isInfixOf` formatted)
+
+-- Property: error severity should affect formatting output
+prop_errorSeverityAffectsFormatting :: String -> ErrorSeverity -> Property
+prop_errorSeverityAffectsFormatting msg severity =
+  let pos = SourcePos 1 1 0
+      span = SourceSpan pos pos
+      context = ErrorContext "test" span Nothing
+      message = ErrorMessage msg severity context
+      formatted = formatError message
+  in counterexample ("formatted: " ++ formatted) $
+     case severity of
+       ErrorError -> "error" `isInfixOf` formatted
+       ErrorWarning -> "warning" `isInfixOf` formatted
+       ErrorInfo -> "info" `isInfixOf` formatted
