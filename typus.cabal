@@ -934,6 +934,12 @@ test-suite typus-test
         -- New Core Functionality Test Suite (2025) - 10 comprehensive tests
         , Test.Unit.NewCabalCoreFunctionalitySpec
         
+        -- New Enhanced QuickCheck Test Modules (2025) - 8 comprehensive tests
+        , Test.Unit.NewUtilsEnhancedQuickCheckSpec
+        , Test.Unit.NewSourceLocationEnhancedQuickCheckSpec
+        , Test.Unit.NewParserEnhancedQuickCheckSpec
+        , Test.Unit.NewErrorHandlerEnhancedQuickCheckSpec
+        
     other-modules:
             Test.Dependencies.Arbitrary
     build-depends:

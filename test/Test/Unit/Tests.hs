@@ -71,6 +71,12 @@ import qualified Test.Unit.NewTypusUtilsQuickCheckSpec
 import qualified Test.Unit.NewTypusIntegrationQuickCheckSpec
 import qualified Test.Unit.NewTypusSyntaxValidatorQuickCheckSpec
 
+-- New Enhanced QuickCheck Test Modules (2025)
+import qualified Test.Unit.NewUtilsEnhancedQuickCheckSpec
+import qualified Test.Unit.NewSourceLocationEnhancedQuickCheckSpec
+import qualified Test.Unit.NewParserEnhancedQuickCheckSpec
+import qualified Test.Unit.NewErrorHandlerEnhancedQuickCheckSpec
+
 -- ============================================================================
 -- New Comprehensive Test Modules Created (2025)
 -- ============================================================================
@@ -2659,5 +2665,15 @@ tests =
     , Test.Unit.DependencyAnalysisSpec.tests
     , Test.Unit.TypeInferenceSpec.tests
     , Test.Unit.IntegrationPropertiesSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Enhanced QuickCheck Test Modules (2025) - 4 comprehensive tests
+  -- ============================================================================
+  , testGroup "New Enhanced QuickCheck Test Modules - Core Functionality Testing"
+    [ Test.Unit.NewUtilsEnhancedQuickCheckSpec.test_UtilsEnhancedQuickCheck
+    , Test.Unit.NewSourceLocationEnhancedQuickCheckSpec.test_SourceLocationEnhancedQuickCheck
+    , Test.Unit.NewParserEnhancedQuickCheckSpec.test_ParserEnhancedQuickCheck
+    , Test.Unit.NewErrorHandlerEnhancedQuickCheckSpec.test_ErrorHandlerEnhancedQuickCheck
     ]
   ]
