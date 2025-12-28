@@ -615,6 +615,14 @@ import qualified Test.Unit.NewCoreFunctionalityQuickCheckSpec
 import qualified Test.Unit.NewTextProcessingQuickCheckSpec
 import qualified Test.Unit.NewSourceLocationMathQuickCheckSpec
 
+-- ============================================================================
+-- New QuickCheck Test Modules Added (2025) - Additional comprehensive tests
+-- ============================================================================
+import qualified Test.Unit.NewUtilsQuickCheckSpec
+import qualified Test.Unit.NewSourceLocationQuickCheckSpec
+import qualified Test.Unit.NewParserQuickCheckSpec
+import qualified Test.Unit.NewComprehensiveQuickCheckSpec
+
 -- New Cabal QuickCheck Test Suite (10 comprehensive tests)
 import qualified Test.Unit.NewCabalQuickCheckTestSuiteSpec
 
@@ -2675,5 +2683,15 @@ tests =
     , Test.Unit.NewSourceLocationEnhancedQuickCheckSpec.test_SourceLocationEnhancedQuickCheck
     , Test.Unit.NewParserEnhancedQuickCheckSpec.test_ParserEnhancedQuickCheck
     , Test.Unit.NewErrorHandlerEnhancedQuickCheckSpec.test_ErrorHandlerEnhancedQuickCheck
+    ]
+
+  -- ============================================================================
+  -- New QuickCheck Test Modules Added (2025) - Additional comprehensive tests
+  -- ============================================================================
+  , testGroup "New QuickCheck Test Modules - Enhanced Coverage"
+    [ Test.Unit.NewUtilsQuickCheckSpec.tests
+    , Test.Unit.NewSourceLocationQuickCheckSpec.tests
+    , Test.Unit.NewParserQuickCheckSpec.tests
+    , Test.Unit.NewComprehensiveQuickCheckSpec.tests
     ]
   ]

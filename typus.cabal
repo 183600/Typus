@@ -477,6 +477,7 @@ test-suite typus-test
         Test.Unit.NewSourceLocationQuickCheckSpec,
         Test.Unit.NewErrorHandlerQuickCheckSpec,
         Test.Unit.NewParserQuickCheckSpec,
+        Test.Unit.NewComprehensiveQuickCheckSpec,
         Test.Unit.CustomParserQuickCheckSpec,
         Test.Unit.CustomUtilsQuickCheckSpec,
         Test.Unit.CustomSourceLocationQuickCheckSpec,
