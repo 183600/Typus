@@ -9,9 +9,11 @@ import qualified Test.Unit.CompilerIRConsistencyAdvancedSpec
 import qualified Test.Unit.DependentTypesSpec
 import qualified Test.Unit.EmbedAssetsSpec
 import qualified Test.Unit.ErrorHandlingSpec
+import qualified Test.Unit.ErrorHandlerConsistencyAdvancedSpec
 import qualified Test.Unit.GoToolchainSpec
 import qualified Test.Unit.OwnershipSpec
 import qualified Test.Unit.OwnershipBridgeSpec
+import qualified Test.Unit.OwnershipTransitivityAdvancedSpec
 import qualified Test.Unit.ParserSpec
 import qualified Test.Unit.ParserErrorRecoveryAdvancedSpec
 import qualified Test.Unit.TypeSystemSpec
@@ -1372,6 +1374,7 @@ tests =
     , Test.Unit.ParserErrorRecoveryAdvancedSpec.tests
     , Test.Unit.OwnershipSpec.tests
     , Test.Unit.OwnershipBridgeSpec.tests
+    , Test.Unit.OwnershipTransitivityAdvancedSpec.tests
     , Test.Unit.DependentTypesSpec.tests
     , Test.Unit.TypeSystemSpec.tests
     , Test.Unit.SymbolTableSpec.tests
@@ -1382,6 +1385,7 @@ tests =
     , Test.Unit.CompilerIRConsistencyAdvancedSpec.tests
     , Test.Unit.ValueAnalysisSpec.tests
     , Test.Unit.ErrorHandlingSpec.tests
+    , Test.Unit.ErrorHandlerConsistencyAdvancedSpec.tests
     , Test.Unit.EmbedAssetsSpec.tests
     , Test.Unit.GoToolchainSpec.tests
     , Test.Unit.CommandLineDebugSpec.tests
