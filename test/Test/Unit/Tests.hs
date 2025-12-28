@@ -7,10 +7,13 @@ import qualified Test.Unit.CommandLineDebugSpec
 import qualified Test.Unit.CompilerSpec
 import qualified Test.Unit.CompilerIRConsistencyAdvancedSpec
 import qualified Test.Unit.DependentTypesSpec
+import qualified Test.Unit.DependentTypesBoundaryAdvancedSpec
+import qualified Test.Unit.DependenciesCycleDetectionAdvancedSpec
 import qualified Test.Unit.EmbedAssetsSpec
 import qualified Test.Unit.ErrorHandlingSpec
 import qualified Test.Unit.ErrorHandlerConsistencyAdvancedSpec
 import qualified Test.Unit.GoToolchainSpec
+import qualified Test.Unit.GoToolchainPropertiesAdvancedSpec
 import qualified Test.Unit.OwnershipSpec
 import qualified Test.Unit.OwnershipBridgeSpec
 import qualified Test.Unit.OwnershipTransitivityAdvancedSpec
@@ -617,9 +620,20 @@ import qualified Test.Unit.SourceLocationMathQuickCheckSpec
 import qualified Test.Unit.ErrorHandlerRecoveryQuickCheckSpec
 import qualified Test.Unit.CompilerIRConsistencyQuickCheckSpec
 import qualified Test.Unit.TypeSystemInferenceQuickCheckSpec
-import qualified Test.Unit.NewComprehensiveCabalQuickCheckSpec
-import qualified Test.Unit.EnhancedCabalQuickCheckTestSpec
-import qualified Test.Unit.ErrorBoundaryQuickCheckSpec
+
+-- ============================================================================
+-- New Cabal QuickCheck Test Modules (2025) - 10 comprehensive tests
+-- ============================================================================
+import qualified Test.Unit.NewCabalQuickCheckSpec1
+import qualified Test.Unit.NewCabalQuickCheckSpec2
+import qualified Test.Unit.NewCabalQuickCheckSpec3
+import qualified Test.Unit.NewCabalQuickCheckSpec4
+import qualified Test.Unit.NewCabalQuickCheckSpec5
+import qualified Test.Unit.NewCabalQuickCheckSpec6
+import qualified Test.Unit.NewCabalQuickCheckSpec7
+import qualified Test.Unit.NewCabalQuickCheckSpec8
+import qualified Test.Unit.NewCabalQuickCheckSpec9
+import qualified Test.Unit.NewCabalQuickCheckSpec10
 
 -- ============================================================================
 -- New Enhanced Test Modules (2025) - 10 comprehensive QuickCheck tests
@@ -1376,6 +1390,8 @@ tests =
     , Test.Unit.OwnershipBridgeSpec.tests
     , Test.Unit.OwnershipTransitivityAdvancedSpec.tests
     , Test.Unit.DependentTypesSpec.tests
+    , Test.Unit.DependentTypesBoundaryAdvancedSpec.tests
+    , Test.Unit.DependenciesCycleDetectionAdvancedSpec.tests
     , Test.Unit.TypeSystemSpec.tests
     , Test.Unit.SymbolTableSpec.tests
     , Test.Unit.SourceLocationSpec.tests
@@ -1388,6 +1404,7 @@ tests =
     , Test.Unit.ErrorHandlerConsistencyAdvancedSpec.tests
     , Test.Unit.EmbedAssetsSpec.tests
     , Test.Unit.GoToolchainSpec.tests
+    , Test.Unit.GoToolchainPropertiesAdvancedSpec.tests
     , Test.Unit.CommandLineDebugSpec.tests
     , Test.Unit.CLISpec.tests
     , Test.Unit.VerbositySpec.tests
@@ -2793,5 +2810,21 @@ tests =
     , Test.Unit.ConciseSyntaxValidatorQuickCheckSpec.tests
     , Test.Unit.ConciseCompilerIRQuickCheckSpec.tests
     , Test.Unit.ConciseIntegrationQuickCheckSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Cabal QuickCheck Test Modules (2025) - 10 Comprehensive Tests
+  -- ============================================================================
+  , testGroup "New Cabal QuickCheck Test Modules - Comprehensive Property Testing"
+    [ Test.Unit.NewCabalQuickCheckSpec1.tests
+    , Test.Unit.NewCabalQuickCheckSpec2.tests
+    , Test.Unit.NewCabalQuickCheckSpec3.tests
+    , Test.Unit.NewCabalQuickCheckSpec4.tests
+    , Test.Unit.NewCabalQuickCheckSpec5.tests
+    , Test.Unit.NewCabalQuickCheckSpec6.tests
+    , Test.Unit.NewCabalQuickCheckSpec7.tests
+    , Test.Unit.NewCabalQuickCheckSpec8.tests
+    , Test.Unit.NewCabalQuickCheckSpec9.tests
+    , Test.Unit.NewCabalQuickCheckSpec10.tests
     ]
   ]
