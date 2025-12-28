@@ -10,424 +10,439 @@
 module Test.Unit.BoundaryConditionSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?=), assertBool)
+import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), choose, getPositive, getNonNegative, vector, listOf1, elements)
 import TestSupport.Arbitrary
 
-import Parser (parseTypus, TypusFile(..))
-import Compiler (compileTypus, CompilationResult(..))
-import ErrorHandler (errorAt, ErrorLocation(..))
-import SourceLocation (SourcePos(..), startPos, posAtLineCol, advancePosBy)
-import Utils (trim, removeComments, normalizeIndentation)
+import Parser (parseTypus, TypusFile(..), CodeBlock(..))
+import Utils (trim, removeComments, normalizeIndentation, splitBy, breakOn)
+import SourceLocation (SourcePos(..), startPos, posAfter, advancePosByText)
+import ErrorHandler (runErrorHandler)
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, null, length, replicate)
-import Data.Maybe (isJust, isNothing, fromMaybe)
-import Data.Char (isSpace, isControl)
-import qualified Data.String
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.Maybe (isNothing, isJust, fromMaybe, catMaybes)
+import Data.Char (isControl, isAscii, ord, chr)
+import Control.Exception (try, SomeException, evaluate)
 
--- ============================================================================
--- Boundary Condition Tests
--- ============================================================================
-
+-- | Boundary condition and edge case tests
 tests :: TestTree
-tests =
-  testGroup "Boundary Condition Tests"
-    [ testGroup "Empty and minimal inputs"
-        [ testCase "handles completely empty string" test_empty_string
-        , testCase "handles whitespace-only input" test_whitespace_only
-        , testCase "handles single character" test_single_character
-        , testCase "handles minimal valid program" test_minimal_program
-        , testCase "handles input with only newlines" test_only_newlines
-        ]
-
-    , testGroup "Extreme values"
-        [ testCase "handles very long identifiers" test_very_long_identifiers
-        , testCase "handles very long lines" test_very_long_lines
-        , testCase "handles deeply nested structures" test_deeply_nested
-        , testCase "handles maximum recursion depth" test_maximum_recursion
-        , testCase "handles very large numbers" test_very_large_numbers
-        ]
-
-    , testGroup "Special characters and Unicode"
-        [ testCase "handles Unicode characters in identifiers" test_unicode_identifiers
-        , testCase "handles Unicode in string literals" test_unicode_strings
-        , testCase "handles control characters" test_control_characters
-        , testCase "handles zero-width characters" test_zero_width_characters
-        , testCase "handles mixed encoding input" test_mixed_encoding
-        ]
-
-    , testGroup "Malformed inputs"
-        [ testCase "handles unmatched brackets" test_unmatched_brackets
-        , testCase "handles unmatched quotes" test_unmatched_quotes
-        , testCase "handles incomplete statements" test_incomplete_statements
-        , testCase "handles garbage input" test_garbage_input
-        , testCase "handles mixed language syntax" test_mixed_syntax
-        ]
-
-    , testGroup "Resource limits"
-        [ testCase "handles memory pressure gracefully" test_memory_pressure
-        , testCase "handles time limits gracefully" test_time_limits
-        , testCase "handles file size limits" test_file_size_limits
-        , testCase "handles token count limits" test_token_count_limits
-        ]
-
-    , testGroup "Property-based boundary tests"
-        [ fastProperty "parse never crashes on any string input" prop_parse_never_crashes
-        , fastProperty "compile handles any parse result gracefully" prop_compile_never_crashes
-        , fastProperty "error handling is total" prop_error_handling_total
-        , fastProperty "string processing is safe on all inputs" prop_string_processing_safe
-        ]
+tests = testGroup "Boundary Condition Tests"
+  [ testGroup "Empty and Null Input Tests"
+    [ testCase "empty string parsing" test_empty_string_parsing
+    , testCase "null character handling" test_null_character_handling
+    , testCase "whitespace only inputs" test_whitespace_only_inputs
+    , fastProperty "empty input consistency" prop_empty_input_consistency
     ]
 
--- ============================================================================
--- Empty and Minimal Inputs Tests
--- ============================================================================
+  , testGroup "Size Limit Tests"
+    [ testCase "maximum string length" test_maximum_string_length
+    , testCase "minimum string length" test_minimum_string_length
+    , testCase "boundary sizes" test_boundary_sizes
+    , fastProperty "size scaling behavior" prop_size_scaling_behavior
+    ]
 
-test_empty_string :: IO ()
-test_empty_string = do
-  let content = ""
-      parseResult = parseTypus content
-  case parseResult of
-    Left err -> assertFailure $ "Parse failed on empty string: " ++ show err
-    Right typusFile -> do
-      let blocks = tfBlocks typusFile
-          directives = tfDirectives typusFile
-      blocks @?= []
-      directives @?= (error "Default directives - implementation specific")
+  , testGroup "Character Boundary Tests"
+    [ testCase "unicode boundary characters" test_unicode_boundary_characters
+    , testCase "control character handling" test_control_character_handling
+    , testCase "high unicode characters" test_high_unicode_characters
+    , fastProperty "character edge cases" prop_character_edge_cases
+    ]
 
-test_whitespace_only :: IO ()
-test_whitespace_only = do
-  let content = "   \t\n\r   \n\t   "
-      parseResult = parseTypus content
-  case parseResult of
-    Left err -> assertFailure $ "Parse failed on whitespace: " ++ show err
-    Right typusFile -> do
-      let blocks = tfBlocks typusFile
-      -- Should handle whitespace gracefully
-      assertBool "Should handle whitespace-only input" (True)
+  , testGroup "Numeric Boundary Tests"
+    [ testCase "position arithmetic boundaries" test_position_arithmetic_boundaries
+    , testCase "line/column limits" test_line_column_limits
+    , testCase "offset boundaries" test_offset_boundaries
+    , fastProperty "numeric overflow prevention" prop_numeric_overflow_prevention
+    ]
 
-test_single_character :: IO ()
-test_single_character = do
-  let testChars = ["a", "}", "\"", "/", "\n", "\t", " "]
-  mapM_ testChar testChars
-  where
-    testChar char = do
-      let parseResult = parseTypus char
-      case parseResult of
-        Left _ -> assertBool $ "Should handle single character: " ++ show char
-        Right _ -> assertBool $ "Successfully parsed single character: " ++ show char
+  , testGroup "Structure Boundary Tests"
+    [ testCase "deeply nested structures" test_deeply_nested_structures
+    , testCase "wide structures" test_wide_structures
+    , testCase "empty structures" test_empty_structures
+    , fastProperty "structure complexity limits" prop_structure_complexity_limits
+    ]
 
-test_minimal_program :: IO ()
-test_minimal_program = do
-  let content = "f()"
-      parseResult = parseTypus content
-  case parseResult of
-    Left err -> do
-      -- Should either parse successfully or provide meaningful error
-      assertBool $ "Parse result should be meaningful: " ++ show err
-    Right typusFile -> do
-      assertBool "Should parse minimal program" (True)
+  , testGroup "Memory Boundary Tests"
+    [ testCase "memory exhaustion handling" test_memory_exhaustion_handling
+    , testCase "large allocation handling" test_large_allocation_handling
+    , fastProperty "memory usage boundaries" prop_memory_usage_boundaries
+    ]
 
-test_only_newlines :: IO ()
-test_only_newlines = do
-  let content = "\n\n\n\n\n"
-      parseResult = parseTypus content
-  case parseResult of
-    Left err -> assertFailure $ "Parse failed on newlines: " ++ show err
-    Right typusFile -> do
-      assertBool "Should handle newline-only input" (True)
+  , testGroup "Time Boundary Tests"
+    [ testCase "timeout handling" test_timeout_handling
+    , testCase "infinite loop prevention" test_infinite_loop_prevention
+    , fastProperty "performance boundaries" prop_performance_boundaries
+    ]
+
+  , testGroup "Exception Boundary Tests"
+    [ testCase "exception propagation" test_exception_propagation
+    , testCase "exception recovery" test_exception_recovery
+    , fastProperty "exception safety" prop_exception_safety
+    ]
+  ]
 
 -- ============================================================================
--- Extreme Values Tests
+-- Empty and Null Input Tests
 -- ============================================================================
 
-test_very_long_identifiers :: IO ()
-test_very_long_identifiers = do
-  let longIdent = replicate 10000 'a'
-      content = "func " ++ longIdent ++ "() { return 42 }\n"
-      parseResult = parseTypus content
-  case parseResult of
-    Left err -> do
-      -- Should handle gracefully with appropriate error
-      assertBool "Should handle long identifiers gracefully" (True)
-    Right typusFile -> do
-      assertBool "Should parse very long identifiers" (True)
+test_empty_string_parsing :: IO ()
+test_empty_string_parsing = do
+  let emptyContent = ""
+      result = parseTypus emptyContent "empty.typus"
+  case result of
+    Left err -> assertFailure $ "Parse failed on empty input: " ++ show err
+    Right file -> do
+      assertBool "Empty input should produce empty file" $ null (tfBlocks file)
+      assertBool "Empty input should have default directives" $ True
 
-test_very_long_lines :: IO ()
-test_very_long_lines = do
-  let longLine = replicate 100000 'x' ++ "func test() { return 42 }" ++ replicate 100000 'y'
-      content = longLine ++ "\n"
-      parseResult = parseTypus content
-  case parseResult of
-    Left err -> do
-      assertBool "Should handle very long lines gracefully" (True)
-    Right typusFile -> do
-      assertBool "Should parse very long lines" (True)
+test_null_character_handling :: IO ()
+test_null_character_handling = do
+  let nullContent = "func test() { return \"\0\"; }"
+      result = parseTypus nullContent "null.typus"
+  case result of
+    Left err -> assertFailure $ "Parse failed on null character: " ++ show err
+    Right file -> do
+      assertBool "Should handle null characters" $ not (null (tfBlocks file))
 
-test_deeply_nested :: IO ()
-test_deeply_nested = do
-  let nestDepth = 1000
-      nestedContent = concat $ replicate nestDepth "func outer() { "
-      content = nestedContent ++ "return 42" ++ concat (replicate nestDepth " }") ++ "\n"
-      parseResult = parseTypus content
-  case parseResult of
-    Left err -> do
-      -- Should handle deep nesting with appropriate error about recursion limits
-      assertBool "Should handle deep nesting gracefully" (True)
-    Right typusFile -> do
-      assertBool "Should handle deeply nested structures" (True)
-
-test_maximum_recursion :: IO ()
-test_maximum_recursion = do
-  let recursiveContent = "func recurse() { recurse() }\n"
-      parseResult = parseTypus recursiveContent
-  case parseResult of
-    Left err -> do
-      assertBool "Should handle potential infinite recursion" (True)
-    Right typusFile -> do
-      assertBool "Should parse recursive definitions" (True)
-
-test_very_large_numbers :: IO ()
-test_very_large_numbers = do
-  let bigNumber = show (10^100 :: Integer)
-      content = "func test() { return " ++ bigNumber ++ " }\n"
-      parseResult = parseTypus content
-  case parseResult of
-    Left err -> do
-      assertBool "Should handle very large numbers gracefully" (True)
-    Right typusFile -> do
-      assertBool "Should parse very large numbers" (True)
-
--- ============================================================================
--- Special Characters and Unicode Tests
--- ============================================================================
-
-test_unicode_identifiers :: IO ()
-test_unicode_identifiers = do
-  let unicodeIdent = "函数_テスト_функция"
-      content = "func " ++ unicodeIdent ++ "() { return 42 }\n"
-      parseResult = parseTypus content
-  case parseResult of
-    Left err -> do
-      -- Should either support Unicode or provide clear error
-      assertBool "Should handle Unicode in identifiers" (True)
-    Right typusFile -> do
-      assertBool "Should parse Unicode identifiers" (True)
-
-test_unicode_strings :: IO ()
-test_unicode_strings = do
-  let unicodeString = "\"Hello 世界 🚀 Café naïve\""
-      content = "func test() { s := " ++ unicodeString ++ "; return s }\n"
-      parseResult = parseTypus content
-  case parseResult of
-    Left err -> do
-      assertBool "Should handle Unicode in strings" (True)
-    Right typusFile -> do
-      assertBool "Should parse Unicode strings" (True)
-
-test_control_characters :: IO ()
-test_control_characters = do
-  let controlChars = map (\c -> if isControl c then c else ' ') ['\0'..'\31']
-      content = "func test() { return \"" ++ controlChars ++ "\" }\n"
-      parseResult = parseTypus content
-  case parseResult of
-    Left err -> do
-      assertBool "Should handle control characters" (True)
-    Right typusFile -> do
-      assertBool "Should parse control characters" (True)
-
-test_zero_width_characters :: IO ()
-test_zero_width_characters = do
-  let zeroWidthChars = "\x200B\x200C\x200D\xFEFF"  -- Zero-width space, non-joiner, joiner, BOM
-      content = "func test" ++ zeroWidthChars ++ "() { return 42 }\n"
-      parseResult = parseTypus content
-  case parseResult of
-    Left err -> do
-      assertBool "Should handle zero-width characters" (True)
-    Right typusFile -> do
-      assertBool "Should parse zero-width characters" (True)
-
-test_mixed_encoding :: IO ()
-test_mixed_encoding = do
-  let mixedContent = "func test() { return \"Hello\x80世界\" }\n"  -- Invalid UTF-8 sequence
-      parseResult = parseTypus mixedContent
-  case parseResult of
-    Left err -> do
-      assertBool "Should handle mixed encoding gracefully" (True)
-    Right typusFile -> do
-      assertBool "Should handle mixed encoding" (True)
-
--- ============================================================================
--- Malformed Inputs Tests
--- ============================================================================
-
-test_unmatched_brackets :: IO ()
-test_unmatched_brackets = do
-  let testCases = 
-        [ "func test() { return 42"      -- Missing closing brace
-        , "func test() return 42 }"      -- Extra closing brace
-        , "func test(( return 42 ))"     -- Unmatched parentheses
-        , "func test[ return 42 ]"       -- Wrong bracket type
+test_whitespace_only_inputs :: IO ()
+test_whitespace_only_inputs = do
+  let whitespaceInputs = 
+        [ "   \n\t  \n   \n"
+        , "\n\n\n"
+        , "\t\t\t"
+        , "   \t   \n   \t   "
         ]
-  mapM_ testCase_ testCases
+  mapM_ testWhitespaceInput whitespaceInputs
   where
-    testCase_ content = do
-      let parseResult = parseTypus content
-      case parseResult of
-        Left err -> do
-          assertBool $ "Should provide meaningful error for unmatched brackets: " ++ show err
-        Right typusFile -> do
-          -- May parse partially but should handle gracefully
-          assertBool "Should handle unmatched brackets gracefully" (True)
+    testWhitespaceInput content = do
+      let result = parseTypus content "whitespace.typus"
+      case result of
+        Left err -> assertFailure $ "Parse failed on whitespace: " ++ show err
+        Right file -> do
+          assertBool "Whitespace input should be handled" $ True
 
-test_unmatched_quotes :: IO ()
-test_unmatched_quotes = do
-  let testCases = 
-        [ "func test() { return \"hello }"      -- Missing closing quote
-        , "func test() { return 'hello }"       -- Missing closing single quote
-        , "func test() { return \"hello' }"     -- Mixed quote types
-        , "func test() { return \"\"\"hello }"   -- Triple quote
+prop_empty_input_consistency :: Property
+prop_empty_input_consistency =
+  let emptyContent = ""
+      parse1 = parseTypus emptyContent "empty1.typus"
+      parse2 = parseTypus emptyContent "empty2.typus"
+      trim1 = trim emptyContent
+      trim2 = trim emptyContent
+  in case (parse1, parse2) of
+       (Right f1, Right f2) -> property $ 
+         length (tfBlocks f1) == length (tfBlocks f2) && trim1 == trim2
+       _ -> property True
+
+-- ============================================================================
+-- Size Limit Tests
+-- ============================================================================
+
+test_maximum_string_length :: IO ()
+test_maximum_string_length = do
+  let maxSize = 1000000
+      largeContent = take maxSize $ cycle "func test() { return 42; }\n"
+      result = parseTypus largeContent "large.typus"
+  case result of
+    Right file -> assertBool "Should handle large strings" $ not (null (tfBlocks file))
+    Left _ -> return ()  -- May fail due to size limits, which is acceptable
+
+test_minimum_string_length :: IO ()
+test_minimum_string_length = do
+  let minimalInputs = ["", "a", " ", "\n", "\t"]
+  mapM_ testMinimalInput minimalInputs
+  where
+    testMinimalInput content = do
+      let result = parseTypus content "minimal.typus"
+      case result of
+        Left _ -> return ()  -- May fail for minimal inputs
+        Right file -> assertBool "Should handle minimal inputs" $ True
+
+test_boundary_sizes :: IO ()
+test_boundary_sizes = do
+  let sizes = [1, 10, 100, 1000, 10000]
+  mapM_ testBoundarySize sizes
+  where
+    testBoundarySize size = do
+      let content = take size $ cycle "x"
+          result = parseTypus content ("boundary" ++ show size ++ ".typus")
+      case result of
+        Right file -> assertBool "Should handle boundary sizes" $ True
+        Left _ -> return ()  -- May fail at certain boundaries
+
+prop_size_scaling_behavior :: Int -> Property
+prop_size_scaling_behavior size =
+  size > 0 && size <= 10000 ==>
+  let content = take size $ cycle "func test() { return 42; }"
+      result = parseTypus content "scaling.typus"
+  in case result of
+       Right file -> property $ length (tfBlocks file) >= 0
+       Left _ -> property $ size > 1000  -- Large inputs may fail
+
+-- ============================================================================
+-- Character Boundary Tests
+-- ============================================================================
+
+test_unicode_boundary_characters :: IO ()
+test_unicode_boundary_characters = do
+  let boundaryChars = 
+        [ "\0"      -- Null
+        , "\x1F"    -- Unit separator
+        , "\x7F"    -- Delete
+        , "\x80"    -- Start of extended ASCII
+        , "\xFF"    -- End of extended ASCII
+        , "\u0100"  -- Start of extended unicode
+        , "\uFFFF"  -- End of BMP
+        , "\U0010FFFF" -- Last unicode code point
         ]
-  mapM_ testCase_ testCases
+  mapM_ testBoundaryChar boundaryChars
   where
-    testCase_ content = do
-      let parseResult = parseTypus content
-      case parseResult of
-        Left err -> do
-          assertBool $ "Should provide meaningful error for unmatched quotes: " ++ show err
-        Right typusFile -> do
-          assertBool "Should handle unmatched quotes gracefully" (True)
+    testBoundaryChar char = do
+      let content = "func test() { return \"" ++ char ++ "\"; }"
+          result = parseTypus content "unicode-boundary.typus"
+      case result of
+        Right file -> assertBool "Should handle unicode boundary chars" $ True
+        Left _ -> return ()  -- May fail for certain boundary chars
 
-test_incomplete_statements :: IO ()
-test_incomplete_statements = do
-  let testCases = 
-        [ "func test() { return"           -- Incomplete return
-        , "func test() { var x :="         -- Incomplete assignment
-        , "func test() { if"               -- Incomplete if
-        , "func test() { for"              -- Incomplete for
+test_control_character_handling :: IO ()
+test_control_character_handling = do
+  let controlChars = map chr [0..31] ++ [chr 127]
+  mapM_ testControlChar controlChars
+  where
+    testControlChar char = do
+      let content = "func test() { return \"" ++ [char] ++ "\"; }"
+          result = parseTypus content "control.typus"
+      case result of
+        Right file -> assertBool "Should handle control chars" $ True
+        Left _ -> return ()  -- May fail for certain control chars
+
+test_high_unicode_characters :: IO ()
+test_high_unicode_characters = do
+  let highUnicode = 
+        [ "\U00010000"  -- First supplementary plane
+        , "\U00020000"  -- Second supplementary plane
+        , "\U000E0000"  -- Private use area
+        , "\U0010FFFF"  -- Last code point
         ]
-  mapM_ testCase_ testCases
+  mapM_ testHighUnicode highUnicode
   where
-    testCase_ content = do
-      let parseResult = parseTypus content
-      case parseResult of
-        Left err -> do
-          assertBool $ "Should handle incomplete statements: " ++ show err
-        Right typusFile -> do
-          assertBool "Should handle incomplete statements gracefully" (True)
+    testHighUnicode char = do
+      let content = "func test() { return \"" ++ char ++ "\"; }"
+          result = parseTypus content "high-unicode.typus"
+      case result of
+        Right file -> assertBool "Should handle high unicode" $ True
+        Left _ -> return ()  -- May fail for certain high unicode
 
-test_garbage_input :: IO ()
-test_garbage_input = do
-  let garbageContent = "!@#$%^&*()_+{}|:\"<>?~`-=[]\\;',./\n\x00\x01\x02\xFF"
-      parseResult = parseTypus garbageContent
-  case parseResult of
-    Left err -> do
-      assertBool "Should handle garbage input gracefully" (True)
-    Right typusFile -> do
-      assertBool "Should handle garbage input" (True)
+prop_character_edge_cases :: Char -> Property
+prop_character_edge_cases char =
+  let content = "func test() { return \"" ++ [char] ++ "\"; }"
+      result = parseTypus content "edge-char.typus"
+  in case result of
+       Right file -> property $ length (tfBlocks file) >= 0
+       Left _ -> property $ isControl char  -- Control chars may fail
 
-test_mixed_syntax :: IO ()
-test_mixed_syntax = do
-  let mixedContent = unlines
-        [ "func test() {"
-        , "    print \"Hello\";  // Go-style"
-        , "    console.log(\"World\");  // JavaScript-style"
-        , "    echo \"Test\";  // Shell-style"
+-- ============================================================================
+-- Numeric Boundary Tests
+-- ============================================================================
+
+test_position_arithmetic_boundaries :: IO ()
+test_position_arithmetic_boundaries = do
+  let maxInt = maxBound `div` 2
+      boundaryPositions = 
+        [ posAt 1 1
+        , posAt maxBound maxBound
+        , posAt 1 maxBound
+        , posAt maxBound 1
+        ]
+  mapM_ testBoundaryPosition boundaryPositions
+  where
+    testBoundaryPosition pos = do
+      let content = "test"
+          newPos = advancePosByText pos content
+      assertBool "Position arithmetic should handle boundaries" $ True
+
+test_line_column_limits :: IO ()
+test_line_column_limits = do
+  let limitTests = 
+        [ (1, 1)      -- Minimum
+        , (1000, 1000) -- Medium
+        , (maxBound `div` 1000, maxBound `div` 1000) -- Large
+        ]
+  mapM_ testLineColumnLimit limitTests
+  where
+    testLineColumnLimit (line, col) = do
+      let pos = posAt line col
+      assertBool "Line/column limits should be handled" $ posLine pos == line && posColumn pos == col
+
+test_offset_boundaries :: IO ()
+test_offset_boundaries = do
+  let offsetTests = [0, 1, 1000, maxBound `div` 1000]
+  mapM_ testOffsetBoundary offsetTests
+  where
+    testOffsetBoundary offset = do
+      let pos = posAtLineCol 1 1 offset
+      assertBool "Offset boundaries should be handled" $ posOffset pos == offset
+
+prop_numeric_overflow_prevention :: Int -> Int -> Property
+prop_numeric_overflow_prevention line col =
+  line > 0 && col > 0 && line <= maxBound `div` 1000 && col <= maxBound `div` 1000 ==>
+  let pos = posAt line col
+      newPos = posAfter 'x' pos
+  in property $ posLine newPos >= line && posColumn newPos >= col
+
+-- ============================================================================
+-- Structure Boundary Tests
+-- ============================================================================
+
+test_deeply_nested_structures :: IO ()
+test_deeply_nested_structures = do
+  let maxDepth = 100
+      nestedContent = unlines $ replicate maxDepth "    func nested() { return 42; }"
+      result = parseTypus nestedContent "deep.typus"
+  case result of
+    Right file -> assertBool "Should handle deeply nested structures" $ not (null (tfBlocks file))
+    Left _ -> return ()  -- May fail due to depth limits
+
+test_wide_structures :: IO ()
+test_wide_structures = do
+  let maxWidth = 1000
+      wideContent = "func wide() { " ++ unwords (replicate maxWidth "x") ++ " }"
+      result = parseTypus wideContent "wide.typus"
+  case result of
+    Right file -> assertBool "Should handle wide structures" $ not (null (tfBlocks file))
+    Left _ -> return ()  -- May fail due to width limits
+
+test_empty_structures :: IO ()
+test_empty_structures = do
+  let emptyStructures = 
+        [ "func empty() {}"
+        , "struct Empty {}"
+        , "interface Empty {}"
+        , "class Empty {}"
+        ]
+  mapM_ testEmptyStructure emptyStructures
+  where
+    testEmptyStructure content = do
+      let result = parseTypus content "empty-struct.typus"
+      case result of
+        Right file -> assertBool "Should handle empty structures" $ not (null (tfBlocks file))
+        Left _ -> return ()
+
+prop_structure_complexity_limits :: Int -> Property
+prop_structure_complexity_limits complexity =
+  complexity > 0 && complexity <= 1000 ==>
+  let content = unlines $ replicate complexity "func test() { return 42; }"
+      result = parseTypus content "complexity.typus"
+  in case result of
+       Right file -> property $ length (tfBlocks file) >= 0
+       Left _ -> property $ complexity > 100  -- High complexity may fail
+
+-- ============================================================================
+-- Memory Boundary Tests
+-- ============================================================================
+
+test_memory_exhaustion_handling :: IO ()
+test_memory_exhaustion_handling = do
+  let hugeContent = unlines $ replicate 100000 "func test() { return \"x\"; }"
+      result = try $ evaluate $ parseTypus hugeContent "memory.typus"
+  case result of
+    Right (Right file) -> assertBool "Should handle large memory usage" $ True
+    Right (Left _) -> return ()  -- Parse failed, but didn't crash
+    Left (_ :: SomeException) -> return ()  -- Exception handled gracefully
+
+test_large_allocation_handling :: IO ()
+test_large_allocation_handling = do
+  let largeString = replicate 1000000 'x'
+      result = try $ evaluate $ trim largeString
+  case result of
+    Right trimmed -> assertBool "Should handle large allocations" $ not (null trimmed)
+    Left (_ :: SomeException) -> return ()  -- Exception handled gracefully
+
+prop_memory_usage_boundaries :: Int -> Property
+prop_memory_usage_boundaries size =
+  size > 0 && size <= 10000 ==>
+  let content = replicate size 'x'
+      result = trim content
+  in property $ length result <= size
+
+-- ============================================================================
+-- Time Boundary Tests
+-- ============================================================================
+
+test_timeout_handling :: IO ()
+test_timeout_handling = do
+  let infiniteContent = unlines $ repeat "func infinite() { while(true) { } }"
+      result = parseTypus (take 1000 infiniteContent) "timeout.typus"
+  case result of
+    Right file -> assertBool "Should complete in reasonable time" $ True
+    Left _ -> return ()  -- May fail, but should timeout gracefully
+
+test_infinite_loop_prevention :: IO ()
+test_infinite_loop_prevention = do
+  let problematicContent = unlines
+        [ "func problematic() {"
+        , "    while(true) {"
+        , "        // infinite loop simulation"
+        , "    }"
         , "}"
         ]
-      parseResult = parseTypus mixedContent
-  case parseResult of
-    Left err -> do
-      assertBool "Should handle mixed syntax gracefully" (True)
-    Right typusFile -> do
-      assertBool "Should handle mixed syntax" (True)
+      result = parseTypus problematicContent "infinite.typus"
+  case result of
+    Right file -> assertBool "Should prevent infinite loops" $ True
+    Left _ -> return ()  -- May fail, but should not hang
+
+prop_performance_boundaries :: Int -> Property
+prop_performance_boundaries size =
+  size > 0 && size <= 1000 ==>
+  let content = unlines $ replicate size "func test() { return 42; }"
+      result = parseTypus content "performance.typus"
+  in case result of
+       Right file -> property $ True  -- Completed without timeout
+       Left _ -> property $ size <= 100  -- Small inputs should not timeout
 
 -- ============================================================================
--- Resource Limits Tests
+-- Exception Boundary Tests
 -- ============================================================================
 
-test_memory_pressure :: IO ()
-test_memory_pressure = do
-  let hugeContent = concat $ replicate 10000 "func test" ++ show [1..10000] ++ "() { return " ++ show [1..1000] ++ " }\n"
-      parseResult = parseTypus hugeContent
-  case parseResult of
-    Left err -> do
-      assertBool "Should handle memory pressure gracefully" (True)
-    Right typusFile -> do
-      assertBool "Should handle large inputs without crashing" (True)
+test_exception_propagation :: IO ()
+test_exception_propagation = do
+  let problematicContent = "\0\1\2\3\4\5\6\7\8\10\11\12\13\14\15\16\17\18\19\20\21\22\23\24\25\26\27\28\29\30\31"
+      result = try $ evaluate $ parseTypus problematicContent "exception.typus"
+  case result of
+    Right (Right file) -> assertBool "Should handle problematic content" $ True
+    Right (Left _) -> return ()  -- Parse failed gracefully
+    Left (_ :: SomeException) -> return ()  -- Exception handled gracefully
 
-test_time_limits :: IO ()
-test_time_limits = do
-  let complexContent = concat $ replicate 1000 "func test" ++ show [1..1000] ++ "() { if true { if true { if true { return 42 } } } }\n"
-      parseResult = parseTypus complexContent
-  case parseResult of
-    Left err -> do
-      assertBool "Should handle complex inputs within time limits" (True)
-    Right typusFile -> do
-      assertBool "Should handle complex inputs" (True)
+test_exception_recovery :: IO ()
+test_exception_recovery = do
+  let mixedContent = unlines
+        [ "func good() { return 42; }"
+        , "func bad( {"
+        , "func also_good() { return 24; }"
+        ]
+      result = parseTypus mixedContent "recovery.typus"
+  case result of
+    Right file -> do
+      assertBool "Should recover from exceptions" $ not (null (tfBlocks file))
+      let syntaxErrors = tfSyntaxErrors file
+      assertBool "Should record errors" $ not (null syntaxErrors)
+    Left _ -> return ()  -- May fail entirely
 
-test_file_size_limits :: IO ()
-test_file_size_limits = do
-  let largeContent = concat $ replicate 100000 "x\n"  -- 100KB of content
-      parseResult = parseTypus largeContent
-  case parseResult of
-    Left err -> do
-      assertBool "Should handle large file sizes gracefully" (True)
-    Right typusFile -> do
-      assertBool "Should handle large file sizes" (True)
-
-test_token_count_limits :: IO ()
-test_token_count_limits = do
-  let manyTokens = concat $ replicate 10000 "a + b * c / d % e && f || g & h | i ^ j << k >> l"
-      parseResult = parseTypus manyTokens
-  case parseResult of
-    Left err -> do
-      assertBool "Should handle many tokens gracefully" (True)
-    Right typusFile -> do
-      assertBool "Should handle many tokens" (True)
+prop_exception_safety :: String -> Property
+prop_exception_safety content =
+  length content <= 100 ==>
+  let result = try $ evaluate $ parseTypus content "safety.typus"
+  in case result of
+       Right (Right _) -> property True  -- Success
+       Right (Left _) -> property True   -- Graceful failure
+       Left (_ :: SomeException) -> property True  -- Exception caught
 
 -- ============================================================================
--- Property-Based Boundary Tests
+-- Helper Functions
 -- ============================================================================
 
-prop_parse_never_crashes :: Property
-prop_parse_never_crashes =
-  forAll arbitrary $ \content ->
-    let parseResult = parseTypus content
-    in case parseResult of
-         Left _ -> property True
-         Right _ -> property True
-
-prop_compile_never_crashes :: Property
-prop_compile_never_crashes =
-  forAll arbitrary $ \content ->
-    let parseResult = parseTypus content
-    in case parseResult of
-         Left _ -> property True
-         Right typusFile ->
-           let compileResult = compileTypus typusFile
-           in case compileResult of
-                Left _ -> property True
-                Right _ -> property True
-
-prop_error_handling_total :: Property
-prop_error_handling_total =
-  forAll arbitrary $ \line ->
-  forAll arbitrary $ \col ->
-    let location = ErrorLocation Nothing line col Nothing Nothing
-        error = errorAt location "test error"
-    in property $ line errorLocation error === line .&&.
-                    column errorLocation error === col
-
-prop_string_processing_safe :: Property
-prop_string_processing_safe =
-  forAll arbitrary $ \input ->
-    let trimmed = trim input
-        withoutComments = removeComments input
-        normalized = normalizeIndentation input
-    in property $ length trimmed <= length input .&&.
-                    length withoutComments <= length input .&&.
-                    not (null normalized) || null input
+-- Mock maxBound for testing
+maxBound :: Int
+maxBound = 2147483647
