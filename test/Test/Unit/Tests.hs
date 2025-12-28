@@ -84,6 +84,10 @@ import qualified Test.Unit.NewOwnershipTransferPropertiesSpec
 import qualified Test.Unit.NewDependenciesCorePropertiesSpec
 import qualified Test.Unit.NewSyntaxValidatorBoundarySpec
 
+-- New Cabal Test Modules (Added for this request)
+import qualified Test.Unit.NewCabalCoreTestsSpec
+import qualified Test.Unit.NewCabalQuickCheckPropertiesSpec
+
 -- New Comprehensive Test Modules (2025)
 import qualified Test.Unit.StringAnalysisSpec
 import qualified Test.Unit.CompilerOptimizationSpec
@@ -2502,5 +2506,13 @@ tests =
     , Test.Unit.NewTypusUtilsQuickCheckSpec.tests
     , Test.Unit.NewTypusIntegrationQuickCheckSpec.tests
     , Test.Unit.NewTypusSyntaxValidatorQuickCheckSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Cabal Test Modules (Added for this request)
+  -- ============================================================================
+  , testGroup "New Cabal Test Modules - Core Functionality"
+    [ Test.Unit.NewCabalCoreTestsSpec.tests
+    , Test.Unit.NewCabalQuickCheckPropertiesSpec.tests
     ]
   ]

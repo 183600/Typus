@@ -1,135 +1,119 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE FlexibleContexts #-}
-
+{-# LANGUAGE TemplateHaskell #-}
 module Test.Unit.NewCabalQuickCheckPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), (==>), choose)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck
-import qualified Data.Map as Map
-import qualified Data.Set as Set
-import qualified Data.List as List
-import Data.Char (isSpace, toLower, toUpper)
-import Data.List (isPrefixOf)
+import Data.List (isInfixOf)
 
-import Utils (splitBy, splitByCollapsed, normalizeIndentation, removeLineComments)
-import SourceLocation (SourcePos(..), SourceSpan(..), spanBetween)
-import Parser (FileDirectives(..))
-import Compiler.TypeChecker (Type(..))
+import qualified Utils
+import qualified SourceLocation
+import qualified Parser
 
--- Import Arbitrary instances
-import TestSupport.Arbitrary ()
-import TestSupport.ExtendedArbitrary ()
+-- ============================================================================
+-- QuickCheck属性测试用例
+-- ============================================================================
 
--- Property 1: splitByCollapsed removes consecutive delimiters
-prop_splitByCollapsed_consecutive :: Char -> String -> Property
-prop_splitByCollapsed_consecutive delim str =
-  let collapsed = splitByCollapsed delim str
-      regular = splitBy delim str
-      hasConsecutive = any (\s -> length (filter (== delim) s) > 1) (splitBy delim str)
-      hasEmptyStrings = any null regular
-  in if hasConsecutive || hasEmptyStrings
-      then property $ length collapsed <= length regular
-      else collapsed === regular  -- If no consecutive delimiters or empty strings, should be the same
-
--- Property 2: normalizeIndentation preserves relative indentation
-prop_normalizeIndentation_relative :: String -> Property
-prop_normalizeIndentation_relative str =
-  let linesList = lines str
-      nonEmpty = filter (not . null) linesList
-  in not (null nonEmpty) ==>
-  let normalizedStr = normalizeIndentation str
-      normalized = lines normalizedStr
-      originalIndents = map (length . takeWhile isSpace) nonEmpty
-      normalizedIndents = map (length . takeWhile isSpace) (filter (not . null) normalized)
-      minOriginal = if null originalIndents then 0 else minimum originalIndents
-      minNormalized = if null normalizedIndents then 0 else minimum normalizedIndents
-      relativeIndents = zipWith (-) originalIndents (repeat minOriginal)
-      normalizedRelativeIndents = zipWith (-) normalizedIndents (repeat minNormalized)
-  in relativeIndents === normalizedRelativeIndents
-
--- Property 3: removeLineComments preserves non-comment content
-prop_removeLineComments_preserves_content :: String -> Property
-prop_removeLineComments_preserves_content str =
-  let withoutComments = removeLineComments str
-      commentLines = [line | line <- lines str, "//" `isPrefixOf` dropWhile isSpace line]
-      nonCommentLines = [line | line <- lines str, not ("//" `isPrefixOf` dropWhile isSpace line)]
-  in if null commentLines 
-      then property True  -- If no comments, test passes trivially
-      else lines withoutComments === nonCommentLines
-
--- Property 4: SourceSpan construction is well-formed
-prop_sourcespan_construction :: SourcePos -> SourcePos -> Property
-prop_sourcespan_construction start end =
-  let sourceSpan = spanBetween start end
-  in conjoin
-    [ spanStart sourceSpan === start
-    , spanEnd sourceSpan === end
-    ]
-
--- Property 5: FileDirectives equality works correctly
-prop_file_directives_equality :: FileDirectives -> Property
-prop_file_directives_equality fd =
-  fd === fd
-
--- Property 6: Type substitution preserves structure
-prop_type_substitution :: Type -> Type -> Property
-prop_type_substitution oldType newType =
-  let substituteType t = if t == oldType then newType else t
-      result = substituteType oldType
-  in result === newType
-
--- Property 7: Map union with later preference
-prop_map_union_preference :: [(String, Int)] -> [(String, Int)] -> Property
-prop_map_union_preference pairs1 pairs2 =
-  let map1 = Map.fromList pairs1
-      map2 = Map.fromList pairs2
-      union = Map.union map2 map1  -- map2 has preference
-      commonKeys = Map.keysSet map1 `Set.intersection` Map.keysSet map2
-      checkKey k = Map.lookup k union === Map.lookup k map2
-  in conjoin [checkKey k | k <- Set.toList commonKeys]
-
--- Property 8: Set operations are consistent
-prop_set_operations_consistent :: [Int] -> [Int] -> Property
-prop_set_operations_consistent xs ys =
-  let set1 = Set.fromList xs
-      set2 = Set.fromList ys
-      union = Set.union set1 set2
-      intersection = Set.intersection set1 set2
-      difference = Set.difference set1 set2
-  in conjoin
-    [ property $ Set.isSubsetOf set1 union
-    , property $ Set.isSubsetOf set2 union
-    , property $ Set.isSubsetOf intersection set1
-    , property $ Set.isSubsetOf intersection set2
-    , property $ Set.union intersection difference === set1
-    ]
-
--- Property 9: String case conversion roundtrip
-prop_string_case_roundtrip :: String -> Property
-prop_string_case_roundtrip str =
-  let lowered = map toLower str
-      uppered = map toUpper str
-  in map toLower uppered === lowered
-
--- Property 10: List partition and unpartition are inverse
-prop_list_partition_inverse :: [Int] -> Property
-prop_list_partition_inverse lst =
-  let predicate = even  -- Use a simple predicate function
-      (satisfying, notSatisfying) = List.partition predicate lst
-      recombined = satisfying ++ notSatisfying
-  in List.sort lst === List.sort recombined
-
+-- | 新的Cabal QuickCheck属性测试
 tests :: TestTree
-tests = testGroup "New Cabal QuickCheck Properties"
-  [ fastProperty "splitByCollapsed removes consecutive delimiters" prop_splitByCollapsed_consecutive
-  , fastProperty "normalizeIndentation preserves relative indentation" prop_normalizeIndentation_relative
-  , fastProperty "removeLineComments preserves non-comment content" prop_removeLineComments_preserves_content
-  , fastProperty "SourceSpan construction is well-formed" prop_sourcespan_construction
-  , fastProperty "FileDirectives equality works correctly" prop_file_directives_equality
-  , fastProperty "Type substitution preserves structure" prop_type_substitution
-  , fastProperty "Map union with later preference" prop_map_union_preference
-  , fastProperty "Set operations are consistent" prop_set_operations_consistent
-  , fastProperty "String case conversion roundtrip" prop_string_case_roundtrip
-  , fastProperty "List partition and unpartition are inverse" prop_list_partition_inverse
-  ]
+tests =
+  testGroup "New Cabal QuickCheck Properties"
+    [ utilsProperties
+    , sourceLocationProperties
+    ]
+
+-- ============================================================================
+-- Utils模块属性测试
+-- ============================================================================
+utilsProperties :: TestTree
+utilsProperties =
+  testGroup "Utils Properties"
+    [ testProperty "trim . trim = trim (idempotent)" $
+        fastProperty $ \s -> Utils.trim (Utils.trim s) === Utils.trim (s :: String)
+
+    , testProperty "splitBy followed by join should reconstruct original" $
+        fastProperty $ \c s -> 
+          let delim = toEnum $ (fromEnum c) `mod` 128
+              parts = Utils.splitBy delim s
+              reconstructed = concatMap (++ [delim]) (init parts) ++ last parts
+          in length s <= 100 ==> reconstructed === s
+
+    , testProperty "splitByCollapsed removes empty segments" $
+        fastProperty $ \c s ->
+          let delim = toEnum $ (fromEnum c) `mod` 128
+              parts = Utils.splitByCollapsed delim s
+          in all (not . null) parts
+
+    , testProperty "removeLineComments preserves string literals" $
+        fastProperty $ \s ->
+          let input = "x := \"// not a comment\"\n" ++ s ++ " // real comment"
+              result = Utils.removeLineComments input
+          in "// not a comment" `isInfixOf` result
+
+    , testProperty "trim length is never greater than original" $
+        fastProperty $ \s -> length (Utils.trim s) <= length (s :: String)
+
+    , testProperty "splitBy on empty string returns singleton" $
+        fastProperty $ \c ->
+          let delim = toEnum $ (fromEnum c) `mod` 128
+          in Utils.splitBy delim "" === ["" :: String]
+
+    , testProperty "splitByCollapsed on empty string returns empty" $
+        fastProperty $ \c ->
+          let delim = toEnum $ (fromEnum c) `mod` 128
+          in null (Utils.splitByCollapsed delim "")
+    ]
+
+-- ============================================================================
+-- SourceLocation模块属性测试
+-- ============================================================================
+sourceLocationProperties :: TestTree
+sourceLocationProperties =
+  testGroup "SourceLocation Properties"
+    [ testProperty "posAfter advances column by 1" $
+        fastProperty $ \line col ->
+          let pos = SourceLocation.posAt line col
+              after = SourceLocation.posAfter pos
+          in SourceLocation.posLine after === SourceLocation.posLine pos &&
+             SourceLocation.posColumn after === SourceLocation.posColumn pos + 1
+
+    , testProperty "spanFrom and spanTo create valid span" $
+        fastProperty $ \line1 col1 line2 col2 ->
+          let start = SourceLocation.posAt line1 col1
+              end = SourceLocation.posAt (max line1 line2) (max col1 col2)
+              span = SourceLocation.spanBetween start end
+          in SourceLocation.isValidSpan span
+
+    , testProperty "mergeSpans is commutative" $
+        fastProperty $ \line1 col1 line2 col2 ->
+          let span1 = SourceLocation.spanFrom (SourceLocation.posAt line1 col1)
+              span2 = SourceLocation.spanFrom (SourceLocation.posAt line2 col2)
+              merged1 = SourceLocation.mergeSpans span1 span2
+              merged2 = SourceLocation.mergeSpans span2 span1
+          in merged1 === merged2
+
+    , testProperty "advancePos by newline increments line" $
+        fastProperty $ \line col ->
+          let pos = SourceLocation.posAt line col
+              after = SourceLocation.advancePos '\n' pos
+          in SourceLocation.posLine after === SourceLocation.posLine pos + 1 &&
+             SourceLocation.posColumn after === 1
+
+    , testProperty "advancePos by other char increments column" $
+        fastProperty $ \line col c ->
+          let pos = SourceLocation.posAt line col
+              after = SourceLocation.advancePos c pos
+          in c /= '\n' ==> 
+             SourceLocation.posLine after === SourceLocation.posLine pos &&
+             SourceLocation.posColumn after === SourceLocation.posColumn pos + 1
+    ]
+
+-- ============================================================================
+-- 实例定义
+-- ============================================================================
+
+-- 为String和Char定义Arbitrary实例以支持QuickCheck测试
+instance Arbitrary String where
+  arbitrary = do
+    n <- choose (0, 20)
+    sequence [choose (' ', '~') | _ <- [1..n]]
