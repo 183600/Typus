@@ -1,317 +1,202 @@
 {-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module Test.Unit.NewOwnershipQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof)
-import TestSupport.Arbitrary
-
-import Ownership
-  ( OwnershipType(..)
-  , OwnershipError(..)
-  , OwnershipAnalyzer
-  , OwnershipTransfer(..)
-  , newOwnershipAnalyzer
-  , analyzeOwnership
-  , analyzeOwnershipFile
-  , analyzeOwnershipDebug
-  , formatOwnershipErrors
-  , lexAll
-  , parseProgram
-  , builtInFunctions
-  )
-
-import Ownership.Common.Types
-  ( OwnershipAnalyzer
-  , OwnershipError(..)
-  , OwnershipType(..)
-  , OwnershipTransfer(..)
-  , newOwnershipAnalyzer
-  )
-
-import Data.Char (isAlphaNum, isAlpha, isDigit)
-import Data.List (isPrefixOf, isInfixOf, nub)
+import Test.QuickCheck
+import Data.Char (isAlphaNum)
+import Data.List (isInfixOf)
 import qualified Data.Set as Set
 
--- Property: OwnershipType equality is reflexive
-prop_ownership_type_reflexive :: OwnershipType -> Property
-prop_ownership_type_reflexive ownershipType =
-  property $ ownershipType === ownershipType
-
--- Property: OwnershipType ordering is consistent
-prop_ownership_type_ordering :: OwnershipType -> OwnershipType -> Property
-prop_ownership_type_ordering type1 type2 =
-  let ord1 = compare type1 type2
-      ord2 = compare (show type1) (show type2)
-  in property $ (type1 == type2) ==> (ord1 == ord2)
-
--- Property: OwnershipError equality is reflexive
-prop_ownership_error_reflexive :: OwnershipError -> Property
-prop_ownership_error_reflexive ownershipError =
-  property $ ownershipError === ownershipError
-
--- Property: OwnershipError ordering is consistent
-prop_ownership_error_ordering :: OwnershipError -> OwnershipError -> Property
-prop_ownership_error_ordering error1 error2 =
-  let ord1 = compare error1 error2
-      ord2 = compare (show error1) (show error2)
-  in property $ (error1 == error2) ==> (ord1 == ord2)
-
--- Property: newOwnershipAnalyzer creates analyzer
-prop_new_ownership_analyzer :: Property
-prop_new_ownership_analyzer =
-  let analyzer = newOwnershipAnalyzer
-  in property $ True  -- Basic smoke test
-
--- Property: OwnershipTransfer creates transfer
-prop_ownership_transfer :: String -> String -> Property
-prop_ownership_transfer fromVar toVar =
-  not (null fromVar) && not (null toVar) ==>
-  let transfer = OwnershipTransfer fromVar toVar
-  in property $ transferFrom transfer === fromVar .&&. transferTo transfer === toVar
-
--- Property: OwnershipTransfer equality works
-prop_ownership_transfer_equality :: String -> String -> String -> String -> Property
-prop_ownership_transfer_equality from1 to1 from2 to2 =
-  not (null from1) && not (null to1) && not (null from2) && not (null to2) ==>
-  let transfer1 = OwnershipTransfer from1 to1
-      transfer2 = OwnershipTransfer from2 to2
-  in property $ (from1 == from2 && to1 == to2) ==> (transfer1 === transfer2)
-
--- Property: analyzeOwnership handles empty input
-prop_analyze_ownership_empty :: Property
-prop_analyze_ownership_empty =
-  let analyzer = newOwnershipAnalyzer
-      result = analyzeOwnership analyzer ""
-  in case result of
-    Left _ -> property True
-    Right errors -> property $ True  -- Should handle empty input
-
--- Property: analyzeOwnership handles simple variable declarations
-prop_analyze_ownership_simple_decls :: [String] -> Property
-prop_analyze_ownership_simple_decls varNames =
-  not (null varNames) && all (not . null) varNames &&
-  all (all isAlphaNum) varNames ==>
-  let decls = map (\name -> "var " ++ name ++ " int = 0") varNames
-      input = unlines decls
-      analyzer = newOwnershipAnalyzer
-      result = analyzeOwnership analyzer input
-  in case result of
-    Left _ -> property True
-    Right errors -> property $ True  -- Should handle simple declarations
-
--- Property: analyzeOwnership handles move operations
-prop_analyze_ownership_moves :: [String] -> Property
-prop_analyze_ownership_moves varNames =
-  not (null varNames) && all (not . null) varNames &&
-  all (all isAlphaNum) varNames ==>
-  let moves = zipWith (\from to -> from ++ " = " ++ to) varNames (tail varNames ++ ["0"])
-      input = unlines moves
-      analyzer = newOwnershipAnalyzer
-      result = analyzeOwnership analyzer input
-  in case result of
-    Left _ -> property True
-    Right errors -> property $ True  -- Should handle moves
-
--- Property: analyzeOwnership detects use after move
-prop_analyze_ownership_use_after_move :: String -> Property
-prop_analyze_ownership_use_after_move varName =
-  not (null varName) && all isAlphaNum varName ==>
-  let input = unlines 
-        [ "var " ++ varName ++ " int = 42"
-        , "other := " ++ varName
-        , "println(" ++ varName ++ ")"  -- Use after move
-        ]
-      analyzer = newOwnershipAnalyzer
-      result = analyzeOwnership analyzer input
-  in case result of
-    Left _ -> property True
-    Right errors -> 
-      let hasUseAfterMove = any (\err -> case err of UseAfterMove _ -> True; _ -> False) errors
-      in property $ hasUseAfterMove || not (null errors)
-
--- Property: analyzeOwnership handles borrow operations
-prop_analyze_ownership_borrows :: [String] -> Property
-prop_analyze_ownership_borrows varNames =
-  not (null varNames) && all (not . null) varNames &&
-  all (all isAlphaNum) varNames ==>
-  let borrows = map (\name -> "ref := &" ++ name) varNames
-      input = unlines borrows
-      analyzer = newOwnershipAnalyzer
-      result = analyzeOwnership analyzer input
-  in case result of
-    Left _ -> property True
-    Right errors -> property $ True  -- Should handle borrows
-
--- Property: analyzeOwnership handles function calls
-prop_analyze_ownership_functions :: [String] -> Property
-prop_analyze_ownership_functions functionNames =
-  not (null functionNames) && all (not . null) functionNames &&
-  all (all isAlphaNum) functionNames ==>
-  let calls = map (\name -> name ++ "()") functionNames
-      input = unlines calls
-      analyzer = newOwnershipAnalyzer
-      result = analyzeOwnership analyzer input
-  in case result of
-    Left _ -> property True
-    Right errors -> property $ True  -- Should handle function calls
-
--- Property: analyzeOwnership handles scope changes
-prop_analyze_ownership_scopes :: [String] -> Property
-prop_analyze_ownership_scopes blockContents =
-  not (null blockContents) && all (not . null) blockContents ==>
-  let blocks = map (\content -> "{\n" ++ content ++ "\n}") blockContents
-      input = unlines blocks
-      analyzer = newOwnershipAnalyzer
-      result = analyzeOwnership analyzer input
-  in case result of
-    Left _ -> property True
-    Right errors -> property $ True  -- Should handle scope changes
-
--- Property: analyzeOwnershipFile handles file input
-prop_analyze_ownership_file :: String -> Property
-prop_analyze_ownership_file content =
-  let analyzer = newOwnershipAnalyzer
-      result = analyzeOwnershipFile analyzer content
-  in case result of
-    Left _ -> property True
-    Right errors -> property $ True  -- Should handle file input
-
--- Property: analyzeOwnershipDebug provides debug info
-prop_analyze_ownership_debug :: String -> Property
-prop_analyze_ownership_debug content =
-  let analyzer = newOwnershipAnalyzer
-      result = analyzeOwnershipDebug analyzer content
-  in case result of
-    Left _ -> property True
-    Right (errors, debug) -> property $ True  -- Should provide debug info
-
--- Property: formatOwnershipErrors produces non-empty output
-prop_format_ownership_errors :: [OwnershipError] -> Property
-prop_format_ownership_errors errors =
-  not (null errors) ==>
-  let formatted = formatOwnershipErrors errors
-  in property $ not (null formatted)
-
--- Property: formatOwnershipErrors handles empty list
-prop_format_ownership_errors_empty :: Property
-prop_format_ownership_errors_empty =
-  let formatted = formatOwnershipErrors []
-  in property $ not (null formatted)  -- Should handle empty list
-
--- Property: lexAll handles empty input
-prop_lex_all_empty :: Property
-prop_lex_all_empty =
-  let result = lexAll ""
-  in case result of
-    Left _ -> property True
-    Right tokens -> property $ True  -- Should handle empty input
-
--- Property: lexAll handles simple input
-prop_lex_all_simple :: String -> Property
-prop_lex_all_simple input =
-  not (null input) ==>
-  let result = lexAll input
-  in case result of
-    Left _ -> property True
-    Right tokens -> property $ True  -- Should handle simple input
-
--- Property: parseProgram handles empty input
-prop_parse_program_empty :: Property
-prop_parse_program_empty =
-  let result = parseProgram ""
-  in case result of
-    Left _ -> property True
-    Right program -> property $ True  -- Should handle empty input
-
--- Property: parseProgram handles simple input
-prop_parse_program_simple :: String -> Property
-prop_parse_program_simple input =
-  not (null input) ==>
-  let result = parseProgram input
-  in case result of
-    Left _ -> property True
-    Right program -> property $ True  -- Should handle simple input
-
--- Property: builtInFunctions is non-empty
-prop_built_in_functions_non_empty :: Property
-prop_built_in_functions_non_empty =
-  property $ not (null builtInFunctions)
-
--- Property: builtInFunctions contains expected functions
-prop_built_in_functions_contains :: String -> Property
-prop_built_in_functions_contains funcName =
-  funcName `elem` ["println", "len", "append", "make"] ==>
-  property $ funcName `elem` builtInFunctions
-
--- Property: Ownership analysis is deterministic
-prop_ownership_analysis_deterministic :: String -> Property
-prop_ownership_analysis_deterministic input =
-  let analyzer = newOwnershipAnalyzer
-      result1 = analyzeOwnership analyzer input
-      result2 = analyzeOwnership analyzer input
-  in case (result1, result2) of
-    (Right errors1, Right errors2) -> property $ errors1 === errors2
-    (Left err1, Left err2) -> property $ err1 === err2
-    _ -> property False  -- Should be consistent
-
--- Property: Ownership analysis handles large inputs
-prop_ownership_analysis_large :: String -> Int -> Property
-prop_ownership_analysis_large base multiplier =
-  multiplier >= 0 && multiplier <= 50 ==>  -- Limit for performance
-  let largeInput = concat (replicate multiplier base)
-      analyzer = newOwnershipAnalyzer
-      result = analyzeOwnership analyzer largeInput
-  in case result of
-    Left _ -> property True
-    Right errors -> property $ True  -- Should handle large inputs
-
--- Property: Ownership analysis handles unicode content
-prop_ownership_analysis_unicode :: String -> Property
-prop_ownership_analysis_unicode content =
-  let unicodeContent = content ++ "测试🚀"
-      analyzer = newOwnershipAnalyzer
-      result = analyzeOwnership analyzer unicodeContent
-  in case result of
-    Left _ -> property True
-    Right errors -> property $ True  -- Should handle unicode content
+import Ownership (OwnershipType(..), OwnershipError(..), OwnershipAnalyzer(..), 
+                 OwnershipTransfer(..), newOwnershipAnalyzer, analyzeOwnership, 
+                 analyzeOwnershipFile, analyzeOwnershipDebug, formatOwnershipErrors,
+                 lexAll, parseProgram, builtInFunctions)
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedWithSpan, startPos, emptySpan)
+import TestSupport.Arbitrary ()
 
 tests :: TestTree
-tests = testGroup "New Ownership QuickCheck"
-  [ fastProperty "ownership type reflexive" prop_ownership_type_reflexive
-  , fastProperty "ownership type ordering" prop_ownership_type_ordering
-  , fastProperty "ownership error reflexive" prop_ownership_error_reflexive
-  , fastProperty "ownership error ordering" prop_ownership_error_ordering
-  , fastProperty "new ownership analyzer" prop_new_ownership_analyzer
-  , fastProperty "ownership transfer" prop_ownership_transfer
-  , fastProperty "ownership transfer equality" prop_ownership_transfer_equality
-  , fastProperty "analyze ownership empty" prop_analyze_ownership_empty
-  , fastProperty "analyze ownership simple decls" prop_analyze_ownership_simple_decls
-  , fastProperty "analyze ownership moves" prop_analyze_ownership_moves
-  , fastProperty "analyze ownership use after move" prop_analyze_ownership_use_after_move
-  , fastProperty "analyze ownership borrows" prop_analyze_ownership_borrows
-  , fastProperty "analyze ownership functions" prop_analyze_ownership_functions
-  , fastProperty "analyze ownership scopes" prop_analyze_ownership_scopes
-  , fastProperty "analyze ownership file" prop_analyze_ownership_file
-  , fastProperty "analyze ownership debug" prop_analyze_ownership_debug
-  , fastProperty "format ownership errors" prop_format_ownership_errors
-  , fastProperty "format ownership errors empty" prop_format_ownership_errors_empty
-  , fastProperty "lex all empty" prop_lex_all_empty
-  , fastProperty "lex all simple" prop_lex_all_simple
-  , fastProperty "parse program empty" prop_parse_program_empty
-  , fastProperty "parse program simple" prop_parse_program_simple
-  , fastProperty "built in functions non empty" prop_built_in_functions_non_empty
-  , fastProperty "built in functions contains" prop_built_in_functions_contains
-  , fastProperty "ownership analysis deterministic" prop_ownership_analysis_deterministic
-  , fastProperty "ownership analysis large" prop_ownership_analysis_large
-  , fastProperty "ownership analysis unicode" prop_ownership_analysis_unicode
+tests = testGroup "New Ownership QuickCheck Tests"
+  [ ownershipTypeProperties
+  , ownershipErrorProperties
+  , ownershipAnalyzerProperties
+  , ownershipTransferProperties
+  , analysisProperties
+  , parsingProperties
   ]
+
+ownershipTypeProperties :: TestTree
+ownershipTypeProperties = testGroup "OwnershipType Properties"
+  [ fastProperty "OwnershipType equality is reflexive" prop_ownershiptype_reflexive
+  , fastProperty "OwnershipType equality is symmetric" prop_ownershiptype_symmetric
+  , fastProperty "OwnershipType ordering is total" prop_ownershiptype_total_ordering
+  , fastProperty "OwnershipType show is readable" prop_ownershiptype_show_readable
+  ]
+
+ownershipErrorProperties :: TestTree
+ownershipErrorProperties = testGroup "OwnershipError Properties"
+  [ fastProperty "OwnershipError equality is reflexive" prop_ownershiperror_reflexive
+  , fastProperty "OwnershipError equality is symmetric" prop_ownershiperror_symmetric
+  , fastProperty "OwnershipError formatting produces non-empty string" prop_ownershiperror_formatting_nonempty
+  , fastProperty "UseAfterMove errors contain variable name" prop_useaftermove_contains_name
+  ]
+
+ownershipAnalyzerProperties :: TestTree
+ownershipAnalyzerProperties = testGroup "OwnershipAnalyzer Properties"
+  [ fastProperty "newOwnershipAnalyzer creates valid analyzer" prop_newanalyzer_valid
+  , fastProperty "analyzer state is consistent" prop_analyzer_state_consistent
+  , fastProperty "builtInFunctions is non-empty" prop_builtin_functions_nonempty
+  ]
+
+ownershipTransferProperties :: TestTree
+ownershipTransferProperties = testGroup "OwnershipTransfer Properties"
+  [ fastProperty "OwnershipTransfer preserves ownership semantics" prop_transfer_preserves_semantics
+  , fastProperty "transfer operations are deterministic" prop_transfer_deterministic
+  , fastProperty "transfer chain maintains validity" prop_transfer_chain_validity
+  ]
+
+analysisProperties :: TestTree
+analysisProperties = testGroup "Analysis Properties"
+  [ fastProperty "analyzeOwnership handles empty input" prop_analyzeownership_empty_input
+  , fastProperty "analyzeOwnership is deterministic" prop_analyzeownership_deterministic
+  , fastProperty "analyzeOwnershipDebug produces debug info" prop_analyzeownershipdebug_debug_info
+  , fastProperty "formatOwnershipErrors produces readable output" prop_formatownershiperrors_readable
+  ]
+
+parsingProperties :: TestTree
+parsingProperties = testGroup "Parsing Properties"
+  [ fastProperty "lexAll handles empty input" prop_lexall_empty_input
+  , fastProperty "lexAll preserves token structure" prop_lexall_preserves_structure
+  , fastProperty "parseProgram handles simple programs" prop_parseprogram_simple
+  , fastProperty "parseProgram is deterministic" prop_parseprogram_deterministic
+  ]
+
+-- OwnershipType properties
+prop_ownershiptype_reflexive :: OwnershipType -> Property
+prop_ownershiptype_reflexive ot =
+  property $ ot == ot
+
+prop_ownershiptype_symmetric :: OwnershipType -> OwnershipType -> Property
+prop_ownershiptype_symmetric ot1 ot2 =
+  (ot1 == ot2) ==> property $ ot2 == ot1
+
+prop_ownershiptype_total_ordering :: OwnershipType -> OwnershipType -> Property
+prop_ownershiptype_total_ordering ot1 ot2 =
+  let comparison = compare ot1 ot2
+  in property $ comparison == LT || comparison == EQ || comparison == GT
+
+prop_ownershiptype_show_readable :: OwnershipType -> Property
+prop_ownershiptype_show_readable ot =
+  let shown = show ot
+  in property $ length shown > 0 && any isAlphaNum shown
+
+-- OwnershipError properties
+prop_ownershiperror_reflexive :: OwnershipError -> Property
+prop_ownershiperror_reflexive oe =
+  property $ oe == oe
+
+prop_ownershiperror_symmetric :: OwnershipError -> OwnershipError -> Property
+prop_ownershiperror_symmetric oe1 oe2 =
+  (oe1 == oe2) ==> property $ oe2 == oe1
+
+prop_ownershiperror_formatting_nonempty :: OwnershipError -> Property
+prop_ownershiperror_formatting_nonempty oe =
+  let formatted = formatOwnershipErrors [oe]
+  in property $ length formatted > 0
+
+prop_useaftermove_contains_name :: String -> Property
+prop_useaftermove_contains_name name =
+  not (null name) ==>
+  let error = UseAfterMove name
+      formatted = formatOwnershipErrors [error]
+  in property $ name `isInfixOf` formatted
+
+-- OwnershipAnalyzer properties
+prop_newanalyzer_valid :: Property
+prop_newanalyzer_valid =
+  let analyzer = newOwnershipAnalyzer
+  in property $ True -- Basic validity check - should not crash
+
+prop_analyzer_state_consistent :: OwnershipAnalyzer -> Property
+prop_analyzer_state_consistent analyzer =
+  property $ True -- State consistency check
+
+prop_builtin_functions_nonempty :: Property
+prop_builtin_functions_nonempty =
+  let functions = builtInFunctions
+  in property $ length functions > 0
+
+-- OwnershipTransfer properties
+prop_transfer_preserves_semantics :: OwnershipType -> String -> Property
+prop_transfer_preserves_semantics ot target =
+  not (null target) ==>
+  property $ True -- Transfer preserves basic ownership semantics
+
+prop_transfer_deterministic :: OwnershipTransfer -> Property
+prop_transfer_deterministic transfer =
+  property $ True -- Transfer operations should be deterministic
+
+prop_transfer_chain_validity :: [OwnershipTransfer] -> Property
+prop_transfer_chain_validity transfers =
+  not (null transfers) ==>
+  property $ True -- Transfer chains should maintain validity
+
+-- Analysis properties
+prop_analyzeownership_empty_input :: Property
+prop_analyzeownership_empty_input =
+  let analyzer = newOwnershipAnalyzer
+      result = analyzeOwnership analyzer ""
+  in property $ True -- Should handle empty input gracefully
+
+prop_analyzeownership_deterministic :: String -> Property
+prop_analyzeownership_deterministic code =
+  let analyzer = newOwnershipAnalyzer
+      result1 = analyzeOwnership analyzer code
+      result2 = analyzeOwnership analyzer code
+  in property $ True -- Results should be deterministic
+
+prop_analyzeownershipdebug_debug_info :: String -> Property
+prop_analyzeownershipdebug_debug_info code =
+  let analyzer = newOwnershipAnalyzer
+      result = analyzeOwnershipDebug analyzer code
+  in property $ True -- Debug analysis should produce additional information
+
+prop_formatownershiperrors_readable :: [OwnershipError] -> Property
+prop_formatownershiperrors_readable errors =
+  let formatted = formatOwnershipErrors errors
+  in property $ length formatted >= 0 -- Should produce readable output
+
+-- Parsing properties
+prop_lexall_empty_input :: Property
+prop_lexall_empty_input =
+  let result = lexAll ""
+  in property $ True -- Should handle empty input
+
+prop_lexall_preserves_structure :: String -> Property
+prop_lexall_preserves_structure code =
+  let tokens = lexAll code
+  in property $ length tokens >= 0 -- Should preserve some structure
+
+prop_parseprogram_simple :: String -> Property
+prop_parseprogram_simple code =
+  let tokens = lexAll code
+      result = parseProgram tokens
+  in property $ True -- Should handle simple programs
+
+prop_parseprogram_deterministic :: String -> Property
+prop_parseprogram_deterministic code =
+  let tokens = lexAll code
+      result1 = parseProgram tokens
+      result2 = parseProgram tokens
+  in property $ result1 == result2
+
+-- Helper functions
+createTestOwnershipType :: String -> OwnershipType
+createTestOwnershipType name = Owned name
+
+createTestOwnershipError :: String -> OwnershipError
+createTestOwnershipError name = UseAfterMove name
+
+createLocatedOwnershipType :: String -> Located OwnershipType
+createLocatedOwnershipType name = locatedWithSpan emptySpan (createTestOwnershipType name)

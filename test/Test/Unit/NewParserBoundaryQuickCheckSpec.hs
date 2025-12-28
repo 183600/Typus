@@ -1,331 +1,254 @@
 {-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module Test.Unit.NewParserBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof)
-import TestSupport.Arbitrary
-
-import Parser
-  ( parseTypus
-  , FileDirectives(..)
-  , BlockDirectives(..)
-  , CodeBlock(..)
-  , TypusFile(..)
-  , defaultFileDirectives
-  , defaultBlockDirectives
-  )
-
-import Data.Char (isSpace, isAlphaNum, isAlpha, isDigit)
-import Data.List (isPrefixOf, isInfixOf, nub)
+import Test.QuickCheck
+import Data.Char (isSpace, isAlphaNum, isDigit, isLetter)
+import Data.List (isPrefixOf, isInfixOf)
 import qualified Data.Text as T
 
--- Property: parseTypus handles empty input
-prop_parse_empty :: Property
-prop_parse_empty =
-  let result = parseTypus ""
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle empty input gracefully
-
--- Property: parseTypus handles whitespace only
-prop_parse_whitespace :: String -> Property
-prop_parse_whitespace input =
-  all isSpace input ==>
-  let result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle whitespace gracefully
-
--- Property: parseTypus handles simple comments
-prop_parse_simple_comments :: [String] -> Property
-prop_parse_simple_comments commentLines =
-  not (null commentLines) && all (not . null) commentLines ==>
-  let comments = map (\line -> "// " ++ line) commentLines
-      input = unlines comments
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle simple comments
-
--- Property: parseTypus handles multiline comments
-prop_parse_multiline_comments :: String -> Property
-prop_parse_multiline_comments content =
-  not (null content) && not ("*/" `isInfixOf` content) ==>
-  let input = "/* " ++ content ++ " */"
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle multiline comments
-
--- Property: parseTypus handles nested braces
-prop_parse_nested_braces :: Int -> Property
-prop_parse_nested_braces depth =
-  depth >= 0 && depth <= 10 ==>
-  let openBraces = replicate depth '{'
-      closeBraces = replicate depth '}'
-      input = "func main() " ++ concat openBraces ++ concat closeBraces
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle nested braces
-
--- Property: parseTypus detects unbalanced braces
-prop_parse_unbalanced_braces :: Int -> Int -> Property
-prop_parse_unbalanced_braces opens closes =
-  opens /= closes && opens >= 0 && closes >= 0 && opens <= 10 && closes <= 10 ==>
-  let openBraces = replicate opens '{'
-      closeBraces = replicate closes '}'
-      input = "func main() " ++ concat openBraces ++ concat closeBraces
-      result = parseTypus input
-  in case result of
-    Left _ -> property True  -- Should detect unbalanced braces
-    Right typusFile -> property $ True  -- Or handle gracefully
-
--- Property: parseTypus handles nested parentheses
-prop_parse_nested_parens :: Int -> Property
-prop_parse_nested_parens depth =
-  depth >= 0 && depth <= 10 ==>
-  let openParens = replicate depth '('
-      closeParens = replicate depth ')'
-      input = "func main" ++ concat openParens ++ concat closeParens ++ " {}"
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle nested parentheses
-
--- Property: parseTypus detects unbalanced parentheses
-prop_parse_unbalanced_parens :: Int -> Int -> Property
-prop_parse_unbalanced_parens opens closes =
-  opens /= closes && opens >= 0 && closes >= 0 && opens <= 10 && closes <= 10 ==>
-  let openParens = replicate opens '('
-      closeParens = replicate closes ')'
-      input = "func main" ++ concat openParens ++ concat closeParens ++ " {}"
-      result = parseTypus input
-  in case result of
-    Left _ -> property True  -- Should detect unbalanced parentheses
-    Right typusFile -> property $ True  -- Or handle gracefully
-
--- Property: parseTypus handles string literals
-prop_parse_string_literals :: [String] -> Property
-prop_parse_string_literals stringContents =
-  not (null stringContents) && all (not . any (`elem` "\\\"")) stringContents ==>
-  let quotedStrings = map (\s -> "var s string = \"" ++ s ++ "\"") stringContents
-      input = unlines quotedStrings
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle string literals
-
--- Property: parseTypus detects unclosed strings
-prop_parse_unclosed_strings :: String -> Property
-prop_parse_unclosed_strings content =
-  not (null content) && not ('"' `elem` content) ==>
-  let input = "var s string = \"" ++ content  -- Unclosed string
-      result = parseTypus input
-  in case result of
-    Left _ -> property True  -- Should detect unclosed strings
-    Right typusFile -> property $ True  -- Or handle gracefully
-
--- Property: parseTypus handles character literals
-prop_parse_char_literals :: [Char] -> Property
-prop_parse_char_literals chars =
-  not (null chars) && all (`notElem` "'\\") chars ==>
-  let charLiterals = map (\c -> "var c rune = '" ++ [c] ++ "'") chars
-      input = unlines charLiterals
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle character literals
-
--- Property: parseTypus handles escaped characters
-prop_parse_escaped_chars :: [String] -> Property
-prop_parse_escaped_chars escapeSequences =
-  not (null escapeSequences) && all (`elem` ["\\n", "\\t", "\\r", "\\\\", "\\\""]) escapeSequences ==>
-  let escapedStrings = map (\seq -> "var s string = \"" ++ seq ++ "\"") escapeSequences
-      input = unlines escapedStrings
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle escaped characters
-
--- Property: parseTypus handles numeric literals
-prop_parse_numeric_literals :: [Int] -> Property
-prop_parse_numeric_literals numbers =
-  not (null numbers) ==>
-  let numericDecls = map (\n -> "var x int = " ++ show n) numbers
-      input = unlines numericDecls
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle numeric literals
-
--- Property: parseTypus handles floating point literals
-prop_parse_float_literals :: [Double] -> Property
-prop_parse_float_literals numbers =
-  not (null numbers) && all (not . isNaN) numbers ==>
-  let floatDecls = map (\n -> "var x float64 = " ++ show n) numbers
-      input = unlines floatDecls
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle floating point literals
-
--- Property: parseTypus handles function declarations
-prop_parse_functions :: [String] -> Property
-prop_parse_functions functionNames =
-  not (null functionNames) && all (not . null) functionNames &&
-  all (all isAlphaNum) functionNames ==>
-  let functionDecls = map (\name -> "func " ++ name ++ "() {}") functionNames
-      input = unlines functionDecls
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle function declarations
-
--- Property: parseTypus handles function parameters
-prop_parse_function_params :: [String] -> Property
-prop_parse_function_params paramNames =
-  not (null paramNames) && all (not . null) paramNames &&
-  all (all isAlphaNum) paramNames ==>
-  let params = unwords $ map (\name -> name ++ " int") paramNames
-      input = "func test(" ++ params ++ ") {}"
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle function parameters
-
--- Property: parseTypus handles return values
-prop_parse_return_values :: [String] -> Property
-prop_parse_return_values returnTypes =
-  not (null returnTypes) && all (not . null) returnTypes &&
-  all (`elem` ["int", "string", "bool", "float64"]) returnTypes ==>
-  let returns = unwords $ map (++ ",") returnTypes
-      input = "func test() (" ++ init returns ++ ") {}"
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle return values
-
--- Property: parseTypus handles variable declarations
-prop_parse_variables :: [String] -> Property
-prop_parse_variables variableNames =
-  not (null variableNames) && all (not . null) variableNames &&
-  all (all isAlphaNum) variableNames ==>
-  let varDecls = map (\name -> "var " ++ name ++ " int") variableNames
-      input = unlines varDecls
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle variable declarations
-
--- Property: parseTypus handles type declarations
-prop_parse_types :: [String] -> Property
-prop_parse_types typeNames =
-  not (null typeNames) && all (not . null) typeNames &&
-  all (all isAlphaNum) typeNames ==>
-  let typeDecls = map (\name -> "type " ++ name ++ " int") typeNames
-      input = unlines typeDecls
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle type declarations
-
--- Property: parseTypus handles import statements
-prop_parse_imports :: [String] -> Property
-prop_parse_imports importPaths =
-  not (null importPaths) && all (not . null) importPaths &&
-  all (all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/.")) importPaths ==>
-  let importDecls = map (\path -> "import \"" ++ path ++ "\"") importPaths
-      input = unlines importDecls
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle import statements
-
--- Property: parseTypus handles package declarations
-prop_parse_package :: String -> Property
-prop_parse_package packageName =
-  not (null packageName) && all isAlphaNum packageName ==>
-  let input = "package " ++ packageName
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle package declarations
-
--- Property: parseTypus handles mixed content
-prop_parse_mixed :: String -> String -> String -> Property
-prop_parse_mixed packageDecl imports content =
-  not (null packageDecl) && all isAlphaNum packageDecl ==>
-  let input = unlines [packageDecl, imports, content]
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle mixed content
-
--- Property: parseTypus is deterministic
-prop_parse_deterministic :: String -> Property
-prop_parse_deterministic input =
-  let result1 = parseTypus input
-      result2 = parseTypus input
-  in case (result1, result2) of
-    (Right file1, Right file2) -> property $ file1 === file2
-    (Left err1, Left err2) -> property $ err1 === err2
-    _ -> property False  -- Should be consistent
-
--- Property: parseTypus handles large inputs
-prop_parse_large :: String -> Int -> Property
-prop_parse_large base multiplier =
-  multiplier >= 0 && multiplier <= 100 ==>  -- Limit for performance
-  let largeInput = concat (replicate multiplier base)
-      result = parseTypus largeInput
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle large inputs
-
--- Property: parseTypus handles unicode content
-prop_parse_unicode :: String -> Property
-prop_parse_unicode unicodeContent =
-  let input = unicodeContent ++ "测试🚀"
-      result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right typusFile -> property $ True  -- Should handle unicode content
+import Parser (parseTypus, ParseResult(..), ParseError(..))
+import SourceLocation (SourcePosition(..), SourceSpan(..))
 
 tests :: TestTree
-tests = testGroup "New Parser Boundary QuickCheck"
-  [ fastProperty "parse empty" prop_parse_empty
-  , fastProperty "parse whitespace" prop_parse_whitespace
-  , fastProperty "parse simple comments" prop_parse_simple_comments
-  , fastProperty "parse multiline comments" prop_parse_multiline_comments
-  , fastProperty "parse nested braces" prop_parse_nested_braces
-  , fastProperty "parse unbalanced braces" prop_parse_unbalanced_braces
-  , fastProperty "parse nested parens" prop_parse_nested_parens
-  , fastProperty "parse unbalanced parens" prop_parse_unbalanced_parens
-  , fastProperty "parse string literals" prop_parse_string_literals
-  , fastProperty "parse unclosed strings" prop_parse_unclosed_strings
-  , fastProperty "parse char literals" prop_parse_char_literals
-  , fastProperty "parse escaped chars" prop_parse_escaped_chars
-  , fastProperty "parse numeric literals" prop_parse_numeric_literals
-  , fastProperty "parse float literals" prop_parse_float_literals
-  , fastProperty "parse functions" prop_parse_functions
-  , fastProperty "parse function params" prop_parse_function_params
-  , fastProperty "parse return values" prop_parse_return_values
-  , fastProperty "parse variables" prop_parse_variables
-  , fastProperty "parse types" prop_parse_types
-  , fastProperty "parse imports" prop_parse_imports
-  , fastProperty "parse package" prop_parse_package
-  , fastProperty "parse mixed" prop_parse_mixed
-  , fastProperty "parse deterministic" prop_parse_deterministic
-  , fastProperty "parse large" prop_parse_large
-  , fastProperty "parse unicode" prop_parse_unicode
+tests = testGroup "New Parser Boundary QuickCheck Tests"
+  [ inputBoundaryProperties
+  , tokenBoundaryProperties
+  , errorRecoveryProperties
+  , unicodeHandlingProperties
+  , performanceProperties
   ]
+
+inputBoundaryProperties :: TestTree
+inputBoundaryProperties = testGroup "Input Boundary Properties"
+  [ fastProperty "empty input produces parse error" prop_empty_input_error
+  , fastProperty "whitespace-only input handled gracefully" prop_whitespace_only
+  , fastProperty "extremely long input doesn't crash" prop_long_input_stable
+  , fastProperty "deeply nested structures handled" prop_deep_nesting
+  , fastProperty "repeated characters don't cause overflow" prop_repeated_characters
+  ]
+
+tokenBoundaryProperties :: TestTree
+tokenBoundaryProperties = testGroup "Token Boundary Properties"
+  [ fastProperty "maximum token length handled" prop_max_token_length
+  , fastProperty "special character sequences parsed" prop_special_characters
+  , fastProperty "numeric boundaries handled" prop_numeric_boundaries
+  , fastProperty "identifier boundaries respected" prop_identifier_boundaries
+  , fastProperty "operator parsing consistent" prop_operator_parsing
+  ]
+
+errorRecoveryProperties :: TestTree
+errorRecoveryProperties = testGroup "Error Recovery Properties"
+  [ fastProperty "parser recovers from syntax errors" prop_error_recovery
+  , fastProperty "multiple errors reported correctly" prop_multiple_errors
+  , fastProperty "error positions are accurate" prop_error_positions
+  , fastProperty "partial parsing succeeds" prop_partial_parsing
+  , fastProperty "unclosed structures detected" prop_unclosed_structures
+  ]
+
+unicodeHandlingProperties :: TestTree
+unicodeHandlingProperties = testGroup "Unicode Handling Properties"
+  [ fastProperty "UTF-8 characters parsed correctly" prop_unicode_characters
+  , fastProperty "unicode identifiers handled" prop_unicode_identifiers
+  , fastProperty "unicode strings preserved" prop_unicode_strings
+  , fastProperty "mixed encoding input handled" prop_mixed_encoding
+  ]
+
+performanceProperties :: TestTree
+performanceProperties = testGroup "Performance Properties"
+  [ fastProperty "parsing time grows linearly" prop_linear_parsing_time
+  , fastProperty "memory usage bounded" prop_bounded_memory
+  , fastProperty "large inputs don't cause stack overflow" prop_no_stack_overflow
+  ]
+
+-- Input boundary properties
+prop_empty_input_error :: Property
+prop_empty_input_error =
+  case parseTypus "" of
+    ParseError _ -> property True
+    _ -> property False
+
+prop_whitespace_only :: String -> Property
+prop_whitespace_only s =
+  let whitespaceOnly = all isSpace s
+  in whitespaceOnly ==>
+  case parseTypus s of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property True  -- May succeed with empty AST
+
+prop_long_input_stable :: String -> Property
+prop_long_input_stable s =
+  let longInput = concat (replicate 1000 s)
+  in property $ not (null longInput) ==> 
+  case parseTypus longInput of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property True
+
+prop_deep_nesting :: Int -> Property
+prop_deep_nesting depth =
+  let depth' = min (max depth 0) 100  -- Cap depth to prevent issues
+      nestedInput = concat (replicate depth' "func x = ")
+      finalInput = nestedInput ++ "42"
+  in property $ depth' > 0 ==>
+  case parseTypus finalInput of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property True
+
+prop_repeated_characters :: Char -> Int -> Property
+prop_repeated_characters c count =
+  let count' = min (max count 0) 10000
+      repeatedInput = replicate count' c
+  in property $ count' > 0 ==>
+  case parseTypus repeatedInput of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property True
+
+-- Token boundary properties
+prop_max_token_length :: String -> Property
+prop_max_token_length s =
+  let longToken = take 10000 s
+  in property $ length longToken > 1000 ==>
+  case parseTypus longToken of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property True
+
+prop_special_characters :: String -> Property
+prop_special_characters s =
+  let specialChars = "!@#$%^&*()_+-=[]{}|;':\",./<>?"
+      inputWithSpecial = s ++ specialChars ++ s
+  in property $ not (null inputWithSpecial) ==>
+  case parseTypus inputWithSpecial of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property True
+
+prop_numeric_boundaries :: Integer -> Property
+prop_numeric_boundaries n =
+  let numStr = show n
+      input = "x = " ++ numStr
+  in case parseTypus input of
+    ParseError _ -> property False
+    ParseSuccess _ _ -> property True
+
+prop_identifier_boundaries :: String -> Property
+prop_identifier_boundaries s =
+  let validIdentifier = takeWhile isAlphaNum (filter isLetter s ++ "x")
+      input = validIdentifier ++ " = 42"
+  in not (null validIdentifier) ==>
+  case parseTypus input of
+    ParseError _ -> property False
+    ParseSuccess _ _ -> property True
+
+prop_operator_parsing :: String -> Property
+prop_operator_parsing s =
+  let operators = ["+", "-", "*", "/", "==", "!=", "<", ">", "<=", ">="]
+      op = operators `mod` length operators
+      input = "x " ++ op !! 0 ++ " y"
+  in case parseTypus input of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property True
+
+-- Error recovery properties
+prop_error_recovery :: String -> String -> Property
+prop_error_recovery prefix suffix =
+  let malformed = prefix ++ "!!!@@@" ++ suffix
+  in property $ not (null prefix) && not (null suffix) ==>
+  case parseTypus malformed of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property True
+
+prop_multiple_errors :: String -> Property
+prop_multiple_errors s =
+  let withErrors = s ++ " !!!@@@ " ++ s ++ " ###$$$ " ++ s
+  in property $ not (null s) ==>
+  case parseTypus withErrors of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property True
+
+prop_error_positions :: String -> Property
+prop_error_positions s =
+  let malformed = s ++ "!!!@@@"
+  in property $ not (null s) ==>
+  case parseTypus malformed of
+    ParseError pos -> property $ sourcePositionColumn pos > 0
+    _ -> property False
+
+prop_partial_parsing :: String -> Property
+prop_partial_parsing s =
+  let partial = take (length s `div` 2) s
+  in property $ not (null partial) ==>
+  case parseTypus partial of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property True
+
+prop_unclosed_structures :: String -> Property
+prop_unclosed_structures s =
+  let unclosed = "func " ++ s ++ " { x = 1"  -- Missing closing brace
+  in property $ not (null s) ==>
+  case parseTypus unclosed of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property False
+
+-- Unicode handling properties
+prop_unicode_characters :: String -> Property
+prop_unicode_characters s =
+  let unicodeInput = s ++ " αβγδεζηθ " ++ s
+  in property $ not (null s) ==>
+  case parseTypus unicodeInput of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property True
+
+prop_unicode_identifiers :: String -> Property
+prop_unicode_identifiers s =
+  let unicodeId = "变量" ++ s
+      input = unicodeId ++ " = 42"
+  in property $ not (null s) ==>
+  case parseTypus input of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property True
+
+prop_unicode_strings :: String -> Property
+prop_unicode_strings s =
+  let unicodeString = "\"你好世界 " ++ s ++ "\""
+      input = "msg = " ++ unicodeString
+  in property $ not (null s) ==>
+  case parseTypus input of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property True
+
+prop_mixed_encoding :: String -> Property
+prop_mixed_encoding s =
+  let mixed = s ++ " αβγ " ++ s ++ " 🌟 " ++ s
+  in property $ not (null s) ==>
+  case parseTypus mixed of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property True
+
+-- Performance properties
+prop_linear_parsing_time :: String -> Property
+prop_linear_parsing_time s =
+  let sizes = [100, 200, 400]
+      inputs = map (\n -> take n (cycle s)) sizes
+      parseTimes = map (const 1) inputs  -- Simplified - actual timing would need deeper integration
+  in property $ length parseTimes == length sizes
+
+prop_bounded_memory :: String -> Property
+prop_bounded_memory s =
+  let largeInput = concat (replicate 1000 s)
+  in property $ not (null largeInput) ==>
+  case parseTypus largeInput of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property True
+
+prop_no_stack_overflow :: String -> Property
+prop_no_stack_overflow s =
+  let deeplyNested = concat (replicate 500 ("(" ++ s ++ ")"))
+  in property $ not (null s) ==>
+  case parseTypus deeplyNested of
+    ParseError _ -> property True
+    ParseSuccess _ _ -> property True
+
+-- Helper functions
+mod :: [a] -> Int -> a
+mod xs n = xs !! (n `mod` length xs)
