@@ -98,6 +98,20 @@ import qualified Test.Unit.NewOwnershipTransferPropertiesSpec
 import qualified Test.Unit.NewDependenciesCorePropertiesSpec
 import qualified Test.Unit.NewSyntaxValidatorBoundarySpec
 
+-- ============================================================================
+-- New Concise QuickCheck Test Modules (2025) - 10 focused tests
+-- ============================================================================
+import qualified Test.Unit.ConciseUtilsQuickCheckSpec
+import qualified Test.Unit.ConciseParserQuickCheckSpec
+import qualified Test.Unit.ConciseSourceLocationQuickCheckSpec
+import qualified Test.Unit.ConciseErrorHandlerQuickCheckSpec
+import qualified Test.Unit.ConciseDependenciesQuickCheckSpec
+import qualified Test.Unit.ConciseOwnershipQuickCheckSpec
+import qualified Test.Unit.ConciseTypeSystemQuickCheckSpec
+import qualified Test.Unit.ConciseSyntaxValidatorQuickCheckSpec
+import qualified Test.Unit.ConciseCompilerIRQuickCheckSpec
+import qualified Test.Unit.ConciseIntegrationQuickCheckSpec
+
 -- New Cabal Test Modules (Added for this request)
 import qualified Test.Unit.NewCabalCoreTestsSpec
 import qualified Test.Unit.NewCabalQuickCheckPropertiesSpec
@@ -2751,5 +2765,21 @@ tests =
     , Test.Unit.NewDependenciesQuickCheckSpec.tests
     , Test.Unit.NewIntegrationQuickCheckSpec.tests
     , Test.Unit.NewDependentTypesQuickCheckSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Concise QuickCheck Test Modules (2025) - 10 focused tests
+  -- ============================================================================
+  , testGroup "New Concise QuickCheck Test Modules - Focused Testing"
+    [ Test.Unit.ConciseUtilsQuickCheckSpec.tests
+    , Test.Unit.ConciseParserQuickCheckSpec.tests
+    , Test.Unit.ConciseSourceLocationQuickCheckSpec.tests
+    , Test.Unit.ConciseErrorHandlerQuickCheckSpec.tests
+    , Test.Unit.ConciseDependenciesQuickCheckSpec.tests
+    , Test.Unit.ConciseOwnershipQuickCheckSpec.tests
+    , Test.Unit.ConciseTypeSystemQuickCheckSpec.tests
+    , Test.Unit.ConciseSyntaxValidatorQuickCheckSpec.tests
+    , Test.Unit.ConciseCompilerIRQuickCheckSpec.tests
+    , Test.Unit.ConciseIntegrationQuickCheckSpec.tests
     ]
   ]
