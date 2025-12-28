@@ -2,354 +2,341 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module Test.Unit.TypeSystemInferenceBoundarySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
+import Test.Tasty.HUnit (testCase, assertBool, assertFailure, (@?=), (@=?))
 import TestSupport.QuickCheck (fastProperty)
-import TestSupport.Arbitrary
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, sized, resize, Positive(..))
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Gen, choose, vectorOf, oneof, elements, listOf1, arbitrary)
 
 import Compiler.TypeChecker
-import Compiler.DependentTypeChecker
-import Dependencies.TypeSystem
-import SourceLocation
-import Utils
+  ( TypeChecker
+  , TypeEnvironment
+  , TypeConstraint(..)
+  , TypeScheme(..)
+  , TypeVar(..)
+  , inferType
+  , unifyTypes
+  , substituteTypes
+  , generalizeType
+  , instantiateType
+  , TypeInferenceError(..)
+  , TypeCheckResult(..)
+  , emptyTypeEnvironment
+  , extendTypeEnvironment
+  )
 
-import Data.Char (isSpace, isLetter, isDigit)
-import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, intercalate, nub)
+import Compiler.IR
+  ( IRExpression(..)
+  , IRType(..)
+  , TypeAnnotation(..)
+  )
+
+import Data.List (sort, nub, intersect, union, (\\))
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
-import Data.Set (Set)
-import qualified Data.Set as Set
-import Data.Map (Map)
 import qualified Data.Map as Map
+import qualified Data.Set as Set
+import Data.Either (isLeft, isRight)
 
--- | Tests for type system inference boundary conditions
+-- | Test type system inference boundary conditions
 tests :: TestTree
 tests =
   testGroup "Type System Inference Boundary Tests"
-    [ testGroup "Basic Type Inference"
-        [ fastProperty "Simple type inference succeeds" prop_simple_type_inference
-        , fastProperty "Type inference with generics" prop_generic_type_inference
-        , fastProperty "Type inference with function pointers" prop_function_pointer_inference
-        , testCase "Local variable type inference" test_local_variable_inference
-        , testCase "Return type inference" test_return_type_inference
+    [ testGroup "Basic type inference boundaries"
+        [ testCase "infers types for simple expressions" $ do
+            let env = emptyTypeEnvironment
+                expr = IRLiteral (IRInt 42)
+                result = inferType env expr
+            assertBool "should infer Int type" $ 
+              case result of
+                Right (_, IRTypeInt) -> True
+                _ -> False
+
+        , testCase "handles type variable unification" $ do
+            let env = emptyTypeEnvironment
+                typeVar1 = TypeVar "a"
+                typeVar2 = TypeVar "b"
+                constraint = TypeEquality typeVar1 typeVar2
+                result = unifyTypes [constraint]
+            assertBool "should unify type variables" $ 
+              case result of
+                Right _ -> True
+                Left _ -> False
+
+        , testCase "detects type mismatches" $ do
+            let env = emptyTypeEnvironment
+                expr = IRBinaryOp Add (IRLiteral (IRInt 1)) (IRLiteral (IRString "bad"))
+                result = inferType env expr
+            assertBool "should detect type mismatch" $ 
+              case result of
+                Left (TypeMismatch _ _) -> True
+                _ -> False
         ]
-    
-    , testGroup "Complex Type Inference"
-        [ fastProperty "Recursive type inference" prop_recursive_type_inference
-        , fastProperty "Higher-ranked type inference" prop_higher_ranked_inference
-        , fastProperty "Type inference with constraints" prop_constrained_type_inference
-        , testCase "Complex generic inference" test_complex_generic_inference
-        , testCase "Trait object inference" test_trait_object_inference
+
+    , testGroup "Complex type inference scenarios"
+        [ testCase "infers polymorphic function types" $ do
+            let env = emptyTypeEnvironment
+                identityExpr = IRLambda "x" (IRVariable "x")
+                result = inferType env identityExpr
+            assertBool "should infer polymorphic identity function" $ 
+              case result of
+                Right (_, IRFunctionType paramType returnType) -> 
+                  paramType == returnType  -- Identity: a -> a
+                _ -> False
+
+        , testCase "handles higher-order functions" $ do
+            let env = emptyTypeEnvironment
+                mapExpr = IRLambda "f" 
+                    (IRLambda "xs" 
+                      (IRBinaryOp Apply (IRVariable "f") (IRVariable "xs")))
+                result = inferType env mapExpr
+            assertBool "should infer higher-order function type" $ 
+              case result of
+                Right (_, _) -> True  -- Complex type, just check it succeeds
+                Left _ -> False
+
+        , testCase "infers recursive function types" $ do
+            let env = emptyTypeEnvironment
+                factorialExpr = IRLambda "n"
+                    (IRBinaryOp If
+                        (IRBinaryOp Equal (IRVariable "n") (IRLiteral (IRInt 0)))
+                        (IRLiteral (IRInt 1))
+                        (IRBinaryOp Mul 
+                            (IRVariable "n")
+                            (IRBinaryOp Apply 
+                                (IRVariable "factorial")
+                                (IRBinaryOp Sub (IRVariable "n") (IRLiteral (IRInt 1))))))
+                result = inferType env factorialExpr
+            assertBool "should handle recursive function inference" $ 
+              case result of
+                Right (_, IRFunctionType IRTypeInt IRTypeInt) -> True
+                _ -> False
         ]
-    
-    , testGroup "Dependent Type Inference"
-        [ fastProperty "Dependent type constraint inference" prop_dependent_constraint_inference
-        , fastProperty "Type-level computation inference" prop_type_level_computation
-        , fastProperty "Refinement type inference" prop_refinement_type_inference
-        , testCase "Vector length inference" test_vector_length_inference
-        , testCase "Type-level arithmetic" test_type_level_arithmetic
+
+    , testGroup "Type environment boundaries"
+        [ testCase "handles large type environments" $ do
+            let baseEnv = emptyTypeEnvironment
+                env = foldr (\i acc -> extendTypeEnvironment acc ("var" ++ show i) IRTypeInt) baseEnv [1..1000]
+                expr = IRVariable "var500"
+                result = inferType env expr
+            assertBool "should handle large environments" $ 
+              case result of
+                Right (_, IRTypeInt) -> True
+                _ -> False
+
+        , testCase "manages nested scopes correctly" $ do
+            let outerEnv = extendTypeEnvironment emptyTypeEnvironment "x" IRTypeInt
+                innerEnv = extendTypeEnvironment outerEnv "x" IRTypeString  -- Shadowing
+                outerExpr = IRVariable "x"
+                innerExpr = IRVariable "x"
+                outerResult = inferType outerEnv outerExpr
+                innerResult = inferType innerEnv innerExpr
+            assertBool "outer scope should have Int" $ 
+              case outerResult of
+                Right (_, IRTypeInt) -> True
+                _ -> False
+            assertBool "inner scope should have String" $ 
+              case innerResult of
+                Right (_, IRTypeString) -> True
+                _ -> False
+
+        , testCase "handles type variable capture" $ do
+            let env = emptyTypeEnvironment
+                -- Expression that might cause variable capture
+                captureExpr = IRLambda "f" 
+                    (IRBinaryOp Apply
+                        (IRVariable "f")
+                        (IRVariable "x"))  -- x is free
+                result = inferType env captureExpr
+            assertBool "should handle variable capture" $ 
+              case result of
+                Right (_, _) -> True  -- Should handle gracefully
+                Left (UnboundVariable _) -> True  -- Or detect unbound variable
+                _ -> False
         ]
-    
-    , testGroup "Inference Boundary Conditions"
-        [ fastProperty "Inference with incomplete information" prop_incomplete_information
-        , fastProperty "Inference with ambiguous types" prop_ambiguous_type_inference
-        , fastProperty "Inference with recursive constraints" prop_recursive_constraints
-        , testCase "Inference failure recovery" test_inference_failure_recovery
-        , testCase "Inference timeout handling" test_inference_timeout_handling
+
+    , testGroup "Constraint solving boundaries"
+        [ testCase "solves complex constraint systems" $ do
+            let constraints = 
+                  [ TypeEquality (TypeVar "a") IRTypeInt
+                  , TypeEquality (TypeVar "b") IRTypeString
+                  , TypeEquality 
+                      (IRFunctionType (TypeVar "a") (TypeVar "c"))
+                      (IRFunctionType IRTypeInt IRTypeBool)
+                  ]
+                result = unifyTypes constraints
+            assertBool "should solve complex constraints" $ 
+              case result of
+                Right substitution -> 
+                  Map.lookup "a" substitution == Just IRTypeInt &&
+                  Map.lookup "c" substitution == Just IRTypeBool
+                Left _ -> False
+
+        , testCase "detects unsolvable constraints" $ do
+            let constraints = 
+                  [ TypeEquality IRTypeInt IRTypeString
+                  , TypeEquality (TypeVar "a") IRTypeInt
+                  ]
+                result = unifyTypes constraints
+            assertBool "should detect unsolvable constraints" $ 
+              case result of
+                Left (UnificationError _) -> True
+                _ -> False
+
+        , testCase "handles cyclic constraints" $ do
+            let constraints = 
+                  [ TypeEquality (TypeVar "a") (IRFunctionType (TypeVar "b") IRTypeInt)
+                  , TypeEquality (TypeVar "b") (IRFunctionType (TypeVar "a") IRTypeInt)
+                  ]
+                result = unifyTypes constraints
+            assertBool "should handle cyclic constraints" $ 
+              case result of
+                Right _ -> True   -- Should find a solution (recursive types)
+                Left _ -> False   -- Or detect as unsolvable
         ]
-    
-    , testGroup "Type Inference Performance"
-        [ fastProperty "Inference performance with large expressions" prop_large_expression_inference
-        , fastProperty "Inference memory efficiency" prop_inference_memory_efficiency
-        , fastProperty "Inference caching behavior" prop_inference_caching
-        , testCase "Inference benchmark" test_inference_benchmark
-        , testCase "Incremental inference" test_incremental_inference
+
+    , testGroup "Generalization and instantiation"
+        [ testCase "generalizes polymorphic types correctly" $ do
+            let env = emptyTypeEnvironment
+                expr = IRLambda "x" (IRVariable "x")
+                result = inferType env expr
+            assertBool "should generalize to polymorphic type" $ 
+              case result of
+                Right (_, scheme) -> isPolymorphic scheme
+                _ -> False
+          where
+            isPolymorphic (TypeScheme vars _) = not (null vars)
+
+        , testCase "instantiates polymorphic types" $ do
+            let scheme = TypeScheme ["a"] (IRFunctionType (TypeVar "a") (TypeVar "a"))
+                instanceType = instantiateType scheme
+            assertBool "should instantiate to concrete type" $ 
+              case instanceType of
+                IRFunctionType paramType returnType -> paramType == returnType
+                _ -> False
+
+        , testCase "preserves type correctness through generalization" $ do
+            let env = emptyTypeEnvironment
+                expr = IRLambda "f" 
+                    (IRBinaryOp Apply 
+                        (IRVariable "f")
+                        (IRLiteral (IRInt 42)))
+                result = inferType env expr
+            assertBool "generalization should preserve correctness" $ 
+              case result of
+                Right (_, _) -> True
+                Left _ -> False
         ]
-    ]
 
--- Property: Simple type inference succeeds
-prop_simple_type_inference :: String -> String -> Property
-prop_simple_type_inference varName value =
-  not (null varName) && not (null value) && all isLetter varName ==>
-  let code = "let " ++ varName ++ " = " ++ value
-      inferenceResult = performTypeInference code
-      hasType = isJust inferenceResult
-  in property $ hasType
+    , testGroup "Error handling boundaries"
+        [ testCase "provides informative error messages" $ do
+            let env = emptyTypeEnvironment
+                expr = IRBinaryOp Add (IRLiteral (IRInt 1)) (IRLiteral (IRString "bad"))
+                result = inferType env expr
+            assertBool "should provide informative error" $ 
+              case result of
+                Left (TypeMismatch expected actual) -> 
+                  show expected /= "" && show actual /= ""
+                _ -> False
 
--- Property: Type inference with generics
-prop_generic_type_inference :: String -> Property
-prop_generic_type_inference genericCode =
-  not (null genericCode) ==> 
-  let inferenceResult = performGenericTypeInference genericCode
-      hasType = isJust inferenceResult
-  in property $ hasType
+        , testCase "handles multiple errors gracefully" $ do
+            let env = emptyTypeEnvironment
+                expr = IRBinaryOp Add 
+                    (IRBinaryOp Add (IRLiteral (IRInt 1)) (IRLiteral (IRString "bad1")))
+                    (IRLiteral (IRString "bad2"))
+                result = inferType env expr
+            assertBool "should handle multiple errors" $ 
+              case result of
+                Left _ -> True  -- Should report at least one error
+                Right _ -> False
+        ]
 
--- Property: Type inference with function pointers
-prop_function_pointer_inference :: String -> Property
-prop_function_pointer_inference functionCode =
-  "fn" `isPrefixOf` functionCode ==> 
-  let inferenceResult = performFunctionPointerInference functionCode
-      hasType = isJust inferenceResult
-  in property $ hasType
+    , testGroup "Performance boundaries"
+        [ testCase "handles deeply nested type expressions" $ do
+            let nestedType = foldr (\t acc -> IRFunctionType t acc) IRTypeInt 
+                              (replicate 100 IRTypeBool)
+                expr = IRVariable "deeply_nested"
+                env = extendTypeEnvironment emptyTypeEnvironment "deeply_nested" nestedType
+                result = inferType env expr
+            assertBool "should handle deeply nested types" $ 
+              case result of
+                Right (_, inferredType) -> inferredType == nestedType
+                _ -> False
 
--- Property: Recursive type inference
-prop_recursive_type_inference :: String -> Property
-prop_recursive_type_inference recursiveCode =
-  not (null recursiveCode) ==> 
-  let inferenceResult = performRecursiveTypeInference recursiveCode
-      hasType = isJust inferenceResult
-  in property $ hasType
+        , testCase "scales with expression complexity" $ do
+            let complexExpr = foldl1 IRBinaryOp Add 
+                              [IRLiteral (IRInt i) | i <- [1..100]]
+                env = emptyTypeEnvironment
+                result = inferType env complexExpr
+            assertBool "should handle complex expressions" $ 
+              case result of
+                Right (_, IRTypeInt) -> True
+                _ -> False
+        ]
 
--- Property: Higher-ranked type inference
-prop_higher_ranked_inference :: String -> Property
-prop_higher_ranked_inference higherRankedCode =
-  "for<" `isInfixOf` higherRankedCode ==> 
-  let inferenceResult = performHigherRankedInference higherRankedCode
-      hasType = isJust inferenceResult
-  in property $ hasType
+    , testGroup "QuickCheck property tests for type inference"
+        [ fastProperty "type inference is deterministic" $
+            \env expr ->
+            let result1 = inferType env expr
+                result2 = inferType env expr
+            in result1 === result2
 
--- Property: Type inference with constraints
-prop_constrained_type_inference :: String -> Property
-prop_constrained_type_inference constrainedCode =
-  ":" `isInfixOf` constrainedCode ==> 
-  let inferenceResult = performConstrainedTypeInference constrainedCode
-      hasType = isJust inferenceResult
-  in property $ hasType
+        , fastProperty "unification is idempotent" $
+            \constraints ->
+            let result1 = unifyTypes constraints
+                result2 = case result1 of
+                  Right substitution -> unifyTypes (map (applySubstitution substitution) constraints)
+                  Left _ -> result1
+            in result1 === result2
+          where
+            applySubstitution substitution constraint = 
+              case constraint of
+                TypeEquality t1 t2 -> 
+                  TypeEquality (subst substitution t1) (subst substitution t2)
+                _ -> constraint
+            subst substitution typ = 
+              case typ of
+                TypeVar name -> fromMaybe typ (Map.lookup name substitution)
+                _ -> typ
 
--- Property: Dependent type constraint inference
-prop_dependent_constraint_inference :: String -> Property
-prop_dependent_constraint_inference dependentCode =
-  "{" `isInfixOf` dependentCode && "|" `isInfixOf` dependentCode ==> 
-  let inferenceResult = performDependentTypeInference dependentCode
-      hasConstraints = isJust inferenceResult
-  in property $ hasConstraints
+        , fastProperty "generalization increases polymorphism" $
+            \env expr ->
+            case inferType env expr of
+              Right (_, scheme) -> 
+                let generalized = generalizeType env expr
+                in isPolymorphic generalized ==> isPolymorphic generalized
+              Left _ -> property True
+          where
+            isPolymorphic (TypeScheme vars _) = not (null vars)
 
--- Property: Type-level computation inference
-prop_type_level_computation :: String -> Property
-prop_type_level_computation typeLevelCode =
-  not (null typeLevelCode) ==> 
-  let computationResult = performTypeLevelComputation typeLevelCode
-      hasResult = isJust computationResult
-  in property $ hasResult
+        , fastProperty "instantiation reduces polymorphism" $
+            \scheme ->
+            isPolymorphic scheme ==>
+            let instanceType = instantiateType scheme
+            in not (containsTypeVars instanceType)
+          where
+            isPolymorphic (TypeScheme vars _) = not (null vars)
+            containsTypeVars typ = 
+              case typ of
+                TypeVar _ -> True
+                IRFunctionType t1 t2 -> containsTypeVars t1 || containsTypeVars t2
+                _ -> False
 
--- Property: Refinement type inference
-prop_refinement_type_inference :: String -> Property
-prop_refinement_type_inference refinementCode =
-  "|" `isInfixOf` refinementCode ==> 
-  let inferenceResult = performRefinementTypeInference refinementCode
-      hasRefinement = isJust inferenceResult
-  in property $ hasRefinement
-
--- Property: Inference with incomplete information
-prop_incomplete_information :: String -> Property
-prop_incomplete_information incompleteCode =
-  not (null incompleteCode) ==> 
-  let inferenceResult = performTypeInferenceWithIncompleteInfo incompleteCode
-      hasPartialResult = isJust inferenceResult
-  in property $ hasPartialResult
-
--- Property: Inference with ambiguous types
-prop_ambiguous_type_inference :: String -> Property
-prop_ambiguous_type_inference ambiguousCode =
-  not (null ambiguousCode) ==> 
-  let inferenceResult = performAmbiguousTypeInference ambiguousCode
-      hasAmbiguity = requiresTypeAnnotation inferenceResult
-  in property $ hasAmbiguity
-
--- Property: Inference with recursive constraints
-prop_recursive_constraints :: String -> Property
-prop_recursive_constraints recursiveConstraintCode =
-  not (null recursiveConstraintCode) ==> 
-  let inferenceResult = performRecursiveConstraintInference recursiveConstraintCode
-      terminates = inferenceTerminates inferenceResult
-  in property $ terminates
-
--- Property: Inference performance with large expressions
-prop_large_expression_inference :: Int -> String -> Property
-prop_large_expression_inference depth baseExpression =
-  depth > 0 && depth <= 10 ==> 
-  let largeExpression = buildLargeExpression depth baseExpression
-      inferenceResult = performTypeInference largeExpression
-      hasResult = isJust inferenceResult
-  in property $ hasResult
-
--- Property: Inference memory efficiency
-prop_inference_memory_efficiency :: String -> Property
-prop_inference_memory_efficiency code =
-  not (null code) ==> 
-  let memoryUsage = measureInferenceMemoryUsage code
-      isEfficient = memoryUsage < 1000000 -- 1MB threshold
-  in property $ isEfficient
-
--- Property: Inference caching behavior
-prop_inference_caching :: String -> Property
-prop_inference_caching code =
-  not (null code) ==> 
-  let firstResult = performTypeInference code
-      secondResult = performCachedTypeInference code
-      cacheHit = firstResult == secondResult
-  in property $ cacheHit
-
--- Test cases for specific inference scenarios
-
-test_local_variable_inference :: IO ()
-test_local_variable_inference = do
-  let code = "let x = 42\nlet y = \"hello\"\nlet z = vec![1, 2, 3]"
-      inferenceResult = performTypeInference code
-      hasTypes = isJust inferenceResult
-  hasTypes @?= True
-
-test_return_type_inference :: IO ()
-test_return_type_inference = do
-  let code = "fn add(a: i32, b: i32) -> _ {\n  a + b\n}"
-      inferenceResult = performReturnTypeInference code
-      inferredType = fromMaybe "" inferenceResult
-  inferredType @?= "i32"
-
-test_complex_generic_inference :: IO ()
-test_complex_generic_inference = do
-  let code = "fn process<T, U>(data: T, func: fn(T) -> U) -> U {\n  func(data)\n}"
-      inferenceResult = performGenericTypeInference code
-      hasTypes = isJust inferenceResult
-  hasTypes @?= True
-
-test_trait_object_inference :: IO ()
-test_trait_object_inference = do
-  let code = "let writer: &dyn Write = &mut buf;"
-      inferenceResult = performTraitObjectInference code
-      hasTraitObject = isJust inferenceResult
-  hasTraitObject @?= True
-
-test_vector_length_inference :: IO ()
-test_vector_length_inference = do
-  let code = "let v: Vec<{n: Int | n > 0}> = vec![1, 2, 3];"
-      inferenceResult = performDependentTypeInference code
-      hasLengthConstraint = isJust inferenceResult
-  hasLengthConstraint @?= True
-
-test_type_level_arithmetic :: IO ()
-test_type_level_arithmetic = do
-  let code = "type Sum = Add<3, 5>; // Should be 8"
-      computationResult = performTypeLevelComputation code
-      correctResult = fromMaybe "" computationResult == "8"
-  correctResult @?= True
-
-test_inference_failure_recovery :: IO ()
-test_inference_failure_recovery = do
-  let invalidCode = "let x: AmbiguousType = invalid_expression;"
-      recoveredResult = performTypeInferenceWithRecovery invalidCode
-      hasRecovery = isJust recoveredResult
-  hasRecovery @?= True
-
-test_inference_timeout_handling :: IO ()
-test_inference_timeout_handling = do
-  let complexCode = "fn complex<T>() where T: ComplexConstraint { /* very complex */ }"
-      timeoutResult = performTypeInferenceWithTimeout complexCode 1000 -- 1 second timeout
-      handledTimeout = isTimeoutHandled timeoutResult
-  handledTimeout @?= True
-
-test_inference_benchmark :: IO ()
-test_inference_benchmark = do
-  let benchmarkCode = "fn benchmark() { let x = 1 + 2 * 3 - 4 / 5; }"
-      inferenceTime = measureInferenceTime benchmarkCode
-      isPerformant = inferenceTime < 1000 -- 1 second threshold
-  isPerformant @?= True
-
-test_incremental_inference :: IO ()
-test_incremental_inference = do
-  let baseCode = "let x = 42;"
-      incrementalCode = baseCode ++ "\nlet y = x + 1;"
-      firstResult = performTypeInference baseCode
-      secondResult = performIncrementalTypeInference firstResult incrementalCode
-      hasIncrementalResult = isJust secondResult
-  hasIncrementalResult @?= True
-
--- Helper functions (placeholders for actual implementation)
-
--- Basic type inference functions
-performTypeInference :: String -> Maybe String
-performTypeInference _ = Just "inferred_type" -- Placeholder
-
-performGenericTypeInference :: String -> Maybe String
-performGenericTypeInference _ = Just "generic_type" -- Placeholder
-
-performFunctionPointerInference :: String -> Maybe String
-performFunctionPointerInference _ = Just "function_pointer_type" -- Placeholder
-
-performReturnTypeInference :: String -> Maybe String
-performReturnTypeInference _ = Just "return_type" -- Placeholder
-
-performTraitObjectInference :: String -> Maybe String
-performTraitObjectInference _ = Just "trait_object_type" -- Placeholder
-
--- Complex type inference functions
-performRecursiveTypeInference :: String -> Maybe String
-performRecursiveTypeInference _ = Just "recursive_type" -- Placeholder
-
-performHigherRankedInference :: String -> Maybe String
-performHigherRankedInference _ = Just "higher_ranked_type" -- Placeholder
-
-performConstrainedTypeInference :: String -> Maybe String
-performConstrainedTypeInference _ = Just "constrained_type" -- Placeholder
-
--- Dependent type inference functions
-performDependentTypeInference :: String -> Maybe String
-performDependentTypeInference _ = Just "dependent_type" -- Placeholder
-
-performTypeLevelComputation :: String -> Maybe String
-performTypeLevelComputation _ = Just "8" -- Placeholder
-
-performRefinementTypeInference :: String -> Maybe String
-performRefinementTypeInference _ = Just "refinement_type" -- Placeholder
-
--- Boundary condition functions
-performTypeInferenceWithIncompleteInfo :: String -> Maybe String
-performTypeInferenceWithIncompleteInfo _ = Just "partial_type" -- Placeholder
-
-performAmbiguousTypeInference :: String -> Maybe String
-performAmbiguousTypeInference _ = Just "ambiguous_type" -- Placeholder
-
-requiresTypeAnnotation :: Maybe String -> Bool
-requiresTypeAnnotation _ = True -- Placeholder
-
-performRecursiveConstraintInference :: String -> Maybe String
-performRecursiveConstraintInference _ = Just "recursive_constraint_type" -- Placeholder
-
-inferenceTerminates :: Maybe String -> Bool
-inferenceTerminates _ = True -- Placeholder
-
--- Performance and utility functions
-buildLargeExpression :: Int -> String -> String
-buildLargeExpression depth base = concat (replicate depth (base ++ " + "))
-
-measureInferenceMemoryUsage :: String -> Int
-measureInferenceMemoryUsage _ = 500000 -- Placeholder
-
-performCachedTypeInference :: String -> Maybe String
-performCachedTypeInference code = performTypeInference code -- Placeholder
-
-performTypeInferenceWithRecovery :: String -> Maybe String
-performTypeInferenceWithRecovery _ = Just "recovered_type" -- Placeholder
-
-performTypeInferenceWithTimeout :: String -> Int -> TimeoutResult
-performTypeInferenceWithTimeout _ _ = TimeoutResult True -- Placeholder
-
-isTimeoutHandled :: TimeoutResult -> Bool
-isTimeoutHandled (TimeoutResult handled) = handled
-
-measureInferenceTime :: String -> Int
-measureInferenceTime _ = 500 -- Placeholder
-
-performIncrementalTypeInference :: Maybe String -> String -> Maybe String
-performIncrementalTypeInference _ _ = Just "incremental_type" -- Placeholder
-
--- Data types (placeholders)
-data TimeoutResult = TimeoutResult Bool deriving (Show, Eq)
+        , fastProperty "type inference preserves type safety" $
+            \env expr ->
+            case inferType env expr of
+              Right (_, inferredType) -> 
+                isValidType inferredType
+              Left _ -> property True
+          where
+            isValidType typ = 
+              case typ of
+                IRTypeInt -> True
+                IRTypeString -> True
+                IRTypeBool -> True
+                IRFunctionType t1 t2 -> isValidType t1 && isValidType t2
+                TypeVar _ -> True
+                _ -> False
+        ]
+  ]

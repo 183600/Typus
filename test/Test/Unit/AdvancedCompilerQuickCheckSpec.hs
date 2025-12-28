@@ -30,7 +30,16 @@ import Compiler.IR
   , attachInferredImports
   )
 
-import Parser (TypusFile(..), CodeBlock(..))
+import Parser
+  ( TypusFile(..)
+  , CodeBlock(..)
+  , defaultFileDirectives
+  , defaultBlockDirectives
+  )
+
+import SourceLocation
+  ( emptySpan
+  )
 import SyntaxValidator (SyntaxError(..))
 import Compiler.Errors (CompilerResult)
 import Compiler.GoAst (GoModule(..))
@@ -261,8 +270,17 @@ prop_ir_large_input base multiplier =
 prop_ir_unicode :: String -> Property
 prop_ir_unicode content =
   let unicodeContent = content ++ "测试🚀"
-      block = CodeBlock unicodeContent Nothing Nothing
-      typusFile = TypusFile "" Nothing Nothing [block]
+      block = CodeBlock 
+                { cbDirectives = defaultBlockDirectives
+                , cbContent = unicodeContent
+                , cbSpan = emptySpan
+                }
+      typusFile = TypusFile 
+                    { tfDirectives = defaultFileDirectives
+                    , tfBuildTags = []
+                    , tfBlocks = [block]
+                    , tfSyntaxErrors = []
+                    }
       ir = buildSourceIR typusFile
   in property $ "测试🚀" `isInfixOf` (sourceText ir)
 

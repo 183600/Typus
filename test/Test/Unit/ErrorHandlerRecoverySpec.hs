@@ -2,377 +2,199 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module Test.Unit.ErrorHandlerRecoverySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
+import Test.Tasty.HUnit (testCase, assertBool, assertFailure, (@?=), (@=?))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import Test.QuickCheck.Arbitrary (Arbitrary(..), arbitrary)
-import Test.QuickCheck.Gen (choose, listOf, oneof, elements, vectorOf, suchThat, Gen)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Gen, choose, vectorOf, oneof, elements, listOf1)
 
-import ErrorHandler
-import EnhancedErrorHandler
-import Compiler.Errors (CompilerError(..), ErrorCategory(..), ErrorSeverity(..), CompilationPhase(..))
-import Compiler.Errors.Core (ErrorLocation(..))
+import Compiler.Errors.Core
+  ( Error(..)
+  , ErrorSeverity(..)
+  , ErrorLocation(..)
+  , ErrorContext(..)
+  , ErrorMessage(..)
+  , ErrorBundle(..)
+  , addError
+  , hasErrors
+  , getErrors
+  , getWarnings
+  , getErrorsBySeverity
+  , formatError
+  , formatErrorBundle
+  , mergeErrorBundles
+  , recoverFromErrors
+  , canRecoverFrom
+  )
 
-import Parser (parseTypus)
-import Compiler (compile, CompilerResult)
-import SourceLocation (SourceSpan(..), SourcePos(..))
+import Data.List (sort, nub)
+import Data.Maybe (isJust, isNothing, fromMaybe)
 
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
-import Data.Char (isSpace, isAlphaNum)
-import Data.Set (Set)
-import qualified Data.Set as Set
-
--- ============================================================================
--- Arbitrary Instances
--- ============================================================================
-
--- Generate error codes
-arbitraryErrorCode :: Gen String
-arbitraryErrorCode = do
-  prefix <- elements ["CP", "PT", "TC", "OW", "DE"]
-  number <- choose (1000, 9999)
-  return $ prefix ++ show number
-
--- Generate error messages
-arbitraryErrorMessage :: Gen String
-arbitraryErrorMessage = do
-  words <- vectorOf 3 8 (elements ["type", "error", "syntax", "semantic", "compilation", "parsing", "analysis", "checking", "invalid", "unexpected", "missing", "found", "required"])
-  return $ unwords words
-
--- Generate error locations
-arbitraryErrorLocation :: Gen ErrorLocation
-arbitraryErrorLocation = do
-  line <- choose (1, 1000)
-  column <- choose (1, 100)
-  endLine <- elements [Just line, Nothing]
-  endColumn <- elements [Just column, Nothing]
-  filePath <- elements [Nothing, Just "test.typus"]
-  return $ ErrorLocation filePath line column endLine endColumn
-
--- Generate error categories
-arbitraryErrorCategory :: Gen ErrorCategory
-arbitraryErrorCategory = elements [Parsing, TypeChecking, Semantic, Analysis, Runtime, System]
-
--- Generate error severities
-arbitraryErrorSeverity :: Gen ErrorSeverity
-arbitraryErrorSeverity = elements [Error, Warning, Info, Hint]
-
--- Generate compilation phases
-arbitraryCompilationPhase :: Gen CompilationPhase
-arbitraryCompilationPhase = elements [ParsingPhase, TypeCheckingPhase, SemanticPhase, OptimizationPhase, CodeGenPhase]
-
--- Generate compiler errors
-arbitraryCompilerError :: Gen CompilerError
-arbitraryCompilerError = do
-  code <- arbitraryErrorCode
-  message <- T.pack <$> arbitraryErrorMessage
-  phase <- arbitraryCompilationPhase
-  category <- arbitraryErrorCategory
-  severity <- arbitraryErrorSeverity
-  location <- arbitraryErrorLocation
-  suggestions <- vectorOf 0 3 (T.pack <$> arbitraryErrorMessage)
-  stackTrace <- vectorOf 0 5 arbitraryErrorMessage
-  return $ CompilerError code message phase category severity (Just location) Nothing suggestions stackTrace Nothing
-
--- Generate source code with errors
-arbitraryErrorCode :: Gen String
-arbitraryErrorCode = do
-  errorType <- elements ["syntax", "type", "semantic", "runtime"]
-  case errorType of
-    "syntax" -> do
-      let syntaxError = "func test() {\n  if true\n    x := 1\n  }\n}\n"  -- Missing opening brace
-      return syntaxError
-    "type" -> do
-      let typeError = "func test() {\n  x := \"string\"\n  y := 1\n  z := x + y\n}\n"
-      return typeError
-    "semantic" -> do
-      let semanticError = "func test() {\n  x := 1\n  y := x + 1\n  z := undefined_var\n}\n"
-      return semanticError
-    _ -> do
-      let runtimeError = "func test() {\n  x := 1\n  y := 0\n  z := x / y\n}\n"
-      return runtimeError
-
--- Generate valid code snippets
-arbitraryValidCode :: Gen String
-arbitraryValidCode = do
-  funcName <- elements ["test", "process", "calculate", "validate"]
-  numStmts <- choose (1, 3)
-  stmts <- vectorOf numStmts $ do
-    varName <- elements ["x", "y", "z", "result", "value"]
-    value <- elements ["1", "2", "42", "true", "false"]
-    return $ "  " ++ varName ++ " := " ++ value
-  return $ "func " ++ funcName ++ "() {\n" ++ unlines stmts ++ "}\n"
-
--- ============================================================================
--- Error Handler Recovery Properties
--- ============================================================================
-
--- Property: Error handler recovers from syntax errors
-prop_error_handler_recovers_syntax :: Property
-prop_error_handler_recovers_syntax =
-  let syntaxErrorCode = "func test() {\n  if true\n    x := 1\n  }\n}\n"
-  in case parseTypus syntaxErrorCode of
-    Left _ -> property True  -- Parsing fails as expected
-    Right typusFile ->
-      case compile typusFile of
-        Left _ -> property True  -- Compilation fails as expected
-        Right _ -> property False  -- Should not succeed with syntax errors
-
--- Property: Error handler provides meaningful error messages
-prop_error_handler_meaningful_messages :: Property
-prop_error_handler_meaningful_messages =
-  forAll arbitraryErrorCode $ \code ->
-  case parseTypus code of
-    Left _ -> property True
-    Right typusFile ->
-      case compile typusFile of
-        Left errors -> property $ not (null errors) .&&. all (not . T.null . errorMessage) errors
-        Right _ -> property False  -- Should have errors for invalid code
-
--- Property: Error handler includes source location information
-prop_error_handler_includes_location :: Property
-prop_error_handler_includes_location =
-  forAll arbitraryErrorCode $ \code ->
-  case parseTypus code of
-    Left _ -> property True
-    Right typusFile ->
-      case compile typusFile of
-        Left errors -> property $ not (null errors) ==> 
-                   all (\err -> case errorLocation err of
-                     Nothing -> False
-                     Just loc -> line loc > 0 && column loc > 0) errors
-        Right _ -> property False
-
--- Property: Error handler categorizes errors correctly
-prop_error_handler_categorizes_errors :: Property
-prop_error_handler_categorizes_errors =
-  forAll arbitraryErrorCode $ \code ->
-  case parseTypus code of
-    Left _ -> property True
-    Right typusFile ->
-      case compile typusFile of
-        Left errors -> property $ not (null errors) ==> 
-                   all (\err -> errorCategory err `elem` [Parsing, TypeChecking, Semantic, Analysis]) errors
-        Right _ -> property False
-
--- Property: Error handler provides recovery suggestions
-prop_error_handler_provides_suggestions :: Property
-prop_error_handler_provides_suggestions =
-  forAll arbitraryErrorCode $ \code ->
-  case parseTypus code of
-    Left _ -> property True
-    Right typusFile ->
-      case compile typusFile of
-        Left errors -> property $ not (null errors) ==> 
-                   any (not . null . errorSuggestions) errors
-        Right _ -> property False
-
--- Property: Error handler handles multiple errors gracefully
-prop_error_handler_multiple_errors :: Property
-prop_error_handler_multiple_errors =
-  let multiErrorCode = "func test() {\n  if true\n    x := \"string\"\n    y := 1\n    z := x + y\n  }\n}\n"
-  in case parseTypus multiErrorCode of
-    Left _ -> property True
-    Right typusFile ->
-      case compile typusFile of
-        Left errors -> property $ length errors >= 1
-        Right _ -> property False
-
--- Property: Error handler preserves compilation context
-prop_error_handler_preserves_context :: Property
-prop_error_handler_preserves_context =
-  forAll arbitraryErrorCode $ \code ->
-  case parseTypus code of
-    Left _ -> property True
-    Right typusFile ->
-      case compile typusFile of
-        Left errors -> property $ not (null errors) ==> 
-                   all (\err -> not (null $ errorStackTrace err)) errors
-        Right _ -> property False
-
--- Property: Error handler handles edge cases gracefully
-prop_error_handler_edge_cases :: Property
-prop_error_handler_edge_cases =
-  let edgeCases = 
-        [ ""  -- Empty file
-        , "\n\n\n"  -- Only whitespace
-        , "func test()"  -- Incomplete function
-        , "func test() {"  -- Unclosed brace
-        , "}"  -- Unmatched closing brace
-        ]
-  in all (\code -> 
-    case parseTypus code of
-      Left _ -> True
-      Right typusFile ->
-        case compile typusFile of
-          Left _ -> True
-          Right _ -> False  -- Should fail for invalid code
-    ) edgeCases
-
--- Property: Error handler recovers from mixed valid/invalid code
-prop_error_handler_mixed_code :: Property
-prop_error_handler_mixed_code =
-  let validCode = "func valid() {\n  x := 1\n  return x\n}\n"
-      invalidCode = "func invalid() {\n  if true\n    x := 1\n  }\n}\n"
-      mixedCode = validCode ++ "\n" ++ invalidCode
-  in case parseTypus mixedCode of
-    Left _ -> property True
-    Right typusFile ->
-      case compile typusFile of
-        Left errors -> property $ length errors >= 1
-        Right _ -> property False
-
--- ============================================================================
--- Enhanced Error Handler Properties
--- ============================================================================
-
--- Property: Enhanced error handler provides detailed context
-prop_enhanced_error_detailed_context :: Property
-prop_enhanced_error_detailed_context =
-  forAll arbitraryErrorCode $ \code ->
-  case parseTypus code of
-    Left _ -> property True
-    Right typusFile ->
-      case compile typusFile of
-        Left errors -> property $ not (null errors) ==> 
-                   all (\err -> T.length (errorMessage err) >= 10) errors
-        Right _ -> property False
-
--- Property: Enhanced error handler groups related errors
-prop_enhanced_error_groups_related :: Property
-prop_enhanced_error_groups_related =
-  let relatedErrorCode = "func test() {\n  x := \"string\"\n  y := 1\n  z := x + y\n  w := x * y\n}\n"
-  in case parseTypus relatedErrorCode of
-    Left _ -> property True
-    Right typusFile ->
-      case compile typusFile of
-        Left errors -> property $ length errors >= 1
-        Right _ -> property False
-
--- Property: Enhanced error handler provides progressive recovery
-prop_enhanced_error_progressive_recovery :: Property
-prop_enhanced_error_progressive_recovery =
-  let progressiveCode = "func test() {\n  x := 1\n  y := x + 1\n  z := undefined_var\n  w := z + 1\n}\n"
-  in case parseTypus progressiveCode of
-    Left _ -> property True
-    Right typusFile ->
-      case compile typusFile of
-        Left errors -> property $ length errors >= 1
-        Right _ -> property False
-
--- ============================================================================
--- Performance Properties
--- ============================================================================
-
--- Property: Error handling is efficient for large files
-prop_error_handling_efficient_large :: Property
-prop_error_handling_efficient_large =
-  let largeCode = unlines $ replicate 100 "func test() {\n  x := 1\n  y := x + 1\n}\n"
-  in case parseTypus largeCode of
-    Left _ -> property True
-    Right typusFile ->
-      case compile typusFile of
-        Left _ -> property True
-        Right _ -> property True
-
--- Property: Error handling scales with error count
-prop_error_handling_scales_with_errors :: Property
-prop_error_handling_scales_with_errors =
-  let manyErrors = concat $ replicate 10 ["func test() {\n  if true\n    x := 1\n  }\n}\n"]
-  in case parseTypus manyErrors of
-    Left _ -> property True
-    Right typusFile ->
-      case compile typusFile of
-        Left errors -> property $ length errors >= 1
-        Right _ -> property False
-
--- ============================================================================
--- Advanced Recovery Properties
--- ============================================================================
-
--- Property: Error handler maintains consistency across phases
-prop_error_handler_phase_consistency :: Property
-prop_error_handler_phase_consistency =
-  forAll arbitraryErrorCode $ \code ->
-  case parseTypus code of
-    Left _ -> property True
-    Right typusFile ->
-      case compile typusFile of
-        Left errors -> property $ not (null errors) ==> 
-                   all (\err -> errorPhase err `elem` [ParsingPhase, TypeCheckingPhase, SemanticPhase]) errors
-        Right _ -> property False
-
--- Property: Error handler provides actionable suggestions
-prop_error_handler_actionable_suggestions :: Property
-prop_error_handler_actionable_suggestions =
-  forAll arbitraryErrorCode $ \code ->
-  case parseTypus code of
-    Left _ -> property True
-    Right typusFile ->
-      case compile typusFile of
-        Left errors -> property $ not (null errors) ==> 
-                   any (\err -> not (null $ errorSuggestions err) && 
-                              all (T.length . (> 0)) (errorSuggestions err)) errors
-        Right _ -> property False
-
--- Property: Error handler handles nested errors gracefully
-prop_error_handler_nested_errors :: Property
-prop_error_handler_nested_errors =
-  let nestedErrorCode = "func outer() {\n  func inner() {\n    if true\n      x := 1\n    }\n  }\n}\n"
-  in case parseTypus nestedErrorCode of
-    Left _ -> property True
-    Right typusFile ->
-      case compile typusFile of
-        Left errors -> property $ length errors >= 1
-        Right _ -> property False
-
--- ============================================================================
--- Test Suite
--- ============================================================================
-
+-- | Test error recovery mechanisms
 tests :: TestTree
-tests = testGroup "Error Handler Recovery Tests"
-  [ testGroup "Basic Error Recovery Properties"
-    [ fastProperty "Error handler recovers from syntax errors" prop_error_handler_recovers_syntax
-    , fastProperty "Error handler provides meaningful error messages" prop_error_handler_meaningful_messages
-    , fastProperty "Error handler includes source location information" prop_error_handler_includes_location
-    , fastProperty "Error handler categorizes errors correctly" prop_error_handler_categorizes_errors
-    ]
+tests =
+  testGroup "Error Handler Recovery Tests"
+    [ testGroup "Error recovery basic tests"
+        [ testCase "canRecoverFrom allows recovery from warnings" $ do
+            let warning = Error Warning (ErrorLocation "test" 1 1) "test warning" [] []
+            assertBool "should recover from warnings" $ canRecoverFrom warning
 
-  , testGroup "Error Information Properties"
-    [ fastProperty "Error handler provides recovery suggestions" prop_error_handler_provides_suggestions
-    , fastProperty "Error handler handles multiple errors gracefully" prop_error_handler_multiple_errors
-    , fastProperty "Error handler preserves compilation context" prop_error_handler_preserves_context
-    , fastProperty "Error handler handles edge cases gracefully" prop_error_handler_edge_cases
-    ]
+        , testCase "canRecoverFrom may not allow recovery from critical errors" $ do
+            let critical = Error Critical (ErrorLocation "test" 1 1) "critical error" [] []
+            assertBool "should not recover from critical errors" $ not (canRecoverFrom critical)
 
-  , testGroup "Mixed Code Handling Properties"
-    [ fastProperty "Error handler recovers from mixed valid/invalid code" prop_error_handler_mixed_code
-    ]
+        , testCase "recoverFromErrors filters non-recoverable errors" $ do
+            let recoverable = Error Warning (ErrorLocation "test" 1 1) "warning" [] []
+                nonRecoverable = Error Critical (ErrorLocation "test" 2 1) "critical" [] []
+                bundle = ErrorBundle [recoverable, nonRecoverable]
+                recovered = recoverFromErrors bundle
+                remainingErrors = getErrors recovered
+            length remainingErrors @?= 1
+            errorSeverity (head remainingErrors) @?= Warning
 
-  , testGroup "Enhanced Error Handler Properties"
-    [ fastProperty "Enhanced error handler provides detailed context" prop_enhanced_error_detailed_context
-    , fastProperty "Enhanced error handler groups related errors" prop_enhanced_error_groups_related
-    , fastProperty "Enhanced error handler provides progressive recovery" prop_enhanced_error_progressive_recovery
-    ]
+        , testCase "mergeErrorBundles preserves recovery information" $ do
+            let bundle1 = ErrorBundle [Error Warning (ErrorLocation "test1" 1 1) "warning1" [] []]
+                bundle2 = ErrorBundle [Error Critical (ErrorLocation "test2" 1 1) "critical1" [] []]
+                merged = mergeErrorBundles bundle1 bundle2
+                allErrors = getErrors merged
+            length allErrors @?= 2
+        ]
 
-  , testGroup "Performance Properties"
-    [ fastProperty "Error handling is efficient for large files" prop_error_handling_efficient_large
-    , fastProperty "Error handling scales with error count" prop_error_handling_scales_with_errors
-    ]
+    , testGroup "Error context and recovery"
+        [ testCase "error context affects recovery possibility" $ do
+            let contextError = Error Warning (ErrorLocation "test" 1 1) "error in context" 
+                                [ContextItem "function", ContextItem "module"] []
+                contextErrorCritical = Error Critical (ErrorLocation "test" 1 1) "critical in context"
+                                      [ContextItem "function", ContextItem "module"] []
+            assertBool "contextual warning should be recoverable" $ canRecoverFrom contextError
+            assertBool "contextual critical should not be recoverable" $ not (canRecoverFrom contextErrorCritical)
 
-  , testGroup "Advanced Recovery Properties"
-    [ fastProperty "Error handler maintains consistency across phases" prop_error_handler_phase_consistency
-    , fastProperty "Error handler provides actionable suggestions" prop_error_handler_actionable_suggestions
-    , fastProperty "Error handler handles nested errors gracefully" prop_error_handler_nested_errors
-    ]
+        , testCase "recovery preserves error context" $ do
+            let contextualError = Error Warning (ErrorLocation "test" 1 1) "contextual error"
+                                               [ContextItem "parse", ContextItem "expression"] []
+                bundle = ErrorBundle [contextualError]
+                recovered = recoverFromErrors bundle
+                remainingErrors = getErrors recovered
+            if not (null remainingErrors)
+                then errorContext (head remainingErrors) @?= [ContextItem "parse", ContextItem "expression"]
+                else assertFailure "expected at least one recoverable error"
+
+        , testCase "nested error contexts are handled properly" $ do
+            let nestedError = Error Warning (ErrorLocation "test" 1 1) "nested error"
+                              [ContextItem "outer", ContextItem "inner", ContextItem "deep"] []
+                bundle = ErrorBundle [nestedError]
+            assertBool "should handle nested contexts" $ hasErrors bundle
+        ]
+
+    , testGroup "Error formatting and recovery"
+        [ testCase "formatError works for recoverable errors" $ do
+            let recoverable = Error Warning (ErrorLocation "test" 1 1) "recoverable warning" [] []
+                formatted = formatError recoverable
+            assertBool "formatted error should not be empty" $ not (null formatted)
+            assertBool "formatted error should contain location" $ "test" `elem` words formatted
+
+        , testCase "formatErrorBundle handles recovered errors" $ do
+            let bundle = ErrorBundle 
+                  [ Error Warning (ErrorLocation "test1" 1 1) "warning1" [] []
+                  , Error Critical (ErrorLocation "test2" 1 1) "critical1" [] []
+                  ]
+                recovered = recoverFromErrors bundle
+                formatted = formatErrorBundle recovered
+            assertBool "formatted bundle should not be empty" $ not (null formatted)
+
+        , testCase "error formatting preserves severity information" $ do
+            let warning = Error Warning (ErrorLocation "test" 1 1) "warning message" [] []
+                critical = Error Critical (ErrorLocation "test" 1 1) "critical message" [] []
+                warningFormatted = formatError warning
+                criticalFormatted = formatError critical
+            assertBool "warning format should indicate warning" $ 
+              any (\word -> word `elem` ["warning", "Warning"]) (words warningFormatted)
+            assertBool "critical format should indicate critical" $ 
+              any (\word -> word `elem` ["critical", "Critical", "error", "Error"]) (words criticalFormatted)
+        ]
+
+    , testGroup "Error bundle operations and recovery"
+        [ testCase "addError respects recovery rules" $ do
+            let initialBundle = ErrorBundle []
+                recoverable = Error Warning (ErrorLocation "test" 1 1) "new warning" [] []
+                updated = addError recoverable initialBundle
+            assertBool "adding recoverable error should result in errors" $ hasErrors updated
+
+        , testCase "getErrorsBySeverity works with recovered bundles" $ do
+            let bundle = ErrorBundle
+                  [ Error Warning (ErrorLocation "test" 1 1) "warning1" [] []
+                  , Error Critical (ErrorLocation "test" 2 1) "critical1" [] []
+                  , Error Warning (ErrorLocation "test" 3 1) "warning2" [] []
+                  ]
+                recovered = recoverFromErrors bundle
+                warnings = getErrorsBySeverity Warning recovered
+                criticals = getErrorsBySeverity Critical recovered
+            length warnings @?= 2
+            length criticals @?= 0  -- critical errors should be filtered out
+
+        , testCase "mergeErrorBundles with recovery" $ do
+            let bundle1 = ErrorBundle [Error Warning (ErrorLocation "test1" 1 1) "warning1" [] []]
+                bundle2 = ErrorBundle [Error Critical (ErrorLocation "test2" 1 1) "critical1" [] []]
+                merged = mergeErrorBundles bundle1 bundle2
+                recovered = recoverFromErrors merged
+                finalErrors = getErrors recovered
+            length finalErrors @?= 1  -- only warning should remain
+        ]
+
+    , testGroup "QuickCheck property tests for error recovery"
+        [ fastProperty "recoverFromErrors preserves ordering of recoverable errors" $
+            \errors ->
+            let bundle = ErrorBundle errors
+                recovered = recoverFromErrors bundle
+                remainingErrors = getErrors recovered
+                originalRecoverable = filter canRecoverFrom errors
+            in remainingErrors === originalRecoverable
+
+        , fastProperty "canRecoverFrom is consistent with severity" $
+            \severity location message ->
+            let error = Error severity location message [] []
+                expected = severity `elem` [Warning, Info]
+            in canRecoverFrom error === expected
+
+        , fastProperty "mergeErrorBundles is associative" $
+            \bundle1 bundle2 bundle3 ->
+            let merged1 = mergeErrorBundles (mergeErrorBundles bundle1 bundle2) bundle3
+                merged2 = mergeErrorBundles bundle1 (mergeErrorBundles bundle2 bundle3)
+                recovered1 = recoverFromErrors merged1
+                recovered2 = recoverFromErrors merged2
+            in getErrors recovered1 === getErrors recovered2
+
+        , fastProperty "recoverFromErrors is idempotent" $
+            \bundle ->
+            let recovered1 = recoverFromErrors bundle
+                recovered2 = recoverFromErrors recovered1
+            in getErrors recovered1 === getErrors recovered2
+
+        , fastProperty "getWarnings only returns recoverable warning errors" $
+            \errors ->
+            let bundle = ErrorBundle errors
+                recovered = recoverFromErrors bundle
+                warnings = getWarnings recovered
+                allWarnings = filter (\e -> errorSeverity e == Warning) errors
+            in length warnings === length allWarnings
+
+        , fastProperty "formatError produces non-empty strings for valid errors" $
+            \severity location message ->
+            not (null message) ==>
+            let error = Error severity location message [] []
+                formatted = formatError error
+            in not (null formatted)
+
+        , fastProperty "error recovery preserves error locations" $
+            \errors ->
+            let recoverableErrors = filter canRecoverFrom errors
+                bundle = ErrorBundle recoverableErrors
+                recovered = recoverFromErrors bundle
+                remainingErrors = getErrors recovered
+                originalLocations = map errorLocation recoverableErrors
+                recoveredLocations = map errorLocation remainingErrors
+            in sort originalLocations === sort recoveredLocations
+        ]
   ]

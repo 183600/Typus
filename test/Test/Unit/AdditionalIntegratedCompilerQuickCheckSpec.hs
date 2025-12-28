@@ -147,8 +147,8 @@ prop_format_contains_status config source =
     monadicIO $ do
         result <- run $ compileWithIntegratedAnalyzers source config
         let formatted = formatCompilationResult result
-        in assert $ "✅ Compilation Successful" `isInfixOf` formatted .||.
-                     "❌ Compilation Failed" `isInfixOf` formatted
+        assert $ "✅ Compilation Successful" `isInfixOf` formatted .||.
+                 "❌ Compilation Failed" `isInfixOf` formatted
 
 -- Property: Successful result contains success indicator
 prop_format_success_indicator :: CompilerConfig -> String -> Property
@@ -156,9 +156,9 @@ prop_format_success_indicator config source =
     monadicIO $ do
         result <- run $ compileWithIntegratedAnalyzers source config
         let formatted = formatCompilationResult result
-        in assert $ if success result
-                    then "✅ Compilation Successful" `isInfixOf` formatted
-                    else "❌ Compilation Failed" `isInfixOf` formatted
+        assert $ if success result
+                 then "✅ Compilation Successful" `isInfixOf` formatted
+                 else "❌ Compilation Failed" `isInfixOf` formatted
 
 -- Property: Failed result contains error information
 prop_format_failure_contains_errors :: CompilerConfig -> String -> Property
@@ -166,13 +166,13 @@ prop_format_failure_contains_errors config source =
     monadicIO $ do
         result <- run $ compileWithIntegratedAnalyzers source config
         let formatted = formatCompilationResult result
-        in assert $ if not (success result)
-                    then not (null formatted) .&&. 
-                         ("Syntax Errors" `isInfixOf` formatted .||
-                          "Analysis Errors" `isInfixOf` formatted .||
-                          "Compiler Errors" `isInfixOf` formatted .||
-                          "Warnings" `isInfixOf` formatted)
-                    else True
+        assert $ if not (success result)
+                 then not (null formatted) .&&. 
+                      ("Syntax Errors" `isInfixOf` formatted .||
+                       "Analysis Errors" `isInfixOf` formatted .||
+                       "Compiler Errors" `isInfixOf` formatted .||
+                       "Warnings" `isInfixOf` formatted)
+                 else True
 
 -- ============================================================================
 -- Property Tests for Analysis Summary

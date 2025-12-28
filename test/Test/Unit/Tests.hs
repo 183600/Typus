@@ -248,6 +248,20 @@ import qualified Test.Unit.SourceLocationCoreQuickCheckSpec
 import qualified Test.Unit.ErrorHandlerCoreQuickCheckSpec
 import qualified Test.Unit.ParserCoreQuickCheckSpec
 import qualified Test.Unit.UtilsCoreQuickCheckSpec
+
+-- ============================================================================
+-- New Test Modules Added (2025) - 10 comprehensive tests
+-- ============================================================================
+import qualified Test.Unit.SourceLocationBoundarySpec
+import qualified Test.Unit.ErrorHandlerRecoverySpec
+import qualified Test.Unit.OwnershipComplexScenariosSpec
+import qualified Test.Unit.UtilsPerformanceBoundarySpec
+import qualified Test.Unit.ParserErrorRecoverySpec
+import qualified Test.Unit.CompilerOptimizationConsistencySpec
+import qualified Test.Unit.DependenciesCycleDetectionSpec
+import qualified Test.Unit.TypeSystemInferenceBoundarySpec
+import qualified Test.Unit.IntegrationEndToEndScenariosSpec
+import qualified Test.Unit.MathematicalPropertiesQuickCheckSpec
 import qualified Test.Unit.CompilerIRCoreQuickCheckSpec
 import qualified Test.Unit.OwnershipTransferCoreQuickCheckSpec
 import qualified Test.Unit.DependencyAnalysisCoreQuickCheckSpec
@@ -2417,6 +2431,22 @@ tests =
     , Test.Unit.NewCompilerQuickCheckTestsSpec.tests
     , Test.Unit.NewOwnershipQuickCheckTestsSpec.tests
     , Test.Unit.NewDependenciesQuickCheckTestsSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Test Modules Added (2025) - 10 comprehensive tests
+  -- ============================================================================
+  , testGroup "New Test Modules - Comprehensive Testing"
+    [ Test.Unit.SourceLocationBoundarySpec.tests
+    , Test.Unit.ErrorHandlerRecoverySpec.tests
+    , Test.Unit.OwnershipComplexScenariosSpec.tests
+    , Test.Unit.UtilsPerformanceBoundarySpec.tests
+    , Test.Unit.ParserErrorRecoverySpec.tests
+    , Test.Unit.CompilerOptimizationConsistencySpec.tests
+    , Test.Unit.DependenciesCycleDetectionSpec.tests
+    , Test.Unit.TypeSystemInferenceBoundarySpec.tests
+    , Test.Unit.IntegrationEndToEndScenariosSpec.tests
+    , Test.Unit.MathematicalPropertiesQuickCheckSpec.tests
     ]
 
   -- ============================================================================
