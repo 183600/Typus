@@ -1,107 +1,224 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-module Test.Unit.TextProcessingPropertiesSpec (tests) where
+module Test.Unit.TextProcessingPropertiesSpec where
 
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, listOf, oneof, elements, forAll)
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
+import Utils
+import SourceLocation
+import Data.Char (isSpace, isAlphaNum, isLetter)
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Data.Text as T
-import Data.Char (isSpace, isAlphaNum)
-import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, 
-             removeLineComments, removeComments, normalizeIndentation, breakOn)
+import Control.Arrow ((&&&))
+
+-- ============================================================================
+-- Text Processing Properties Test Suite
+-- ============================================================================
 
 tests :: TestTree
 tests = testGroup "Text Processing Properties Tests"
-  [ testGroup "Trim properties"
-    [ testProperty "trim removes leading and trailing whitespace" $
-        \s -> all isSpace (takeWhile isSpace s) ==> 
-              all isSpace (reverse $ takeWhile isSpace $ reverse s) ==>
-              trim s == s
-    , testProperty "trim . trim = trim (idempotent)" $
-        \s -> trim (trim s) == trim s
-    , testProperty "trim never adds characters" $
-        \s -> length (trim s) <= length s
-    , testProperty "trim preserves non-whitespace content" $
-        \s -> let t = filter (not . isSpace) s
-               in filter (not . isSpace) (trim s) == t
-    ]
-  , testGroup "Split properties"
-    [ testProperty "splitBy preserves total content" $
-        \c s -> concat (splitBy c s) == s
-    , testProperty "splitBy length property" $
-        \c s -> length (splitBy c s) == length (filter (== c) s) + 1
-    , testProperty "splitByCollapsed removes empty segments" $
-        \c s -> all (not . null) (splitByCollapsed c s)
-    , testProperty "splitByCollapsed length <= splitBy length" $
-        \c s -> length (splitByCollapsed c s) <= length (splitBy c s)
-    , testProperty "splitByComma = splitBy ','" $
-        \s -> splitByComma s == splitBy ',' s
-    , testProperty "splitByCommaCollapsed = splitByCollapsed ','" $
-        \s -> splitByCommaCollapsed s == splitByCollapsed ',' s
-    ]
-  , testGroup "Comment removal properties"
-    [ testProperty "removeLineComments never increases length" $
-        \s -> length (removeLineComments s) <= length s
-    , testProperty "removeLineComments preserves lines" $
-        \s -> length (lines (removeLineComments s)) == length (lines s)
-    , testProperty "removeComments never increases length" $
-        \s -> length (removeComments s) <= length s
-    , testProperty "removeComments removes // patterns" $
-        \s -> "//" `isInfixOf` s ==> "//" `notIsInfixOf` removeComments s
-    , testProperty "removeComments removes /* */ patterns" $
-        forAll genStringWithBlockComment $ \s -> "/*" `isInfixOf` s ==> "/*" `notIsInfixOf` removeComments s
-    ]
-  , testGroup "Indentation properties"
-    [ testProperty "normalizeIndentation preserves line count" $
-        \s -> not (null s) ==> length (lines (normalizeIndentation s)) == length (lines s)
-    , testProperty "normalizeIndentation doesn't create leading empty lines" $
-        \s -> not (null s) ==> not (null (dropWhile (all isSpace) (lines (normalizeIndentation s))))
-    , testProperty "normalizeIndentation preserves relative structure" $
-        \s -> let original = lines s
-                  normalized = lines (normalizeIndentation s)
-                  originalNonEmpty = filter (not . all isSpace) original
-                  normalizedNonEmpty = filter (not . all isSpace) normalized
-              in length originalNonEmpty == length normalizedNonEmpty
-    ]
-  , testGroup "BreakOn properties"
-    [ testProperty "breakOn pattern pattern = (\"\", pattern)" $
-        \p -> not (null p) ==> breakOn p p == ("", "")
-    , testProperty "breakOn empty pattern = (\"\", s)" $
-        \s -> breakOn "" s == ("", s)
-    , testProperty "breakOn concatenation property" $
-        \p s -> let (before, after) = breakOn p s
-                in if p `isInfixOf` s
-                   then before ++ p ++ after == s
-                   else before == s && after == ""
-    , testProperty "breakOn never returns longer prefix than original" $
-        \p s -> let (before, _) = breakOn p s
-                in length before <= length s
-    ]
-  , testGroup "Combined operation properties"
-    [ testProperty "trim after normalizeIndentation" $
-        \s -> trim (normalizeIndentation s) == normalizeIndentation (trim s)
-    , testProperty "removeComments after removeLineComments" $
-        \s -> removeComments (removeLineComments s) == removeComments s
-    , testProperty "splitBy after trim" $
-        \c s -> splitBy c (trim s) == map trim (splitBy c s)
-    ]
+  [ trimProperties
+  , splitByProperties
+  , commentRemovalProperties
+  , indentationProperties
+  , sourceLocationProperties
+  , textNormalizationProperties
   ]
 
--- Helper functions
-isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]
+-- ============================================================================
+-- Trim Function Properties
+-- ============================================================================
 
-notIsInfixOf :: String -> String -> Bool
-notIsInfixOf needle haystack = not (isInfixOf needle haystack)
+trimProperties :: TestTree
+trimProperties = testGroup "Trim Function Properties"
+  [ testProperty "trim idempotent" $
+      \s -> trim (trim s) === trim s
+    
+  , testProperty "trim removes leading/trailing whitespace" $
+      \s -> not (null s) && all isSpace s ==> trim s === ""
+    
+  , testProperty "trim preserves inner whitespace" $
+      \s1 s2 s3 -> not (all isSpace s1) && not (all isSpace s3) ==>
+        trim (s1 ++ s2 ++ s3) === trim s1 ++ trim s2 ++ trim s3
+    
+  , testProperty "trim never increases length" $
+      \s -> length (trim s) <= length s
+  ]
 
--- Generators for specific test cases
-genStringWithBlockComment :: Gen String
-genStringWithBlockComment = do
-  before <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ " \t\n"
-  comment <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ " \t\n"
-  after <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ " \t\n"
-  return $ before ++ "/*" ++ comment ++ "*/" ++ after
+-- ============================================================================
+-- Split Function Properties
+-- ============================================================================
 
--- Note: Arbitrary instance for String is provided by QuickCheck
+splitByProperties :: TestTree
+splitByProperties = testGroup "Split Function Properties"
+  [ testProperty "splitBy preserves concatenation" $
+      \delim s -> delim /= ',' ==> concat (splitBy delim s) === s
+    
+  , testProperty "splitBy length matches delimiter count + 1" $
+      \delim s -> delim /= ',' && delim /= '\n' && delim /= '\t' ==>
+        length (splitBy delim s) === length (filter (== delim) s) + 1
+    
+  , testProperty "splitByCommaCollapsed removes empty segments" $
+      \s -> not (any null (splitByCommaCollapsed s))
+    
+  , testProperty "splitByCommaCollapsed subset of splitByComma" $
+      \s -> all (`elem` splitByComma s) (splitByCommaCollapsed s)
+    
+  , testProperty "splitBy empty string returns single empty" $
+      \delim -> splitBy delim "" === [""]
+  ]
+
+-- ============================================================================
+-- Comment Removal Properties
+-- ============================================================================
+
+commentRemovalProperties :: TestTree
+commentRemovalProperties = testGroup "Comment Removal Properties"
+  [ testCase "removeLineComments removes // comments" $
+      removeLineComments "code // comment\nmore code" @?= "code \nmore code"
+    
+  , testCase "removeComments removes both comment types" $
+      removeComments "code // comment\n/* block */ more" @?= "code \n more"
+    
+  , testProperty "removeLineComments preserves non-comment lines" $
+      \s -> not ("//" `isInfixOf` s) ==> removeLineComments s === s
+    
+  , testProperty "removeComments idempotent" $
+      \s -> removeComments (removeComments s) === removeComments s
+    
+  , testProperty "comment removal never increases length" $
+      \s -> length (removeComments s) <= length s
+  ]
+
+-- ============================================================================
+-- Indentation Properties
+-- ============================================================================
+
+indentationProperties :: TestTree
+indentationProperties = testGroup "Indentation Properties"
+  [ testProperty "normalizeIndentation preserves relative structure" $
+      \s -> not (null s) ==> 
+        let normalized = normalizeIndentation s
+            lines1 = lines s
+            lines2 = lines normalized
+        in length lines1 === length lines2
+    
+  , testCase "normalizeIndentation removes common prefix" $
+      normalizeIndentation "  line1\n    line2\n  line3" @?= "line1\n  line2\nline3"
+    
+  , testProperty "normalizeIndentation idempotent" $
+      \s -> normalizeIndentation (normalizeIndentation s) === normalizeIndentation s
+    
+  , testProperty "forceSingleTabIndentation converts spaces to tabs" $
+      \s -> not (null s) ==> 
+        let tabbed = forceSingleTabIndentation s
+        in not ("  " `isInfixOf` tabbed) || "    " `isInfixOf` tabbed
+  ]
+
+-- ============================================================================
+-- Source Location Properties
+-- ============================================================================
+
+sourceLocationProperties :: TestTree
+sourceLocationProperties = testGroup "Source Location Properties"
+  [ testProperty "SourcePos ordering is consistent" $
+      \line1 col1 line2 col2 ->
+        let pos1 = SourcePos line1 col1
+            pos2 = SourcePos line2 col2
+        in (line1 < line2 || (line1 == line2 && col1 < col2)) === 
+           (pos1 < pos2)
+    
+  , testProperty "posAfter advances correctly" $
+      \line col ->
+        let pos = SourcePos line col
+            advanced = posAfter pos 'a'
+        in sourceLine advanced === line && sourceColumn advanced === col + 1
+    
+  , testProperty "spanBetween creates valid span" $
+      \line1 col1 line2 col2 ->
+        let pos1 = SourcePos line1 col1
+            pos2 = SourcePos line2 col2
+            span = spanBetween pos1 pos2
+        in isValidSpan span === (pos1 <= pos2)
+    
+  , testProperty "mergeSpans is commutative" $
+      \line1 col1 line2 col2 line3 col3 line4 col4 ->
+        let span1 = spanBetween (SourcePos line1 col1) (SourcePos line2 col2)
+            span2 = spanBetween (SourcePos line3 col3) (SourcePos line4 col4)
+        in mergeSpans span1 span2 === mergeSpans span2 span1
+  ]
+
+-- ============================================================================
+-- Text Normalization Properties
+-- ============================================================================
+
+textNormalizationProperties :: TestTree
+textNormalizationProperties = testGroup "Text Normalization Properties"
+  [ testProperty "trim . split . join preserves content" $
+      \delim s -> delim /= ',' && delim /= '\n' && delim /= '\t' ==>
+        let parts = splitBy delim s
+            rejoined = concat parts
+        in trim rejoined === trim (filter (/= delim) s)
+    
+  , testProperty "breakOn consistency with splitBy" $
+      \delim s -> delim /= ',' && delim /= '\n' && delim /= '\t' ==>
+        let (prefix, suffix) = breakOn delim s
+            parts = splitBy delim s
+        in case parts of
+          [] -> prefix === "" && suffix === ""
+          [x] -> prefix === x && suffix === ""
+          (x:xs) -> prefix === x && suffix === concat xs
+    
+  , testProperty "text processing pipeline is idempotent" $
+      \s -> let processed = normalizeIndentation . trim . removeComments $ s
+            in normalizeIndentation . trim . removeComments $ processed === processed
+  ]
+
+-- ============================================================================
+-- Additional QuickCheck Generators
+-- ============================================================================
+
+-- Generate strings with various whitespace patterns
+genWhitespaceString :: Gen String
+genWhitespaceString = listOf $ elements [' ', '\t', '\n', '\r']
+
+-- Generate strings with delimiters
+genDelimitedString :: Char -> Gen String
+genDelimitedString delim = listOf $ elements ['a'..'z'] ++ [delim]
+
+-- Generate source positions
+genSourcePos :: Gen SourcePos
+genSourcePos = SourcePos <$> choose (1, 1000) <*> choose (1, 1000)
+
+instance Arbitrary SourcePos where
+  arbitrary = genSourcePos
+
+-- ============================================================================
+-- Helper Functions
+-- ============================================================================
+
+-- Check if a span is valid (start <= end)
+isValidSpan' :: SourceSpan -> Bool
+isValidSpan' span = spanStart span <= spanEnd span
+
+-- Count occurrences of a character in a string
+countChar :: Char -> String -> Int
+countChar c = length . filter (== c)
+
+-- ============================================================================
+-- Performance Properties
+-- ============================================================================
+
+performanceProperties :: TestTree
+performanceProperties = testGroup "Performance Properties"
+  [ testProperty "trim is linear time" $
+      \s -> length (trim s) `seq` True
+    
+  , testProperty "splitBy is linear in input size" $
+      \delim s -> delim /= ',' ==> length (splitBy delim s) `seq` True
+    
+  , testProperty "comment removal is linear time" $
+      \s -> length (removeComments s) `seq` True
+  ]

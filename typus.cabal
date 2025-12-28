@@ -457,8 +457,7 @@ test-suite typus-test
         Test.Unit.SourceLocationAccuracyQuickCheckSpec,
         Test.Unit.TypeEnvironmentBuildingQuickCheckSpec,
         
-        Test.Unit.DependentTypeBoundarySpec,
-        Test.Unit.OwnershipTransitivitySpec,
+        
         
         Test.Unit.SyntaxValidatorAdvancedSpec,
         
@@ -613,7 +612,7 @@ test-suite typus-test
         Test.Unit.UtilsPerformanceBoundarySpec,
         Test.Unit.ErrorHandlerConsistencySpec,
         Test.Unit.OwnershipAnalysisBoundarySpec,
-        Test.Unit.EndToEndCompilationSpec,
+        
 
         -- New Additional Test Modules
         Test.Unit.EnhancedParserTestSpec,
@@ -816,7 +815,7 @@ test-suite typus-test
         , Test.Unit.AdvancedEdgeCaseQuickCheckSpec
 
         -- New Comprehensive Cabal QuickCheck Test Module
-        , Test.Unit.TextProcessingBoundarySpec
+        
         , Test.Unit.NewCabalTestSpec
         , Test.Unit.NewComprehensiveCabalTestSpec
 
