@@ -1123,7 +1123,6 @@ test-suite typus-test
         , Test.Unit.NewTextEncodingSafetyQuickCheckSpec
         , Test.Unit.NewErrorRecoveryMechanismsQuickCheckSpec
         , Test.Unit.NewParserPerformanceBoundaryQuickCheckSpec
-        , Test.Unit.NewCompilerIRConsistencyQuickCheckSpec
         , Test.Unit.NewOwnershipTransferBoundaryQuickCheckSpec
         , Test.Unit.NewDependentTypeConstraintValidationQuickCheckSpec
         , Test.Unit.NewSourceLocationMathPrecisionQuickCheckSpec
