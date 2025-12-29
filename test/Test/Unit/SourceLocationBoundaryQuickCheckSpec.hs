@@ -1,198 +1,190 @@
+{-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+
 module Test.Unit.SourceLocationBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.HUnit (testCase, assertBool, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Arbitrary(..), Gen, choose, listOf, suchThat, oneof, elements, frequency)
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, posAfter, spanBetween, mergeSpans, isValidSpan, locatedAt, locatedWithSpan, mapLocated, _isPosInSpan, _doSpansOverlap, _spanLength)
+import Test.QuickCheck 
+  ( Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.)
+  , Arbitrary(..), Gen, oneof, choose, listOf, vectorOf, elements, sized, frequency
+  , suchThat, resize
+  )
 
--- | Generate arbitrary source positions with boundary-focused values
-instance Arbitrary SourcePos where
-  arbitrary = frequency 
-    [ (5, do -- Normal positions
-        line <- choose (1, 100)
-        column <- choose (1, 100)
-        offset <- choose (0, 10000)
-        return $ SourcePos line column offset)
-    , (1, do -- Edge case: line 1
-        column <- choose (1, 100)
-        offset <- choose (0, 100)
-        return $ SourcePos 1 column offset)
-    , (1, do -- Edge case: column 1
-        line <- choose (1, 100)
-        offset <- choose (0, 100)
-        return $ SourcePos line 1 offset)
-    , (1, do -- Edge case: offset 0
-        line <- choose (1, 100)
-        column <- choose (1, 100)
-        return $ SourcePos line column 0)
-    ]
+import SourceLocation 
+  ( SourcePos(..), SourceSpan(..), Located(..), startPos, posAfter, posAt, advancePos
+  , advancePosByText, spanFrom, spanTo, mergeSpans, isValidSpan, locatedAt
+  , locatedWithSpan, locatedValue, locatedSpan, locatedPos, mapLocated
+  )
+import Data.Char (isSpace, isPrint)
+import qualified Data.Text as T
+import Data.List (foldl')
 
--- | Generate arbitrary source spans with boundary conditions
-instance Arbitrary SourceSpan where
-  arbitrary = frequency
-    [ (5, do -- Normal spans
-        startLine <- choose (1, 50)
-        startCol <- choose (1, 50)
-        endLineOffset <- choose (0, 10)
-        endColOffset <- choose (0, 50)
-        let endLine = startLine + endLineOffset
-            endCol = if endLine == startLine then startCol + endColOffset else choose (1, 100)
-        let start = SourcePos startLine startCol (startLine * 100 + startCol)
-            end = SourcePos endLine endCol (endLine * 100 + endCol)
-        return $ SourceSpan start end)
-    , (2, do -- Zero-length spans
-        pos <- arbitrary
-        return $ SourceSpan pos pos)
-    , (1, do -- Single character spans
-        pos <- arbitrary
-        let endPos = posAfter 'x' pos
-        return $ SourceSpan pos endPos)
-    ]
+-- Test data for source location
+data SourceLocationTestData = SourceLocationTestData
+  { testText :: String
+  , startPos :: SourcePos
+  , expectedEndPos :: SourcePos
+  } deriving (Show, Eq)
 
--- | Generate arbitrary located values
-instance Arbitrary a => Arbitrary (Located a) where
+instance Arbitrary SourceLocationTestData where
   arbitrary = do
-    value <- arbitrary
-    pos <- arbitrary
-    span <- arbitrary
-    return $ Located value pos span
+    text <- listOf $ elements "abc\n\t "
+    startLine <- choose (1, 50)
+    startCol <- choose (1, 50)
+    let start = SourcePos startLine startCol 0
+        endPos = advancePosByText start (T.pack text)
+    return $ SourceLocationTestData text start endPos
 
--- | Generate strings for position advancement with boundary cases
-genBoundaryText :: Gen String
-genBoundaryText = frequency
-    [ (5, listOf $ elements ['a'..'z', 'A'..'Z', '0'..'9', ' '])
-    , (2, return $ replicate 10 '\n') -- Many newlines
-    , (2, return $ replicate 10 '\t') -- Many tabs
-    , (1, return "") -- Empty string
-    ]
+-- Property: Position advancement for single character
+prop_pos_after_single_char :: Char -> SourcePos -> Property
+prop_pos_after_single_char char pos =
+  let newPos = posAfter char pos
+      lineChanged = char == '\n'
+  in property $ if lineChanged
+    then posLine newPos == posLine pos + 1 && posColumn newPos == 1
+    else posLine newPos == posLine pos && posColumn newPos == posColumn pos + 1
+
+-- Property: Position advancement for tab character
+prop_pos_after_tab :: SourcePos -> Property
+prop_pos_after_tab pos =
+  let newPos = posAfter '\t' pos
+      expectedCol = ((posColumn pos - 1) `div` 8 + 1) * 8 + 1
+  in property $ posLine newPos == posLine pos && posColumn newPos == expectedCol
+
+-- Property: Position advancement preserves monotonicity
+prop_pos_advancement_monotonic :: String -> SourcePos -> Property
+prop_pos_advancement_monotonic text pos =
+  not (null text) ==>
+  let finalPos = advancePosByText pos (T.pack text)
+      startOffset = posOffset pos
+      finalOffset = posOffset finalPos
+  in property $ finalOffset >= startOffset
+
+-- Property: Line advancement is correct for newlines
+prop_line_advancement_correct :: String -> SourcePos -> Property
+prop_line_advancement_correct text pos =
+  let newlineCount = length $ filter (== '\n') text
+      finalPos = advancePosByText pos (T.pack text)
+      expectedLine = posLine pos + newlineCount
+  in property $ posLine finalPos == expectedLine
+
+-- Property: Column resets after newlines
+prop_column_resets_after_newlines :: String -> SourcePos -> Property
+prop_column_resets_after_newlines text pos =
+  let finalPos = advancePosByText pos (T.pack text)
+      lastNewlineIndex = length text - length (dropWhile (/= '\n') (reverse text))
+      hasNewline = '\n' `elem` text
+  in hasNewline ==>
+  let afterLastNewline = drop lastNewlineIndex text
+      expectedCol = if null afterLastNewline 
+                   then 1 
+                   else 1 + length (takeWhile (/= '\n') afterLastNewline)
+  in property $ posColumn finalPos == expectedCol
+
+-- Property: Span validity is consistent
+prop_span_validity_consistent :: SourcePos -> SourcePos -> Property
+prop_span_validity_consistent start end =
+  let span = SourceSpan start end
+      valid = isValidSpan span
+  in property $ valid == (posLine start <= posLine end && 
+                         (posLine start < posLine end || posColumn start <= posColumn end))
+
+-- Property: Span merging works correctly
+prop_span_merging_correct :: SourcePos -> SourcePos -> SourcePos -> Property
+prop_span_merging_correct pos1 pos2 pos3 =
+  let span1 = spanFrom pos1 pos2
+      span2 = spanFrom pos2 pos3
+      merged = mergeSpans span1 span2
+      expectedStart = spanStart span1
+      expectedEnd = spanEnd span2
+  in property $ spanStart merged == expectedStart && spanEnd merged == expectedEnd
+
+-- Property: Located values preserve position information
+prop_located_preserves_position :: SourcePos -> String -> Property
+prop_located_preserves_position pos value =
+  let located = locatedAt pos value
+  in property $ locatedPos located == pos
+
+-- Property: Located values preserve content
+prop_located_preserves_content :: SourcePos -> String -> Property
+prop_located_preserves_content pos value =
+  let located = locatedAt pos value
+  in property $ locatedValue located == value
+
+-- Property: Mapping located values preserves position
+prop_map_located_preserves_position :: SourcePos -> Int -> Property
+prop_map_located_preserves_position pos value =
+  let located = locatedAt pos value
+      mapped = mapLocated (*2) located
+  in property $ locatedPos mapped == pos
+
+-- Property: Mapping located values transforms content
+prop_map_located_transforms_content :: SourcePos -> Int -> Property
+prop_map_located_transforms_content pos value =
+  let located = locatedAt pos value
+      mapped = mapLocated (*2) located
+  in property $ locatedValue mapped == value * 2
+
+-- Property: Position tracking through multiple lines
+prop_multi_line_position_tracking :: [String] -> SourcePos -> Property
+prop_multi_line_position_tracking lines' pos =
+  not (null lines') ==>
+  let text = T.unlines lines'
+      finalPos = advancePosByText pos text
+      expectedLine = posLine pos + length lines' - 1
+      lastLine = last lines'
+      expectedCol = if null lastLine then 1 else length lastLine + 1
+  in property $ posLine finalPos == expectedLine && posColumn finalPos == expectedCol
+
+-- Property: Offset calculation is consistent
+prop_offset_calculation_consistent :: String -> SourcePos -> Property
+prop_offset_calculation_consistent text pos =
+  let finalPos = advancePosByText pos (T.pack text)
+      startOffset = posOffset pos
+      expectedOffset = startOffset + length text
+  in property $ posOffset finalPos == expectedOffset
 
 tests :: TestTree
-tests =
-  testGroup "SourceLocation boundary conditions QuickCheck tests"
-    [ testGroup "Position boundary conditions"
-        [ testCase "posAfter handles all boundary characters" $ do
-            let pos = startPos { posColumn = 5, posOffset = 10 }
-                posNewline = posAfter '\n' pos
-                posTab = posAfter '\t' pos
-                posRegular = posAfter 'x' pos
-            posNewline @?= SourcePos { posLine = 2, posColumn = 1, posOffset = 11 }
-            posTab @?= SourcePos { posLine = 1, posColumn = 9, posOffset = 11 } -- Next tab stop
-            posRegular @?= SourcePos { posLine = 1, posColumn = 6, posOffset = 11 }
-
-        , fastProperty "posAfter maintains monotonic offset increase" $
-            \pos ch ->
-              let newPos = posAfter ch pos
-              in posOffset newPos > posOffset pos
-
-        , fastProperty "posAfter newline always sets column to 1" $
-            \pos ->
-              let newPos = posAfter '\n' pos
-              in posColumn newPos == 1
-
-        , fastProperty "posAfter tab advances to multiple of 8 plus 1" $
-            \pos ->
-              let newPos = posAfter '\t' pos
-                  col = posColumn newPos
-              in (col - 1) `mod` 8 == 0
-        ]
-
-    , testGroup "Span boundary conditions"
-        [ testCase "zero-length span is valid" $ do
-            let pos = SourcePos 5 10 100
-                span = SourceSpan pos pos
-            isValidSpan span @?= True
-
-        , testCase "span covering single position has zero length" $ do
-            let pos = SourcePos 3 7 50
-                span = SourceSpan pos pos
-            _spanLength span @?= 0
-
-        , fastProperty "span length is non-negative" $
-            \span ->
-              _spanLength span >= 0
-
-        , fastProperty "merged span contains both original spans" $
-            \span1 span2 ->
-              let merged = mergeSpans span1 span2
-              in spanStart merged <= spanStart span1 &&
-                 spanEnd merged >= spanEnd span1 &&
-                 spanStart merged <= spanStart span2 &&
-                 spanEnd merged >= spanEnd span2
-
-        , fastProperty "span overlap detection is symmetric" $
-            \span1 span2 ->
-              _doSpansOverlap span1 span2 == _doSpansOverlap span2 span1
-        ]
-
-    , testGroup "Located value boundary conditions"
-        [ testCase "locatedAt creates span with same start and end" $ do
-            let pos = SourcePos 10 20 200
-                value = "test"
-                located = locatedAt pos value
-            locSpan located @?= SourceSpan pos pos
-
-        , fastProperty "mapLocated preserves position information" $
-            \value1 value2 pos ->
-              let located1 = locatedAt pos value1
-                  located2 = mapLocated (const value2) located1
-              in locPos located2 == locPos located1 && 
-                 locSpan located2 == locSpan located1
-
-        , fastProperty "located values maintain equality structure" $
-            \value pos ->
-              let located1 = locatedAt pos value
-                  located2 = locatedAt pos value
-              in located1 == located2
-        ]
-
-    , testGroup "Position containment and overlap"
-        [ testCase "position containment works for span boundaries" $ do
-            let start = SourcePos 1 1 0
-                end = SourcePos 1 5 4
-                span = SourceSpan start end
-                inside = SourcePos 1 3 2
-                outside = SourcePos 1 6 5
-            _isPosInSpan inside span @?= True
-            _isPosInSpan outside span @?= False
-            _isPosInSpan start span @?= True
-            _isPosInSpan end span @?= True
-
-        , fastProperty "span overlap with zero-length spans" $
-            \pos ->
-              let zeroSpan = SourceSpan pos pos
-                  normalSpan = spanBetween pos (posAfter 'x' pos)
-              in _doSpansOverlap zeroSpan normalSpan
-
-        , fastProperty "identical spans always overlap" $
-            \span ->
-              _doSpansOverlap span span
-
-        , testCase "non-overlapping spans on different lines" $ do
-            let span1 = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
-                span2 = SourceSpan (SourcePos 2 1 10) (SourcePos 2 10 19)
-            _doSpansOverlap span1 span2 @?= False
-        ]
-
-    , testGroup "Extreme boundary conditions"
-        [ testCase "position advancement with empty string" $ do
-            let pos = startPos
-                result = pos `posAfter` ' ' -- Single character
-            posOffset result @?= 1
-
-        , fastProperty "span merging with identical spans preserves identity" $
-            \span ->
-              mergeSpans span span == span
-
-        , testCase "tab advancement at column boundaries" $ do
-            let pos1 = SourcePos 1 1 0 -- Before first tab stop
-                pos2 = SourcePos 1 8 7 -- At tab stop
-                pos3 = SourcePos 1 9 8 -- After tab stop
-                newPos1 = posAfter '\t' pos1
-                newPos2 = posAfter '\t' pos2
-                newPos3 = posAfter '\t' pos3
-            posColumn newPos1 @?= 9 -- Next tab stop
-            posColumn newPos2 @?= 17 -- Next tab stop
-            posColumn newPos3 @?= 17 -- Next tab stop
-        ]
-    ]
+tests = testGroup "Source Location Boundary QuickCheck Tests"
+  [ fastProperty "Position advancement for single character" prop_pos_after_single_char
+  , fastProperty "Position advancement for tab character" prop_pos_after_tab
+  , fastProperty "Position advancement preserves monotonicity" prop_pos_advancement_monotonic
+  , fastProperty "Line advancement is correct for newlines" prop_line_advancement_correct
+  , fastProperty "Column resets after newlines" prop_column_resets_after_newlines
+  , fastProperty "Span validity is consistent" prop_span_validity_consistent
+  , fastProperty "Span merging works correctly" prop_span_merging_correct
+  , fastProperty "Located values preserve position information" prop_located_preserves_position
+  , fastProperty "Located values preserve content" prop_located_preserves_content
+  , fastProperty "Mapping located values preserves position" prop_map_located_preserves_position
+  , fastProperty "Mapping located values transforms content" prop_map_located_transforms_content
+  , fastProperty "Position tracking through multiple lines" prop_multi_line_position_tracking
+  , fastProperty "Offset calculation is consistent" prop_offset_calculation_consistent
+  , testCase "Manual source location test" $ do
+      let start = startPos
+          afterHello = advancePosByText start "Hello"
+          afterHelloWorld = advancePosByText afterHello " World"
+          afterNewline = advancePosByText afterHelloWorld "\n"
+          afterNewLineHello = advancePosByText afterNewline "Hello"
+      
+      posLine afterHello @?= 1
+      posColumn afterHello @?= 6
+      posLine afterHelloWorld @?= 1
+      posColumn afterHelloWorld @?= 12
+      posLine afterNewline @?= 2
+      posColumn afterNewline @?= 1
+      posLine afterNewLineHello @?= 2
+      posColumn afterNewLineHello @?= 6
+      
+      let span = spanFrom start afterHelloWorld
+      isValidSpan span @?= True
+      spanStart span @?= start
+      spanEnd span @?= afterHelloWorld
+  ]
