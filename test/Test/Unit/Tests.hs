@@ -65,7 +65,7 @@ import qualified Test.Unit.EdgeCaseSpec
 import qualified Test.Unit.EnhancedQuickCheckSpec
 import qualified Test.Unit.EnhancedParserTestSpec
 import qualified Test.Unit.EnhancedCompilerTestSpec
-import qualified Test.Unit.UtilsPropertiesQuickCheckSpec
+
 import qualified Test.Unit.ParserCompilerPropertiesQuickCheckSpec
 
 -- New Cabal Test Modules (2025)
@@ -298,6 +298,17 @@ import qualified Test.Unit.NewComprehensiveCabalQuickCheckTestSuite
 import qualified Test.Unit.ParserErrorRecoveryQuickCheckSpec
 import qualified Test.Unit.OwnershipTransferConsistencyQuickCheckSpec
 import qualified Test.Unit.CompilerIRConsistencyQuickCheckSpec
+
+-- ============================================================================
+-- New Essential Test Modules (2025) - Core Functionality Testing
+-- ============================================================================
+import qualified Test.Unit.CoreUtilsEssentialSpec
+import qualified Test.Unit.CoreSourceLocationEssentialSpec
+import qualified Test.Unit.CoreParserEssentialSpec
+import qualified Test.Unit.CoreCompilerEssentialSpec
+import qualified Test.Unit.IntegrationEssentialSpec
+
+
 import qualified Test.Unit.ErrorLocationTrackingQuickCheckSpec
 import qualified Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec
 
@@ -1057,9 +1068,9 @@ import qualified Test.Unit.AdvancedQuickCheckTestSpec
 import qualified Test.Unit.FinalQuickCheckTestSpec
 -- New comprehensive QuickCheck test modules
 import qualified Test.Unit.NewCoreQuickCheckSpec
-import qualified Test.Unit.ParserPropertiesQuickCheckSpec
+
 import qualified Test.Unit.ErrorRecoveryQuickCheckSpec
-import qualified Test.Unit.SourceLocationPropertiesQuickCheckSpec
+
 import qualified Test.Unit.NewCoreQuickCheckTests
 import qualified Test.Unit.SimpleCoreQuickCheckSpec
 import qualified Test.Unit.NewCabalQuickCheckSpec
@@ -1489,7 +1500,7 @@ tests =
     , Test.Unit.EnhancedQuickCheckSpec.tests
     , Test.Unit.EnhancedParserTestSpec.tests
     , Test.Unit.EnhancedCompilerTestSpec.tests
-    , Test.Unit.UtilsPropertiesQuickCheckSpec.tests
+    
     , Test.Unit.ParserCompilerPropertiesQuickCheckSpec.tests
     , Test.Unit.NewCoreQuickCheckPropertiesSpec.tests
     , Test.Unit.AdditionalUtilsSpec.tests
@@ -2925,4 +2936,17 @@ tests =
     , Test.Unit.NewCoreErrorHandlingQuickCheckSpec.testSuite
     , Test.Unit.NewCompleteCoreTestSuiteSpec.testSuite
     ]
+
+  -- ============================================================================
+  -- New Essential Test Modules (2025) - Core Functionality Testing
+  -- ============================================================================
+  , testGroup "Essential Test Modules - Core Functionality"
+    [ Test.Unit.CoreUtilsEssentialSpec.tests
+    , Test.Unit.CoreSourceLocationEssentialSpec.tests
+    , Test.Unit.CoreParserEssentialSpec.tests
+    , Test.Unit.CoreCompilerEssentialSpec.tests
+    , Test.Unit.IntegrationEssentialSpec.tests
+    ]
+
+  
   ]

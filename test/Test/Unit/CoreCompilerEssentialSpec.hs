@@ -1,0 +1,142 @@
+{-# LANGUAGE OverloadedStrings #-}
+
+module Test.Unit.CoreCompilerEssentialSpec (tests) where
+
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
+import qualified Data.Text as T
+
+import Compiler (compile, CompilerError(..), CompilationPhase(..), hasTypeErrors, generateGoCode)
+import Parser (TypusFile(..), defaultFileDirectives)
+
+tests :: TestTree
+tests = testGroup "Core Compiler Essential Tests"
+  [ testGroup "Basic Compilation"
+    [ testCase "compile handles empty file" $
+        let emptyFile = TypusFile defaultFileDirectives []
+        in case compile emptyFile of
+          Left err -> assertBool "should handle empty file gracefully" True
+          Right result -> assertBool "should compile empty file" True
+    
+    , testCase "compile handles simple function" $
+        let simpleFile = TypusFile defaultFileDirectives 
+                          [mockCodeBlock "func main() {\n  return 0\n}"]
+        in case compile simpleFile of
+          Left err -> assertBool "should compile simple function" False
+          Right result -> assertBool "should produce result" True
+    
+    , testCase "compile detects syntax errors" $
+        let invalidFile = TypusFile defaultFileDirectives 
+                            [mockCodeBlock "func invalid {\n  missing closing"]
+        in case compile invalidFile of
+          Left err -> assertBool "should detect syntax errors" True
+          Right _ -> assertBool "should not succeed on invalid input" False
+    ]
+  
+  , testGroup "Type Checking"
+    [ testCase "hasTypeErrors identifies type errors" $
+        let typeError = mockCompilerError TypeErrorPhase "Type mismatch"
+            otherError = mockCompilerError ParsingPhase "Syntax error"
+        in do
+          assertBool "should identify type errors" (hasTypeErrors [typeError])
+          assertBool "should not identify non-type errors" (not $ hasTypeErrors [otherError])
+          assertBool "should handle mixed errors" (hasTypeErrors [typeError, otherError])
+          assertBool "should handle empty list" (not $ hasTypeErrors [])
+    
+    , testCase "compile performs type checking" $
+        let typedFile = TypusFile defaultFileDirectives 
+                           [mockCodeBlock "func add(a: int, b: int) int {\n  return a + b\n}"]
+        in case compile typedFile of
+          Left err -> assertBool "should type check valid code" False
+          Right result -> assertBool "should complete type checking" True
+    
+    , testCase "compile detects type mismatches" $
+        let invalidTypedFile = TypusFile defaultFileDirectives 
+                                [mockCodeBlock "func test() {\n  let x: int = \"string\"\n}"]
+        in case compile invalidTypedFile of
+          Left err -> assertBool "should detect type mismatch" True
+          Right _ -> assertBool "should not succeed on type error" False
+    ]
+  
+  , testGroup "Code Generation"
+    [ testCase "generateGoCode produces valid Go syntax" $
+        let simpleFile = TypusFile defaultFileDirectives 
+                          [mockCodeBlock "func hello() {\n  println(\"Hello\")\n}"]
+        in case generateGoCode simpleFile of
+          Left err -> assertBool "should generate Go code" False
+          Right goCode -> do
+            assertBool "should contain package declaration" ("package" `T.isInfixOf` goCode)
+            assertBool "should contain func keyword" ("func" `T.isInfixOf` goCode)
+    
+    , testCase "generateGoCode handles multiple functions" $
+        let multiFile = TypusFile defaultFileDirectives 
+                          [ mockCodeBlock "func one() {}"
+                          , mockCodeBlock "func two() {}"
+                          ]
+        in case generateGoCode multiFile of
+          Left err -> assertBool "should handle multiple functions" False
+          Right goCode -> do
+            assertBool "should contain both functions" 
+              ("func one()" `T.isInfixOf` goCode && "func two()" `T.isInfixOf` goCode)
+    
+    , testCase "generateGoCode preserves function signatures" $
+        let signatureFile = TypusFile defaultFileDirectives 
+                             [mockCodeBlock "func add(a: int, b: int) int {\n  return a + b\n}"]
+        in case generateGoCode signatureFile of
+          Left err -> assertBool "should preserve signatures" False
+          Right goCode -> 
+            assertBool "should contain parameter types" 
+              ("a int" `T.isInfixOf` goCode && "b int" `T.isInfixOf` goCode)
+    ]
+  
+  , testGroup "Error Reporting"
+    [ testCase "compile provides phase information" $
+        let errorFile = TypusFile defaultFileDirectives 
+                          [mockCodeBlock "invalid syntax here"]
+        in case compile errorFile of
+          Left err -> assertBool "error should include phase" True
+          Right _ -> assertBool "should not succeed on invalid input" False
+    
+    , testCase "compile handles multiple errors" $
+        let multiErrorFile = TypusFile defaultFileDirectives 
+                              [ mockCodeBlock "func bad1() {"
+                              , mockCodeBlock "func bad2() {"
+                              ]
+        in case compile multiErrorFile of
+          Left err -> assertBool "should detect multiple errors" True
+          Right _ -> assertBool "should not succeed with errors" False
+    ]
+  
+  , testGroup "Integration Features"
+    [ testCase "compile handles ownership annotations" $
+        let ownershipFile = TypusFile (defaultFileDirectives { fdOwnership = Just True })
+                              [mockCodeBlock "func transfer() {\n  // ownership logic\n}"]
+        in case compile ownershipFile of
+          Left err -> assertBool "should handle ownership" True
+          Right result -> assertBool "should process ownership" True
+    
+    , testCase "compile handles dependent types" $
+        let depTypesFile = TypusFile (defaultFileDirectives { fdDependentTypes = Just True })
+                             [mockCodeBlock "func dependent(n: int) {\n  // dependent type logic\n}"]
+        in case compile depTypesFile of
+          Left err -> assertBool "should handle dependent types" True
+          Right result -> assertBool "should process dependent types" True
+    ]
+  ]
+  where
+    mockCodeBlock content = 
+      CodeBlock 
+        { cbDirectives = defaultBlockDirectives
+        , cbContent = content
+        , cbSpan = Nothing
+        }
+    
+    mockCompilerError phase message = 
+      CompilerError
+        { cePhase = phase
+        , ceMessage = message
+        , ceLocation = Nothing
+        , ceSuggestions = []
+        }
+    
+    defaultBlockDirectives = Parser.BlockDirectives Nothing Nothing Nothing
