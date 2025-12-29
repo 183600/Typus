@@ -803,6 +803,9 @@ import qualified Test.Unit.EnhancedCabalQuickCheckTestSpec
 -- New Additional QuickCheck Test Module
 import qualified Test.Unit.NewAdditionalQuickCheckSpec
 
+-- Enhanced Cabal Core Properties Test Module
+import qualified Test.Unit.EnhancedCabalCorePropertiesSpec
+
 -- New Enhanced QuickCheck Test Modules
 import qualified Test.Unit.EnhancedUtilsQuickCheckSpec
 import qualified Test.Unit.EnhancedSourceLocationQuickCheckSpec
@@ -3525,6 +3528,13 @@ tests =
         , Test.Unit.OwnershipTransferConsistencyQuickCheckSpec.tests
         , Test.Unit.DependencyCycleDetectionQuickCheckSpec.tests
         , Test.Unit.TypeSystemBoundaryQuickCheckSpec.tests
+        ]
+
+    -- ============================================================================
+    -- Enhanced Cabal Core Properties Test Suite - Comprehensive QuickCheck Testing
+    -- ============================================================================
+    , testGroup "Enhanced Cabal Core Properties - Comprehensive QuickCheck Testing"
+        [ Test.Unit.EnhancedCabalCorePropertiesSpec.tests
         ]
 
         ]
