@@ -587,6 +587,18 @@ import qualified Test.Unit.NewIntegrationValidationSpec
 import qualified Test.Unit.NewBoundaryConditionSpec
 import qualified Test.Unit.NewPerformanceSpec
 
+-- ============================================================================
+-- Enhanced Cabal Test Suite - 8 comprehensive QuickCheck tests
+-- ============================================================================
+import qualified Test.Unit.EnhancedCabalTestSuiteSpec
+import qualified Test.Unit.CompilerIRConsistencyQuickCheckSpec
+import qualified Test.Unit.OwnershipTransitivityQuickCheckSpec
+import qualified Test.Unit.DependentTypeBoundaryQuickCheckSpec
+import qualified Test.Unit.SyntaxValidatorRobustnessQuickCheckSpec
+import qualified Test.Unit.IntegrationEndToEndQuickCheckSpec
+import qualified Test.Unit.UtilsBoundaryConditionsQuickCheckSpec
+import qualified Test.Unit.ParserErrorRecoveryQuickCheckSpec
+
 -- New Comprehensive Typus Test Module (2025)
 import qualified Test.Unit.NewComprehensiveTypusTestSpec
 import qualified Test.Unit.AdditionalCorePropertiesSpec
@@ -3276,5 +3288,19 @@ tests =
     -- New Comprehensive Typus Test Module (2025)
     -- ============================================================================
     , Test.Unit.NewComprehensiveTypusTestSpec.tests
+
+    -- ============================================================================
+    -- Enhanced Cabal Test Suite - 8 comprehensive QuickCheck tests
+    -- ============================================================================
+    , testGroup "Enhanced Cabal Test Suite - Core Functionality Tests"
+        [ Test.Unit.EnhancedCabalTestSuiteSpec.tests
+        , Test.Unit.CompilerIRConsistencyQuickCheckSpec.tests
+        , Test.Unit.OwnershipTransitivityQuickCheckSpec.tests
+        , Test.Unit.DependentTypeBoundaryQuickCheckSpec.tests
+        , Test.Unit.SyntaxValidatorRobustnessQuickCheckSpec.tests
+        , Test.Unit.IntegrationEndToEndQuickCheckSpec.tests
+        , Test.Unit.UtilsBoundaryConditionsQuickCheckSpec.tests
+        , Test.Unit.ParserErrorRecoveryQuickCheckSpec.tests
+        ]
 
         ]
