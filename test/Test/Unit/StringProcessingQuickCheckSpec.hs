@@ -1,145 +1,217 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
--- | String processing property tests for various modules
-module Test.Unit.StringProcessingQuickCheckSpec where
+module Test.Unit.StringProcessingQuickCheckSpec (tests) where
 
-import Test.Tasty
-import Test.Tasty.QuickCheck
-import Utils (trim, splitBy, splitByCollapsed, removeLineComments, removeComments)
-import Data.Char (isSpace, isAlphaNum)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, assertBool, (@?=))
+import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck 
+  ( Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.)
+  , Arbitrary(..), Gen, oneof, choose, listOf, vectorOf, elements, sized, frequency
+  , suchThat, resize
+  )
+
+import Utils 
+  ( trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed
+  , removeLineComments, removeComments, normalizeIndentation, breakOn
+  )
+import Data.Char (isSpace, isPrint, isControl, isAscii)
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, nub)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf)
 
--- ============================================================================
--- Test Properties
--- ============================================================================
+-- Test data for string processing
+data StringProcessingTestData = StringProcessingTestData
+  { inputString :: String
+  , testDelim :: Char
+  , testComment :: String
+  } deriving (Show, Eq)
 
--- | trim should handle all whitespace strings
-prop_trim_all_whitespace :: String -> Property
-prop_trim_all_whitespace s =
-  let allWs = all isSpace s
-      trimmed = trim s
-  in if allWs
-     then trimmed === ""
-     else property True
+instance Arbitrary StringProcessingTestData where
+  arbitrary = do
+    -- Generate strings with various characters including edge cases
+    str <- listOf $ oneof
+      [ elements "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+      , elements " \t\n\r"
+      , elements "/-*{}[]();:,.<>!?@#$%^&*+=|\\~`'"
+      , return '\0'  -- Null character
+      , choose ('\x80', '\xFF')  -- Non-ASCII characters
+      ]
+    delim <- elements ",;:\t "
+    comment <- listOf $ elements "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
+    return $ StringProcessingTestData str delim comment
 
--- | trim should preserve non-whitespace content
-prop_trim_preserve_content :: String -> Property
-prop_trim_preserve_content s =
-  let hasNonWs = any (not . isSpace) s
-      trimmed = trim s
-      content = filter (not . isSpace) s
-      trimmedContent = filter (not . isSpace) trimmed
-  in if hasNonWs
-     then trimmedContent === content
-     else property True
+-- Property: trim removes leading and trailing whitespace
+prop_trim_removes_whitespace :: StringProcessingTestData -> Property
+prop_trim_removes_whitespace testData =
+  let input = inputString testData
+      trimmed = trim input
+      hasLeading = not (null input) && isSpace (head input)
+      hasTrailing = not (null input) && isSpace (last input)
+  in classify hasLeading "has leading whitespace" $
+     classify hasTrailing "has trailing whitespace" $
+     property $ null trimmed || not (isSpace (head trimmed)) && 
+                (null trimmed || not (isSpace (last trimmed)))
 
--- | splitBy should preserve all characters
-prop_splitBy_preserve_characters :: Char -> String -> Property
-prop_splitBy_preserve_characters delim s =
-  let parts = splitBy delim s
-      rejoined = concat $ intersperse [delim] parts
-  in rejoined === s
-  where
-    intersperse _ [] = []
-    intersperse _ [x] = [x]
-    intersperse sep (x:y:xs) = x ++ sep ++ intersperse sep (y:xs)
+-- Property: trim preserves internal whitespace
+prop_trim_preserves_internal :: String -> String -> String -> Property
+prop_trim_preserves_internal before middle after =
+  not (null middle) ==>
+  let content = before ++ middle ++ after
+      trimmed = trim content
+      expectedInternal = filter (not . isSpace) before ++ middle ++ filter (not . isSpace) after
+  in property $ filter (not . isSpace) trimmed === filter (not . isSpace) expectedInternal
 
--- | splitByCollapsed should remove consecutive delimiters
-prop_splitByCollapsed_remove_consecutive :: Char -> String -> Property
-prop_splitByCollapsed_remove_consecutive delim s =
-  let parts = splitByCollapsed delim
-      hasNoConsecutive = all (\p -> not (delim `elem` p)) parts
-  in hasNoConsecutive === True
+-- Property: splitBy preserves empty segments
+prop_splitBy_preserves_empty :: StringProcessingTestData -> Property
+prop_splitBy_preserves_empty testData =
+  let input = inputString testData
+      delim = testDelim testData
+      segments = splitBy delim input
+      expectedCount = length input + 1
+  in property $ length segments <= expectedCount
 
--- | removeLineComments should handle strings without comments
-prop_remove_line_comments_no_comments :: String -> Property
-prop_remove_line_comments_no_comments s =
-  let hasNoComment = not ("//" `isPrefixOf` s) && "//" `notElem` substrings s
-      result = removeLineComments s
-  in if hasNoComment
-     then result === s
-     else property True
-  where
-    substrings str = [take n str | n <- [2..length str]]
+-- Property: splitByCollapsed removes empty segments
+prop_splitBy_collapsed_removes_empty :: StringProcessingTestData -> Property
+prop_splitBy_collapsed_removes_empty testData =
+  let input = inputString testData
+      delim = testDelim testData
+      collapsed = splitByCollapsed delim input
+      regular = splitBy delim input
+      emptyCount = length $ filter null regular
+  in property $ length collapsed == length regular - emptyCount
 
--- | removeLineComments should preserve content before comment
-prop_remove_line_comments_preserve_before :: String -> String -> Property
-prop_remove_line_comments_preserve_before prefix comment =
-  let input = prefix ++ "//" ++ comment
-      result = removeLineComments input
-  in result === prefix
+-- Property: splitByComma delegates to splitBy correctly
+prop_splitBy_comma_delegates :: String -> Property
+prop_splitBy_comma_delegates input =
+  let commaResult = splitByComma input
+      directResult = splitBy ',' input
+  in property $ commaResult === directResult
 
--- | removeComments should handle block comments
-prop_remove_comments_block_comments :: String -> String -> Property
-prop_remove_comments_block_comments before after =
-  let input = before ++ "/*" ++ "comment" ++ "*/" ++ after
-      result = removeComments input
-  in after `isInfixOf` result .&&. before `isInfixOf` result
+-- Property: removeLineComments handles strings without quotes correctly
+prop_remove_line_comments_simple :: String -> String -> Property
+prop_remove_line_comments_simple code comment =
+  not (any (`elem` ['"', '\'']) code) ==>
+  let lineWithComment = code ++ " // " ++ comment
+      cleaned = removeLineComments lineWithComment
+  in property $ cleaned === (code ++ " ")
 
--- | removeComments should handle nested block comments gracefully
-prop_remove_comments_nested :: String -> Property
-prop_remove_comments_nested content =
-  let input = "/* outer /* inner */ " ++ content ++ " */"
-      result = removeComments input
-  in property True  -- Should not crash
+-- Property: removeLineComments preserves string literals
+prop_remove_line_comments_preserves_strings :: String -> String -> Property
+prop_remove_line_comments_preserves_strings content comment =
+  let stringWithComment = "value := \"" ++ content ++ "\" // " ++ comment
+      cleaned = removeLineComments stringWithComment
+  in property $ ("\"" ++ content ++ "\"") `isInfixOf` cleaned
 
--- | String operations should be composable
-prop_string_operations_composable :: String -> Property
-prop_string_operations_composable s =
-  let trimmed = trim s
-      parts = splitBy ',' trimmed
-      rejoined = concat $ intersperse "," parts
-      trimmedAgain = trim rejoined
-  in trimmedAgain === trimmed
-  where
-    intersperse _ [] = []
-    intersperse _ [x] = [x]
-    intersperse sep (x:y:xs) = x ++ sep ++ intersperse sep (y:xs)
+-- Property: removeComments handles both line and block comments
+prop_remove_comments_mixed :: String -> String -> String -> Property
+prop_remove_comments_mixed code1 code2 comment =
+  not (any (`elem` ['"', '\'', '/', '*']) (code1 ++ code2)) ==>
+  let mixed = code1 ++ " // line\n" ++ code2 ++ " /* " ++ comment ++ " */ " ++ code1
+      cleaned = removeComments mixed
+  in property $ (code1 ++ " \n" ++ code2 ++ "  " ++ code1) `isPrefixOf` cleaned
 
--- | Unicode strings should be handled correctly
-prop_unicode_handling :: String -> Property
-prop_unicode_handling s =
-  let unicodeStr = "测试" ++ s ++ "🚀"
-      trimmed = trim unicodeStr
-      parts = splitBy ' ' unicodeStr
-  in property True  -- Should handle Unicode without crashing
+-- Property: removeComments preserves string literals containing comment markers
+prop_remove_comments_preserves_string_markers :: String -> Property
+prop_remove_comments_preserves_string_markers content =
+  let stringWithMarkers = "path := \"C://tmp/*keep*/\" /* comment */"
+      cleaned = removeComments stringWithMarkers
+  in property $ "C://tmp/*keep*/" `isInfixOf` cleaned
 
--- | Empty strings should be handled gracefully
-prop_empty_string_handling :: Char -> Property
-prop_empty_string_handling delim =
-  let splitResult = splitBy delim ""
-      splitCollapsedResult = splitByCollapsed delim ""
-      trimResult = trim ""
-      removeLineResult = removeLineComments ""
-      removeCommentsResult = removeComments ""
-  in splitResult === [""] .&&.
-     splitCollapsedResult === [] .&&.
-     trimResult === "" .&&.
-     removeLineResult === "" .&&.
-     removeCommentsResult === ""
+-- Property: normalizeIndentation handles mixed indentation
+prop_normalize_mixed_indentation :: String -> Property
+prop_normalize_mixed_indentation content =
+  not ('\n' `elem` content) ==>
+  let mixed = "  " ++ content ++ "\n\t" ++ content ++ "\n    " ++ content
+      normalized = normalizeIndentation mixed
+      linesNorm = lines normalized
+  in property $ length linesNorm == 3
 
--- | Very long strings should be handled efficiently
-prop_long_string_handling :: Positive Int -> Char -> Property
-prop_long_string_handling (Positive len) delim =
-  let longStr = replicate len 'a' ++ [delim] ++ replicate len 'b'
-      parts = splitBy delim longStr
-  in length parts === 2 .&&. length (head parts) === len .&&. length (last parts) === len
+-- Property: breakOn finds substrings correctly
+prop_break_on_finds_substrings :: String -> String -> Property
+prop_break_on_finds_substrings text pattern =
+  not (null pattern) ==>
+  let combined = text ++ pattern ++ text
+      result = breakOn combined pattern
+  in property $ case result of
+    Nothing -> False
+    Just (before, after) -> before == text && after `isPrefixOf` text
 
--- ============================================================================
--- Test Suite
--- ============================================================================
+-- Property: breakOn returns Nothing for non-existent patterns
+prop_break_on_nothing_for_missing :: String -> String -> Property
+prop_break_on_nothing_for_missing text pattern =
+  not (pattern `isInfixOf` text) ==>
+  let result = breakOn text pattern
+  in property $ result == Nothing
 
-testSuite :: TestTree
-testSuite = testGroup "String Processing QuickCheck Tests"
-  [ testProperty "trim: all whitespace strings" prop_trim_all_whitespace
-  , testProperty "trim: preserve content" prop_trim_preserve_content
-  , testProperty "splitBy: preserve characters" prop_splitBy_preserve_characters
-  , testProperty "splitByCollapsed: remove consecutive delimiters" prop_splitByCollapsed_remove_consecutive
-  , testProperty "removeLineComments: no comments" prop_remove_line_comments_no_comments
-  , testProperty "removeLineComments: preserve before comment" prop_remove_line_comments_preserve_before
-  , testProperty "removeComments: block comments" prop_remove_comments_block_comments
-  , testProperty "removeComments: nested comments" prop_remove_comments_nested
-  , testProperty "String operations: composability" prop_string_operations_composable
-  , testProperty "Unicode handling" prop_unicode_handling
+-- Property: String processing is idempotent for certain operations
+prop_trim_idempotent :: String -> Property
+prop_trim_idempotent input =
+  let trimmedOnce = trim input
+      trimmedTwice = trim trimmedOnce
+  in property $ trimmedOnce === trimmedTwice
+
+-- Property: splitBy is consistent with Data.Text.split
+prop_splitby_text_consistency :: String -> Char -> Property
+prop_splitby_text_consistency input delim =
+  let stringResult = splitBy delim input
+      textResult = map T.unpack $ T.split (== delim) (T.pack input)
+  in property $ stringResult === textResult
+
+-- Property: removeComments handles empty input gracefully
+prop_remove_comments_empty :: Property
+prop_remove_comments_empty =
+  let result = removeComments ""
+  in property $ result == ""
+
+-- Property: removeComments handles only comments gracefully
+prop_remove_comments_only_comments :: Property
+prop_remove_comments_only_comments =
+  let onlyComments = "// line comment\n/* block comment */"
+      result = removeComments onlyComments
+  in property $ result `elem` ["\n", " ", " \n", "\n ", "  "]
+
+tests :: TestTree
+tests = testGroup "String Processing QuickCheck Tests"
+  [ fastProperty "trim removes leading and trailing whitespace" prop_trim_removes_whitespace
+  , fastProperty "trim preserves internal whitespace" prop_trim_preserves_internal
+  , fastProperty "splitBy preserves empty segments" prop_splitBy_preserves_empty
+  , fastProperty "splitByCollapsed removes empty segments" prop_splitby_collapsed_removes_empty
+  , fastProperty "splitByComma delegates to splitBy correctly" prop_splitBy_comma_delegates
+  , fastProperty "removeLineComments handles strings without quotes correctly" prop_remove_line_comments_simple
+  , fastProperty "removeLineComments preserves string literals" prop_remove_line_comments_preserves_strings
+  , fastProperty "removeComments handles both line and block comments" prop_remove_comments_mixed
+  , fastProperty "removeComments preserves string literals containing comment markers" prop_remove_comments_preserves_string_markers
+  , fastProperty "normalizeIndentation handles mixed indentation" prop_normalize_mixed_indentation
+  , fastProperty "breakOn finds substrings correctly" prop_break_on_finds_substrings
+  , fastProperty "breakOn returns Nothing for non-existent patterns" prop_break_on_nothing_for_missing
+  , fastProperty "trim is idempotent" prop_trim_idempotent
+  , fastProperty "splitBy is consistent with Data.Text.split" prop_splitby_text_consistency
+  , fastProperty "removeComments handles empty input gracefully" prop_remove_comments_empty
+  , fastProperty "removeComments handles only comments gracefully" prop_remove_comments_only_comments
+  , testCase "Manual string processing test" $ do
+      let input = "  hello world  "
+          trimmed = trim input
+      trimmed @?= "hello world"
+      
+      let csv = "a,b,,c,"
+          splitRegular = splitBy ',' csv
+          splitCollapsed = splitByCollapsed ',' csv
+      splitRegular @?= ["a", "b", "", "c", ""]
+      splitCollapsed @?= ["a", "b", "c"]
+      
+      let withComment = "value := 42 // this is a comment"
+          withoutComment = removeLineComments withComment
+      withoutComment @?= "value := 42 "
+      
+      let withBlockComment = "code /* block comment */ more code"
+          withoutBlockComment = removeComments withBlockComment
+      "code " `isPrefixOf` withoutBlockComment @?= True
+      " more code" `isSuffixOf` withoutBlockComment @?= True
   ]

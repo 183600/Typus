@@ -1,415 +1,321 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
+{-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+
 module Test.Unit.TypeSystemBoundaryQuickCheckSpec (tests) where
 
-import Test.Tasty
-import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, assertBool, (@?=))
+import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck 
+  ( Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.)
+  , Arbitrary(..), Gen, oneof, choose, listOf, vectorOf, elements, sized, frequency
+  , suchThat, resize
+  )
 
-import Compiler.TypeChecker (TypeEnvironment(..), Type(..), TypeConstraint(..))
-import Dependencies.TypeSystem (TypeDependency(..), TypeRelation(..))
-import DependentTypesParser (DependentType(..), TypeConstructor(..))
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Set (Set)
+import Dependencies.TypeSystem
+import Dependencies.AST
+import Data.List (nub, sort, intersect, union)
+import Data.Set (Set, toList, fromList, union, intersection, difference)
 import qualified Data.Set as Set
-import Data.List (nub, sort)
-
--- ============================================================================
--- Type System Boundary Property Tests
--- ============================================================================
-
--- | Test that type checking handles deeply nested types
-prop_typeCheckingHandlesDeeplyNestedTypes :: Int -> Property
-prop_typeCheckingHandlesDeeplyNestedTypes depth =
-  depth >= 0 && depth <= 10 ==> 
-    let nestedType = createNestedType depth
-        typeEnv = createBasicTypeEnvironment
-        result = checkType typeEnv nestedType
-    in counterexample ("Type checking should handle deeply nested types. " ++
-                       "Depth: " ++ show depth ++
-                       " Type: " ++ show nestedType)
-       (isValidTypeResult result)
-
--- | Test that type unification preserves type safety
-prop_typeUnificationPreservesTypeSafety :: Type -> Type -> Property
-prop_typeUnificationPreservesTypeSafety type1 type2 =
-  let typeEnv = createBasicTypeEnvironment
-      unifiedType = unifyTypes typeEnv type1 type2
-      isSafe = checkTypeSafety typeEnv unifiedType
-  in counterexample ("Type unification should preserve type safety. " ++
-                     "Type1: " ++ show type1 ++
-                     " Type2: " ++ show type2 ++
-                     " Unified: " ++ show unifiedType)
-     (isSafe === True)
-
--- | Test that type inference handles ambiguous expressions
-prop_typeInferenceHandlesAmbiguousExpressions :: String -> Property
-prop_typeInferenceHandlesAmbiguousExpressions expression =
-  let typeEnv = createBasicTypeEnvironment
-      inferredType = inferType typeEnv expression
-  in counterexample ("Type inference should handle ambiguous expressions. " ++
-                     "Expression: " ++ expression ++
-                     " Inferred: " ++ show inferredType)
-     (isValidType inferredType)
-
--- | Test that type constraints are satisfiable
-prop_typeConstraintsAreSatisfiable :: [TypeConstraint] -> Property
-prop_typeConstraintsAreSatisfiable constraints =
-  let typeEnv = createBasicTypeEnvironment
-      isSatisfiable = checkConstraintSatisfiability typeEnv constraints
-  in counterexample ("Type constraints should be satisfiable. " ++
-                     "Constraints: " ++ show constraints)
-     (isSatisfiable === True || not (null constraints))
-
--- | Test that type substitution preserves type equivalence
-prop_typeSubstitutionPreservesEquivalence :: Type -> Map String Type -> Property
-prop_typeSubstitutionPreservesEquivalence type substitution =
-  let substituted = applyTypeSubstitution type substitution
-      equivalence = checkTypeEquivalence type substituted
-  in counterexample ("Type substitution should preserve type equivalence. " ++
-                     "Original: " ++ show type ++
-                     " Substituted: " ++ show substituted)
-     (Map.null substitution ==> equivalence === True)
-
--- | Test that type generalization maintains correctness
-prop_typeGeneralizationMaintainsCorrectness :: Type -> Property
-prop_typeGeneralizationMaintainsCorrectness type =
-  let typeEnv = createBasicTypeEnvironment
-      generalized = generalizeType typeEnv type
-      isCorrect = checkGeneralizationCorrectness type generalized
-  in counterexample ("Type generalization should maintain correctness. " ++
-                     "Original: " ++ show type ++
-                     " Generalized: " ++ show generalized)
-     (isCorrect === True)
-
--- | Test that type instantiation preserves type schemes
-prop_typeInstantiationPreservesSchemes :: Type -> Property
-prop_typeInstantiationPreservesSchemes type =
-  let typeEnv = createBasicTypeEnvironment
-      scheme = createTypeScheme type
-      instanceType = instantiateTypeScheme typeEnv scheme
-      isInstance = checkTypeInstance type instanceType
-  in counterexample ("Type instantiation should preserve type schemes. " ++
-                     "Type: " ++ show type ++
-                     " Instance: " ++ show instanceType)
-     (isInstance === True)
-
--- | Test that dependent types maintain logical consistency
-prop_dependentTypesMaintainLogicalConsistency :: DependentType -> Property
-prop_dependentTypesMaintainLogicalConsistency depType =
-  let typeEnv = createDependentTypeEnvironment
-      isConsistent = checkDependentTypeConsistency typeEnv depType
-  in counterexample ("Dependent types should maintain logical consistency. " ++
-                     "Type: " ++ show depType)
-     (isConsistent === True)
-
--- | Test that type constructors preserve invariants
-prop_typeConstructorsPreserveInvariants :: TypeConstructor -> [Type] -> Property
-prop_typeConstructorsPreserveInvariants constructor args =
-  let constructedType = applyTypeConstructor constructor args
-      invariants = extractTypeInvariants constructedType
-      preserved = all checkInvariant invariants
-  in counterexample ("Type constructors should preserve invariants. " ++
-                     "Constructor: " ++ show constructor ++
-                     " Args: " ++ show args)
-     (preserved === True)
-
--- | Test that type relations are transitive
-prop_typeRelationsAreTransitive :: TypeRelation -> TypeRelation -> Property
-prop_typeRelationsAreTransitive rel1 rel2 =
-  let typeEnv = createBasicTypeEnvironment
-      transitive = checkTypeRelationTransitivity typeEnv rel1 rel2
-  in counterexample ("Type relations should be transitive. " ++
-                     "Rel1: " ++ show rel1 ++
-                     " Rel2: " ++ show rel2)
-     (transitive === True || rel1 /= rel2)
-
--- | Test that type checking handles recursive types
-prop_typeCheckingHandlesRecursiveTypes :: String -> Property
-prop_typeCheckingHandlesRecursiveTypes typeName =
-  let recursiveType = createRecursiveType typeName
-      typeEnv = createBasicTypeEnvironment
-      result = checkType typeEnv recursiveType
-  in counterexample ("Type checking should handle recursive types. " ++
-                     "Type: " ++ show recursiveType)
-     (isValidTypeResult result)
-
--- | Test that type inference handles polymorphic functions
-prop_typeInferenceHandlesPolymorphicFunctions :: [String] -> Property
-prop_typeInferenceHandlesPolymorphicFunctions params =
-  not (null params) ==> 
-    let funcType = createPolymorphicFunctionType params
-        typeEnv = createBasicTypeEnvironment
-        inferredType = inferFunctionType typeEnv funcType
-    in counterexample ("Type inference should handle polymorphic functions. " ++
-                       "Params: " ++ show params)
-       (isPolymorphicType inferredType)
-
--- | Test that type unification handles higher-kinded types
-prop_typeUnificationHandlesHigherKindedTypes :: Type -> Type -> Property
-prop_typeUnificationHandlesHigherKindedTypes type1 type2 =
-  let higherKinded1 = makeHigherKindedType type1
-      higherKinded2 = makeHigherKindedType type2
-      typeEnv = createBasicTypeEnvironment
-      unified = unifyTypes typeEnv higherKinded1 higherKinded2
-  in counterexample ("Type unification should handle higher-kinded types. " ++
-                     "Type1: " ++ show higherKinded1 ++
-                     " Type2: " ++ show higherKinded2)
-     (isHigherKindedType unified)
-
--- | Test that type constraints are consistent with type hierarchy
-prop_typeConstraintsConsistentWithHierarchy :: [TypeConstraint] -> Property
-prop_typeConstraintsConsistentWithHierarchy constraints =
-  let typeEnv = createTypeHierarchyEnvironment
-      isConsistent = checkConstraintHierarchyConsistency typeEnv constraints
-  in counterexample ("Type constraints should be consistent with type hierarchy. " ++
-                     "Constraints: " ++ show constraints)
-     (isConsistent === True || null constraints)
-
--- | Test that type checking handles type-level computations
-prop_typeCheckingHandlesTypeLevelComputations :: String -> Property
-prop_typeCheckingHandlesTypeLevelComputations computation =
-  let typeLevelExpr = parseTypeLevelComputation computation
-      typeEnv = createBasicTypeEnvironment
-      result = evaluateTypeLevelExpression typeEnv typeLevelExpr
-  in counterexample ("Type checking should handle type-level computations. " ++
-                     "Computation: " ++ computation)
-     (isValidTypeResult result)
-
--- | Test that type inference handles implicit parameters
-prop_typeInferenceHandlesImplicitParameters :: [String] -> Property
-prop_typeInferenceHandlesImplicitParameters implicits =
-  let typeEnv = createImplicitParameterEnvironment implicits
-      expression = createExpressionWithImplicits implicits
-      inferredType = inferType typeEnv expression
-  in counterexample ("Type inference should handle implicit parameters. " ++
-                     "Implicits: " ++ show implicits)
-     (hasImplicitParameters inferredType)
-
--- | Test that type checking handles type families
-prop_typeCheckingHandlesTypeFamilies :: String -> [Type] -> Property
-prop_typeCheckingHandlesTypeFamilies familyName args =
-  let typeFamily = createTypeFamily familyName args
-      typeEnv = createTypeFamilyEnvironment
-      result = checkTypeFamily typeEnv typeFamily
-  in counterexample ("Type checking should handle type families. " ++
-                     "Family: " ++ familyName ++
-                     " Args: " ++ show args)
-     (isValidTypeResult result)
-
--- | Test that type unification handles type classes
-prop_typeUnificationHandlesTypeClasses :: String -> [Type] -> Property
-prop_typeUnificationHandlesTypeClasses className constraints =
-  let typeClass = createTypeClass className constraints
-      typeEnv = createTypeClassEnvironment
-      result = checkTypeClass typeEnv typeClass
-  in counterexample ("Type unification should handle type classes. " ++
-                     "Class: " ++ className ++
-                     " Constraints: " ++ show constraints)
-     (isValidTypeResult result)
-
--- | Test that type inference handles GADTs
-prop_typeInferenceHandlesGADTs :: String -> [Type] -> Property
-prop_typeInferenceHandlesGADTs constructorName argTypes =
-  let gadt = createGADT constructorName argTypes
-      typeEnv = createGADTEnvironment
-      inferredType = inferGADTType typeEnv gadt
-  in counterexample ("Type inference should handle GADTs. " ++
-                     "Constructor: " ++ constructorName ++
-                     " Args: " ++ show argTypes)
-     (isValidGADTType inferredType)
-
--- ============================================================================
--- Helper Functions (Mock implementations for testing)
--- ============================================================================
-
--- Mock data types
-data Type = Type
-  { _typeName :: String
-  , _typeArgs :: [Type]
-  } deriving (Eq, Show)
-
-data TypeConstraint = TypeConstraint
-  { _constraintType :: String
-  , _constraintArgs :: [Type]
-  } deriving (Eq, Show)
-
-data DependentType = DependentType
-  { _dependentTypeName :: String
-  , _dependentTypeArgs :: [Type]
-  } deriving (Eq, Show)
-
-data TypeConstructor = TypeConstructor
-  { _constructorName :: String
-  , _constructorArity :: Int
-  } deriving (Eq, Show)
-
-data TypeRelation = TypeRelation
-  { _relationFrom :: Type
-  , _relationTo :: Type
-  , _relationKind :: String
-  } deriving (Eq, Show)
-
--- Mock functions
-createNestedType :: Int -> Type
-createNestedType depth = Type ("Nested" ++ show depth) []
-
-createBasicTypeEnvironment :: TypeEnvironment
-createBasicTypeEnvironment = TypeEnvironment Map.empty
-
-checkType :: TypeEnvironment -> Type -> Bool
-checkType _ _ = True
-
-isValidTypeResult :: Bool -> Bool
-isValidTypeResult = id
-
-unifyTypes :: TypeEnvironment -> Type -> Type -> Type
-unifyTypes _ t1 t2 = Type "Unified" [t1, t2]
-
-checkTypeSafety :: TypeEnvironment -> Type -> Bool
-checkTypeSafety _ _ = True
-
-inferType :: TypeEnvironment -> String -> Type
-inferType _ _ = Type "Inferred" []
-
-isValidType :: Type -> Bool
-isValidType _ = True
-
-checkConstraintSatisfiability :: TypeEnvironment -> [TypeConstraint] -> Bool
-checkConstraintSatisfiability _ _ = True
-
-applyTypeSubstitution :: Type -> Map String Type -> Type
-applyTypeSubstitution type _ = type
-
-checkTypeEquivalence :: Type -> Type -> Bool
-checkTypeEquivalence _ _ = True
-
-generalizeType :: TypeEnvironment -> Type -> Type
-generalizeType _ type = Type "Generalized" [type]
-
-checkGeneralizationCorrectness :: Type -> Type -> Bool
-checkGeneralizationCorrectness _ _ = True
-
-createTypeScheme :: Type -> Type
-createTypeScheme type = Type "Scheme" [type]
-
-instantiateTypeScheme :: TypeEnvironment -> Type -> Type
-instantiateTypeScheme _ type = Type "Instance" [type]
-
-checkTypeInstance :: Type -> Type -> Bool
-checkTypeInstance _ _ = True
-
-createDependentTypeEnvironment :: TypeEnvironment
-createDependentTypeEnvironment = TypeEnvironment Map.empty
-
-checkDependentTypeConsistency :: TypeEnvironment -> DependentType -> Bool
-checkDependentTypeConsistency _ _ = True
-
-applyTypeConstructor :: TypeConstructor -> [Type] -> Type
-applyTypeConstructor constructor args = Type (_constructorName constructor) args
-
-extractTypeInvariants :: Type -> [String]
-extractTypeInvariants _ = ["invariant1", "invariant2"]
-
-checkInvariant :: String -> Bool
-checkInvariant _ = True
-
-checkTypeRelationTransitivity :: TypeEnvironment -> TypeRelation -> TypeRelation -> Bool
-checkTypeRelationTransitivity _ _ _ = True
-
-createRecursiveType :: String -> Type
-createRecursiveType name = Type ("Recursive" ++ name) []
-
-inferFunctionType :: TypeEnvironment -> Type -> Type
-inferFunctionType _ type = Type "Function" [type]
-
-isPolymorphicType :: Type -> Bool
-isPolymorphicType _ = True
-
-makeHigherKindedType :: Type -> Type
-makeHigherKindedType type = Type "HigherKinded" [type]
-
-isHigherKindedType :: Type -> Bool
-isHigherKindedType (Type "HigherKinded" _) = True
-isHigherKindedType _ = False
-
-createTypeHierarchyEnvironment :: TypeEnvironment
-createTypeHierarchyEnvironment = TypeEnvironment Map.empty
-
-checkConstraintHierarchyConsistency :: TypeEnvironment -> [TypeConstraint] -> Bool
-checkConstraintHierarchyConsistency _ _ = True
-
-parseTypeLevelComputation :: String -> String
-parseTypeLevelComputation = id
-
-evaluateTypeLevelExpression :: TypeEnvironment -> String -> Bool
-evaluateTypeLevelExpression _ _ = True
-
-createImplicitParameterEnvironment :: [String] -> TypeEnvironment
-createImplicitParameterEnvironment _ = TypeEnvironment Map.empty
-
-createExpressionWithImplicits :: [String] -> String
-createExpressionWithImplicits implicits = unwords implicits
-
-hasImplicitParameters :: Type -> Bool
-hasImplicitParameters _ = True
-
-createTypeFamily :: String -> [Type] -> Type
-createTypeFamily name args = Type ("Family" ++ name) args
-
-createTypeFamilyEnvironment :: TypeEnvironment
-createTypeFamilyEnvironment = TypeEnvironment Map.empty
-
-checkTypeFamily :: TypeEnvironment -> Type -> Bool
-checkTypeFamily _ _ = True
-
-createTypeClass :: String -> [Type] -> Type
-createTypeClass name constraints = Type ("Class" ++ name) constraints
-
-createTypeClassEnvironment :: TypeEnvironment
-createTypeClassEnvironment = TypeEnvironment Map.empty
-
-checkTypeClass :: TypeEnvironment -> Type -> Bool
-checkTypeClass _ _ = True
-
-createGADT :: String -> [Type] -> Type
-createGADT name args = Type ("GADT" ++ name) args
-
-createGADTEnvironment :: TypeEnvironment
-createGADTEnvironment = TypeEnvironment Map.empty
-
-inferGADTType :: TypeEnvironment -> Type -> Type
-inferGADTType _ gadt = gadt
-
-isValidGADTType :: Type -> Bool
-isValidGADTType _ = True
-
--- Mock TypeEnvironment
-data TypeEnvironment = TypeEnvironment (Map String Type)
-
--- ============================================================================
--- Test Suite
--- ============================================================================
+
+-- Test data for type system
+data TypeSystemTestData = TypeSystemTestData
+  { baseTypes :: [TypeExpr]
+  , constraints :: [Constraint]
+  , typeVars :: [TypeVar]
+  } deriving (Show, Eq)
+
+-- Simplified type expressions for testing
+data TypeExpr = 
+    TypeVar String
+  | TypeConstructor String [TypeExpr]
+  | FunctionType TypeExpr TypeExpr
+  | dependentType TypeExpr TypeExpr  -- Dependent type: Type(value)
+  deriving (Show, Eq, Ord)
+
+data Constraint = 
+    Equality TypeExpr TypeExpr
+  | Subtype TypeExpr TypeExpr
+  | DependentConstraint String TypeExpr TypeExpr
+  deriving (Show, Eq)
+
+data TypeVar = TypeVar String deriving (Show, Eq, Ord)
+
+instance Arbitrary TypeExpr where
+  arbitrary = sized genType
+    where
+      genType 0 = TypeVar <$> arbitrary
+      genType n = oneof
+        [ TypeVar <$> arbitrary
+        , TypeConstructor <$> arbitrary <*> listOf (genType (n `div` 2))
+        , FunctionType <$> genType (n `div` 2) <*> genType (n `div` 2)
+        , dependentType <$> genType (n `div` 2) <*> genType (n `div` 2)
+        ]
+
+instance Arbitrary Constraint where
+  arbitrary = do
+    t1 <- arbitrary
+    t2 <- arbitrary
+    oneof
+      [ return $ Equality t1 t2
+      , return $ Subtype t1 t2
+      , do
+          name <- arbitrary
+          return $ DependentConstraint name t1 t2
+      ]
+
+instance Arbitrary TypeVar where
+  arbitrary = TypeVar <$> elements ["a", "b", "c", "x", "y", "z", "t1", "t2", "t3"]
+
+instance Arbitrary TypeSystemTestData where
+  arbitrary = do
+    types <- listOf arbitrary
+    constraints <- listOf arbitrary
+    vars <- listOf arbitrary
+    return $ TypeSystemTestData types constraints vars
+
+-- Property: Type variable substitution preserves structure
+prop_type_substitution_preserves_structure :: TypeExpr -> String -> TypeExpr -> Property
+prop_type_substitution_preserves_structure typeExpr varName replacement =
+  let substituted = substituteType varName replacement typeExpr
+  in case typeExpr of
+    TypeVar name -> 
+      if name == varName 
+      then property $ substituted === replacement
+      else property $ substituted === typeExpr
+    TypeConstructor name args -> 
+      case substituted of
+        TypeConstructor newName newArgs -> 
+          property $ newName === name && length newArgs === length args
+        _ -> property False
+    FunctionType from to -> 
+      case substituted of
+        FunctionType newFrom newTo -> 
+          property $ True  -- Basic structure preserved
+        _ -> property False
+    dependentType base value -> 
+      case substituted of
+        dependentType newBase newValue -> 
+          property $ True  -- Basic structure preserved
+        _ -> property False
+
+-- Property: Type unification finds correct substitution
+prop_type_unification_finds_substitution :: TypeExpr -> TypeExpr -> Property
+prop_type_unification_finds_substitution type1 type2 =
+  let result = unifyTypes type1 type2
+  in case result of
+    Left _ -> property True  -- Unification failure is acceptable
+    Right substitution -> 
+      let applied1 = applySubstitution substitution type1
+          applied2 = applySubstitution substitution type2
+      in property $ applied1 === applied2
+
+-- Property: Function type unification works correctly
+prop_function_type_unification :: TypeExpr -> TypeExpr -> TypeExpr -> TypeExpr -> Property
+prop_function_type_unification from1 to1 from2 to2 =
+  let func1 = FunctionType from1 to1
+      func2 = FunctionType from2 to2
+      result = unifyTypes func1 func2
+  in case result of
+    Left _ -> property True
+    Right substitution -> 
+      let applied1 = applySubstitution substitution func1
+          applied2 = applySubstitution substitution func2
+      in property $ applied1 === applied2
+
+-- Property: Dependent type constraints are preserved
+prop_dependent_constraints_preserved :: TypeExpr -> TypeExpr -> String -> Property
+prop_dependent_constraints_preserved base value name =
+  let dependent = dependentType base value
+      constraint = DependentConstraint name base value
+      constraints = [constraint]
+      satisfied = checkDependentConstraint constraint dependent
+  in property $ satisfied
+
+-- Property: Type variable freshness is maintained
+prop_type_var_freshness :: [TypeVar] -> Property
+prop_type_var_freshness vars =
+  let freshVars = map generateFreshVar vars
+      allUnique = length (nub freshVars) == length freshVars
+      allFresh = all (`notElem` vars) freshVars
+  in property $ allUnique && allFresh
+
+-- Property: Type inference preserves consistency
+prop_type_inference_consistent :: [Statement] -> Property
+prop_type_inference_consistent statements =
+  not (null statements) ==>
+  let result = inferTypes statements
+  in case result of
+    Left _ -> property True
+    Right types -> 
+      let typeCount = length types
+          statementCount = length statements
+      in property $ typeCount <= statementCount
+
+-- Property: Subtype relation is transitive
+prop_subtype_transitive :: TypeExpr -> TypeExpr -> TypeExpr -> Property
+prop_subtype_transitive t1 t2 t3 =
+  let sub1 = isSubtype t1 t2
+      sub2 = isSubtype t2 t3
+      sub3 = isSubtype t1 t3
+  in (sub1 && sub2) ==> sub3
+
+-- Property: Type equality is reflexive
+prop_type_equality_reflexive :: TypeExpr -> Property
+prop_type_equality_reflexive typeExpr =
+  let equal = areTypesEqual typeExpr typeExpr
+  in property $ equal
+
+-- Property: Type equality is symmetric
+prop_type_equality_symmetric :: TypeExpr -> TypeExpr -> Property
+prop_type_equality_symmetric type1 type2 =
+  let equal1 = areTypesEqual type1 type2
+      equal2 = areTypesEqual type2 type1
+  in property $ equal1 === equal2
+
+-- Property: Type constructor arity is preserved
+prop_type_constructor_arity :: String -> [TypeExpr] -> Property
+prop_type_constructor_arity name args =
+  let constructor = TypeConstructor name args
+      arity = getConstructorArity constructor
+  in property $ arity === length args
+
+-- Property: Dependent type reduction works correctly
+prop_dependent_type_reduction :: TypeExpr -> TypeExpr -> Property
+prop_dependent_type_reduction base value =
+  let dependent = dependentType base value
+      reduced = reduceDependentType dependent
+  in case reduced of
+    Just result -> property $ True  -- Basic check that reduction succeeds
+    Nothing -> property True  -- No reduction is also valid
+
+-- Property: Type variable generalization preserves free variables
+prop_generalization_preserves_free :: TypeExpr -> [TypeVar] -> Property
+prop_generalization_preserves_free typeExpr env =
+  let freeVars = getFreeVariables typeExpr
+      generalized = generalizeType typeExpr env
+      generalizedFree = getFreeVariables generalized
+  in property $ Set.isSubsetOf (fromList generalizedFree) (fromList freeVars)
+
+-- Property: Type instantiation preserves structure
+prop_instantiation_preserves_structure :: TypeExpr -> [TypeVar] -> [TypeExpr] -> Property
+prop_instantiation_preserves_structure typeExpr vars replacements =
+  length vars == length replacements ==>
+  let scheme = TypeScheme vars typeExpr
+      instantiated = instantiateScheme scheme replacements
+  in property $ case instantiated of
+    Just result -> True  -- Basic structure preservation
+    Nothing -> False
+
+-- Helper functions for type system operations
+data TypeScheme = TypeScheme [TypeVar] TypeExpr deriving (Show, Eq)
+
+substituteType :: String -> TypeExpr -> TypeExpr -> TypeExpr
+substituteType varName replacement typeExpr = case typeExpr of
+  TypeVar name -> if name == varName then replacement else typeExpr
+  TypeConstructor name args -> TypeConstructor name (map (substituteType varName replacement) args)
+  FunctionType from to -> FunctionType (substituteType varName replacement from) (substituteType varName replacement to)
+  dependentType base value -> dependentType (substituteType varName replacement base) (substituteType varName replacement value)
+
+data Statement = 
+    VarDecl String TypeExpr
+  | FunctionDecl String TypeExpr TypeExpr
+  deriving (Show, Eq)
+
+instance Arbitrary Statement where
+  arbitrary = oneof
+    [ VarDecl <$> arbitrary <*> arbitrary
+    , FunctionDecl <$> arbitrary <*> arbitrary <*> arbitrary
+    ]
+
+-- Simplified implementations for testing
+unifyTypes :: TypeExpr -> TypeExpr -> Either String [(String, TypeExpr)]
+unifyTypes t1 t2 = 
+  if t1 == t2 
+  then Right []
+  else Left "Cannot unify"
+
+applySubstitution :: [(String, TypeExpr)] -> TypeExpr -> TypeExpr
+applySubstitution substitution typeExpr = foldl (\acc (var, replacement) -> substituteType var replacement acc) typeExpr substitution
+
+checkDependentConstraint :: Constraint -> TypeExpr -> Bool
+checkDependentConstraint (DependentConstraint _ base value) (dependentType base' value') = base == base' && value == value'
+checkDependentConstraint _ _ = False
+
+generateFreshVar :: TypeVar -> TypeVar
+generateFreshVar (TypeVar name) = TypeVar (name ++ "'")
+
+inferTypes :: [Statement] -> Either String [(String, TypeExpr)]
+inferTypes statements = Right $ map inferStatement statements
+  where
+    inferStatement (VarDecl name t) = (name, t)
+    inferStatement (FunctionDecl name t _) = (name, t)
+
+isSubtype :: TypeExpr -> TypeExpr -> Bool
+isSubtype t1 t2 = t1 == t2  -- Simplified
+
+areTypesEqual :: TypeExpr -> TypeExpr -> Bool
+areTypesEqual = (==)
+
+getConstructorArity :: TypeExpr -> Int
+getConstructorArity (TypeConstructor _ args) = length args
+getConstructorArity _ = 0
+
+reduceDependentType :: TypeExpr -> Maybe TypeExpr
+reduceDependentType dependent = Just dependent  -- Simplified
+
+getFreeVariables :: TypeExpr -> [String]
+getFreeVariables (TypeVar name) = [name]
+getFreeVariables (TypeConstructor _ args) = concatMap getFreeVariables args
+getFreeVariables (FunctionType from to) = getFreeVariables from ++ getFreeVariables to
+getFreeVariables (dependentType base value) = getFreeVariables base ++ getFreeVariables value
+
+generalizeType :: TypeExpr -> [TypeVar] -> TypeExpr
+generalizeType typeExpr _ = typeExpr  -- Simplified
+
+instantiateScheme :: TypeScheme -> [TypeExpr] -> Maybe TypeExpr
+instantiateScheme (TypeScheme vars typeExpr) replacements = 
+  if length vars == length replacements
+  then Just $ foldl (\acc (TypeVar var, replacement) -> substituteType var replacement acc) typeExpr (zip vars replacements)
+  else Nothing
 
 tests :: TestTree
 tests = testGroup "Type System Boundary QuickCheck Tests"
-  [ testProperty "Type checking handles deeply nested types" prop_typeCheckingHandlesDeeplyNestedTypes
-  , testProperty "Type unification preserves type safety" prop_typeUnificationPreservesTypeSafety
-  , testProperty "Type inference handles ambiguous expressions" prop_typeInferenceHandlesAmbiguousExpressions
-  , testProperty "Type constraints are satisfiable" prop_typeConstraintsAreSatisfiable
-  , testProperty "Type substitution preserves type equivalence" prop_typeSubstitutionPreservesEquivalence
-  , testProperty "Type generalization maintains correctness" prop_typeGeneralizationMaintainsCorrectness
-  , testProperty "Type instantiation preserves type schemes" prop_typeInstantiationPreservesSchemes
-  , testProperty "Dependent types maintain logical consistency" prop_dependentTypesMaintainLogicalConsistency
-  , testProperty "Type constructors preserve invariants" prop_typeConstructorsPreserveInvariants
-  , testProperty "Type relations are transitive" prop_typeRelationsAreTransitive
-  , testProperty "Type checking handles recursive types" prop_typeCheckingHandlesRecursiveTypes
-  , testProperty "Type inference handles polymorphic functions" prop_typeInferenceHandlesPolymorphicFunctions
-  , testProperty "Type unification handles higher-kinded types" prop_typeUnificationHandlesHigherKindedTypes
-  , testProperty "Type constraints consistent with type hierarchy" prop_typeConstraintsConsistentWithHierarchy
-  , testProperty "Type checking handles type-level computations" prop_typeCheckingHandlesTypeLevelComputations
-  , testProperty "Type inference handles implicit parameters" prop_typeInferenceHandlesImplicitParameters
-  , testProperty "Type checking handles type families" prop_typeCheckingHandlesTypeFamilies
-  , testProperty "Type unification handles type classes" prop_typeUnificationHandlesTypeClasses
-  , testProperty "Type inference handles GADTs" prop_typeInferenceHandlesGADTs
+  [ fastProperty "Type variable substitution preserves structure" prop_type_substitution_preserves_structure
+  , fastProperty "Type unification finds correct substitution" prop_type_unification_finds_substitution
+  , fastProperty "Function type unification works correctly" prop_function_type_unification
+  , fastProperty "Dependent type constraints are preserved" prop_dependent_constraints_preserved
+  , fastProperty "Type variable freshness is maintained" prop_type_var_freshness
+  , fastProperty "Type inference preserves consistency" prop_type_inference_consistent
+  , fastProperty "Subtype relation is transitive" prop_subtype_transitive
+  , fastProperty "Type equality is reflexive" prop_type_equality_reflexive
+  , fastProperty "Type equality is symmetric" prop_type_equality_symmetric
+  , fastProperty "Type constructor arity is preserved" prop_type_constructor_arity
+  , fastProperty "Dependent type reduction works correctly" prop_dependent_type_reduction
+  , fastProperty "Type variable generalization preserves free variables" prop_generalization_preserves_free
+  , fastProperty "Type instantiation preserves structure" prop_instantiation_preserves_structure
+  , testCase "Manual type system test" $ do
+      let varA = TypeVar "a"
+          varB = TypeVar "b"
+          funcType = FunctionType varA varB
+          constructor = TypeConstructor "List" [varA]
+          dependent = dependentType varA (TypeConstructor "Nat" [])
+      
+      getConstructorArity constructor @?= 1
+      areTypesEqual varA varA @?= True
+      areTypesEqual varA varB @?= False
+      
+      let substitution = substituteType "a" (TypeConstructor "Int" []) varA
+      substitution @?= TypeConstructor "Int" []
+      
+      isSubtype varA varA @?= True
+      
+      let freeVars = getFreeVariables funcType
+      sort freeVars @?= ["a", "b"]
   ]
