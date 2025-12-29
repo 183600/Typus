@@ -612,6 +612,19 @@ import qualified Test.Unit.SourceLocationMathComprehensiveSpec
 import qualified Test.Unit.CompilerIntegrationComprehensiveSpec
 import qualified Test.Unit.OwnershipAnalysisComprehensiveSpec
 import qualified Test.Unit.DependentTypesValidationComprehensiveSpec
+
+-- ============================================================================
+-- New Comprehensive QuickCheck Test Modules (2025) - 10 Core Modules
+-- ============================================================================
+import qualified Test.Unit.UtilsComprehensiveQuickCheckSpec
+import qualified Test.Unit.SourceLocationComprehensiveQuickCheckSpec
+import qualified Test.Unit.ParserComprehensiveQuickCheckSpec
+import qualified Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec
+import qualified Test.Unit.OwnershipComprehensiveQuickCheckSpec
+import qualified Test.Unit.CompilerComprehensiveQuickCheckSpec
+import qualified Test.Unit.DependenciesComprehensiveQuickCheckSpec
+import qualified Test.Unit.DependentTypesComprehensiveQuickCheckSpec
+import qualified Test.Unit.SyntaxValidatorComprehensiveQuickCheckSpec
 import qualified Test.Unit.ErrorHandlerCoreComprehensiveSpec
 import qualified Test.Unit.UtilsStringProcessingComprehensiveSpec
 
@@ -2986,6 +2999,21 @@ tests =
     , Test.Unit.AdditionalOwnershipAnalysisQuickCheckSpec.tests
     , Test.Unit.AdditionalDependencyAnalysisQuickCheckSpec.tests
     , Test.Unit.EndToEndIntegrationQuickCheckSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Comprehensive QuickCheck Test Modules (2025) - 10 Core Modules
+  -- ============================================================================
+  , testGroup "New Comprehensive QuickCheck Test Modules - Core Functionality Testing"
+    [ Test.Unit.UtilsComprehensiveQuickCheckSpec.utilsComprehensiveQuickCheckSpec
+    , Test.Unit.SourceLocationComprehensiveQuickCheckSpec.sourceLocationComprehensiveQuickCheckSpec
+    , Test.Unit.ParserComprehensiveQuickCheckSpec.parserComprehensiveQuickCheckSpec
+    , Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec.errorHandlerComprehensiveQuickCheckSpec
+    , Test.Unit.OwnershipComprehensiveQuickCheckSpec.ownershipComprehensiveQuickCheckSpec
+    , Test.Unit.CompilerComprehensiveQuickCheckSpec.compilerComprehensiveQuickCheckSpec
+    , Test.Unit.DependenciesComprehensiveQuickCheckSpec.dependenciesComprehensiveQuickCheckSpec
+    , Test.Unit.DependentTypesComprehensiveQuickCheckSpec.dependentTypesComprehensiveQuickCheckSpec
+    , Test.Unit.SyntaxValidatorComprehensiveQuickCheckSpec.syntaxValidatorComprehensiveQuickCheckSpec
     ]
 
   

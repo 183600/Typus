@@ -614,6 +614,19 @@ test-suite typus-test
         Test.Unit.SourcePositionPrecisionSpec,
         Test.Unit.TextProcessingRobustnessSpec,
 
+        -- ============================================================================
+        -- New Comprehensive QuickCheck Test Modules (2025) - 10 Core Modules
+        -- ============================================================================
+        Test.Unit.UtilsComprehensiveQuickCheckSpec,
+        Test.Unit.SourceLocationComprehensiveQuickCheckSpec,
+        Test.Unit.ParserComprehensiveQuickCheckSpec,
+        Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec,
+        Test.Unit.OwnershipComprehensiveQuickCheckSpec,
+        Test.Unit.CompilerComprehensiveQuickCheckSpec,
+        Test.Unit.DependenciesComprehensiveQuickCheckSpec,
+        Test.Unit.DependentTypesComprehensiveQuickCheckSpec,
+        Test.Unit.SyntaxValidatorComprehensiveQuickCheckSpec,
+
         -- New Comprehensive Test Suite (2025)
         Test.Unit.SourceLocationBoundarySpec,
         Test.Unit.UtilsPerformanceBoundarySpec,
