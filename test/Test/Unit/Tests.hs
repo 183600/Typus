@@ -98,6 +98,18 @@ import qualified Test.Unit.NewComprehensiveCoreQuickCheckSpec
 import qualified Test.Unit.NewCoreBoundaryConditionsQuickCheckSpec
 import qualified Test.Unit.NewCorePerformanceQuickCheckSpec
 import qualified Test.Unit.NewCoreErrorHandlingQuickCheckSpec
+
+-- ============================================================================
+-- New QuickCheck Test Modules (2025) - 8 comprehensive tests
+-- ============================================================================
+import qualified Test.Unit.NewCoreParsingQuickCheckSpec
+import qualified Test.Unit.NewTypeSystemQuickCheckSpec
+import qualified Test.Unit.NewMemorySafetyQuickCheckSpec
+import qualified Test.Unit.NewErrorRecoveryQuickCheckSpec
+import qualified Test.Unit.NewPerformanceQuickCheckSpec
+import qualified Test.Unit.NewIntegrationQuickCheckSpec
+import qualified Test.Unit.NewOwnershipAnalysisQuickCheckSpec
+import qualified Test.Unit.NewCompilerOptimizationQuickCheckSpec
 import qualified Test.Unit.NewCompleteCoreTestSuiteSpec
 import qualified Test.Unit.AdvancedParserSpec
 import qualified Test.Unit.IntegrationSpec
