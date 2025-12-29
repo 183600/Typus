@@ -1393,6 +1393,16 @@ import qualified Test.Unit.NewCabalErrorHandlerQuickCheckSpec
 import qualified Test.Unit.NewCabalDependenciesQuickCheckSpec
 import qualified Test.Unit.NewCabalSyntaxValidatorQuickCheckSpec
 
+-- New Enhanced Test Modules (2025) - Added for comprehensive testing
+import qualified Test.Unit.UtilsEnhancedTestSpec
+import qualified Test.Unit.SourceLocationEnhancedTestSpec
+import qualified Test.Unit.ParserEnhancedTestSpec
+import qualified Test.Unit.UtilsPropertiesQuickCheckTestSpec
+import qualified Test.Unit.SourceLocationPropertiesQuickCheckTestSpec
+import qualified Test.Unit.IntegrationEnhancedTestSpec
+import qualified Test.Unit.EdgeCaseHandlingTestSpec
+import qualified Test.Unit.PerformanceBoundaryTestSpec
+
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
 --
@@ -1468,6 +1478,20 @@ tests =
     , Test.Unit.SourceLocationAdditionalSpec.tests
     , Test.Unit.SourceLocationAdditionalQuickCheckSpec.tests
     , Test.Unit.ParserAdditionalSpec.tests
+
+    -- ============================================================================
+    -- New Enhanced Test Modules (2025) - 8 comprehensive tests
+    -- ============================================================================
+    , testGroup "New Enhanced Test Modules"
+        [ Test.Unit.UtilsEnhancedTestSpec.tests
+        , Test.Unit.SourceLocationEnhancedTestSpec.tests
+        , Test.Unit.ParserEnhancedTestSpec.tests
+        , Test.Unit.UtilsPropertiesQuickCheckTestSpec.tests
+        , Test.Unit.SourceLocationPropertiesQuickCheckTestSpec.tests
+        , Test.Unit.IntegrationEnhancedTestSpec.tests
+        , Test.Unit.EdgeCaseHandlingTestSpec.tests
+        , Test.Unit.PerformanceBoundaryTestSpec.tests
+        ]
     , Test.Unit.NewCabalTestSpec.tests
     
     -- New Comprehensive Test Modules (2025)
