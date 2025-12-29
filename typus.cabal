@@ -1207,7 +1207,7 @@ test-suite typus-test
             Test.Unit.CoreParserEssentialSpec,
             Test.Unit.CoreCompilerEssentialSpec,
             Test.Unit.IntegrationEssentialSpec,
-        Test.Unit.NewComprehensiveQuickCheckTestsSpec,
+            Test.Unit.NewComprehensiveQuickCheckTestsSpec,
         
         -- New Cabal QuickCheck Test Modules (2025) - 10 comprehensive tests
         Test.Unit.NewCabalUtilsQuickCheckTestSpec,
@@ -1228,6 +1228,9 @@ test-suite typus-test
         Test.Unit.DependentTypesBoundarySpec,
         Test.Unit.StringUtilsBoundarySpec,
         Test.Unit.PerformanceBoundarySpec,
+        
+        -- New QuickCheck Test Modules (Added for enhanced coverage)
+        -- Note: These modules are already listed above
         
         -- New Enhanced QuickCheck Test Modules (2025) - 4 comprehensive tests
         -- (These modules are already listed above)

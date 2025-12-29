@@ -575,6 +575,16 @@ import qualified Test.Unit.CabalAnalyzerQuickCheckSpec
 import qualified Test.Unit.CabalIntegrationQuickCheckSpec
 
 -- ============================================================================
+-- New QuickCheck Test Modules (Added for enhanced coverage)
+-- ============================================================================
+import qualified Test.Unit.NewUtilsQuickCheckPropertyTestsSpec
+import qualified Test.Unit.NewSourceLocationMathPropertiesSpec
+import qualified Test.Unit.NewParserCombinatorPropertiesSpec
+import qualified Test.Unit.NewStringProcessingBoundarySpec
+import qualified Test.Unit.NewErrorHandlerConsistencySpec
+import qualified Test.Unit.NewComprehensiveQuickCheckTestSuite
+
+-- ============================================================================
 -- New Cabal Test Modules - 10 Comprehensive QuickCheck Tests (2025)
 -- ============================================================================
 import qualified Test.Unit.TextProcessingPropertiesSpec
@@ -3639,6 +3649,18 @@ tests =
         , Test.Unit.TypeSystemBoundaryQuickCheckSpec.tests
         , Test.Unit.MemorySafetyQuickCheckSpec.tests
         , Test.Unit.CompilerOptimizationConsistencySpec.tests
+        ]
+
+    -- ============================================================================
+    -- New QuickCheck Test Modules (Added for enhanced coverage) - Core Functionality
+    -- ============================================================================
+    , testGroup "New QuickCheck Test Modules - Enhanced Coverage"
+        [ Test.Unit.NewUtilsQuickCheckPropertyTestsSpec.testSuite
+        , Test.Unit.NewSourceLocationMathPropertiesSpec.testSuite
+        , Test.Unit.NewParserCombinatorPropertiesSpec.testSuite
+        , Test.Unit.NewStringProcessingBoundarySpec.testSuite
+        , Test.Unit.NewErrorHandlerConsistencySpec.testSuite
+        , Test.Unit.NewComprehensiveQuickCheckTestSuite.testSuite
         ]
 
         ]

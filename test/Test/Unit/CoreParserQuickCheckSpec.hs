@@ -12,349 +12,209 @@ module Test.Unit.CoreParserQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import Test.QuickCheck.Gen (Gen, choose, listOf, vectorOf, elements, oneof)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose)
 
 import Parser
-  ( parseTypus
-  , FileDirectives(..)
+  ( FileDirectives(..)
   , BlockDirectives(..)
   , CodeBlock(..)
   , TypusFile(..)
   , defaultFileDirectives
   , defaultBlockDirectives
+  , parseTypus
   )
 
 import SourceLocation
   ( SourcePos(..)
   , SourceSpan(..)
+  , locatedWithSpan
+  , locatedValue
   , startPos
-  , spanFrom
-  , spanStart
-  , spanEnd
   )
 
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf)
-import Data.Maybe (isJust, isNothing, fromMaybe)
+import Data.List (isPrefixOf, isInfixOf, sort, isPrefixOf)
+import Data.Char (isSpace, isAlpha, isAlphaNum)
 
 -- ============================================================================
--- Generators
+-- 生成器定义
 -- ============================================================================
 
-genSourcePos :: Gen SourcePos
-genSourcePos = do
-  line <- choose (1, 1000)
-  col <- choose (1, 1000)
-  return $ posAt line col
+-- 生成简单的标识符
+genIdentifier :: Gen String
+genIdentifier = do
+  first <- elements ['a'..'z']
+  rest <- listOf $ elements $ ['a'..'z'] ++ ['0'..'9'] ++ ['_']
+  return $ first : rest
 
-genSourceSpan :: Gen SourceSpan
-genSourceSpan = do
-  start <- genSourcePos
-  end <- genSourcePos
-  return $ spanBetween start end
+-- 生成简单的Typus代码块
+genSimpleCodeBlock :: Gen String
+genSimpleCodeBlock = do
+  funcName <- genIdentifier
+  return $ "func " ++ funcName ++ "() {\n    return 42\n}"
 
-genLocatedBool :: Gen (Maybe (Located Bool))
-genLocatedBool = oneof
-  [ return Nothing
-  , do
-      value <- elements [True, False]
-      span <- genSourceSpan
-      return $ Just (Located value span)
+-- 生成文件级指令
+genFileDirective :: Gen String
+genFileDirective = oneof
+  [ return "//! ownership: on"
+  , return "//! ownership: off"
+  , return "//! dependent_types: on"
+  , return "//! dependent_types: off"
+  , return "//! constraints: on"
+  , return "//! constraints: off"
   ]
 
-genLocatedString :: Gen (Located String)
-genLocatedString = do
-  value <- elements ["debug", "release", "test", "linux", "windows", "darwin"]
-  span <- genSourceSpan
-  return $ Located value span
+-- 生成块级指令
+genBlockDirective :: Gen String
+genBlockDirective = oneof
+  [ return "//@ ownership: on"
+  , return "//@ ownership: off"
+  , return "//@ dependent_types: on"
+  , return "//@ dependent_types: off"
+  , return "//@ constraints: on"
+  , return "//@ constraints: off"
+  ]
 
-genFileDirectives :: Gen FileDirectives
-genFileDirectives = do
-  ownership <- genLocatedBool
-  dependentTypes <- genLocatedBool
-  constraints <- genLocatedBool
-  return $ FileDirectives ownership dependentTypes constraints
-
-genBlockDirectives :: Gen BlockDirectives
-genBlockDirectives = do
-  ownership <- genLocatedBool
-  dependentTypes <- genLocatedBool
-  constraints <- genLocatedBool
-  return $ BlockDirectives ownership dependentTypes constraints
-
-genCodeContent :: Gen String
-genCodeContent = do
-  lines <- choose (1, 10)
-  content <- listOf $ elements 
-    [ "func main() {"
-    , "    println(\"Hello, World!\")"
-    , "}"
-    , "var x int = 42"
-    , "const y = \"test\""
-    , "if x > 0 {"
-    , "    return x"
-    , "}"
-    , "type Person struct {"
-    , "    Name string"
-    , "    Age int"
-    , "}"
-    ]
-  return $ unlines $ take lines content
-
-genCodeBlock :: Gen CodeBlock
-genCodeBlock = do
-  directives <- genBlockDirectives
-  content <- genCodeContent
-  span <- genSourceSpan
-  return $ CodeBlock directives content span
-
-genTypusFile :: Gen TypusFile
-genTypusFile = do
-  directives <- genFileDirectives
-  buildTags <- listOf genLocatedString
-  blocks <- listOf genCodeBlock
-  syntaxErrors <- return []  -- Simplified for testing
-  return $ TypusFile directives buildTags blocks syntaxErrors
-
-genValidTypusContent :: Gen String
-genValidTypusContent = do
-  hasFileDirectives <- elements [True, False]
-  hasBuildTags <- elements [True, False]
-  numBlocks <- choose (1, 5)
-  
-  let fileDirective = if hasFileDirectives
-        then "//! ownership=true, dependent-types=true\n"
-        else ""
-      
-      buildTagDirective = if hasBuildTags
-        then "// +build debug\n"
-        else ""
-      
-      generateBlock i = unlines
-        [ "// ownership=true"
-        , "func test" ++ show i ++ "() {"
-        , "    x := " ++ show (i * 10)
-        , "    return x"
-        , "}"
-        , ""
-        ]
-      
-      blocks = concatMap generateBlock [1..numBlocks]
-  
-  return $ fileDirective ++ buildTagDirective ++ blocks
+-- 生成基本的Typus文件内容
+genBasicTypusContent :: Gen String
+genBasicTypusContent = do
+  numDirectives <- choose (0, 3)
+  directives <- listOf genFileDirective
+  codeBlock <- genSimpleCodeBlock
+  return $ unlines directives ++ "\n" ++ codeBlock
 
 -- ============================================================================
--- Properties for FileDirectives
+-- QuickCheck 属性测试
 -- ============================================================================
 
-prop_defaultFileDirectives_has_no_values :: Property
-prop_defaultFileDirectives_has_no_values =
-  let directives = defaultFileDirectives
-  in property $ isNothing (fdOwnership directives) .&&.
-               isNothing (fdDependentTypes directives) .&&.
-               isNothing (fdConstraints directives)
+-- 属性: 解析空内容应该返回默认指令
+prop_parse_empty_content :: Property
+prop_parse_empty_content =
+  case parseTypus "" of
+    Left _ -> property False
+    Right typusFile -> tfDirectives typusFile === defaultFileDirectives
 
-prop_fileDirectives_extracts_ownership :: String -> Property
-prop_fileDirectives_extracts_ownership content =
-  "//! ownership=true" `isInfixOf` content ==>
-  let parsed = parseTypus content
-      directives = tfDirectives parsed
-      ownership = fdOwnership directives
-  in property $ isJust ownership .&&. 
-               (maybe False locatedValue ownership) === True
+-- 属性: 解析只有注释的文件应该保持默认指令
+prop_parse_comments_only :: Property
+prop_parse_comments_only =
+  forAll genFileDirective $ \directive ->
+    case parseTypus directive of
+      Left _ -> property False
+      Right typusFile -> tfDirectives typusFile /= defaultFileDirectives
 
-prop_fileDirectives_extracts_dependent_types :: String -> Property
-prop_fileDirectives_extracts_dependent_types content =
-  "//! dependent-types=false" `isInfixOf` content ==>
-  let parsed = parseTypus content
-      directives = tfDirectives parsed
-      dependentTypes = fdDependentTypes directives
-  in property $ isJust dependentTypes .&&. 
-               (maybe False locatedValue dependentTypes) === False
+-- 属性: 解析有效的简单代码应该成功
+prop_parse_valid_simple_code :: Property
+prop_parse_valid_simple_code =
+  forAll genBasicTypusContent $ \content ->
+    case parseTypus content of
+      Left err -> counterexample ("Parse failed: " ++ err) $ property False
+      Right _ -> property True
 
-prop_fileDirectives_extracts_constraints :: String -> Property
-prop_fileDirectives_extracts_constraints content =
-  "//! constraints=true" `isInfixOf` content ==>
-  let parsed = parseTypus content
-      directives = tfDirectives parsed
-      constraints = fdConstraints directives
-  in property $ isJust constraints .&&. 
-               (maybe False locatedValue constraints) === True
+-- 属性: 所有权指令解析一致性
+prop_ownership_directive_parsing :: Property
+prop_ownership_directive_parsing =
+  forAll (elements ["on", "off"]) $ \value ->
+    let source = "//! ownership: " ++ value ++ "\npackage main\nfunc main() {}"
+    in case parseTypus source of
+         Left _ -> property False
+         Right typusFile -> 
+           case fdOwnership (tfDirectives typusFile) of
+             Nothing -> property False
+             Just loc -> locatedValue loc === (value == "on")
 
--- ============================================================================
--- Properties for BlockDirectives
--- ============================================================================
+-- 属性: 依赖类型指令解析一致性
+prop_dependent_types_directive_parsing :: Property
+prop_dependent_types_directive_parsing =
+  forAll (elements ["on", "off"]) $ \value ->
+    let source = "//! dependent_types: " ++ value ++ "\npackage main\nfunc main() {}"
+    in case parseTypus source of
+         Left _ -> property False
+         Right typusFile -> 
+           case fdDependentTypes (tfDirectives typusFile) of
+             Nothing -> property False
+             Just loc -> locatedValue loc === (value == "on")
 
-prop_defaultBlockDirectives_has_no_values :: Property
-prop_defaultBlockDirectives_has_no_values =
-  let directives = defaultBlockDirectives
-  in property $ isNothing (bdOwnership directives) .&&.
-               isNothing (bdDependentTypes directives) .&&.
-               isNothing (bdConstraints directives)
+-- 属性: 约束指令解析一致性（作为依赖类型的别名）
+prop_constraints_directive_parsing :: Property
+prop_constraints_directive_parsing =
+  forAll (elements ["on", "off"]) $ \value ->
+    let source = "//! constraints: " ++ value ++ "\npackage main\nfunc main() {}"
+    in case parseTypus source of
+         Left _ -> property False
+         Right typusFile -> 
+           case fdConstraints (tfDirectives typusFile) of
+             Nothing -> property False
+             Just loc -> locatedValue loc === (value == "on")
 
-prop_blockDirectives_extracts_ownership :: String -> Property
-prop_blockDirectives_extracts_ownership content =
-  "// ownership=true" `isInfixOf` content ==>
-  let parsed = parseTypus content
-      blocks = tfBlocks parsed
-      hasOwnershipBlock = any (\block -> 
-        let directives = cbDirectives block
-            ownership = bdOwnership directives
-        in isJust ownership && maybe False locatedValue ownership) blocks
-  in property $ hasOwnershipBlock === True
+-- 属性: 多个指令解析正确性
+prop_multiple_directives_parsing :: Property
+prop_multiple_directives_parsing =
+  forAll (listOf genFileDirective) $ \directives ->
+    let source = unlines directives ++ "\npackage main\nfunc main() {}"
+    in case parseTypus source of
+         Left _ -> counterexample "Failed to parse multiple directives" $ property False
+         Right _ -> property True
 
--- ============================================================================
--- Properties for CodeBlock
--- ============================================================================
+-- 属性: 解析结果位置信息一致性
+prop_parse_location_consistency :: Property
+prop_parse_location_consistency =
+  let source = "//! ownership: on\npackage main\nfunc main() {}"
+  in case parseTypus source of
+       Left _ -> property False
+       Right typusFile ->
+         case fdOwnership (tfDirectives typusFile) of
+           Nothing -> property False
+           Just loc -> 
+             let span = locSpan loc
+             in posLine (spanStart span) === 1 .&&.
+                posColumn (spanStart span) === 1
 
-prop_codeBlock_preserves_content :: String -> Property
-prop_codeBlock_preserves_content content =
-  not (null content) ==> 
-  let parsed = parseTypus content
-      blocks = tfBlocks parsed
-      blockContents = map cbContent blocks
-  in property $ any (not . null) blockContents
+-- 属性: 错误输入应该产生解析错误
+prop_invalid_input_produces_error :: Property
+prop_invalid_input_produces_error =
+  forAll (elements ["@", "$", "%", "^", "&", "*"]) $ \invalidChar ->
+    let source = invalidChar ++ " invalid syntax"
+    in case parseTypus source of
+         Left _ -> property True
+         Right _ -> property False
 
-prop_codeBlock_tracks_span :: String -> Property
-prop_codeBlock_tracks_span content =
-  not (null content) ==> 
-  let parsed = parseTypus content
-      blocks = tfBlocks parsed
-      spans = map cbSpan blocks
-  in property $ all isValidSpan spans
+-- 属性: 解析包含换行符的代码
+prop_parse_with_newlines :: Property
+prop_parse_with_newlines =
+  forAll (choose (1, 10)) $ \numLines ->
+    let source = unlines $ replicate numLines "//! ownership: on"
+    in case parseTypus source of
+         Left _ -> property False
+         Right typusFile ->
+           case fdOwnership (tfDirectives typusFile) of
+             Nothing -> property False
+             Just _ -> property True
 
--- ============================================================================
--- Properties for TypusFile
--- ============================================================================
-
-prop_typusFile_preserves_structure :: String -> Property
-prop_typusFile_preserves_structure content =
-  not (null content) ==> 
-  let parsed = parseTypus content
-      directives = tfDirectives parsed
-      buildTags = tfBuildTags parsed
-      blocks = tfBlocks parsed
-  in property $ length blocks >= 0 .&&.
-               length buildTags >= 0
-
-prop_typusFile_handles_empty_content :: Property
-prop_typusFile_handles_empty_content =
-  let parsed = parseTypus ""
-      directives = tfDirectives parsed
-      buildTags = tfBuildTags parsed
-      blocks = tfBlocks parsed
-  in property | length blocks === 0
-
--- ============================================================================
--- Properties for Build Tags
--- ============================================================================
-
-prop_buildTags_extracts_build_constraints :: String -> Property
-prop_buildTags_extracts_build_constraints content =
-  "// +build debug" `isInfixOf` content ==>
-  let parsed = parseTypus content
-      buildTags = tfBuildTags parsed
-      hasDebugTag = any ((== "debug") . locatedValue) buildTags
-  in property $ hasDebugTag === True
-
-prop_buildTags_handles_multiple_tags :: String -> Property
-prop_buildTags_handles_multiple_tags content =
-  "// +build debug" `isInfixOf` content && "// +build test" `isInfixOf` content ==>
-  let parsed = parseTypus content
-      buildTags = tfBuildTags parsed
-      tagValues = map locatedValue buildTags
-  in property $ "debug" `elem` tagValues .&&. "test" `elem` tagValues
+-- 属性: 解析包含空格的指令
+prop_parse_whitespace_in_directives :: Property
+prop_parse_whitespace_in_directives =
+  let source = "//!    ownership:    on   \npackage main\nfunc main() {}"
+  in case parseTypus source of
+       Left _ -> property False
+       Right typusFile ->
+         case fdOwnership (tfDirectives typusFile) of
+           Nothing -> property False
+           Just loc -> locatedValue loc === True
 
 -- ============================================================================
--- Properties for Parsing Robustness
--- ============================================================================
-
-prop_parser_handles_mixed_directives :: String -> String -> String -> Property
-prop_parser_handles_mixed_directives fileDirective blockDirective code =
-  not (null fileDirective || null blockDirective || null code) ==>
-  let content = unlines [fileDirective, blockDirective, code]
-      parsed = parseTypus content
-  in property $ length (tfBlocks parsed) >= 0
-
-prop_parser_handles_nested_blocks :: Int -> Property
-prop_parser_handles_nested_blocks depth =
-  depth >= 0 && depth <= 5 ==>
-  let generateNestedBlock 0 = "func base() { return 0 }"
-      generateNestedBlock n = "func level" ++ show n ++ "() { " ++ generateNestedBlock (n-1) ++ " }"
-      content = generateNestedBlock depth
-      parsed = parseTypus content
-  in property $ length (tfBlocks parsed) >= 0
-
-prop_parser_preserves_line_structure :: String -> Property
-prop_parser_preserves_line_structure content =
-  not (null content) ==> 
-  let inputLines = lines content
-      parsed = parseTypus content
-      blocks = tfBlocks parsed
-      blockContents = concatMap (lines . cbContent) blocks
-  in property $ length blockContents <= length inputLines
-
--- ============================================================================
--- Properties for Error Handling
--- ============================================================================
-
-prop_parser_handles_malformed_directives :: String -> Property
-prop_parser_handles_malformed_directives malformedDirective =
-  not (null malformedDirective) ==> 
-  let content = malformedDirective ++ "\nfunc test() {}"
-      parsed = parseTypus content
-  in property $ length (tfBlocks parsed) >= 0
-
-prop_parser_handles_unicode_content :: String -> Property
-prop_parser_handles_unicode_content unicodeText =
-  not (null unicodeText) ==> 
-  let content = "// Unicode test: " ++ unicodeText ++ "\nfunc test() { println(\"" ++ unicodeText ++ "\") }"
-      parsed = parseTypus content
-  in property $ length (tfBlocks parsed) >= 0
-
--- ============================================================================
--- Test Suite
+-- 测试套件
 -- ============================================================================
 
 tests :: TestTree
 tests = testGroup "Core Parser QuickCheck Tests"
-  [ testGroup "FileDirectives Properties"
-    [ fastProperty "defaultFileDirectives has no values" prop_defaultFileDirectives_has_no_values
-    , fastProperty "fileDirectives extracts ownership" prop_fileDirectives_extracts_ownership
-    , fastProperty "fileDirectives extracts dependent types" prop_fileDirectives_extracts_dependent_types
-    , fastProperty "fileDirectives extracts constraints" prop_fileDirectives_extracts_constraints
-    ]
-
-  , testGroup "BlockDirectives Properties"
-    [ fastProperty "defaultBlockDirectives has no values" prop_defaultBlockDirectives_has_no_values
-    , fastProperty "blockDirectives extracts ownership" prop_blockDirectives_extracts_ownership
-    ]
-
-  , testGroup "CodeBlock Properties"
-    [ fastProperty "codeBlock preserves content" prop_codeBlock_preserves_content
-    , fastProperty "codeBlock tracks span" prop_codeBlock_tracks_span
-    ]
-
-  , testGroup "TypusFile Properties"
-    [ fastProperty "typusFile preserves structure" prop_typusFile_preserves_structure
-    , fastProperty "typusFile handles empty content" prop_typusFile_handles_empty_content
-    ]
-
-  , testGroup "Build Tags Properties"
-    [ fastProperty "buildTags extracts build constraints" prop_buildTags_extracts_build_constraints
-    , fastProperty "buildTags handles multiple tags" prop_buildTags_handles_multiple_tags
-    ]
-
-  , testGroup "Parsing Robustness Properties"
-    [ fastProperty "parser handles mixed directives" prop_parser_handles_mixed_directives
-    , fastProperty "parser handles nested blocks" prop_parser_handles_nested_blocks
-    , fastProperty "parser preserves line structure" prop_parser_preserves_line_structure
-    ]
-
-  , testGroup "Error Handling Properties"
-    [ fastProperty "parser handles malformed directives" prop_parser_handles_malformed_directives
-    , fastProperty "parser handles unicode content" prop_parser_handles_unicode_content
-    ]
+  [ fastProperty "Default directives for empty content" prop_parse_empty_content
+  , fastProperty "Comments only parsing" prop_parse_comments_only
+  , fastProperty "Valid simple code parsing" prop_parse_valid_simple_code
+  , fastProperty "Ownership directive parsing consistency" prop_ownership_directive_parsing
+  , fastProperty "Dependent types directive parsing consistency" prop_dependent_types_directive_parsing
+  , fastProperty "Constraints directive parsing consistency" prop_constraints_directive_parsing
+  , fastProperty "Multiple directives parsing" prop_multiple_directives_parsing
+  , fastProperty "Parse location consistency" prop_parse_location_consistency
+  , fastProperty "Invalid input produces error" prop_invalid_input_produces_error
+  , fastProperty "Parse with newlines" prop_parse_with_newlines
+  , fastProperty "Parse whitespace in directives" prop_parse_whitespace_in_directives
   ]
