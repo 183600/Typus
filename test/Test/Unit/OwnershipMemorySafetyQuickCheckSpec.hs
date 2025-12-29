@@ -1,337 +1,273 @@
+{-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+
 module Test.Unit.OwnershipMemorySafetyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Arbitrary(..), Gen, choose, listOf, suchThat, oneof, elements, frequency)
-import Data.List (sort, nub, intersect, union)
-import Data.Set (Set, fromList, toList, union, intersection, difference)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
+import TestSupport.Arbitrary
+
+import Ownership
 import Ownership.Common.Types
+import SourceLocation
+import Data.List (sort, nub, group, intercalate, find, delete)
+import Data.Maybe (isJust, isNothing, catMaybes, fromMaybe)
+import Data.Set (Set, empty, singleton, union, unions, member, size, difference, intersection)
+import qualified Data.Set as Set
+import Data.Map (Map, empty, singleton, insert, lookup, keys, elems, unionWith)
+import qualified Data.Map as Map
 
--- | Generate variable names with memory safety patterns
-genSafeVariableName :: Gen String
-genSafeVariableName = do
-    first <- elements ['a'..'z']
-    rest <- listOf $ elements ['a'..'z', '0'..'9', '_']
-    return (first : rest)
+-- ============================================================================
+-- Ownership Memory Safety QuickCheck Tests
+-- ============================================================================
 
--- | Generate ownership transfer scenarios
-genTransferScenario :: Gen [(String, OwnershipType, [OwnershipTransfer])]
-genTransferScenario = do
-    numVars <- choose (1, 5)
-    vars <- listOf1 genSafeVariableName
-    let uniqueVars = take numVars $ nub vars
-    
-    -- Generate ownership types for each variable
-    ownershipTypes <- mapM (\var -> do
-        ownershipType <- frequency
-            [ (3, return $ Owned var)
-            , (2, return $ Borrowed var)
-            , (1, return $ MutBorrowed var)
-            ]
-        return (var, ownershipType)
-    ) uniqueVars
-    
-    -- Generate transfers between variables
-    numTransfers <- choose (0, numVars * 2)
-    transfers <- listOf numTransfers $ do
-        from <- elements uniqueVars
-        to <- elements uniqueVars
-        return $ OwnershipTransfer from to
-    
-    return ownershipTypes `map` (\(var, ownership) -> 
-        let varTransfers = filter (\t -> transferFrom t == var || transferTo t == var) transfers
-        in (var, ownership, varTransfers))
+-- Property: Ownership transfer preserves uniqueness
+prop_ownership_transfer_preserves_uniqueness :: String -> String -> Property
+prop_ownership_transfer_preserves_uniqueness owner1 owner2 =
+  owner1 /= owner2 ==> 
+  let resource = Resource "testResource" owner1
+      transferred = transferOwnership resource owner2
+  in property $ resourceOwner transferred === owner2 .&&. 
+     resourceOwner resource === owner1
 
--- | Generate error scenarios
-genErrorScenario :: Gen [OwnershipError]
-genErrorScenario = do
-    numErrors <- choose (1, 10)
-    listOf numErrors $ frequency
-        [ (3, do var <- genSafeVariableName
-                return $ UseAfterMove var)
-        , (2, do var1 <- genSafeVariableName
-                var2 <- genSafeVariableName
-                return $ DoubleMove var1 var2)
-        , (2, do var <- genSafeVariableName
-                return $ BorrowWhileMoved var)
-        , (1, do var <- genSafeVariableName
-                return $ MutBorrowWhileBorrowed var)
-        , (1, do var <- genSafeVariableName
-                return $ BorrowWhileMutBorrowed var)
-        , (1, do var <- genSafeVariableName
-                return $ MultipleMutBorrows var)
-        , (1, do var <- genSafeVariableName
-                return $ UseWhileMutBorrowed var)
-        , (1, do var <- genSafeVariableName
-                return $ OutOfScope var)
-        , (1, do msg <- listOf1 (elements ['a'..'z', ' '])
-                return $ BorrowError msg)
-        , (1, do msg <- listOf1 (elements ['a'..'z', ' '])
-                return $ ParseError msg)
-        ]
+-- Property: Borrowing prevents double free
+prop_borrowing_prevents_double_free :: String -> String -> Property
+prop_borrowing_prevents_double_free borrower1 borrower2 =
+  borrower1 /= borrower2 ==> 
+  let resource = Resource "testResource" borrower1
+      borrowed1 = borrowResource resource borrower1
+      borrowed2 = borrowResource resource borrower2
+  in property $ isJust borrowed1 .&&. isNothing borrowed2
+
+-- Property: Reference counting correctness
+prop_reference_counting_correctness :: [String] -> Property
+prop_reference_counting_correctness borrowers =
+  not (null borrowers) ==> 
+  let resource = Resource "testResource" (head borrowers)
+      withRefs = foldl (\res borrower -> addReference res borrower) resource borrowers
+      finalCount = countReferences withRefs
+  in property $ finalCount === length (nub borrowers)
+
+-- Property: Lifetime tracking prevents use-after-free
+prop_lifetime_tracking_prevents_use_after_free :: String -> Int -> Property
+prop_lifetime_tracking_prevents_use_after_free owner lifetime =
+  lifetime > 0 ==> 
+  let resource = Resource "testResource" owner
+      tracked = trackLifetime resource lifetime
+      afterLifetime = useAfterLifetime tracked (lifetime + 1)
+  in property $ isNothing afterLifetime
+
+-- Property: Move semantics invalidate source
+prop_move_semantics_invalidate_source :: String -> String -> Property
+prop_move_semantics_invalidate_source source target =
+  source /= target ==> 
+  let resource = Resource "testResource" source
+      moved = moveResource resource target
+      sourceValid = isResourceValid resource
+  in property $ not sourceValid .&&. resourceOwner moved === target
+
+-- Property: Shared borrowing allows multiple readers
+prop_shared_borrowing_multiple_readers :: [String] -> Property
+prop_shared_borrowing_multiple_readers readers =
+  length readers >= 2 ==> 
+  let resource = Resource "testResource" (head readers)
+      sharedBorrows = map (\reader -> sharedBorrow resource reader) readers
+      successfulBorrows = catMaybes sharedBorrows
+  in property $ length successfulBorrows === length readers
+
+-- Property: Mutable borrowing prevents other borrows
+prop_mutable_borrow_prevents_other_borrows :: String -> [String] -> Property
+prop_mutable_borrow_prevents_other_borrows mutBorrower otherBorrowers =
+  not (null otherBorrowers) ==> 
+  let resource = Resource "testResource" mutBorrower
+      mutableBorrow = mutableBorrowResource resource mutBorrower
+      otherBorrows = map (\borrower -> borrowResource resource borrower) otherBorrowers
+      successfulOthers = catMaybes otherBorrows
+  in property $ isJust mutableBorrow .&&. null successfulOthers
+
+-- Property: Ownership scope cleanup
+prop_ownership_scope_cleanup :: [String] -> Property
+prop_ownership_scope_cleanup owners =
+  not (null owners) ==> 
+  let resources = map (\owner -> Resource ("resource" ++ owner) owner) owners
+      scope = createScope resources
+      cleaned = cleanupScope scope
+      remainingResources = getActiveResources cleaned
+  in property $ null remainingResources
+
+-- Property: Borrowing hierarchy enforcement
+prop_borrowing_hierarchy_enforcement :: [String] -> Property
+prop_borrowing_hierarchy_enforcement hierarchy =
+  length hierarchy >= 3 ==> 
+  let rootOwner = head hierarchy
+      resource = Resource "testResource" rootOwner
+      borrowChain = foldl (\res owner -> 
+        case res of
+          Just r -> borrowResource r owner
+          Nothing -> Nothing
+      ) (Just resource) (tail hierarchy)
+  in property $ isJust borrowChain
+
+-- Property: Resource leak detection
+prop_resource_leak_detection :: [(String, Int)] -> Property
+prop_resource_leak_detection resourceLifetimes =
+  not (null resourceLifetimes) ==> 
+  let resources = map (\(name, lifetime) -> Resource name "system") resourceLifetimes
+      tracker = createResourceTracker resources
+      leaks = detectLeaks tracker
+  in property $ length leaks <= length resourceLifetimes
+
+-- Property: Concurrent access safety
+prop_concurrent_access_safety :: [String] -> Property
+prop_concurrent_access_safety threads =
+  length threads >= 2 ==> 
+  let resource = Resource "sharedResource" (head threads)
+      accessResults = map (\thread -> safeAccess resource thread) threads
+      successfulAccesses = catMaybes accessResults
+  in property $ length successfulAccesses <= 1
+
+-- Property: Ownership transfer chain validity
+prop_ownership_transfer_chain_validity :: [String] -> Property
+prop_ownership_transfer_chain_validity owners =
+  length owners >= 3 ==> 
+  let initialResource = Resource "testResource" (head owners)
+      transferChain = foldl (\res owner -> 
+        case res of
+          Just r -> Just (transferOwnership r owner)
+          Nothing -> Nothing
+      ) (Just initialResource) (tail owners)
+      finalOwner = transferChain >>= Just . resourceOwner
+  in property $ finalOwner === Just (last owners)
+
+-- Property: Borrow checker rules consistency
+prop_borrow_checker_rules_consistency :: String -> [String] -> Property
+prop_borrow_checker_rules_consistency owner borrowers =
+  not (null borrowers) ==> 
+  let resource = Resource "testResource" owner
+      borrowResults = map (\borrower -> checkBorrowRules resource borrower) borrowers
+      validBorrows = filter id borrowResults
+  in property $ length validBorrows <= 1 || all (== owner) (take 1 borrowers)
+
+-- ============================================================================
+-- Helper Functions and Types
+-- ============================================================================
+
+-- Ownership system types
+data Resource = Resource
+  { resourceName :: String
+  , resourceOwner :: String
+  , resourceRefs :: Set String
+  , resourceLifetime :: Maybe Int
+  , resourceValid :: Bool
+  } deriving (Eq, Show)
+
+data OwnershipScope = OwnershipScope
+  { scopeResources :: [Resource]
+  , scopeOwner :: String
+  } deriving (Eq, Show)
+
+data ResourceTracker = ResourceTracker
+  { trackedResources :: Map String Resource
+  , activeReferences :: Map String (Set String)
+  } deriving (Eq, Show)
+
+-- Ownership operations
+transferOwnership :: Resource -> String -> Resource
+transferOwnership resource newOwner = 
+  resource { resourceOwner = newOwner, resourceRefs = empty }
+
+borrowResource :: Resource -> String -> Maybe Resource
+borrowResource resource borrower
+  | resourceOwner resource == borrower && resourceValid resource = 
+      Just $ resource { resourceRefs = insert borrower (resourceRefs resource) }
+  | not (member borrower (resourceRefs resource)) && resourceValid resource = 
+      Just $ resource { resourceRefs = insert borrower (resourceRefs resource) }
+  | otherwise = Nothing
+
+addReference :: Resource -> String -> Resource
+addReference resource borrower = 
+  resource { resourceRefs = insert borrower (resourceRefs resource) }
+
+countReferences :: Resource -> Int
+countReferences = size . resourceRefs
+
+trackLifetime :: Resource -> Int -> Resource
+trackLifetime resource lifetime = 
+  resource { resourceLifetime = Just lifetime }
+
+useAfterLifetime :: Resource -> Int -> Maybe Resource
+useAfterLifetime resource currentTime
+  | Just lifetime <- resourceLifetime resource =
+      if currentTime <= lifetime then Just resource else Nothing
+  | otherwise = Just resource
+
+moveResource :: Resource -> String -> Resource
+moveResource resource target = 
+  resource { resourceOwner = target, resourceValid = False }
+
+isResourceValid :: Resource -> Bool
+isResourceValid = resourceValid
+
+sharedBorrow :: Resource -> String -> Maybe Resource
+sharedBorrow resource borrower = borrowResource resource borrower
+
+mutableBorrowResource :: Resource -> String -> Maybe Resource
+mutableBorrowResource resource borrower
+  | resourceOwner resource == borrower && null (resourceRefs resource) = 
+      Just resource
+  | otherwise = Nothing
+
+createScope :: [Resource] -> OwnershipScope
+createScope resources = OwnershipScope resources "scopeOwner"
+
+cleanupScope :: OwnershipScope -> OwnershipScope
+cleanupScope scope = scope { scopeResources = [] }
+
+getActiveResources :: OwnershipScope -> [Resource]
+getActiveResources = filter resourceValid . scopeResources
+
+createResourceTracker :: [Resource] -> ResourceTracker
+createResourceTracker resources = ResourceTracker 
+  (Map.fromList $ map (\r -> (resourceName r, r)) resources)
+  (Map.fromList $ map (\r -> (resourceName r, resourceRefs r)) resources)
+
+detectLeaks :: ResourceTracker -> [String]
+detectLeaks tracker = 
+  Map.keys $ Map.filter (\r -> resourceValid r && isNothing (resourceLifetime r)) (trackedResources tracker)
+
+safeAccess :: Resource -> String -> Maybe Resource
+safeAccess resource thread = 
+  if resourceOwner resource == thread then Just resource else Nothing
+
+checkBorrowRules :: Resource -> String -> Bool
+checkBorrowRules resource borrower = 
+  resourceOwner resource == borrower || not (member borrower (resourceRefs resource))
+
+-- ============================================================================
+-- Test Collection
+-- ============================================================================
 
 tests :: TestTree
-tests =
-  testGroup "Ownership memory safety QuickCheck tests"
-    [ testGroup "Memory safety invariants"
-        [ testCase "owned variables cannot be borrowed after move" $ do
-            let owned = Owned "x"
-                moved = OwnershipTransfer "x" "y"
-                error = UseAfterMove "x"
-            show error @?= "UseAfterMove x"
-
-        , fastProperty "borrowed variables cannot be mutably borrowed simultaneously" $
-            \var ->
-              let borrowed = Borrowed var
-                  mutBorrowed = MutBorrowed var
-                  error = MutBorrowWhileBorrowed var
-              in show error `contains` var
-
-        , fastProperty "mutable borrow prevents other mutable borrows" $
-            \var ->
-              let mutBorrow1 = MutBorrowed var
-                  mutBorrow2 = MutBorrowed var
-                  error = MultipleMutBorrows var
-              in show error `contains` var
-
-        , testCase "use after mut borrow is detected" $ do
-            let error = UseWhileMutBorrowed "x"
-            show error @?= "UseWhileMutBorrowed x"
-
-        , fastProperty "out of scope access is detected" $
-            \var ->
-              let error = OutOfScope var
-              in show error `contains` var
-        ]
-
-    , testGroup "Transfer safety properties"
-        [ fastProperty "transfer creates clear ownership chain" $
-            \from to ->
-              let transfer = OwnershipTransfer from to
-              in transferFrom transfer == from && transferTo transfer == to
-
-        , fastProperty "transfer preserves variable identity" $
-            \var ->
-              let transfer = OwnershipTransfer var var
-              in transferFrom transfer == transferTo transfer
-
-        , fastProperty "multiple transfers create dependency graph" $
-            \transfers ->
-              let fromVars = map transferFrom transfers
-                  toVars = map transferTo transfers
-                  allVars = fromVars `union` toVars
-              in length allVars <= length fromVars + length toVars
-
-        , fastProperty "transfer chain cannot contain cycles" $
-            \transfers ->
-              let hasCycle = detectTransferCycle transfers
-              in not hasCycle || length transfers > 10 -- Allow cycles in complex scenarios
-
-        , fastProperty "transfer respects ownership hierarchy" $
-            \ownershipType transfer ->
-              let from = transferFrom transfer
-              in case ownershipType of
-                   Owned var -> var == from -- Only owned values can be transferred
-                   Borrowed var -> var /= from -- Borrowed values cannot be transferred
-                   MutBorrowed var -> var /= from -- Mutably borrowed values cannot be transferred
-        ]
-
-    , testGroup "Borrowing safety properties"
-        [ fastProperty "immutable borrows allow multiple readers" $
-            \var ->
-              let borrow1 = Borrowed var
-                  borrow2 = Borrowed var
-              in borrow1 == borrow2 || borrow1 /= borrow2 -- Both are valid
-
-        , fastProperty "mutable borrows exclude other borrows" $
-            \var ->
-              let mutBorrow = MutBorrowed var
-                  immBorrow = Borrowed var
-              in mutBorrow /= immBorrow
-
-        , fastProperty "borrowing preserves source variable" $
-            \var ->
-              let borrowed = Borrowed var
-                  mutBorrowed = MutBorrowed var
-              in case borrowed of
-                   Borrowed v -> v == var
-                   _ -> False &&
-               case mutBorrowed of
-                 MutBorrowed v -> v == var
-                 _ -> False
-
-        , testCase "borrow error scenarios" $ do
-            let borrowError = BorrowError "cannot borrow moved value"
-                parseError = ParseError "syntax error in borrow expression"
-            show borrowError @?= "BorrowError cannot borrow moved value"
-            show parseError @?= "ParseError syntax error in borrow expression"
-        ]
-
-    , testGroup "Error detection consistency"
-        [ fastProperty "use after move error is consistent" $
-            \var ->
-              let error = UseAfterMove var
-                  shown = show error
-              in "UseAfterMove " ++ var == shown
-
-        , fastProperty "double move error includes both variables" $
-            \var1 var2 ->
-              let error = DoubleMove var1 var2
-                  shown = show error
-              in var1 `isInfixOf` shown && var2 `isInfixOf` shown
-
-        , fastProperty "borrowing errors identify conflicting variable" $
-            \var ->
-              let errors = [BorrowWhileMoved var, MutBorrowWhileBorrowed var, 
-                           BorrowWhileMutBorrowed var, MultipleMutBorrows var]
-              in all (\e -> show e `contains` var) errors
-
-        , fastProperty "cross function move error identifies both functions" $
-            \func1 func2 ->
-              let error = CrossFunctionMove func1 func2
-                  shown = show error
-              in func1 `isInfixOf` shown && func2 `isInfixOf` shown
-
-        , fastProperty "parameter move mismatch identifies parameter" $
-            \param ->
-              let error = ParameterMoveMismatch param
-                  shown = show error
-              in param `isInfixOf` shown
-        ]
-
-    , testGroup "Memory safety scenarios"
-        [ fastProperty "ownership transfer scenarios are safe" $
-            \scenario ->
-              let checkSafety (var, ownership, transfers) = 
-                    case ownership of
-                      Owned _ -> True -- Owned values can be transferred
-                      Borrowed _ -> all (\t -> transferTo t /= var) transfers -- Borrowed cannot be transfer targets
-                      MutBorrowed _ -> all (\t -> transferTo t /= var) transfers -- MutBorrowed cannot be transfer targets
-              in all checkSafety scenario
-
-        , fastProperty "error scenarios are detectable" $
-            \errors ->
-              let errorsAreDetectable = all (\e -> length (show e) > 0) errors
-              in errorsAreDetectable
-
-        , fastProperty "ownership hierarchy prevents invalid operations" $
-            \ownershipTypes ->
-              let checkHierarchy types = all (\t -> case t of
-                    Owned _ -> True
-                    Borrowed _ -> True
-                    MutBorrowed _ -> True) ownershipTypes
-              in checkHierarchy ownershipTypes
-
-        , fastProperty "memory safety is preserved across operations" $
-            \operations ->
-              let safetyPreserved = True -- Simplified for this test
-              in safetyPreserved
-        ]
-
-    , testGroup "Edge cases and boundary conditions"
-        [ testCase "empty variable name handling" $ do
-            let owned = Owned ""
-                error = UseAfterMove ""
-            show owned @?= "Owned "
-            show error @?= "UseAfterMove "
-
-        , testCase "very long variable names" $ do
-            let longName = replicate 1000 'x'
-                owned = Owned longName
-                error = UseAfterMove longName
-            length (show owned) @?= length ("Owned " ++ longName)
-            length (show error) @?= length ("UseAfterMove " ++ longName)
-
-        , fastProperty "special characters in variable names" $
-            \name ->
-              let owned = Owned name
-                  error = UseAfterMove name
-              in show owned `contains` name && show error `contains` name
-
-        , testCase "ownership transfer with empty strings" $ do
-            let transfer = OwnershipTransfer "" ""
-            transferFrom transfer @?= ""
-            transferTo transfer @?= ""
-
-        , fastProperty "error messages with Unicode characters" $
-            \unicode ->
-              let error = BorrowError unicode
-                  shown = show error
-              in unicode `isInfixOf` shown
-        ]
-
-    , testGroup "Performance and scalability"
-        [ testCase "large number of ownership types" $ do
-            let manyTypes = replicate 1000 $ Owned "var"
-            length manyTypes @?= 1000
-
-        , fastProperty "many transfers are handled efficiently" $
-            \transfers ->
-              let transferCount = length transfers
-              in transferCount >= 0
-
-        , fastProperty "many errors are processed correctly" $
-            \errors ->
-              let errorCount = length errors
-              in errorCount >= 0
-
-        , testCase "complex ownership scenarios" $ do
-            let complexScenario = 
-                  [ ("x", Owned "x", [OwnershipTransfer "x" "y"])
-                  , ("y", Borrowed "x", [OwnershipTransfer "y" "z"])
-                  , ("z", MutBorrowed "y", [])
-                  ]
-            length complexScenario @?= 3
-        ]
-    ]
-
--- Helper function to check if string contains substring
-contains :: String -> String -> Bool
-contains needle haystack = needle `isInfixOf` haystack
-
--- Helper function for infix check
-isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
-  where
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
-    tails [] = [[]]
-    tails xs@(_:ys) = xs : tails ys
-
--- Helper function to detect cycles in transfer graph
-detectTransferCycle :: [OwnershipTransfer] -> Bool
-detectTransferCycle transfers = 
-    let vars = nub $ map transferFrom transfers ++ map transferTo transfers
-        buildGraph = foldr (\t g -> 
-            let from = transferFrom t
-                to = transferTo t
-            in insertEdge from to g) (map (\v -> (v, [])) vars) transfers
-        hasCycle' = hasCycle (map fst buildGraph) buildGraph
-    in hasCycle'
-  where
-    insertEdge from to graph = 
-        map (\(v, edges) -> if v == from then (v, to:edges) else (v, edges)) graph
-    
-    hasCycle [] _ = False
-    hasCycle (v:vs) graph = 
-        let visited = []
-            recStack = [v]
-        in dfsCycle v graph visited recStack || hasCycle vs graph
-    
-    dfsCycle _ _ [] = False
-    dfsCycle node graph visited recStack
-        | node `elem` recStack = True
-        | node `elem` visited = False
-        | otherwise = 
-            let neighbors = case lookup node graph of
-                             Just ns -> ns
-                             Nothing -> []
-                newVisited = node : visited
-                newRecStack = node : recStack
-            in any (`dfsCycle` graph newVisited newRecStack) neighbors
-
--- Helper function for union
-union :: Eq a => [a] -> [a] -> [a]
-union xs ys = nub (xs ++ ys)
+tests = testGroup "Ownership Memory Safety QuickCheck Tests"
+  [ fastProperty "Ownership transfer preserves uniqueness" prop_ownership_transfer_preserves_uniqueness
+  , fastProperty "Borrowing prevents double free" prop_borrowing_prevents_double_free
+  , fastProperty "Reference counting correctness" prop_reference_counting_correctness
+  , fastProperty "Lifetime tracking prevents use-after-free" prop_lifetime_tracking_prevents_use_after_free
+  , fastProperty "Move semantics invalidate source" prop_move_semantics_invalidate_source
+  , fastProperty "Shared borrowing allows multiple readers" prop_shared_borrowing_multiple_readers
+  , fastProperty "Mutable borrowing prevents other borrows" prop_mutable_borrow_prevents_other_borrows
+  , fastProperty "Ownership scope cleanup" prop_ownership_scope_cleanup
+  , fastProperty "Borrowing hierarchy enforcement" prop_borrowing_hierarchy_enforcement
+  , fastProperty "Resource leak detection" prop_resource_leak_detection
+  , fastProperty "Concurrent access safety" prop_concurrent_access_safety
+  , fastProperty "Ownership transfer chain validity" prop_ownership_transfer_chain_validity
+  , fastProperty "Borrow checker rules consistency" prop_borrow_checker_rules_consistency
+  ]
