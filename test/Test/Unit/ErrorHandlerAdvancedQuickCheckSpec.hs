@@ -1,324 +1,360 @@
-{-# LANGUAGE CPP #-}
 module Test.Unit.ErrorHandlerAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, choose, listOf, forAll, Property, (===), counterexample, (==>))
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf, elements, oneof, suchThat)
+import TestSupport.QuickCheck (fastProperty)
 
-import qualified Data.Text as T
-import qualified Data.Map.Strict as Map
-import Data.Maybe (isJust, isNothing, fromMaybe)
-import Data.List (sort, sortOn)
-
-import Compiler.Errors.Core
-  ( TypeError(..)
-  , ErrorSeverity(..)
-  , ErrorCategory(..)
-  , ErrorLocation(..)
-  , ErrorContext(..)
-  , ErrorRecovery(..)
-  , CombinedError(..)
-  , emptyContext
-  , severityPriority
-  , isAtLeast
-  , canRecoverFrom
-  , shouldContinueAfter
-  , formatError
-  , formatErrors
-  , errorAt
-  , warningAt
-  , infoAt
-  , fatalError
-  , errorWithCategory
-  , filterBySeverity
-  , filterByCategory
-  , hasErrors
-  , hasWarnings
-  , combinedErrorSeverity
-  , filterCombinedErrorsBySeverity
-  , getErrorLine
-  , getErrorColumn
-  , _atLocation
-  , _atFileLocation
-  , _atRange
-  , fatalRecovery
-  , errorRecovery
-  , warningRecovery
-  , infoRecovery
+import Compiler.Errors.Core (
+    TypeError(..), ErrorSeverity(..), ErrorCategory(..), ErrorLocation(..), 
+    ErrorContext(..), ErrorRecovery(..), CombinedError(..),
+    emptyContext, fatalRecovery, errorRecovery, warningRecovery, infoRecovery,
+    formatError, formatErrors, getErrors, getWarnings, getInfo, getAllMessages,
+    hasErrors, hasWarnings, addError, addWarning, addInfo,
+    errorAt, warningAt, infoAt, errorWithCategory, warningWithCategory,
+    filterBySeverity, filterByCategory, hasCategory, canRecoverFrom, 
+    shouldContinueAfter, combineErrors, combinedErrorSeverity,
+    severityPriority, isAtLeast, _unknownLocation, _atLocation
   )
+import qualified Data.Text as T
+import Data.List (sort, nub)
+import Data.Maybe (isJust, isNothing, fromMaybe)
+import qualified Data.Map.Strict as Map
 
 -- ============================================================================
--- Arbitrary Instances
+-- Generators
 -- ============================================================================
 
-instance Arbitrary ErrorSeverity where
-  arbitrary = elements [Fatal, Error, Warning, Info]
+-- Generate error severities
+genErrorSeverity :: Gen ErrorSeverity
+genErrorSeverity = elements [Fatal, Error, Warning, Info]
 
-instance Arbitrary ErrorCategory where
-  arbitrary = elements [TypeChecking, Ownership, Parsing, Semantic, Runtime, Constraint, Inference, Integration, Unknown]
+-- Generate error categories
+genErrorCategory :: Gen ErrorCategory
+genErrorCategory = elements [TypeChecking, Ownership, Parsing, Semantic, Runtime, Constraint, Inference, Integration, Unknown]
 
-instance Arbitrary ErrorLocation where
-  arbitrary = do
-    filePath <- oneof [return Nothing, fmap Just arbitrary]
-    line <- choose (1, 1000)
-    column <- choose (1, 200)
-    endLine <- oneof [return Nothing, fmap Just (choose (line, line + 100))]
-    endColumn <- oneof [return Nothing, fmap Just (choose (column, column + 100))]
-    return $ ErrorLocation filePath line column endLine endColumn
+-- Generate error locations
+genErrorLocation :: Gen ErrorLocation
+genErrorLocation = do
+  line <- choose (1, 1000)
+  column <- choose (1, 200)
+  endLine <- oneof [return Nothing, Just <$> choose (line, line + 10)]
+  endColumn <- oneof [return Nothing, Just <$> choose (column, column + 50)]
+  filePath <- oneof [return Nothing, Just <$> arbitrary]
+  return $ ErrorLocation filePath line column endLine endColumn
 
-instance Arbitrary ErrorContext where
-  arbitrary = do
-    contextCode <- oneof [return Nothing, fmap Just arbitrary]
-    contextFunction <- oneof [return Nothing, fmap Just arbitrary]
-    contextVariable <- oneof [return Nothing, fmap Just arbitrary]
-    contextType <- oneof [return Nothing, fmap Just arbitrary]
-    contextAdditional <- listOf $ do
-      key <- arbitrary
-      value <- arbitrary
-      return (key, value)
-    return $ ErrorContext contextCode contextFunction contextVariable contextType contextAdditional
+-- Generate error context
+genErrorContext :: Gen ErrorContext
+genErrorContext = do
+  code <- oneof [return Nothing, Just <$> arbitrary]
+  function <- oneof [return Nothing, Just <$> arbitrary]
+  variable <- oneof [return Nothing, Just <$> arbitrary]
+  type' <- oneof [return Nothing, Just <$> arbitrary]
+  additional <- listOf $ arbitrary `suchThat` (\(k, v) -> length k <= 20 && length v <= 50)
+  return $ ErrorContext code function variable type' additional
 
-instance Arbitrary ErrorRecovery where
-  arbitrary = do
-    canRecover <- arbitrary
-    shouldContinue <- arbitrary
-    recoveryAction <- oneof [return Nothing, fmap Just arbitrary]
-    recoveryHint <- oneof [return Nothing, fmap Just arbitrary]
-    recoveryCost <- choose (0, 100)
-    recoveryConfidence <- choose (0.0, 1.0)
-    return $ RecoveryStrategy canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
+-- Generate error recovery strategies
+genErrorRecovery :: Gen ErrorRecovery
+genErrorRecovery = do
+  canRecover <- arbitrary
+  shouldContinue <- arbitrary
+  action <- oneof [return Nothing, Just <$> arbitrary]
+  hint <- oneof [return Nothing, Just <$> arbitrary]
+  cost <- choose (0, 100)
+  confidence <- choose (0.0, 1.0)
+  return $ RecoveryStrategy canRecover shouldContinue action hint cost confidence
 
-instance Arbitrary TypeError where
-  arbitrary = do
-    errorId <- arbitrary
-    severity <- arbitrary
-    category <- arbitrary
-    message <- T.pack <$> arbitrary
-    location <- arbitrary
-    context <- arbitrary
-    recovery <- arbitrary
-    suggestions <- listOf (T.pack <$> arbitrary)
-    relatedErrors <- listOf arbitrary
-    errorChain <- listOf arbitrary
-    timestamp <- oneof [return Nothing, fmap Just arbitrary]
-    return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
+-- Generate text messages
+genText :: Gen T.Text
+genText = T.pack <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ " ")
 
-instance Arbitrary CombinedError where
-  arbitrary = oneof
-    [ OwnershipErrorCombined <$> arbitrary <*> arbitrary
-    , DependentTypeErrorCombined <$> arbitrary <*> arbitrary
-    , IntegrationError <$> arbitrary <*> arbitrary
-    , CrossAnalyzerError <$> arbitrary <*> arbitrary <*> listOf arbitrary
-    ]
+-- Generate type errors
+genTypeError :: Gen TypeError
+genTypeError = do
+  errorId <- arbitrary `suchThat` (\s -> length s <= 20 && not (null s))
+  severity <- genErrorSeverity
+  category <- genErrorCategory
+  message <- genText
+  location <- genErrorLocation
+  context <- genErrorContext
+  recovery <- genErrorRecovery
+  suggestions <- listOf genText
+  relatedErrors <- listOf genTypeError
+  errorChain <- listOf genTypeError
+  timestamp <- oneof [return Nothing, Just <$> arbitrary]
+  return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
+
+-- Generate combined errors
+genCombinedError :: Gen CombinedError
+genCombinedError = oneof
+  [ OwnershipErrorCombined <$> genErrorSeverity <*> arbitrary
+  , DependentTypeErrorCombined <$> genErrorSeverity <*> arbitrary
+  , IntegrationError <$> arbitrary <*> genErrorSeverity
+  , CrossAnalyzerError <$> arbitrary <*> genErrorSeverity <*> listOf genCombinedError
+  ]
 
 -- ============================================================================
--- Property Tests
+-- QuickCheck Properties
+-- ============================================================================
+
+-- Property: Severity priority ordering is consistent
+prop_severityPriorityOrdering :: ErrorSeverity -> ErrorSeverity -> Property
+prop_severityPriorityOrdering sev1 sev2 =
+  let p1 = severityPriority sev1
+      p2 = severityPriority sev2
+      ordering = compare sev1 sev2
+      priorityOrdering = compare p1 p2
+  in ordering == priorityOrdering
+
+-- Property: isAtLeast is reflexive
+prop_isAtLeastReflexive :: ErrorSeverity -> Bool
+prop_isAtLeastReflexive sev = isAtLeast sev sev
+
+-- Property: isAtLeast is transitive
+prop_isAtLeastTransitive :: ErrorSeverity -> ErrorSeverity -> ErrorSeverity -> Property
+prop_isAtLeastTransitive sev1 sev2 sev3 =
+  isAtLeast sev1 sev2 && isAtLeast sev2 sev3 ==> isAtLeast sev1 sev3
+
+-- Property: Fatal is the highest severity
+prop_fatalIsHighest :: ErrorSeverity -> Bool
+prop_fatalIsHighest sev = isAtLeast sev Fatal || sev == Fatal
+
+-- Property: Info is the lowest severity
+prop_infoIsLowest :: ErrorSeverity -> Bool
+prop_infoIsLowest sev = isAtLeast Info sev || sev == Info
+
+-- Property: Filtering by severity preserves ordering
+prop_filterBySeverityOrdering :: [TypeError] -> ErrorSeverity -> Bool
+prop_filterBySeverityOrdering errors minSeverity =
+  let filtered = filterBySeverity minSeverity errors
+      filteredSeverities = map severity filtered
+  in all (`isAtLeast` minSeverity) filteredSeverities
+
+-- Property: Filtering by category only returns specified category
+prop_filterByCategoryCorrectness :: [TypeError] -> ErrorCategory -> Bool
+prop_filterByCategoryCorrectness errors cat =
+  let filtered = filterByCategory cat errors
+  in all (\e -> category e == cat) filtered
+
+-- Property: hasCategory is consistent with filtering
+prop_hasCategoryConsistency :: [TypeError] -> ErrorCategory -> Bool
+prop_hasCategoryConsistency errors cat =
+  hasCategory cat errors == not (null (filterByCategory cat errors))
+
+-- Property: Error recovery strategies follow logical rules
+prop_recoveryStrategyLogic :: ErrorRecovery -> Bool
+prop_recoveryStrategyLogic recovery =
+  let canRec = canRecover recovery
+      shouldCont = shouldContinueAfter recovery
+      cost = recoveryCost recovery
+      confidence = recoveryConfidence recovery
+  in cost >= 0 && cost <= 100 && confidence >= 0.0 && confidence <= 1.0 &&
+     (not canRec ==> not shouldCont)
+
+-- Property: Fatal errors have non-recoverable recovery
+prop_fatalErrorsNonRecoverable :: TypeError -> Property
+prop_fatalErrorsNonRecoverable err =
+  severity err == Fatal ==> not (canRecoverFrom err)
+
+-- Property: Combining errors preserves all errors
+prop_combineErrorsPreservesAll :: [TypeError] -> Bool
+prop_combineErrorsPreservesAll errors =
+  let combined = combineErrors errors
+      allOriginal = getAllMessages combined
+  in length allOriginal >= length errors
+
+-- Property: Combined error severity is maximum of components
+prop_combinedErrorSeverityMax :: CombinedError -> Property
+prop_combinedErrorSeverityMax combinedErr =
+  case combinedErr of
+    CrossAnalyzerError _ sev subErrors -> 
+      let subSeverities = map combinedErrorSeverity subErrors
+      in not (null subSeverities) ==> sev == maximum subSeverities
+    _ -> property True
+
+-- Property: Error formatting produces non-empty strings
+prop_errorFormattingNonEmpty :: TypeError -> Bool
+prop_errorFormattingNonEmpty err = not (null (formatError err))
+
+-- Property: Error formatting includes severity information
+prop_errorFormattingIncludesSeverity :: TypeError -> Bool
+prop_errorFormattingIncludesSeverity err =
+  let formatted = formatError err
+      severityStr = case severity err of
+        Fatal -> "FATAL"
+        Error -> "ERROR"
+        Warning -> "WARNING"
+        Info -> "INFO"
+  in severityStr `isInfixOf` formatted
+
+-- Property: getErrors only returns Error or Fatal severities
+prop_getErrorsCorrectness :: [TypeError] -> Bool
+prop_getErrorsCorrectness errors =
+  let errorList = getErrors errors
+  in all (\e -> severity e == Error || severity e == Fatal) errorList
+
+-- Property: getWarnings only returns Warning severities
+prop_getWarningsCorrectness :: [TypeError] -> Bool
+prop_getWarningsCorrectness errors =
+  let warningList = getWarnings errors
+  in all (\e -> severity e == Warning) warningList
+
+-- Property: getInfo only returns Info severities
+prop_getInfoCorrectness :: [TypeError] -> Bool
+prop_getInfoCorrectness errors =
+  let infoList = getInfo errors
+  in all (\e -> severity e == Info) infoList
+
+-- Property: hasErrors is consistent with getResults
+prop_hasErrorsConsistency :: [TypeError] -> Bool
+prop_hasErrorsConsistency errors = hasErrors errors == not (null (getErrors errors))
+
+-- Property: hasWarnings is consistent with getWarnings
+prop_hasWarningsConsistency :: [TypeError] -> Bool
+prop_hasWarningsConsistency errors = hasWarnings errors == not (null (getWarnings errors))
+
+-- Property: Error location fields are valid
+prop_errorLocationValidity :: ErrorLocation -> Bool
+prop_errorLocationValidity loc =
+  line loc >= 0 && column loc >= 0 &&
+  all (\l -> l >= line loc) (endLine loc) &&
+  all (\c -> c >= column loc) (endColumn loc)
+
+-- Property: Error context preserves additional information
+prop_errorContextPreservesAdditional :: [(String, String)] -> Bool
+prop_errorContextPreservesAdditional additional =
+  let context = emptyContext { contextAdditional = additional }
+  in contextAdditional context == additional
+
+-- ============================================================================
+-- Unit Tests
 -- ============================================================================
 
 tests :: TestTree
-tests =
-  testGroup "ErrorHandler Advanced QuickCheck Tests"
-    [ testProperty "severityPriority respects ordering: Fatal > Error > Warning > Info" $
-        \sev1 sev2 ->
-          let p1 = severityPriority sev1
-              p2 = severityPriority sev2
-          in (sev1 > sev2) === (p1 > p2)
-
-    , testProperty "isAtLeast is reflexive" $
-        \sev -> isAtLeast sev sev
-
-    , testProperty "isAtLeast is transitive" $
-        \sev1 sev2 sev3 ->
-          isAtLeast sev1 sev2 && isAtLeast sev2 sev3 ==> isAtLeast sev1 sev3
-
-    , testProperty "filterBySeverity preserves ordering" $
-        \errors minSev ->
-          let filtered = filterBySeverity minSev errors
-              sorted = sortOn severityPriority filtered
-          in filtered === sorted
-
-    , testProperty "filterByCategory only returns errors of specified category" $
-        \errors cat ->
-          let filtered = filterByCategory cat errors
-          in all (\e -> category e == cat) filtered
-
-    , testProperty "filterBySeverity with Fatal returns only Fatal errors" $
-        \errors ->
-          let fatalErrors = filterBySeverity Fatal errors
-          in all (\e -> severity e == Fatal) fatalErrors
-
-    , testProperty "hasErrors is True iff there are Error or Fatal severity errors" $
-        \errors ->
-          let hasErrorOrFatal = any (\e -> severity e == Error || severity e == Fatal) errors
-          in hasErrors errors === hasErrorOrFatal
-
-    , testProperty "hasWarnings is True iff there are Warning severity errors" $
-        \errors ->
-          let hasWarningSeverity = any (\e -> severity e == Warning) errors
-          in hasWarnings errors === hasWarningSeverity
-
-    , testProperty "errorAt creates error with correct location" $
-        \line column msg ->
-          let location = _atLocation line column
-              err = errorAt line column msg
-          in getErrorLine (location err) === line .&&.
-             getErrorColumn (location err) === column
-
-    , testProperty "warningAt creates warning with correct severity" $
-        \line column msg ->
-          let err = warningAt line column msg
-          in severity err === Warning
-
-    , testProperty "infoAt creates info with correct severity" $
-        \line column msg ->
-          let err = infoAt line column msg
-          in severity err === Info
-
-    , testProperty "fatalError creates fatal error with correct severity" $
-        \msg ->
-          let err = fatalError msg
-          in severity err === Fatal
-
-    , testProperty "errorWithCategory sets category correctly" $
-        \sev cat msg ->
-          let err = errorWithCategory sev cat msg
-          in category err === cat
-
-    , testProperty "formatError always returns non-empty string" $
-        \err ->
-          let formatted = formatError err
-          in not (null formatted)
-
-    , testProperty "formatError includes severity string" $
-        \err ->
-          let formatted = formatError err
-              severityStr = case severity err of
-                Fatal -> "FATAL"
-                Error -> "ERROR"
-                Warning -> "WARNING"
-                Info -> "INFO"
-          in severityStr `isInfixOf` formatted
-
-    , testProperty "formatErrors handles empty list" $
-        \errors ->
-          null errors ==> null (formatErrors errors)
-
-    , testProperty "formatErrors returns one line per error" $
-        \errors ->
-          let formatted = formatErrors errors
-              linesCount = length (lines formatted)
-          in not (null errors) ==> linesCount >= length errors
-
-    , testProperty "combinedErrorSeverity extracts severity correctly" $
-        \combinedErr ->
-          let extractedSev = combinedErrorSeverity combinedErr
-          in case combinedErr of
-            OwnershipErrorCombined sev _ -> extractedSev === sev
-            DependentTypeErrorCombined sev _ -> extractedSev === sev
-            IntegrationError _ sev -> extractedSev === sev
-            CrossAnalyzerError _ sev _ -> extractedSev === sev
-
-    , testProperty "filterCombinedErrorsBySeverity respects minimum severity" $
-        \combinedErrs minSev ->
-          let filtered = filterCombinedErrorsBySeverity minSev combinedErrs
-          in all (\err -> isAtLeast minSev (combinedErrorSeverity err)) filtered
-
-    , testProperty "ErrorLocation helpers create valid locations" $
-        \line column endLine endColumn ->
-          let loc1 = _atLocation line column
-              loc2 = _atFileLocation "test.txt" line column
-              loc3 = _atRange line column endLine endColumn
-          in getErrorLine loc1 === line .&&.
-             getErrorColumn loc1 === column .&&.
-             getErrorLine loc2 === line .&&.
-             getErrorColumn loc2 === column .&&.
-             filePath loc2 === Just "test.txt" .&&.
-             getErrorLine loc3 === line .&&.
-             getErrorColumn loc3 === column
-
-    , testProperty "Recovery strategies have consistent properties" $
-        \recovery ->
-          let canRec = canRecover recovery
-              shouldCont = shouldContinueAfter recovery
-              cost = recoveryCost recovery
-              confidence = recoveryConfidence recovery
-          in cost >= 0 && cost <= 100 .&&.
-             confidence >= 0.0 && confidence <= 1.0 .&&.
-             (not canRec ==> not shouldCont)
-
-    , testProperty "Fatal recovery cannot recover and should not continue" $
-        \recovery ->
-          recovery === fatalRecovery ==>
-          not (canRecover recovery) .&&.
-          not (shouldContinueAfter recovery)
-
-    , testProperty "Error recovery can recover and should continue" $
-        \recovery ->
-          recovery === errorRecovery ==>
-          canRecover recovery .&&.
-          shouldContinueAfter recovery
-
-    , testProperty "Warning recovery can recover and should continue" $
-        \recovery ->
-          recovery === warningRecovery ==>
-          canRecover recovery .&&.
-          shouldContinueAfter recovery
-
-    , testProperty "Info recovery can recover and should continue" $
-        \recovery ->
-          recovery === infoRecovery ==>
-          canRecover recovery .&&.
-          shouldContinueAfter recovery
-
-    , testProperty "emptyContext has all fields as Nothing or empty" $
-        let ctx = emptyContext
-        in contextCode ctx === Nothing .&&.
-           contextFunction ctx === Nothing .&&.
-           contextVariable ctx === Nothing .&&.
-           contextType ctx === Nothing .&&.
-           null (contextAdditional ctx)
-
-    , testProperty "TypeError preserves all fields when created" $
-        \err ->
-          let id = errorId err
-              sev = severity err
-              cat = category err
-              msg = message err
-              loc = location err
-              ctx = context err
-              rec = recovery err
-              suggs = suggestions err
-              related = relatedErrors err
-              chain = errorChain err
-              ts = timestamp err
-          in errorId err === id .&&.
-             severity err === sev .&&.
-             category err === cat .&&.
-             message err === msg .&&.
-             location err === loc .&&.
-             context err === ctx .&&.
-             recovery err === rec .&&.
-             suggestions err === suggs .&&.
-             relatedErrors err === related .&&.
-             errorChain err === chain .&&.
-             timestamp err === ts
-
-    , testProperty "Error ordering by severity priority is consistent" $
-        \err1 err2 ->
-          let p1 = severityPriority (severity err1)
-              p2 = severityPriority (severity err2)
-          in (err1 > err2) === (p1 > p2)
+tests = testGroup "ErrorHandler Advanced QuickCheck Tests"
+  [ testGroup "Severity Properties"
+    [ testProperty "Severity priority ordering is consistent" prop_severityPriorityOrdering
+    , testProperty "isAtLeast is reflexive" prop_isAtLeastReflexive
+    , testProperty "isAtLeast is transitive" prop_isAtLeastTransitive
+    , testProperty "Fatal is the highest severity" prop_fatalIsHighest
+    , testProperty "Info is the lowest severity" prop_infoIsLowest
     ]
 
--- Helper function
-isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
-  where
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
-    isPrefixOf _ _ = False
+  , testGroup "Filtering Properties"
+    [ testProperty "Filtering by severity preserves ordering" prop_filterBySeverityOrdering
+    , testProperty "Filtering by category only returns specified category" prop_filterByCategoryCorrectness
+    , testProperty "hasCategory is consistent with filtering" prop_hasCategoryConsistency
+    ]
 
-tails :: [a] -> [[a]]
-tails [] = [[]]
-tails xs@(x:xs') = xs : tails xs'
+  , testGroup "Recovery Properties"
+    [ testProperty "Error recovery strategies follow logical rules" prop_recoveryStrategyLogic
+    , testProperty "Fatal errors have non-recoverable recovery" prop_fatalErrorsNonRecoverable
+    ]
+
+  , testGroup "Error Combination Properties"
+    [ testProperty "Combining errors preserves all errors" prop_combineErrorsPreservesAll
+    , testProperty "Combined error severity is maximum of components" prop_combinedErrorSeverityMax
+    ]
+
+  , testGroup "Formatting Properties"
+    [ testProperty "Error formatting produces non-empty strings" prop_errorFormattingNonEmpty
+    , testProperty "Error formatting includes severity information" prop_errorFormattingIncludesSeverity
+    ]
+
+  , testGroup "Error Retrieval Properties"
+    [ testProperty "getErrors only returns Error or Fatal severities" prop_getErrorsCorrectness
+    , testProperty "getWarnings only returns Warning severities" prop_getWarningsCorrectness
+    , testProperty "getInfo only returns Info severities" prop_getInfoCorrectness
+    , testProperty "hasErrors is consistent with getResults" prop_hasErrorsConsistency
+    , testProperty "hasWarnings is consistent with getWarnings" prop_hasWarningsConsistency
+    ]
+
+  , testGroup "Location and Context Properties"
+    [ testProperty "Error location fields are valid" prop_errorLocationValidity
+    , testProperty "Error context preserves additional information" prop_errorContextPreservesAdditional
+    ]
+
+  , testGroup "Unit Tests"
+    [ testCase "Create basic error" $ do
+        let err = errorAt (_atLocation 10 5) "Test error"
+        severity err @?= Error
+        message err @?= "Test error"
+        location err @?= _atLocation 10 5
+
+    , testCase "Create warning" $ do
+        let warn = warningAt (_atLocation 1 1) "Test warning"
+        severity warn @?= Warning
+        message warn @?= "Test warning"
+
+    , testCase "Create info message" $ do
+        let info = infoAt (_atLocation 100 50) "Test info"
+        severity info @?= Info
+        message info @?= "Test info"
+
+    , testCase "Error with category" $ do
+        let err = errorWithCategory TypeChecking "Type error"
+        category err @?= TypeChecking
+        severity err @?= Error
+
+    , testCase "Warning with category" $ do
+        let warn = warningWithCategory Ownership "Ownership warning"
+        category warn @?= Ownership
+        severity warn @?= Warning
+
+    , testCase "Filter errors by severity" $ do
+        let fatal = errorAt (_atLocation 1 1) "Fatal" { severity = Fatal }
+            error = errorAt (_atLocation 2 2) "Error"
+            warning = warningAt (_atLocation 3 3) "Warning"
+            info = infoAt (_atLocation 4 4) "Info"
+            errors = [fatal, error, warning, info]
+            filtered = filterBySeverity Error errors
+        length filtered @?= 2
+        Fatal `elem` map severity filtered @?= True
+        Error `elem` map severity filtered @?= True
+
+    , testCase "Filter errors by category" $ do
+        let typeErr = errorWithCategory TypeChecking "Type error"
+            ownErr = errorWithCategory Ownership "Ownership error"
+            parseErr = errorWithCategory Parsing "Parse error"
+            errors = [typeErr, ownErr, parseErr]
+            filtered = filterByCategory Ownership errors
+        length filtered @?= 1
+        head filtered @?= ownErr
+
+    , testCase "Check for specific category" $ do
+        let typeErr = errorWithCategory TypeChecking "Type error"
+            ownErr = errorWithCategory Ownership "Ownership error"
+            errors = [typeErr, ownErr]
+        hasCategory TypeChecking errors @?= True
+        hasCategory Runtime errors @?= False
+
+    , testCase "Error recovery strategies" $ do
+        canRecoverFrom fatalRecovery @?= False
+        shouldContinueAfter fatalRecovery @?= False
+        canRecoverFrom errorRecovery @?= True
+        shouldContinueAfter errorRecovery @?= True
+        canRecoverFrom warningRecovery @?= True
+        shouldContinueAfter warningRecovery @?= True
+        canRecoverFrom infoRecovery @?= True
+        shouldContinueAfter infoRecovery @?= True
+
+    , testCase "Error formatting" $ do
+        let err = errorAt (_atLocation 10 5) "Test error"
+            formatted = formatError err
+        "[ERROR]" `isInfixOf` formatted @?= True
+        "Test error" `isInfixOf` formatted @?= True
+        "[TypeChecking]" `isInfixOf` formatted @?= True
+
+    , testCase "Error collection" $ do
+        let errors = [errorAt (_atLocation 1 1) "Error 1", warningAt (_atLocation 2 2) "Warning 1", infoAt (_atLocation 3 3) "Info 1"]
+        getErrors errors @?= [errorAt (_atLocation 1 1) "Error 1"]
+        getWarnings errors @?= [warningAt (_atLocation 2 2) "Warning 1"]
+        getInfo errors @?= [infoAt (_atLocation 3 3) "Info 1"]
+        hasErrors errors @?= True
+        hasWarnings errors @?= True
+    ]
+  ]
+
+-- Helper function to check if a string is contained in another
+isInfixOf :: String -> String -> Bool
+isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack

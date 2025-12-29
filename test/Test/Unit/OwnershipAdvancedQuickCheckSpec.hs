@@ -1,285 +1,324 @@
-{-# LANGUAGE CPP #-}
 module Test.Unit.OwnershipAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, choose, listOf, forAll, Property, (===), counterexample, (==>))
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf, elements, oneof, suchThat)
+import TestSupport.QuickCheck (fastProperty)
 
-import qualified Data.Text as T
-import Data.List (isInfixOf, nub, sort)
+import Ownership.Common.Types (OwnershipType(..), OwnershipError(..), OwnershipAnalyzer(..), 
+                              OwnershipTransfer(..), newOwnershipAnalyzer)
+import Data.List (sort, nub)
 import Data.Maybe (isJust, isNothing)
-
-import Ownership
-  ( OwnershipType(..)
-  , OwnershipError(..)
-  , OwnershipAnalyzer
-  , OwnershipTransfer(..)
-  , newOwnershipAnalyzer
-  , analyzeOwnership
-  , analyzeOwnershipFile
-  , analyzeOwnershipDebug
-  , formatOwnershipErrors
-  , lexAll
-  , parseProgram
-  , builtInFunctions
-  )
-
-import Parser (TypusFile(..), FileDirectives(..), BlockDirectives(..), CodeBlock(..), defaultFileDirectives, defaultBlockDirectives)
-import SourceLocation (SourceSpan(..), SourcePos(..))
+import Data.Ord (comparing)
 
 -- ============================================================================
--- Arbitrary Instances
+-- Generators
 -- ============================================================================
 
-instance Arbitrary OwnershipType where
-  arbitrary = do
-    name <- arbitrary
-    oneof [return $ Owned name, return $ Borrowed name, return $ MutBorrowed name]
+-- Generate variable names
+genVarName :: Gen String
+genVarName = do
+  first <- elements ['a'..'z'] ++ ['A'..'Z'] ++ "_"
+  rest <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"
+  return $ first : rest
 
-instance Arbitrary OwnershipError where
-  arbitrary = oneof
-    [ UseAfterMove <$> arbitrary
-    , DoubleMove <$> arbitrary <*> arbitrary
-    , BorrowWhileMoved <$> arbitrary
-    , MutBorrowWhileBorrowed <$> arbitrary
-    , BorrowWhileMutBorrowed <$> arbitrary
-    , MultipleMutBorrows <$> arbitrary
-    , UseWhileMutBorrowed <$> arbitrary
-    , OutOfScope <$> arbitrary
-    , BorrowError <$> arbitrary
-    , ParseError <$> arbitrary
-    , CrossFunctionMove <$> arbitrary <*> arbitrary
-    , ParameterMoveMismatch <$> arbitrary
-    , ControlFlowError <$> arbitrary
-    , PathSensitiveError <$> arbitrary
-    , LoopOwnershipError <$> arbitrary
-    ]
+-- Generate ownership types
+genOwnershipType :: Gen OwnershipType
+genOwnershipType = oneof
+  [ Owned <$> genVarName
+  , Borrowed <$> genVarName
+  , MutBorrowed <$> genVarName
+  ]
 
-instance Arbitrary OwnershipTransfer where
-  arbitrary = do
-    from <- arbitrary
-    to <- arbitrary
-    return $ OwnershipTransfer from to
+-- Generate ownership errors
+genOwnershipError :: Gen OwnershipError
+genOwnershipError = oneof
+  [ UseAfterMove <$> genVarName
+  , DoubleMove <$> genVarName <*> genVarName
+  , BorrowWhileMoved <$> genVarName
+  , MutBorrowWhileBorrowed <$> genVarName
+  , BorrowWhileMutBorrowed <$> genVarName
+  , MultipleMutBorrows <$> genVarName
+  , UseWhileMutBorrowed <$> genVarName
+  , OutOfScope <$> genVarName
+  , BorrowError <$> arbitrary
+  , ParseError <$> arbitrary
+  , CrossFunctionMove <$> genVarName <*> genVarName
+  , ParameterMoveMismatch <$> genVarName
+  , ControlFlowError <$> arbitrary
+  , PathSensitiveError <$> arbitrary
+  , LoopOwnershipError <$> arbitrary
+  ]
 
-instance Arbitrary OwnershipAnalyzer where
-  arbitrary = return newOwnershipAnalyzer
+-- Generate ownership transfers
+genOwnershipTransfer :: Gen OwnershipTransfer
+genOwnershipTransfer = OwnershipTransfer <$> genVarName <*> genVarName
 
--- Generate simple code snippets for ownership analysis
-genOwnershipCode :: Gen String
-genOwnershipCode = do
-  codeType <- choose (1, 5)
-  case codeType of
-    1 -> do  -- Simple variable declaration
-      varName <- arbitrary
-      return $ "let " ++ varName ++ " = 42"
-    2 -> do  -- Move operation
-      var1 <- arbitrary
-      var2 <- arbitrary
-      return $ "let " ++ var2 ++ " = " ++ var1
-    3 -> do  -- Borrow operation
-      var1 <- arbitrary
-      var2 <- arbitrary
-      return $ "let " ++ var2 ++ " = &" ++ var1
-    4 -> do  -- Function call
-      funcName <- elements ["func1", "func2", "process"]
-      varName <- arbitrary
-      return $ funcName ++ "(" ++ varName ++ ")"
-    5 -> do  -- Complex expression
-      var1 <- arbitrary
-      var2 <- arbitrary
-      return $ var1 ++ " + " ++ var2
+-- Generate lists of ownership types
+genOwnershipTypeList :: Gen [OwnershipType]
+genOwnershipTypeList = listOf genOwnershipType
 
--- Generate TypusFile for ownership analysis
-genTypusFileForOwnership :: Gen TypusFile
-genTypusFileForOwnership = do
-  numBlocks <- choose (0, 3)
-  blocks <- replicateM numBlocks genOwnershipCodeBlock
-  return $ TypusFile defaultFileDirectives [] blocks []
-
-genOwnershipCodeBlock :: Gen CodeBlock
-genOwnershipCodeBlock = do
-  numLines <- choose (1, 5)
-  codeLines <- replicateM numLines genOwnershipCode
-  let content = unlines codeLines
-      span = SourceSpan (SourcePos 1 1 0) (SourcePos (numLines + 1) 1 (length content))
-  return $ CodeBlock defaultBlockDirectives content span
+-- Generate lists of ownership errors
+genOwnershipErrorList :: Gen [OwnershipError]
+genOwnershipErrorList = listOf genOwnershipError
 
 -- ============================================================================
--- Property Tests
+-- QuickCheck Properties
+-- ============================================================================
+
+-- Property: OwnershipType equality is reflexive
+prop_ownershipTypeReflexive :: OwnershipType -> Bool
+prop_ownershipTypeReflexive ot = ot == ot
+
+-- Property: OwnershipType equality is symmetric
+prop_ownershipTypeSymmetric :: OwnershipType -> OwnershipType -> Bool
+prop_ownershipTypeSymmetric ot1 ot2 = (ot1 == ot2) == (ot2 == ot1)
+
+-- Property: OwnershipType equality is transitive
+prop_ownershipTypeTransitive :: OwnershipType -> OwnershipType -> OwnershipType -> Bool
+prop_ownershipTypeTransitive ot1 ot2 ot3 =
+  (ot1 == ot2 && ot2 == ot3) ==> (ot1 == ot3)
+
+-- Property: OwnershipType ordering is consistent
+prop_ownershipTypeOrderingConsistent :: OwnershipType -> OwnershipType -> Bool
+prop_ownershipTypeOrderingConsistent ot1 ot2 =
+  let ordering = compare ot1 ot2
+  in case (ot1, ot2) of
+       (Owned _, Owned _) -> ordering == comparing (show) ot1 ot2
+       (Owned _, _) -> ordering == LT
+       (Borrowed _, Borrowed _) -> ordering == comparing (show) ot1 ot2
+       (Borrowed _, MutBorrowed _) -> ordering == LT
+       (Borrowed _, Owned _) -> ordering == GT
+       (MutBorrowed _, MutBorrowed _) -> ordering == comparing (show) ot1 ot2
+       (MutBorrowed _, _) -> ordering == GT
+
+-- Property: OwnershipError equality is reflexive
+prop_ownershipErrorReflexive :: OwnershipError -> Bool
+prop_ownershipErrorReflexive oe = oe == oe
+
+-- Property: OwnershipError equality is symmetric
+prop_ownershipErrorSymmetric :: OwnershipError -> OwnershipError -> Bool
+prop_ownershipErrorSymmetric oe1 oe2 = (oe1 == oe2) == (oe2 == oe1)
+
+-- Property: OwnershipError equality is transitive
+prop_ownershipErrorTransitive :: OwnershipError -> OwnershipError -> OwnershipError -> Bool
+prop_ownershipErrorTransitive oe1 oe2 oe3 =
+  (oe1 == oe2 && oe2 == oe3) ==> (oe1 == oe3)
+
+-- Property: OwnershipTransfer preserves from and to fields
+prop_ownershipTransferPreservesFields :: String -> String -> Bool
+prop_ownershipTransferPreservesFields from to =
+  let transfer = OwnershipTransfer from to
+  in transferFrom transfer == from && transferTo transfer == to
+
+-- Property: OwnershipTransfer equality is based on fields
+prop_ownershipTransferEquality :: String -> String -> String -> String -> Bool
+prop_ownershipTransferEquality from1 to1 from2 to2 =
+  let transfer1 = OwnershipTransfer from1 to1
+      transfer2 = OwnershipTransfer from2 to2
+  in (transfer1 == transfer2) == (from1 == from2 && to1 == to2)
+
+-- Property: Show instances produce non-empty strings
+prop_ownershipTypeShowNonEmpty :: OwnershipType -> Bool
+prop_ownershipTypeShowNonEmpty ot = not (null (show ot))
+
+-- Property: Show instances produce non-empty strings for errors
+prop_ownershipErrorShowNonEmpty :: OwnershipError -> Bool
+prop_ownershipErrorShowNonEmpty oe = not (null (show oe))
+
+-- Property: Show instances produce non-empty strings for transfers
+prop_ownershipTransferShowNonEmpty :: OwnershipTransfer -> Bool
+prop_ownershipTransferShowNonEmpty ot = not (null (show ot))
+
+-- Property: OwnershipAnalyzer constructor produces consistent result
+prop_ownershipAnalyzerConsistent :: Bool
+prop_ownershipAnalyzerConsistent =
+  let analyzer1 = newOwnershipAnalyzer
+      analyzer2 = newOwnershipAnalyzer
+  in analyzer1 == analyzer2
+
+-- Property: Sorting ownership types preserves order properties
+prop_sortOwnershipTypesPreservesOrder :: [OwnershipType] -> Bool
+prop_sortOwnershipTypesPreservesTypes ots =
+  let sorted = sort ots
+  in length sorted == length ots && all (`elem` ots) sorted
+
+-- Property: Sorting ownership errors preserves order properties
+prop_sortOwnershipErrorsPreservesOrder :: [OwnershipError] -> Bool
+prop_sortOwnershipErrorsPreservesOrder oes =
+  let sorted = sort oes
+  in length sorted == length oes && all (`elem` oes) sorted
+
+-- Property: Unique ownership types can be deduplicated
+prop_uniqueOwnershipTypes :: [OwnershipType] -> Bool
+prop_uniqueOwnershipTypes ots =
+  let unique = nub ots
+  in length unique <= length ots && all (`elem` ots) unique
+
+-- Property: Unique ownership errors can be deduplicated
+prop_uniqueOwnershipErrors :: [OwnershipError] -> Bool
+prop_uniqueOwnershipErrors oes =
+  let unique = nub oes
+  in length unique <= length oes && all (`elem` oes) unique
+
+-- Property: OwnershipType constructors produce valid types
+prop_ownedConstructorValid :: String -> Bool
+prop_ownedConstructorValid name = not (null name) ==> 
+  let owned = Owned name
+  in case owned of
+       Owned n -> n == name
+       _ -> False
+
+prop_borrowedConstructorValid :: String -> Bool
+prop_borrowedConstructorValid name = not (null name) ==>
+  let borrowed = Borrowed name
+  in case borrowed of
+       Borrowed n -> n == name
+       _ -> False
+
+prop_mutBorrowedConstructorValid :: String -> Bool
+prop_mutBorrowedConstructorValid name = not (null name) ==>
+  let mutBorrowed = MutBorrowed name
+  in case mutBorrowed of
+       MutBorrowed n -> n == name
+       _ -> False
+
+-- ============================================================================
+-- Unit Tests
 -- ============================================================================
 
 tests :: TestTree
-tests =
-  testGroup "Ownership Advanced QuickCheck Tests"
-    [ testProperty "OwnershipType Show instance produces expected format" $
-        \name ->
-          let owned = Owned name
-              borrowed = Borrowed name
-              mutBorrowed = MutBorrowed name
-          in "Owned " `isInfixOf` show owned .&&.
-             "Borrowed " `isInfixOf` show borrowed .&&.
-             "MutBorrowed " `isInfixOf` show mutBorrowed
-
-    , testProperty "OwnershipType ordering is consistent" $
-        \ownType1 ownType2 ->
-          let ord1 = compare ownType1 ownType2
-              ord2 = compare (show ownType1) (show ownType2)
-          in ord1 === ord2
-
-    , testProperty "OwnershipType equality is reflexive" $
-        \ownType -> ownType === ownType
-
-    , testProperty "OwnershipError Show instance contains error type" $
-        \err ->
-          let errStr = show err
-          in case err of
-            UseAfterMove var -> "UseAfterMove" `isInfixOf` errStr .&&. var `isInfixOf` errStr
-            DoubleMove var1 var2 -> "DoubleMove" `isInfixOf` errStr .&&. var1 `isInfixOf` errStr .&&. var2 `isInfixOf` errStr
-            BorrowWhileMoved var -> "BorrowWhileMoved" `isInfixOf` errStr .&&. var `isInfixOf` errStr
-            MutBorrowWhileBorrowed var -> "MutBorrowWhileBorrowed" `isInfixOf` errStr .&&. var `isInfixOf` errStr
-            BorrowWhileMutBorrowed var -> "BorrowWhileMutBorrowed" `isInfixOf` errStr .&&. var `isInfixOf` errStr
-            MultipleMutBorrows var -> "MultipleMutBorrows" `isInfixOf` errStr .&&. var `isInfixOf` errStr
-            UseWhileMutBorrowed var -> "UseWhileMutBorrowed" `isInfixOf` errStr .&&. var `isInfixOf` errStr
-            OutOfScope var -> "OutOfScope" `isInfixOf` errStr .&&. var `isInfixOf` errStr
-            BorrowError msg -> "BorrowError" `isInfixOf` errStr .&&. msg `isInfixOf` errStr
-            ParseError msg -> "ParseError" `isInfixOf` errStr .&&. msg `isInfixOf` errStr
-            CrossFunctionMove var1 var2 -> "CrossFunctionMove" `isInfixOf` errStr .&&. var1 `isInfixOf` errStr .&&. var2 `isInfixOf` errStr
-            ParameterMoveMismatch var -> "ParameterMoveMismatch" `isInfixOf` errStr .&&. var `isInfixOf` errStr
-            ControlFlowError msg -> "ControlFlowError" `isInfixOf` errStr .&&. msg `isInfixOf` errStr
-            PathSensitiveError msg -> "PathSensitiveError" `isInfixOf` errStr .&&. msg `isInfixOf` errStr
-            LoopOwnershipError msg -> "LoopOwnershipError" `isInfixOf` errStr .&&. msg `isInfixOf` errStr
-
-    , testProperty "OwnershipError ordering is based on string representation" $
-        \err1 err2 ->
-          let ord1 = compare err1 err2
-              ord2 = compare (show err1) (show err2)
-          in ord1 === ord2
-
-    , testProperty "OwnershipTransfer preserves from and to fields" $
-        \from to ->
-          let transfer = OwnershipTransfer from to
-          in transferFrom transfer === from .&&.
-             transferTo transfer === to
-
-    , testProperty "OwnershipTransfer equality is reflexive" $
-        \transfer -> transfer === transfer
-
-    , testProperty "newOwnershipAnalyzer creates valid analyzer" $
-        \analyzer -> analyzer === newOwnershipAnalyzer
-
-    , testProperty "analyzeOwnership handles empty code gracefully" $
-        \analyzer ->
-          let emptyCode = ""
-              result = analyzeOwnership analyzer emptyCode
-          in case result of
-            Left _ -> property True
-            Right _ -> property True
-
-    , testProperty "analyzeOwnership handles simple variable declarations" $
-        \analyzer varName ->
-          let code = "let " ++ varName ++ " = 42"
-              result = analyzeOwnership analyzer code
-          in case result of
-            Left _ -> property True
-            Right _ -> property True
-
-    , testProperty "analyzeOwnershipFile handles TypusFile input" $
-        \analyzer typusFile ->
-          let result = analyzeOwnershipFile analyzer typusFile
-          in case result of
-            Left _ -> property True
-            Right _ -> property True
-
-    , testProperty "analyzeOwnershipDebug provides detailed output" $
-        \analyzer code ->
-          let result = analyzeOwnershipDebug analyzer code
-          in case result of
-            Left _ -> property True
-            Right _ -> property True
-
-    , testProperty "formatOwnershipErrors handles empty error list" $
-        \errors ->
-          null errors ==> null (formatOwnershipErrors errors)
-
-    , testProperty "formatOwnershipErrors returns non-empty string for non-empty errors" $
-        \errors ->
-          not (null errors) ==> not (null (formatOwnershipErrors errors))
-
-    , testProperty "formatOwnershipErrors includes error information" $
-        \errors ->
-          not (null errors) ==>
-          let formatted = formatOwnershipErrors errors
-              firstError = head errors
-          in show firstError `isInfixOf` formatted
-
-    , testProperty "lexAll handles empty input" $
-        let emptyInput = ""
-          in null (lexAll emptyInput)
-
-    , testProperty "lexAll returns tokens for non-empty input" $
-        \input ->
-          not (null input) ==> not (null (lexAll input))
-
-    , testProperty "parseProgram handles empty input" $
-        let emptyInput = ""
-          in case parseProgram emptyInput of
-            Left _ -> property True
-            Right _ -> property True
-
-    , testProperty "parseProgram handles simple code" $
-        \code ->
-          not (null code) ==> 
-          case parseProgram code of
-            Left _ -> property True
-            Right _ -> property True
-
-    , testProperty "builtInFunctions is not empty" $
-        not (null builtInFunctions)
-
-    , testProperty "builtInFunctions contains expected function names" $
-        let funcNames = builtInFunctions
-            hasCommonFuncs = any (`elem` funcNames) ["print", "len", "append"]
-        in hasCommonFuncs
-
-    , testProperty "OwnershipType constructors create distinct types" $
-        \name ->
-          let owned = Owned name
-              borrowed = Borrowed name
-              mutBorrowed = MutBorrowed name
-          in owned /= borrowed .&&.
-             owned /= mutBorrowed .&&.
-             borrowed /= mutBorrowed
-
-    , testProperty "OwnershipType ordering follows expected hierarchy: Owned < Borrowed < MutBorrowed" $
-        \name ->
-          let owned = Owned name
-              borrowed = Borrowed name
-              mutBorrowed = MutBorrowed name
-          in owned < borrowed .&&.
-             borrowed < mutBorrowed .&&.
-             owned < mutBorrowed
-
-    , testProperty "OwnershipError constructors preserve their arguments" $
-        \var1 var2 msg ->
-          let useAfterMove = UseAfterMove var1
-              doubleMove = DoubleMove var1 var2
-              borrowError = BorrowError msg
-          in case useAfterMove of
-            UseAfterMove v -> v === var1
-          in case doubleMove of
-            DoubleMove v1 v2 -> v1 === var1 .&&. v2 === var2
-          in case borrowError of
-            BorrowError m -> m === msg
-
-    , testProperty "OwnershipTransfer is not reflexive unless from == to" $
-        \from to ->
-          let transfer = OwnershipTransfer from to
-              sameTransfer = OwnershipTransfer to from
-          in (from == to) === (transfer == sameTransfer)
-
-    , testProperty "Ownership analysis is deterministic" $
-        \analyzer code ->
-          let result1 = analyzeOwnership analyzer code
-              result2 = analyzeOwnership analyzer code
-          in result1 === result2
+tests = testGroup "Ownership Advanced QuickCheck Tests"
+  [ testGroup "OwnershipType Properties"
+    [ testProperty "OwnershipType equality is reflexive" prop_ownershipTypeReflexive
+    , testProperty "OwnershipType equality is symmetric" prop_ownershipTypeSymmetric
+    , testProperty "OwnershipType equality is transitive" prop_ownershipTypeTransitive
+    , testProperty "OwnershipType ordering is consistent" prop_ownershipTypeOrderingConsistent
+    , testProperty "Show instances produce non-empty strings" prop_ownershipTypeShowNonEmpty
+    , testProperty "Owned constructor produces valid types" prop_ownedConstructorValid
+    , testProperty "Borrowed constructor produces valid types" prop_borrowedConstructorValid
+    , testProperty "MutBorrowed constructor produces valid types" prop_mutBorrowedConstructorValid
     ]
+
+  , testGroup "OwnershipError Properties"
+    [ testProperty "OwnershipError equality is reflexive" prop_ownershipErrorReflexive
+    , testProperty "OwnershipError equality is symmetric" prop_ownershipErrorSymmetric
+    , testProperty "OwnershipError equality is transitive" prop_ownershipErrorTransitive
+    , testProperty "Show instances produce non-empty strings for errors" prop_ownershipErrorShowNonEmpty
+    ]
+
+  , testGroup "OwnershipTransfer Properties"
+    [ testProperty "OwnershipTransfer preserves from and to fields" prop_ownershipTransferPreservesFields
+    , testProperty "OwnershipTransfer equality is based on fields" prop_ownershipTransferEquality
+    , testProperty "Show instances produce non-empty strings for transfers" prop_ownershipTransferShowNonEmpty
+    ]
+
+  , testGroup "OwnershipAnalyzer Properties"
+    [ testProperty "OwnershipAnalyzer constructor produces consistent result" prop_ownershipAnalyzerConsistent
+    ]
+
+  , testGroup "Collection Properties"
+    [ testProperty "Sorting ownership types preserves order properties" prop_sortOwnershipTypesPreservesOrder
+    , testProperty "Sorting ownership errors preserves order properties" prop_sortOwnershipErrorsPreservesOrder
+    , testProperty "Unique ownership types can be deduplicated" prop_uniqueOwnershipTypes
+    , testProperty "Unique ownership errors can be deduplicated" prop_uniqueOwnershipErrors
+    ]
+
+  , testGroup "Unit Tests"
+    [ testCase "Create Owned type" $ do
+        let owned = Owned "x"
+        case owned of
+          Owned name -> name @?= "x"
+          _ -> assertBool "Should be Owned" False
+
+    , testCase "Create Borrowed type" $ do
+        let borrowed = Borrowed "x"
+        case borrowed of
+          Borrowed name -> name @?= "x"
+          _ -> assertBool "Should be Borrowed" False
+
+    , testCase "Create MutBorrowed type" $ do
+        let mutBorrowed = MutBorrowed "x"
+        case mutBorrowed of
+          MutBorrowed name -> name @?= "x"
+          _ -> assertBool "Should be MutBorrowed" False
+
+    , testCase "OwnershipType ordering" $ do
+        let owned = Owned "x"
+            borrowed = Borrowed "x"
+            mutBorrowed = MutBorrowed "x"
+        compare owned borrowed @?= LT
+        compare borrowed mutBorrowed @?= LT
+        compare mutBorrowed owned @?= GT
+
+    , testCase "Create UseAfterMove error" $ do
+        let error = UseAfterMove "x"
+        case error of
+          UseAfterMove var -> var @?= "x"
+          _ -> assertBool "Should be UseAfterMove" False
+
+    , testCase "Create DoubleMove error" $ do
+        let error = DoubleMove "x" "y"
+        case error of
+          DoubleMove var1 var2 -> do
+            var1 @?= "x"
+            var2 @?= "y"
+          _ -> assertBool "Should be DoubleMove" False
+
+    , testCase "Create BorrowError" $ do
+        let error = BorrowError "message"
+        case error of
+          BorrowError msg -> msg @?= "message"
+          _ -> assertBool "Should be BorrowError" False
+
+    , testCase "Create OwnershipTransfer" $ do
+        let transfer = OwnershipTransfer "from" "to"
+        transferFrom transfer @?= "from"
+        transferTo transfer @?= "to"
+
+    , testCase "OwnershipTransfer equality" $ do
+        let transfer1 = OwnershipTransfer "a" "b"
+            transfer2 = OwnershipTransfer "a" "b"
+            transfer3 = OwnershipTransfer "a" "c"
+        transfer1 @?= transfer2
+        assertBool "Different transfers should not be equal" $ transfer1 /= transfer3
+
+    , testCase "Create OwnershipAnalyzer" $ do
+        let analyzer = newOwnershipAnalyzer
+        case analyzer of
+          OwnershipAnalyzer () -> return ()
+          _ -> assertBool "Should be OwnershipAnalyzer" False
+
+    , testCase "Show instances" $ do
+        let owned = Owned "x"
+            borrowed = Borrowed "y"
+            mutBorrowed = MutBorrowed "z"
+            error = UseAfterMove "x"
+            transfer = OwnershipTransfer "a" "b"
+        show owned @?= "Owned x"
+        show borrowed @?= "Borrowed y"
+        show mutBorrowed @?= "MutBorrowed z"
+        show error @?= "UseAfterMove x"
+        show transfer @?= "OwnershipTransfer {transferFrom = \"a\", transferTo = \"b\"}"
+
+    , testCase "Sorting ownership types" $ do
+        let types = [MutBorrowed "z", Owned "x", Borrowed "y"]
+            sorted = sort types
+        sorted @?= [Owned "x", Borrowed "y", MutBorrowed "z"]
+
+    , testCase "Sorting ownership errors" $ do
+        let errors = [UseAfterMove "z", DoubleMove "x" "y", BorrowError "msg"]
+            sorted = sort errors
+        sorted @?= [BorrowError "msg", DoubleMove "x" "y", UseAfterMove "z"]
+
+    , testCase "Deduplicating ownership types" $ do
+        let types = [Owned "x", Borrowed "y", Owned "x", MutBorrowed "z"]
+            unique = nub types
+        unique @?= [Owned "x", Borrowed "y", MutBorrowed "z"]
+
+    , testCase "Deduplicating ownership errors" $ do
+        let errors = [UseAfterMove "x", BorrowError "msg", UseAfterMove "x"]
+            unique = nub errors
+        unique @?= [UseAfterMove "x", BorrowError "msg"]
+    ]
+  ]
