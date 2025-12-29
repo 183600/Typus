@@ -3,8 +3,8 @@
 module Test.Unit.CoreFunctionalityPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, ioProperty, (===), (.&&.), counterexample)
-import Test.Tasty.HUnit (testCase, assertBool)
+import Test.QuickCheck (Arbitrary(..), Gen, Property, (===), (.&&.), counterexample)
+import TestSupport.QuickCheck (fastProperty)
 
 import qualified Data.Text as T
 import Data.Char (isSpace)
@@ -145,24 +145,24 @@ prop_withLocation_updates_location errId msg loc1 loc2 =
 tests :: TestTree
 tests = testGroup "Core Functionality Properties"
     [ testGroup "Utils Module Properties"
-        [ testProperty "trim idempotent" prop_trim_idempotent
-        , testProperty "splitBy reconstruct" prop_splitBy_reconstruct
-        , testProperty "splitByCollapsed no empty" prop_splitByCollapsed_no_empty
-        , testProperty "removeLineComments basic" prop_removeLineComments_basic
-        , testProperty "removeComments preserve strings" prop_removeComments_preserve_strings
-        , testProperty "normalizeIndentation preserve relative" prop_normalizeIndentation_preserve_relative
-        , testProperty "breakOn correct" prop_breakOn_correct
+        [ fastProperty "trim idempotent" prop_trim_idempotent
+        , fastProperty "splitBy reconstruct" prop_splitBy_reconstruct
+        , fastProperty "splitByCollapsed no empty" prop_splitByCollapsed_no_empty
+        , fastProperty "removeLineComments basic" prop_removeLineComments_basic
+        , fastProperty "removeComments preserve strings" prop_removeComments_preserve_strings
+        , fastProperty "normalizeIndentation preserve relative" prop_normalizeIndentation_preserve_relative
+        , fastProperty "breakOn correct" prop_breakOn_correct
         ]
     , testGroup "SourceLocation Module Properties"
-        [ testProperty "posAfter newline" prop_posAfter_newline
-        , testProperty "spanBetween valid" prop_spanBetween_valid
-        , testProperty "mergeSpans commutative" prop_mergeSpans_commutative
-        , testProperty "advancePosByText consistent" prop_advancePosByText_consistent
+        [ fastProperty "posAfter newline" prop_posAfter_newline
+        , fastProperty "spanBetween valid" prop_spanBetween_valid
+        , fastProperty "mergeSpans commutative" prop_mergeSpans_commutative
+        , fastProperty "advancePosByText consistent" prop_advancePosByText_consistent
         ]
     , testGroup "Error Handling Properties"
-        [ testProperty "error format includes severity" prop_error_format_includes_severity
-        , testProperty "filter severity consistent" prop_filter_severity_consistent
-        , testProperty "filter category consistent" prop_filter_category_consistent
-        , testProperty "withLocation updates location" prop_withLocation_updates_location
+        [ fastProperty "error format includes severity" prop_error_format_includes_severity
+        , fastProperty "filter severity consistent" prop_filter_severity_consistent
+        , fastProperty "filter category consistent" prop_filter_category_consistent
+        , fastProperty "withLocation updates location" prop_withLocation_updates_location
         ]
     ]

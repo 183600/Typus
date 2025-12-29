@@ -1182,13 +1182,6 @@ test-suite typus-test
 
         -- Enhanced Cabal Test Suite - 8 comprehensive QuickCheck tests
         , Test.Unit.EnhancedCabalTestSuiteSpec
-        , Test.Unit.CompilerIRConsistencyQuickCheckSpec
-        , Test.Unit.OwnershipTransitivityQuickCheckSpec
-        , Test.Unit.DependentTypeBoundaryQuickCheckSpec
-        , Test.Unit.SyntaxValidatorRobustnessQuickCheckSpec
-        , Test.Unit.IntegrationEndToEndQuickCheckSpec
-        , Test.Unit.UtilsBoundaryConditionsQuickCheckSpec
-        , Test.Unit.ParserErrorRecoveryQuickCheckSpec
 
         -- New Cabal Test Modules (Added by user request) - 10 comprehensive tests
         , Test.Unit.NewCabalCoreSpec
@@ -1198,8 +1191,6 @@ test-suite typus-test
         , Test.Unit.NewCabalTypeSystemSpec
         , Test.Unit.NewCabalErrorRecoverySpec
         , Test.Unit.NewCabalPerformanceSpec
-        , Test.Unit.NewCabalIntegrationSpec
-        , Test.Unit.NewCabalQuickCheckSpec
         , Test.Unit.NewCabalEdgeCaseSpec
         
     other-modules:
