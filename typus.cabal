@@ -298,6 +298,13 @@ test-suite typus-test
         Test.Unit.NewCabalErrorHandlerQuickCheckSpec,
         Test.Unit.NewCabalOwnershipQuickCheckSpec,
         Test.Unit.NewCabalDependenciesQuickCheckSpec,
+        
+        -- New Cabal Test Modules
+        Test.Unit.NewCabalUtilsSpec,
+        Test.Unit.NewCabalSourceLocationSpec,
+        Test.Unit.NewCabalErrorHandlerSpec,
+        Test.Unit.NewCabalParserSpec,
+        Test.Unit.NewCabalIntegrationSpec,
         Test.Unit.NewCabalSyntaxValidatorQuickCheckSpec,
         Test.Unit.ComprehensiveTypeCheckerQuickCheckSpec,
         Test.Unit.CoreDataStructuresQuickCheckSpec,
@@ -611,7 +618,6 @@ test-suite typus-test
         Test.Unit.DependentTypeSystemSpec,
         Test.Unit.OwnershipAnalysisSpec,
         Test.Unit.CompilerIRSpec,
-        Test.Unit.NewCabalIntegrationSpec,
         Test.Unit.SimpleCabalTestSpec,
         
         

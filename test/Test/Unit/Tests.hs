@@ -30,6 +30,13 @@ import qualified Test.Unit.VerbositySpec
 import qualified Test.Unit.UtilsBoundaryConditionsSpec
 import qualified Test.Unit.UtilsSpec
 
+-- New Cabal Test Modules
+import qualified Test.Unit.NewCabalUtilsSpec
+import qualified Test.Unit.NewCabalSourceLocationSpec
+import qualified Test.Unit.NewCabalErrorHandlerSpec
+import qualified Test.Unit.NewCabalParserSpec
+import qualified Test.Unit.NewCabalIntegrationSpec
+
 -- New Core Test Modules Added
 import qualified Test.Unit.CoreUtilsSpec
 import qualified Test.Unit.CoreSourceLocationSpec
@@ -1599,6 +1606,11 @@ tests =
         , Test.Unit.UtilsIndentationSpec.tests
         , Test.Unit.SplitFunctionsSpec.tests
         , Test.Unit.SpanOperationsSpec.tests
+        , Test.Unit.NewCabalUtilsSpec.tests
+        , Test.Unit.NewCabalSourceLocationSpec.tests
+        , Test.Unit.NewCabalErrorHandlerSpec.tests
+        , Test.Unit.NewCabalParserSpec.tests
+        , Test.Unit.NewCabalIntegrationSpec.tests
         ]
     
     -- New Core Test Modules
