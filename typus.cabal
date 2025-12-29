@@ -488,6 +488,13 @@ test-suite typus-test
         Test.Unit.NewGoToolchainQuickCheckSpec,
         Test.Unit.SimpleCoreTestSpec,
 
+        -- New QuickCheck Property Test Modules (Added for enhanced testing)
+        Test.Unit.NewSourceLocationQuickCheckPropertiesSpec,
+        Test.Unit.NewErrorHandlerQuickCheckPropertiesSpec,
+        Test.Unit.NewCompilerQuickCheckPropertiesSpec,
+        Test.Unit.NewParserQuickCheckPropertiesSpec,
+        Test.Unit.NewUtilsQuickCheckPropertiesSpec,
+
         -- New comprehensive QuickCheck test modules added for enhanced coverage
         Test.Unit.CompilerErrorRecoveryQuickCheckSpec,
         Test.Unit.DependentTypeSystemBoundaryQuickCheckSpec,

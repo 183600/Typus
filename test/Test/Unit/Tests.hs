@@ -48,6 +48,13 @@ import qualified Test.Unit.CoreCompilerSpec
 -- New Core Functionality QuickCheck Tests
 import qualified Test.Unit.NewCoreFunctionalityQuickCheckTests
 
+-- New QuickCheck Property Test Modules (Added for enhanced testing)
+import qualified Test.Unit.NewSourceLocationQuickCheckPropertiesSpec
+import qualified Test.Unit.NewErrorHandlerQuickCheckPropertiesSpec
+import qualified Test.Unit.NewCompilerQuickCheckPropertiesSpec
+import qualified Test.Unit.NewParserQuickCheckPropertiesSpec
+import qualified Test.Unit.NewUtilsQuickCheckPropertiesSpec
+
 -- ============================================================================
 -- New Cabal QuickCheck Test Modules (2025) - 7 comprehensive tests
 -- ============================================================================
@@ -3362,5 +3369,16 @@ tests =
     -- Simple Cabal QuickCheck Tests (4 comprehensive tests)
     -- ============================================================================
     , Test.Unit.SimpleCabalQuickCheckTests.tests
+
+    -- ============================================================================
+    -- New QuickCheck Property Test Modules (Added for enhanced testing)
+    -- ============================================================================
+    , testGroup "New QuickCheck Property Test Modules - Core Functionality"
+        [ Test.Unit.NewSourceLocationQuickCheckPropertiesSpec.tests
+        , Test.Unit.NewErrorHandlerQuickCheckPropertiesSpec.tests
+        , Test.Unit.NewCompilerQuickCheckPropertiesSpec.tests
+        , Test.Unit.NewParserQuickCheckPropertiesSpec.tests
+        , Test.Unit.NewUtilsQuickCheckPropertiesSpec.tests
+        ]
 
         ]
