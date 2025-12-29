@@ -175,7 +175,7 @@ import qualified Test.Unit.NewComprehensiveCabalTestSpec
 -- New Comprehensive Test Modules (2025) - 10 cabal tests
 -- ============================================================================
 import qualified Test.Unit.NewTextProcessingBoundarySpec
-import qualified Test.Unit.NewSourceLocationMathPropertiesSpec
+import qualified Test.Unit.NewSourceLocationMathPropertiesSpec2
 import qualified Test.Unit.NewParserRobustnessSpec
 import qualified Test.Unit.NewCompilerOptimizationInvariantSpec
 import qualified Test.Unit.NewOwnershipTransitivitySpec
@@ -541,7 +541,12 @@ import qualified Test.Unit.NewErrorHandlerComprehensiveSpec
 
 -- New Advanced Test Modules for Enhanced Coverage
 import qualified Test.Unit.ParserBoundaryConditionsSpec
-import qualified Test.Unit.SourceLocationMathPropertiesSpec
+import qualified Test.Unit.NewSourceLocationMathPropertiesSpec2
+import qualified Test.Unit.NewUtilsPropertiesSpec2
+import qualified Test.Unit.ErrorHandlerCorePropertiesSpec
+import qualified Test.Unit.OwnershipBasicPropertiesSpec
+import qualified Test.Unit.DependenciesTypeSystemPropertiesSpec
+import qualified Test.Unit.DependentTypesParserPropertiesSpec
 import qualified Test.Unit.ErrorHandlerRecoveryAdvancedSpec
 import qualified Test.Unit.OwnershipTransitivityAdvancedSpec
 import qualified Test.Unit.DependentTypeConstraintValidationSpec
@@ -1069,7 +1074,7 @@ import qualified Test.Unit.CabalEnhancedQuickCheckSpec
 
 -- New Test Modules Added for Enhanced Coverage
 import qualified Test.Unit.NewUtilsEdgeCaseSpec
-import qualified Test.Unit.NewSourceLocationMathPropertiesSpec
+import qualified Test.Unit.NewSourceLocationMathPropertiesSpec2
 import qualified Test.Unit.NewParserUnicodeSpec
 import qualified Test.Unit.NewCommentHandlingSpec
 import qualified Test.Unit.NewIndentationSpec
@@ -2058,9 +2063,19 @@ tests =
     , Test.Unit.NewCoreQuickCheckTestSpec.tests
     , testGroup "New Advanced Test Suite for Enhanced Coverage"
         [ Test.Unit.ParserBoundaryConditionsSpec.tests
-        , Test.Unit.SourceLocationMathPropertiesSpec.tests
-        , Test.Unit.ErrorHandlerRecoveryAdvancedSpec.tests
-        , Test.Unit.OwnershipTransitivityAdvancedSpec.tests
+        , Test.Unit.NewSourceLocationMathPropertiesSpec2.tests
+            , Test.Unit.NewUtilsPropertiesSpec2.tests
+            , Test.Unit.ErrorHandlerCorePropertiesSpec.tests
+            , Test.Unit.OwnershipBasicPropertiesSpec.tests
+            , Test.Unit.DependenciesTypeSystemPropertiesSpec.tests
+            , Test.Unit.DependentTypesParserPropertiesSpec.tests
+            , Test.Unit.ErrorHandlerRecoveryAdvancedSpec.tests
+            , Test.Unit.NewUtilsPropertiesSpec2.tests
+            , Test.Unit.ErrorHandlerCorePropertiesSpec.tests
+            , Test.Unit.OwnershipBasicPropertiesSpec.tests
+            , Test.Unit.DependenciesTypeSystemPropertiesSpec.tests
+            , Test.Unit.DependentTypesParserPropertiesSpec.tests
+            , Test.Unit.ErrorHandlerRecoveryAdvancedSpec.tests        , Test.Unit.OwnershipTransitivityAdvancedSpec.tests
         , Test.Unit.DependentTypeConstraintValidationSpec.tests
         , Test.Unit.UtilsStringProcessingAdvancedSpec.tests
         , Test.Unit.CompilerOptimizationConsistencySpec.tests
@@ -2453,7 +2468,7 @@ tests =
   -- New Test Modules Added for Enhanced Coverage (2025)
   , testGroup "New Enhanced Coverage Test Modules"
     [ Test.Unit.NewUtilsEdgeCaseSpec.tests
-    , Test.Unit.NewSourceLocationMathPropertiesSpec.tests
+    , Test.Unit.NewSourceLocationMathPropertiesSpec2.tests
     , Test.Unit.NewParserUnicodeSpec.tests
     , Test.Unit.NewCommentHandlingSpec.tests
     , Test.Unit.NewIndentationSpec.tests
@@ -2563,7 +2578,7 @@ tests =
   -- New QuickCheck Test Modules (8 comprehensive tests)
   -- ============================================================================
   , testGroup "New QuickCheck Test Modules - Enhanced Testing"
-    [ Test.Unit.SourceLocationMathPropertiesSpec.tests
+    [ Test.Unit.NewSourceLocationMathPropertiesSpec2.tests
     , Test.Unit.ParserConsistencyPropertiesSpec.tests
     , Test.Unit.CompilerIROptimizationSpec.tests
     , Test.Unit.OwnershipTransferInvariantSpec.tests
@@ -2812,7 +2827,7 @@ tests =
   -- ============================================================================
   , testGroup "New Comprehensive Test Modules - Core Functionality Testing"
     [ Test.Unit.NewTextProcessingBoundarySpec.tests
-    , Test.Unit.NewSourceLocationMathPropertiesSpec.tests
+    , Test.Unit.NewSourceLocationMathPropertiesSpec2.tests
     , Test.Unit.NewParserRobustnessSpec.tests
     , Test.Unit.NewCompilerOptimizationInvariantSpec.tests
     , Test.Unit.NewOwnershipTransitivitySpec.tests

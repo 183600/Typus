@@ -213,6 +213,12 @@ test-suite typus-test
         Test.Unit.GoToolchainSpec,
         Test.Unit.VerbositySpec,
         Test.Unit.UtilsSpec,
+        Test.Unit.NewUtilsPropertiesSpec2,
+        Test.Unit.NewSourceLocationMathPropertiesSpec2,
+        Test.Unit.ErrorHandlerCorePropertiesSpec,
+        Test.Unit.OwnershipBasicPropertiesSpec,
+        Test.Unit.DependenciesTypeSystemPropertiesSpec,
+        Test.Unit.DependentTypesParserPropertiesSpec,
                 Test.Unit.AdditionalQuickCheckTests2025,
                 Test.Unit.AdvancedParserSpec,
         Test.Unit.IntegrationSpec,
@@ -1003,7 +1009,6 @@ test-suite typus-test
         , Test.Unit.NewCabalQuickCheckSpec10
 
         -- New Comprehensive Test Modules (2025) - 8 Additional Tests
-        , Test.Unit.SourceLocationMathPropertiesSpec
         , Test.Unit.ErrorHandlingConsistencySpec
         , Test.Unit.UtilsUnicodePerformanceSpec
         , Test.Unit.ModuleIntegrationPropertiesSpec
