@@ -283,6 +283,15 @@ test-suite typus-test
         TestSupport.Arbitrary,
         TestSupport.ExtendedArbitrary,
 
+        -- Additional Test Modules Created for Enhanced Coverage
+        Test.Unit.AdditionalUtilsSpec,
+        Test.Unit.AdditionalSourceLocationSpec,
+        Test.Unit.AdditionalParserSpec,
+        Test.Unit.AdditionalErrorHandlerSpec,
+        Test.Unit.AdditionalSyntaxValidatorSpec,
+        Test.Unit.AdditionalUtilsQuickCheckSpec,
+        Test.Unit.AdditionalSourceLocationQuickCheckSpec,
+
         -- New Cabal QuickCheck Test Modules (2025)
         Test.Unit.NewCabalParserQuickCheckSpec,
         Test.Unit.NewCabalSourceLocationQuickCheckSpec,
@@ -413,8 +422,7 @@ test-suite typus-test
         Test.Unit.SourceLocationAdditionalQuickCheckSpec,
         Test.Unit.ParserAdditionalQuickCheckSpec,
         Test.Unit.IntegrationAdditionalQuickCheckSpec,
-        Test.Unit.AdditionalUtilsSpec,
-        Test.Unit.AdditionalUtilsQuickCheckSpec,
+        
         Test.Unit.SourceLocationAdditionalSpec,
         Test.Unit.ParserAdditionalSpec,
         Test.Unit.AdditionalTypusSpec,

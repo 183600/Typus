@@ -98,6 +98,17 @@ import qualified Test.Unit.SourceLocationEnhancedQuickCheckSpec
 -- New Typus QuickCheck Test Modules (2025) - Core Functionality Testing
 -- ============================================================================
 import qualified Test.Unit.NewTypusCoreQuickCheckSpec
+
+-- ============================================================================
+-- Additional Test Modules Created for Enhanced Coverage
+-- ============================================================================
+import qualified Test.Unit.AdditionalUtilsSpec
+import qualified Test.Unit.AdditionalSourceLocationSpec
+import qualified Test.Unit.AdditionalParserSpec
+import qualified Test.Unit.AdditionalErrorHandlerSpec
+import qualified Test.Unit.AdditionalSyntaxValidatorSpec
+import qualified Test.Unit.AdditionalUtilsQuickCheckSpec
+import qualified Test.Unit.AdditionalSourceLocationQuickCheckSpec
 import qualified Test.Unit.NewTypusParserQuickCheckSpec
 import qualified Test.Unit.NewTypusOwnershipQuickCheckSpec
 import qualified Test.Unit.NewTypusDependentTypesQuickCheckSpec
@@ -1507,6 +1518,21 @@ tests =
     , Test.Unit.VerbositySpec.tests
     , Test.Unit.UtilsSpec.tests
     , Test.Unit.UtilsBoundaryConditionsSpec.tests
+
+    -- Additional Test Modules Created for Enhanced Coverage
+    , testGroup "Additional Test Modules"
+        [ Test.Unit.AdditionalUtilsSpec.tests
+        , Test.Unit.AdditionalSourceLocationSpec.tests
+        , Test.Unit.AdditionalParserSpec.tests
+        , Test.Unit.AdditionalErrorHandlerSpec.tests
+        , Test.Unit.AdditionalSyntaxValidatorSpec.tests
+        ]
+
+    -- Additional QuickCheck Test Modules
+    , testGroup "Additional QuickCheck Tests"
+        [ Test.Unit.AdditionalUtilsQuickCheckSpec.tests
+        , Test.Unit.AdditionalSourceLocationQuickCheckSpec.tests
+        ]
     , Test.Unit.AdvancedParserSpec.tests
     , Test.Unit.IntegrationSpec.tests
     , Test.Unit.PerformanceSpec.tests
