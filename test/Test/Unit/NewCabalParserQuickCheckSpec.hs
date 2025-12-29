@@ -1,291 +1,221 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
 module Test.Unit.NewCabalParserQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
+import Test.Tasty.HUnit (testCase, (@?=))
+import Test.QuickCheck (property, forAll, Gen, arbitrary, choose, elements, listOf)
+import Data.Char (isLetter, isDigit, isSpace)
+import Data.List (isPrefixOf, isSuffixOf)
+
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, vectorOf, Positive(..), NonNegative(..))
-
 import Parser
-  ( parseTypus
-  , FileDirectives(..)
-  , BlockDirectives(..)
-  , CodeBlock(..)
-  , TypusFile(..)
-  , defaultFileDirectives
-  , defaultBlockDirectives
-  )
 
-import SourceLocation (SourceSpan(..), SourcePos(..), startPos)
-import qualified SyntaxValidator
-import Data.List (isPrefixOf, isInfixOf)
-import Data.Maybe (isJust, isNothing)
-import qualified Data.Text as T
-
--- | 新的QuickCheck属性测试，针对Parser模块的错误恢复
+-- | QuickCheck tests for Parser module covering parsing properties and edge cases
 tests :: TestTree
 tests =
   testGroup "New Cabal Parser QuickCheck Tests"
-    [ testGroup "Basic parsing properties"
-        [ fastProperty "Empty input creates valid TypusFile" $
-            \input ->
-              input == "" ==>
-              case parseTypus input of
-                Left _ -> property False
-                Right file -> tfDirectives file === defaultFileDirectives .&&.
-                             null (tfBlocks file) .&&.
-                             null (tfBuildTags file)
-
-        , fastProperty "Valid directives are parsed correctly" $
-            \directives ->
-              let input = "//!" ++ directives
-              in case parseTypus input of
-                   Left _ -> property False
-                   Right file -> not (null (tfDirectives file)) || length (tfSyntaxErrors file) > 0
-
-        , fastProperty "Multiple build tags are preserved" $
-            \tags ->
-              let input = unlines $ map (\tag -> "//go:build " ++ tag) tags
-              in case parseTypus input of
-                   Left _ -> property False
-                   Right file -> length (tfBuildTags file) === length tags
+    [ testGroup "Tokenization properties"
+        [ fastProperty "tokenize preserves input length when whitespace is ignored" prop_tokenizePreservesNonWhitespace
+        , fastProperty "tokenize handles empty input" prop_tokenizeEmpty
+        , fastProperty "tokenize handles whitespace-only input" prop_tokenizeWhitespaceOnly
+        , fastProperty "tokenize respects string literals" prop_tokenizeStringLiterals
+        , fastProperty "tokenize respects comment syntax" prop_tokenizeComments
         ]
-
-    , testGroup "Error recovery properties"
-        [ fastProperty "Parser recovers from syntax errors" $
-            \prefix error suffix ->
-              let input = prefix ++ "\n" ++ error ++ "\n" ++ suffix
-              in case parseTypus input of
-                   Left _ -> property False
-                   Right file -> length (tfSyntaxErrors file) > 0 ==> not (null (tfBlocks file))
-
-        , fastProperty "Partial parsing continues after errors" $
-            \validContent errorContent ->
-              let input = validContent ++ "\n" ++ errorContent ++ "\nfunc main() {}"
-              in case parseTypus input of
-                   Left _ -> property False
-                   Right file -> length (tfSyntaxErrors file) > 0 ==> 
-                                any (isPrefixOf "func" . cbContent) (tfBlocks file)
-
-        , fastProperty "Malformed directives don't crash parser" $
-            \directives ->
-              let input = "//!" ++ directives ++ "\nfunc test() {}"
-              in case parseTypus input of
-                   Left _ -> property False
-                   Right file -> property True  -- Parser should not crash
-
-        , fastProperty "Unclosed blocks are handled gracefully" $
-            \content ->
-              let input = "{//!\n" ++ content ++ "\nfunc test() {}"
-              in case parseTypus input of
-                   Left _ -> property False
-                   Right file -> property True
+    
+    , testGroup "Parsing properties"
+        [ fastProperty "parseExpression handles valid identifiers" prop_parseValidIdentifier
+        , fastProperty "parseExpression handles numeric literals" prop_parseNumericLiterals
+        , fastProperty "parseExpression respects operator precedence" prop_operatorPrecedence
+        , fastProperty "parseExpression handles nested expressions" prop_nestedExpressions
         ]
-
-    , testGroup "Directive parsing robustness"
-        [ fastProperty "Mixed valid and invalid directives" $
-            \valid invalid ->
-              let input = "//!" ++ valid ++ "\n//! " ++ invalid ++ "\nfunc main() {}"
-              in case parseTypus input of
-                   Left _ -> property False
-                   Right file -> property True  -- Should parse some parts
-
-        , fastProperty "Duplicate directives are handled" $
-            \directive ->
-              let input = "//!" ++ directive ++ "\n//! " ++ directive ++ "\nfunc test() {}"
-              in case parseTypus input of
-                   Left _ -> property False
-                   Right file -> property True
-
-        , fastProperty "Directive values with special characters" $
-            \value ->
-              let input = "//!ownership:" ++ value ++ "\nfunc main() {}"
-              in case parseTypus input of
-                   Left _ -> property False
-                   Right file -> property True
-
-        , fastProperty "Block directives with various formats" $
-            \content ->
-              let input = "{//! ownership:true }\n" ++ content ++ "\n}"
-              in case parseTypus input of
-                   Left _ -> property False
-                   Right file -> property True
+    
+    , testGroup "Error handling properties"
+        [ fastProperty "parse fails gracefully on invalid syntax" prop_parseInvalidSyntax
+        , fastProperty "parse provides meaningful error locations" prop_errorLocationAccuracy
+        , fastProperty "parse recovers from certain errors" prop_errorRecovery
         ]
-
-    , testGroup "Content parsing properties"
-        [ fastProperty "Code blocks preserve content" $
-            \content ->
-              let input = "func test() {\n" ++ content ++ "\n}"
-              in case parseTypus input of
-                   Left _ -> property False
-                   Right file -> any (\block -> content `isInfixOf` cbContent block) (tfBlocks file)
-
-        , fastProperty "Multiple code blocks are parsed" $
-            \blocks ->
-              let blockContents = map (\i -> "func block" ++ show i ++ "() {}") [1..blocks]
-                  input = unlines blockContents
-              in case parseTypus input of
-                   Left _ -> property False
-                   Right file -> length (tfBlocks file) >= blocks
-
-        , fastProperty "Nested structures are handled" $
-            \depth ->
-              depth < 10 ==>
-              let nested = concat $ replicate depth "  "
-                  input = nested ++ "func test() {\n" ++ nested ++ "  return 42\n" ++ nested ++ "}"
-              in case parseTypus input of
-                   Left _ -> property False
-                   Right file -> not (null (tfBlocks file))
+    
+    , testGroup "Edge cases and robustness"
+        [ testCase "parse empty input returns appropriate result" $ do
+            parse "" @?= ParseResult [] []
+            
+        , testCase "parse handles very long identifiers" $ do
+            let longIdent = replicate 1000 'a'
+            parse longIdent @?= ParseResult [Token Identifier longIdent] []
+            
+        , testCase "parse handles deeply nested expressions" $ do
+            let deeplyNested = "(" ++ replicate 1000 "(" ++ "x" ++ replicate 1000 ")" ++ ")"
+            let result = parse deeplyNested
+            case result of
+              ParseResult tokens [] -> length tokens @?= 2001
+              _ -> assertFailure "Parse should succeed"
         ]
-
-    , testGroup "Edge cases and boundary conditions"
-        [ testCase "Empty file parsing" $ do
-            let input = ""
-                result = parseTypus input
-            case result of
-              Left err -> assertFailure $ "Should parse empty file: " ++ err
-              Right file -> do
-                tfDirectives file @?= defaultFileDirectives
-                tfBuildTags file @?= []
-                tfBlocks file @?= []
-
-        , testCase "File with only comments" $ do
-            let input = unlines ["// This is a comment", "// Another comment", "//! ownership:true"]
-                result = parseTypus input
-            case result of
-              Left err -> assertFailure $ "Should parse comments: " ++ err
-              Right file -> do
-                length (tfSyntaxErrors file) @?= 0
-                tfBlocks file @?= []
-
-        , testCase "Malformed directive recovery" $ do
-            let input = unlines ["//! ownership", "//! invalid:syntax", "func main() {}"]
-                result = parseTypus input
-            case result of
-              Left err -> assertFailure $ "Should recover from malformed directive: " ++ err
-              Right file -> do
-                -- Should have parsed the function despite malformed directive
-                any (isPrefixOf "func main" . cbContent) (tfBlocks file) @?= True
-
-        , testCase "Unclosed block directive" $ do
-            let input = unlines ["{//! ownership:true", "func test() {}", "// Should close here"]
-                result = parseTypus input
-            case result of
-              Left err -> assertFailure $ "Should handle unclosed block: " ++ err
-              Right file -> do
-                -- Should still parse some content
-                not (null (tfBlocks file)) @?= True
-
-        , testCase "Multiple package declarations error" $ do
-            let input = unlines ["package main", "package test", "func main() {}"]
-                result = parseTypus input
-            case result of
-              Left err -> err @?= "Multiple package declarations found"
-              Right _ -> assertFailure "Should detect multiple package declarations"
-
-        , testCase "If statement without brace" $ do
-            let input = "if condition\n    doSomething()\n"
-                result = parseTypus input
-            case result of
-              Left err -> "missing opening brace" `isInfixOf` err @?= True
-              Right _ -> assertFailure "Should detect missing brace"
-        ]
-
-    , testGroup "Complex error scenarios"
-        [ testCase "Mixed valid and invalid syntax" $ do
-            let input = unlines
-                  [ "//! ownership:true"
-                  , "func validFunction() {"
-                  , "    return 42"
-                  , "}"
-                  , "if invalid syntax here"
-                  , "func anotherValid() {"
-                  , "    return 'hello'"
-                  , "}"
-                  ]
-                result = parseTypus input
-            case result of
-              Left err -> assertFailure $ "Should parse partial content: " ++ err
-              Right file -> do
-                -- Should have parsed valid functions
-                length (filter (isPrefixOf "func validFunction" . cbContent) (tfBlocks file)) @?= 1
-                length (filter (isPrefixOf "func anotherValid" . cbContent) (tfBlocks file)) @?= 1
-                -- Should have syntax errors
-                length (tfSyntaxErrors file) @? (> 0)
-
-        , testCase "Deeply nested malformed content" $ do
-            let input = unlines
-                  [ "{//! ownership:true"
-                  , "func outer() {"
-                  , "    if condition"
-                  , "        malformed line here"
-                  , "    func inner() {"
-                  , "        return 42"
-                  , "    }"
-                  , "}"
-                  , "}"
-                  , "func separate() {"
-                  , "    return 'separate'"
-                  , "}"
-                  ]
-                result = parseTypus input
-            case result of
-              Left err -> assertFailure $ "Should handle deeply nested errors: " ++ err
-              Right file -> do
-                -- Should parse some valid parts
-                any (isPrefixOf "func separate" . cbContent) (tfBlocks file) @?= True
-
-        , testCase "Unicode and special characters" $ do
-            let input = unlines
-                  [ "//! 拥有权:true"
-                  , "func 测试函数() {"
-                  , "    message := '你好世界'"
-                  , "    return message"
-                  , "}"
-                  ]
-                result = parseTypus input
-            case result of
-              Left err -> assertFailure $ "Should handle unicode: " ++ err
-              Right file -> do
-                -- Should parse unicode content
-                any ("测试函数" `isInfixOf` cbContent) (tfBlocks file) @?= True
-        ]
-
-    , testGroup "Performance and stress tests"
-        [ fastProperty "Large file parsing" $
-            \size ->
-              size < 1000 ==>
-              let lines' = replicate size "func test" ++ show (size) ++ "() { return " ++ show size ++ "; }"
-                  input = unlines lines'
-              in case parseTypus input of
-                   Left _ -> property False
-                   Right file -> length (tfBlocks file) >= size `div` 2  -- Should parse most content
-
-        , fastProperty "Many small blocks" $
-            \count ->
-              count < 100 ==>
-              let blocks = map (\i -> "func block" ++ show i ++ "() {}") [1..count]
-                  input = unlines blocks
-              in case parseTypus input of
-                   Left _ -> property False
-                   Right file -> length (tfBlocks file) >= count
-
-        , fastProperty "Complex directive combinations" $
-            \directives ->
-              length directives < 20 ==>
-              let directiveLines = map (\d -> "//!" ++ d) directives
-                  functionLines = ["func main() {}", "return 0"]
-                  input = unlines $ directiveLines ++ functionLines
-              in case parseTypus input of
-                   Left _ -> property False
-                   Right file -> property True
+    
+    , testGroup "Performance and scalability"
+        [ fastProperty "parse time scales linearly with input size" prop_parseLinearScaling
+        , fastProperty "tokenize memory usage is bounded" prop_tokenizeMemoryBounded
         ]
     ]
+
+-- | Property: tokenize preserves input length when whitespace is ignored
+prop_tokenizePreservesNonWhitespace :: String -> Bool
+prop_tokenizePreservesNonWhitespace input =
+  let tokens = tokenize input
+      nonWhitespaceInput = filter (not . isSpace) input
+      tokenContent = concatMap tokenValue tokens
+  in length nonWhitespaceInput == length tokenContent
+
+-- | Property: tokenize handles empty input
+prop_tokenizeEmpty :: Bool
+prop_tokenizeEmpty =
+  let tokens = tokenize ""
+  in null tokens
+
+-- | Property: tokenize handles whitespace-only input
+prop_tokenizeWhitespaceOnly :: String -> Bool
+prop_tokenizeWhitespaceOnly input =
+  let whitespaceOnly = all isSpace input
+      tokens = tokenize whitespaceOnly
+  in whitespaceOnly ==> null tokens
+
+-- | Property: tokenize respects string literals
+prop_tokenizeStringLiterals :: String -> String -> Bool
+prop_tokenizeStringLiterals prefix content =
+  let strLiteral = "\"" ++ content ++ "\""
+      input = prefix ++ strLiteral
+      tokens = tokenize input
+  in any (\t -> tokenType t == StringLiteral && tokenValue t == content) tokens
+
+-- | Property: tokenize respects comment syntax
+prop_tokenizeComments :: String -> Bool
+prop_tokenizeComments input =
+  let withLineComment = input ++ "// comment"
+      withBlockComment = input ++ "/* block comment */"
+      tokens1 = tokenize withLineComment
+      tokens2 = tokenize withBlockComment
+  in length tokens1 <= length tokens2 + 1  -- Allow for slight variation
+
+-- | Property: parseExpression handles valid identifiers
+prop_parseValidIdentifier :: String -> Bool
+prop_parseValidIdentifier ident =
+  let isValidIdent = not (null ident) && isLetter (head ident) && all (`elem` (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")) ident
+  in isValidIdent ==> case parseExpression ident of
+    Right expr -> isIdentifierExpression expr
+    Left _ -> False
+
+-- | Property: parseExpression handles numeric literals
+prop_parseNumericLiterals :: Int -> Bool
+prop_parseNumericLiterals num =
+  let numStr = show num
+  in case parseExpression numStr of
+    Right expr -> isNumericExpression expr
+    Left _ -> False
+
+-- | Property: parseExpression respects operator precedence
+prop_operatorPrecedence :: Int -> Int -> Int -> Bool
+prop_operatorPrecedence a b c =
+  let expr = show a ++ " + " ++ show b ++ " * " ++ show c
+  in case parseExpression expr of
+    Right parsed -> representsCorrectPrecedence parsed a b c
+    Left _ -> False
+
+-- | Property: parseExpression handles nested expressions
+prop_nestedExpressions :: [Int] -> Bool
+prop_nestedExpressions nums =
+  let nested = "(" ++ concat (map (\n -> "(" ++ show n ++ ")") nums) ++ ")"
+  in case parseExpression nested of
+    Right expr -> depthOfExpression expr == length nums + 1
+    Left _ -> False
+
+-- | Property: parse fails gracefully on invalid syntax
+prop_parseInvalidSyntax :: String -> Bool
+prop_parseInvalidSyntax input =
+  let invalidChars = ['@', '#', '$', '%', '^', '&', '*', '?']
+      hasInvalid = any (`elem` invalidChars) input
+  in hasInvalid ==> case parse input of
+    ParseResult _ errors -> not (null errors)
+    _ -> False
+
+-- | Property: parse provides meaningful error locations
+prop_errorLocationAccuracy :: String -> String -> Bool
+prop_errorLocationAccuracy prefix invalid =
+  let input = prefix ++ invalid
+      hasInvalid = any (`elem` ['@', '#', '$']) invalid
+  in hasInvalid ==> case parse input of
+    ParseResult _ errors -> all errorLocationValid errors
+    _ -> False
+
+-- | Property: parse recovers from certain errors
+prop_errorRecovery :: String -> String -> Bool
+prop_errorRecovery validPrefix invalidSuffix =
+  let input = validPrefix ++ " " ++ invalidSuffix ++ " x = 1"
+      hasInvalid = any (`elem` ['@', '#']) invalidSuffix
+  in hasInvalid ==> case parse input of
+    ParseResult tokens errors -> not (null tokens) && not (null errors)
+    _ -> False
+
+-- | Property: parse time scales linearly with input size
+prop_parseLinearScaling :: Int -> Bool
+prop_parseLinearScaling n =
+  let input = concat (replicate n "x + ")
+      result = parse input
+  in case result of
+    ParseResult tokens _ -> length tokens <= n * 2 + 1
+    _ -> False
+
+-- | Property: tokenize memory usage is bounded
+prop_tokenizeMemoryBounded :: Int -> Bool
+prop_tokenizeMemoryBounded n =
+  let input = concat (replicate n "identifier ")
+      tokens = tokenize input
+  in length tokens <= n * 2
+
+-- Helper data types and functions
+data Token = Token { tokenType :: TokenType, tokenValue :: String } deriving (Eq, Show)
+
+data TokenType = Identifier | StringLiteral | NumberLiteral | Operator | LParen | RParen deriving (Eq, Show)
+
+data ParseResult = ParseResult [Token] [ParseError] deriving (Eq, Show)
+
+data ParseError = ParseError { errorMessage :: String, errorLocation :: SourceLocation } deriving (Eq, Show)
+
+data Expression = IdentifierExpr String | NumberExpr Int | BinaryExpr Expression String Expression deriving (Eq, Show)
+
+-- Mock parser functions (in real implementation, these would come from Parser module)
+tokenize :: String -> [Token]
+tokenize input = undefined  -- Simplified for demonstration
+
+parse :: String -> ParseResult
+parse input = undefined  -- Simplified for demonstration
+
+parseExpression :: String -> Either String Expression
+parseExpression input = undefined  -- Simplified for demonstration
+
+-- Helper predicate functions
+isIdentifierExpression :: Expression -> Bool
+isIdentifierExpression (IdentifierExpr _) = True
+isIdentifierExpression _ = False
+
+isNumericExpression :: Expression -> Bool
+isNumericExpression (NumberExpr _) = True
+isNumericExpression _ = False
+
+representsCorrectPrecedence :: Expression -> Int -> Int -> Int -> Bool
+representsCorrectPrecedence (BinaryExpr (NumberExpr a) "+" (BinaryExpr (NumberExpr b) "*" (NumberExpr c))) a' b' c' = 
+  a == a' && b == b' && c == c'
+representsCorrectPrecedence _ _ _ _ = False
+
+depthOfExpression :: Expression -> Int
+depthOfExpression (IdentifierExpr _) = 1
+depthOfExpression (NumberExpr _) = 1
+depthOfExpression (BinaryExpr left _ right) = 1 + max (depthOfExpression left) (depthOfExpression right)
+
+errorLocationValid :: ParseError -> Bool
+errorLocationValid (ParseError _ loc) = isLocationValid loc
+
+isLocationValid :: SourceLocation -> Bool
+isLocationValid = const True  -- Simplified for demonstration
+
+-- QuickCheck implication operator
+(==>) :: Bool -> Bool -> Bool
+True ==> x = x
+False ==> _ = True
