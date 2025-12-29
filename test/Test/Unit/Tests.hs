@@ -609,6 +609,20 @@ import qualified Test.Unit.AdditionalCabalTestSpec
 -- New Cabal Integration Test Module
 import qualified Test.Unit.NewCabalIntegrationSpec
 
+-- ============================================================================
+-- New Cabal QuickCheck Test Modules (2025) - 10 comprehensive tests
+-- ============================================================================
+import qualified Test.Unit.NewCabalUtilsQuickCheckTestSpec
+import qualified Test.Unit.NewCabalSourceLocationQuickCheckTestSpec
+import qualified Test.Unit.NewCabalParserQuickCheckTestSpec
+import qualified Test.Unit.NewCabalErrorHandlerQuickCheckTestSpec
+import qualified Test.Unit.NewCabalDependenciesQuickCheckTestSpec
+import qualified Test.Unit.NewCabalOwnershipQuickCheckTestSpec
+import qualified Test.Unit.NewCabalCompilerQuickCheckTestSpec
+import qualified Test.Unit.NewCabalSyntaxValidatorQuickCheckTestSpec
+import qualified Test.Unit.NewCabalGoToolchainQuickCheckTestSpec
+import qualified Test.Unit.NewCabalIntegrationQuickCheckTestSpec
+
 -- New Cabal Test Suite Module
 import qualified Test.Unit.NewCabalTestSuiteSpec
 
@@ -3098,15 +3112,61 @@ tests =
         ]
 
   -- ============================================================================
-  -- New Cabal QuickCheck Test Modules (2025) - 6 comprehensive tests
-  -- ============================================================================
-  , testGroup "New Cabal QuickCheck Test Modules - Enhanced Coverage"
-    [ Test.Unit.NewCabalUtilsQuickCheckSpec.tests
-    , Test.Unit.NewCabalSourceLocationQuickCheckSpec.tests
-    , Test.Unit.NewCabalParserQuickCheckSpec.tests
-    , Test.Unit.NewCabalOwnershipQuickCheckSpec.tests
-    , Test.Unit.NewCabalDependenciesQuickCheckSpec.tests
-    , Test.Unit.NewCabalErrorHandlerQuickCheckSpec.tests
-    ]
-    
+
+    -- New Cabal QuickCheck Test Modules (2025) - 6 comprehensive tests
+
+    -- ============================================================================
+
+    , testGroup "New Cabal QuickCheck Test Modules - Enhanced Coverage"
+
+      [ Test.Unit.NewCabalUtilsQuickCheckSpec.tests
+
+      , Test.Unit.NewCabalSourceLocationQuickCheckSpec.tests
+
+      , Test.Unit.NewCabalParserQuickCheckSpec.tests
+
+      , Test.Unit.NewCabalOwnershipQuickCheckSpec.tests
+
+      , Test.Unit.NewCabalDependenciesQuickCheckSpec.tests
+
+      , Test.Unit.NewCabalErrorHandlerQuickCheckSpec.tests
+
       ]
+
+  
+
+    -- ============================================================================
+
+    -- New Cabal QuickCheck Test Modules (2025) - 10 comprehensive tests
+
+    -- ============================================================================
+
+    , testGroup "New Cabal QuickCheck Test Modules - Comprehensive Test Suite"
+
+      [ Test.Unit.NewCabalUtilsQuickCheckTestSpec.tests
+
+      , Test.Unit.NewCabalSourceLocationQuickCheckTestSpec.tests
+
+      , Test.Unit.NewCabalParserQuickCheckTestSpec.tests
+
+      , Test.Unit.NewCabalErrorHandlerQuickCheckTestSpec.tests
+
+      , Test.Unit.NewCabalDependenciesQuickCheckTestSpec.tests
+
+      , Test.Unit.NewCabalOwnershipQuickCheckTestSpec.tests
+
+      , Test.Unit.NewCabalCompilerQuickCheckTestSpec.tests
+
+      , Test.Unit.NewCabalSyntaxValidatorQuickCheckTestSpec.tests
+
+      , Test.Unit.NewCabalGoToolchainQuickCheckTestSpec.tests
+
+      , Test.Unit.NewCabalIntegrationQuickCheckTestSpec.tests
+
+      ]
+
+  
+
+      
+
+        ]

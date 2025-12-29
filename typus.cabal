@@ -1089,7 +1089,19 @@ test-suite typus-test
             Test.Unit.CoreParserEssentialSpec,
             Test.Unit.CoreCompilerEssentialSpec,
             Test.Unit.IntegrationEssentialSpec,
-        Test.Unit.NewComprehensiveQuickCheckTestsSpec
+        Test.Unit.NewComprehensiveQuickCheckTestsSpec,
+        
+        -- New Cabal QuickCheck Test Modules (2025) - 10 comprehensive tests
+        Test.Unit.NewCabalUtilsQuickCheckTestSpec,
+        Test.Unit.NewCabalSourceLocationQuickCheckTestSpec,
+        Test.Unit.NewCabalParserQuickCheckTestSpec,
+        Test.Unit.NewCabalErrorHandlerQuickCheckTestSpec,
+        Test.Unit.NewCabalDependenciesQuickCheckTestSpec,
+        Test.Unit.NewCabalOwnershipQuickCheckTestSpec,
+        Test.Unit.NewCabalCompilerQuickCheckTestSpec,
+        Test.Unit.NewCabalSyntaxValidatorQuickCheckTestSpec,
+        Test.Unit.NewCabalGoToolchainQuickCheckTestSpec,
+        Test.Unit.NewCabalIntegrationQuickCheckTestSpec
     build-depends:
         base >=4.7 && <5,
         typus,
