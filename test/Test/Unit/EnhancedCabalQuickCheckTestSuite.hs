@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module Test.Unit.NewEnhancedCabalQuickCheckTests (tests) where
+module Test.Unit.EnhancedCabalQuickCheckTestSuite (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
@@ -12,12 +12,8 @@ import Test.QuickCheck
     )
 import Data.Char (isSpace, isAlphaNum, isLetter)
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
-import qualified Data.Text as T
 
 import qualified Utils
-import qualified SourceLocation
-import qualified Parser
-import qualified Ownership
 
 -- | Enhanced QuickCheck property tests for core Typus functionality
 tests :: TestTree

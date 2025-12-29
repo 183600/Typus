@@ -248,6 +248,9 @@ import qualified Test.Unit.NewOwnershipTransferPropertiesSpec
 import qualified Test.Unit.NewDependenciesCorePropertiesSpec
 import qualified Test.Unit.NewSyntaxValidatorBoundarySpec
 
+-- New Enhanced Cabal QuickCheck Tests
+import qualified Test.Unit.EnhancedCabalQuickCheckTestSuite
+
 -- ============================================================================
 -- New Concise QuickCheck Test Modules (2025) - 10 focused tests
 -- ============================================================================
@@ -2129,6 +2132,7 @@ tests =
             , testGroup "New Cabal Test Suite"
                     [ Test.Unit.SimpleCabalTestSpec.tests
                     , Test.Unit.NewCabalTestSuiteSpec.tests
+    , Test.Unit.EnhancedCabalQuickCheckTestSuite.tests
                     , Test.Unit.SourceLocationCoreFunctionsSpec.tests
                     , Test.Unit.ParserBasicFunctionsSpec.tests
                     , Test.Unit.CompilerErrorHandlingSpec.tests
