@@ -48,6 +48,9 @@ import qualified Test.Unit.CoreCompilerSpec
 -- New Core Functionality QuickCheck Tests
 import qualified Test.Unit.NewCoreFunctionalityQuickCheckTests
 
+-- Core Functionality Properties Tests
+import qualified Test.Unit.CoreFunctionalityPropertiesSpec
+
 -- New QuickCheck Property Test Modules (Added for enhanced testing)
 import qualified Test.Unit.NewSourceLocationQuickCheckPropertiesSpec
 import qualified Test.Unit.NewErrorHandlerQuickCheckPropertiesSpec
@@ -3429,6 +3432,13 @@ tests =
         , Test.Unit.NewCompactDependenciesSpec.tests
         , Test.Unit.NewCompactCompilerIRSpec.tests
         , Test.Unit.NewCompactIntegrationSpec.tests
+        ]
+
+    -- ============================================================================
+    -- Core Functionality Properties Tests - Essential Property Testing
+    -- ============================================================================
+    , testGroup "Core Functionality Properties Tests"
+        [ Test.Unit.CoreFunctionalityPropertiesSpec.tests
         ]
 
         ]

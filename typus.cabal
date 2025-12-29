@@ -463,6 +463,7 @@ test-suite typus-test
         Test.Unit.TypeInferenceAdvancedNewSpec,
         Test.Unit.IntegrationEndToEndNewSpec,
         Test.Unit.PerformanceRegressionNewSpec,
+        Test.Unit.CoreFunctionalityPropertiesSpec,
         
         Test.Golden,
         Test.Golden.Tests,
