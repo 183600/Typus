@@ -41,6 +41,20 @@ import qualified Test.Unit.CoreCompilerSpec
 -- New Core Functionality QuickCheck Tests
 import qualified Test.Unit.NewCoreFunctionalityQuickCheckTests
 
+-- ============================================================================
+-- Additional Enhanced QuickCheck Test Modules (10 comprehensive tests)
+-- ============================================================================
+import qualified Test.Unit.EnhancedTextProcessingQuickCheckSpec
+import qualified Test.Unit.SourceLocationMathPropertiesQuickCheckSpec
+import qualified Test.Unit.ParserErrorRecoveryQuickCheckSpec
+import qualified Test.Unit.CrossModuleIntegrationQuickCheckSpec
+import qualified Test.Unit.PerformanceBoundaryQuickCheckSpec
+import qualified Test.Unit.ErrorHandlingPropertiesQuickCheckSpec
+import qualified Test.Unit.CompilerIRPropertiesQuickCheckSpec
+import qualified Test.Unit.AdditionalOwnershipAnalysisQuickCheckSpec
+import qualified Test.Unit.AdditionalDependencyAnalysisQuickCheckSpec
+import qualified Test.Unit.NewEndToEndIntegrationQuickCheckSpec
+
 -- New Basic Test Modules Added
 import qualified Test.Unit.SourceLocationBasicPropertiesSpec
 import qualified Test.Unit.ParserBasicFunctionsSpec
@@ -107,7 +121,7 @@ import qualified Test.Unit.ComprehensiveCoreQuickCheckSpec
 import qualified Test.Unit.CompilerOwnershipQuickCheckSpec
 import qualified Test.Unit.DependenciesErrorHandlingQuickCheckSpec
 import qualified Test.Unit.SyntaxValidatorGoToolchainQuickCheckSpec
-import qualified Test.Unit.EndToEndIntegrationQuickCheckSpec
+import qualified Test.Unit.NewEndToEndIntegrationQuickCheckSpec
 
 -- New Comprehensive Cabal QuickCheck Test Suite (2025)
 import qualified Test.Unit.NewComprehensiveCabalQuickCheckTestSuite
@@ -1055,7 +1069,7 @@ import qualified Test.Unit.ComprehensiveQuickCheckSpec
 import qualified Test.Unit.CoreDataStructuresQuickCheckSpec
 import qualified Test.Unit.CompilerIRQuickCheckSpec
 import qualified Test.Unit.TypeSystemQuickCheckSpec
-import qualified Test.Unit.OwnershipAnalysisQuickCheckSpec
+import qualified Test.Unit.AdditionalOwnershipAnalysisQuickCheckSpec
 -- Additional new QuickCheck test modules
 import qualified Test.Unit.SimpleQuickCheckTestSpec
 import qualified Test.Unit.CabalQuickCheckTestSpec
@@ -1252,7 +1266,7 @@ import qualified Test.Unit.EnhancedDependentTypeSystemBoundaryQuickCheckSpec
 import qualified Test.Unit.CoreDataStructuresQuickCheckSpec
 import qualified Test.Unit.ParserBoundaryConditionsSpec
 import qualified Test.Unit.CompilerErrorHandlingSpec
-import qualified Test.Unit.OwnershipAnalysisQuickCheckSpec
+import qualified Test.Unit.AdditionalOwnershipAnalysisQuickCheckSpec
 import qualified Test.Unit.DependentTypeSystemSpec
 import qualified Test.Unit.SourceLocationTrackingSpec
 
@@ -1292,7 +1306,7 @@ import qualified Test.Unit.SourceLocationPrecisionQuickCheckSpec
 import qualified Test.Unit.ErrorHandlingConsistencyQuickCheckSpec
 import qualified Test.Unit.ParserBoundaryQuickCheckSpec
 import qualified Test.Unit.UtilsRobustnessQuickCheckSpec
-import qualified Test.Unit.DependencyAnalysisQuickCheckSpec
+import qualified Test.Unit.AdditionalDependencyAnalysisQuickCheckSpec
 import qualified Test.Unit.CompilerIntegrationQuickCheckSpec
 import qualified Test.Unit.OwnershipTransitivitySpec
 
@@ -1317,7 +1331,7 @@ import qualified Test.Unit.ErrorRecoveryEnhancedQuickCheckSpec
 import qualified Test.Unit.ConcurrentParsingQuickCheckSpec
 import qualified Test.Unit.SymbolTableOperationsQuickCheckSpec
 import qualified Test.Unit.CodeGenerationQuickCheckSpec
-import qualified Test.Unit.DependencyAnalysisQuickCheckSpec
+import qualified Test.Unit.AdditionalDependencyAnalysisQuickCheckSpec
 import qualified Test.Unit.PerformanceOptimizationQuickCheckSpec
 
 -- New comprehensive QuickCheck test modules for core functionality
@@ -1702,7 +1716,7 @@ tests =
         , Test.Unit.ConcurrentParsingQuickCheckSpec.tests
         , Test.Unit.SymbolTableOperationsQuickCheckSpec.tests
         , Test.Unit.CodeGenerationQuickCheckSpec.tests
-        , Test.Unit.DependencyAnalysisQuickCheckSpec.tests
+        , Test.Unit.AdditionalDependencyAnalysisQuickCheckSpec.tests
         , Test.Unit.PerformanceOptimizationQuickCheckSpec.tests
         ]
     , testGroup "Additional Comprehensive QuickCheck Test Modules"
@@ -1767,7 +1781,7 @@ tests =
         [ Test.Unit.CoreDataStructuresQuickCheckSpec.tests
         , Test.Unit.ParserBoundaryConditionsSpec.tests
         , Test.Unit.CompilerErrorHandlingSpec.tests
-        , Test.Unit.OwnershipAnalysisQuickCheckSpec.tests
+        , Test.Unit.AdditionalOwnershipAnalysisQuickCheckSpec.tests
         , Test.Unit.DependentTypeSystemSpec.tests
         , Test.Unit.SourceLocationTrackingSpec.tests
         ]
@@ -2111,7 +2125,7 @@ tests =
     , Test.Unit.ErrorHandlingConsistencyQuickCheckSpec.tests
     , Test.Unit.ParserBoundaryQuickCheckSpec.tests
     , Test.Unit.UtilsRobustnessQuickCheckSpec.tests
-    , Test.Unit.DependencyAnalysisQuickCheckSpec.tests
+    , Test.Unit.AdditionalDependencyAnalysisQuickCheckSpec.tests
     , Test.Unit.CompilerIntegrationQuickCheckSpec.tests
     ]
 
@@ -2722,7 +2736,7 @@ tests =
     , Test.Unit.CompilerOwnershipQuickCheckSpec.tests
     , Test.Unit.DependenciesErrorHandlingQuickCheckSpec.tests
     , Test.Unit.SyntaxValidatorGoToolchainQuickCheckSpec.tests
-    , Test.Unit.EndToEndIntegrationQuickCheckSpec.tests
+    , Test.Unit.NewEndToEndIntegrationQuickCheckSpec.tests
     ]
 
   -- ============================================================================
@@ -2956,6 +2970,22 @@ tests =
   -- ============================================================================
   , testGroup "New Core Functionality QuickCheck Tests"
     [ Test.Unit.NewCoreFunctionalityQuickCheckTests.tests
+    ]
+
+  -- ============================================================================
+  -- Additional Enhanced QuickCheck Test Modules (10 comprehensive tests)
+  -- ============================================================================
+  , testGroup "Additional Enhanced QuickCheck Test Modules - Comprehensive Testing"
+    [ Test.Unit.EnhancedTextProcessingQuickCheckSpec.tests
+    , Test.Unit.SourceLocationMathPropertiesQuickCheckSpec.tests
+    , Test.Unit.ParserErrorRecoveryQuickCheckSpec.tests
+    , Test.Unit.CrossModuleIntegrationQuickCheckSpec.tests
+    , Test.Unit.PerformanceBoundaryQuickCheckSpec.tests
+    , Test.Unit.ErrorHandlingPropertiesQuickCheckSpec.tests
+    , Test.Unit.CompilerIRPropertiesQuickCheckSpec.tests
+    , Test.Unit.AdditionalOwnershipAnalysisQuickCheckSpec.tests
+    , Test.Unit.AdditionalDependencyAnalysisQuickCheckSpec.tests
+    , Test.Unit.EndToEndIntegrationQuickCheckSpec.tests
     ]
 
   

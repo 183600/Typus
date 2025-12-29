@@ -319,7 +319,7 @@ test-suite typus-test
         Test.Unit.ComprehensiveQuickCheckSpec,
         Test.Unit.CompilerIRQuickCheckSpec,
         Test.Unit.TypeSystemQuickCheckSpec,
-        Test.Unit.OwnershipAnalysisQuickCheckSpec,
+        Test.Unit.AdditionalOwnershipAnalysisQuickCheckSpec,
         Test.Unit.AdditionalCoreQuickCheckSpec,
         Test.Unit.AdditionalCoreTestsSpec,
         Test.Unit.NewQuickCheckTestSpec,
@@ -553,7 +553,7 @@ test-suite typus-test
         Test.Unit.ErrorHandlingConsistencyQuickCheckSpec,
         Test.Unit.ParserBoundaryQuickCheckSpec,
         Test.Unit.UtilsRobustnessQuickCheckSpec,
-        Test.Unit.DependencyAnalysisQuickCheckSpec,
+        Test.Unit.AdditionalDependencyAnalysisQuickCheckSpec,
         Test.Unit.CompilerIntegrationQuickCheckSpec,
 
         -- New QuickCheck Test Suite 2025
@@ -834,7 +834,16 @@ test-suite typus-test
         , Test.Unit.CompilerOwnershipQuickCheckSpec
         , Test.Unit.DependenciesErrorHandlingQuickCheckSpec
         , Test.Unit.SyntaxValidatorGoToolchainQuickCheckSpec
-        , Test.Unit.EndToEndIntegrationQuickCheckSpec
+        , Test.Unit.NewEndToEndIntegrationQuickCheckSpec
+
+        -- Additional Enhanced QuickCheck Test Modules (10 comprehensive tests)
+        , Test.Unit.EnhancedTextProcessingQuickCheckSpec
+        , Test.Unit.SourceLocationMathPropertiesQuickCheckSpec
+        , Test.Unit.ParserErrorRecoveryQuickCheckSpec
+        , Test.Unit.CrossModuleIntegrationQuickCheckSpec
+        , Test.Unit.PerformanceBoundaryQuickCheckSpec
+        , Test.Unit.ErrorHandlingPropertiesQuickCheckSpec
+        , Test.Unit.CompilerIRPropertiesQuickCheckSpec
 
         -- New Cabal Test Modules (10 comprehensive tests)
         , Test.Unit.CabalParserQuickCheckSpec
