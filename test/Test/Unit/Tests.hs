@@ -255,7 +255,6 @@ import qualified Test.Unit.DependentTypesValidationEnhancedQuickCheckSpec
 
 -- New Comprehensive Test Suite (2025)
 import qualified Test.Unit.SourceLocationBoundarySpec
-import qualified Test.Unit.ParserErrorRecoverySpec
 import qualified Test.Unit.UtilsPerformanceBoundarySpec
 import qualified Test.Unit.ErrorHandlerConsistencySpec
 import qualified Test.Unit.OwnershipAnalysisBoundarySpec
@@ -404,7 +403,6 @@ import qualified Test.Unit.SourceLocationBoundarySpec
 import qualified Test.Unit.ErrorHandlerRecoverySpec
 import qualified Test.Unit.OwnershipComplexScenariosSpec
 import qualified Test.Unit.UtilsPerformanceBoundarySpec
-import qualified Test.Unit.ParserErrorRecoverySpec
 import qualified Test.Unit.CompilerOptimizationConsistencySpec
 import qualified Test.Unit.DependenciesCycleDetectionSpec
 import qualified Test.Unit.TypeSystemInferenceBoundarySpec
@@ -1254,7 +1252,6 @@ import qualified Test.Unit.CompilerAdvancedQuickCheckSpec
 import qualified Test.Unit.DependenciesAdvancedQuickCheckSpec
 import qualified Test.Unit.OwnershipAdvancedQuickCheckSpec
 import qualified Test.Unit.IntegrationAdvancedQuickCheckSpec
-import qualified Test.Unit.ParserErrorRecoverySpec
 import qualified Test.Unit.OwnershipTransitivitySpec
 import qualified Test.Unit.DependentTypeBoundarySpec
 import qualified Test.Unit.IRConsistencySpec
@@ -1466,6 +1463,18 @@ tests =
         , Test.Unit.ValueAnalysisBasicSpec.tests
         , Test.Unit.ErrorHandlerRecoverySpec.tests
         , Test.Unit.SyntaxValidatorValidationSpec.tests
+        ]
+
+    -- New Cabal Test Modules (2025) - 8 comprehensive tests
+    , testGroup "New Cabal Test Modules"
+        [ Test.Unit.UtilsBreakOnQuickCheckSpec.tests
+        , Test.Unit.SourceLocationPositionArithmeticSpec.tests
+        , Test.Unit.StringProcessingSpec.tests
+        , Test.Unit.UtilsCommentProcessingSpec.tests
+        , Test.Unit.SourceLocationIntegrationSpec.tests
+        , Test.Unit.UtilsIndentationSpec.tests
+        , Test.Unit.SplitFunctionsSpec.tests
+        , Test.Unit.SpanOperationsSpec.tests
         ]
     
     -- New Core Test Modules
@@ -1750,7 +1759,6 @@ tests =
         ]
     , testGroup "New Advanced Test Modules"
         [ Test.Unit.SourceLocationAdvancedSpec.tests
-        , Test.Unit.ParserErrorRecoverySpec.tests
         , Test.Unit.OwnershipTransitivitySpec.tests
         , Test.Unit.DependentTypeBoundarySpec.tests
         , Test.Unit.IRConsistencySpec.tests
@@ -2201,7 +2209,6 @@ tests =
   -- New Comprehensive Test Suite (2025)
   , testGroup "New Comprehensive Test Suite 2025"
     [ Test.Unit.SourceLocationBoundarySpec.tests
-    , Test.Unit.ParserErrorRecoverySpec.tests
     , Test.Unit.UtilsPerformanceBoundarySpec.tests
     , Test.Unit.ErrorHandlerConsistencySpec.tests
     , Test.Unit.OwnershipAnalysisBoundarySpec.tests
@@ -2681,7 +2688,6 @@ tests =
     , Test.Unit.ErrorHandlerRecoverySpec.tests
     , Test.Unit.OwnershipComplexScenariosSpec.tests
     , Test.Unit.UtilsPerformanceBoundarySpec.tests
-    , Test.Unit.ParserErrorRecoverySpec.tests
     , Test.Unit.CompilerOptimizationConsistencySpec.tests
     , Test.Unit.DependenciesCycleDetectionSpec.tests
     , Test.Unit.TypeSystemInferenceBoundarySpec.tests

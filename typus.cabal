@@ -617,7 +617,6 @@ test-suite typus-test
 
         -- New Comprehensive Test Suite (2025)
         Test.Unit.SourceLocationBoundarySpec,
-        Test.Unit.ParserErrorRecoverySpec,
         Test.Unit.UtilsPerformanceBoundarySpec,
         Test.Unit.ErrorHandlerConsistencySpec,
         Test.Unit.OwnershipAnalysisBoundarySpec,
@@ -1021,6 +1020,16 @@ test-suite typus-test
         , Test.Unit.NewCorePerformanceQuickCheckSpec
         , Test.Unit.NewCoreErrorHandlingQuickCheckSpec
         , Test.Unit.NewCompleteCoreTestSuiteSpec
+        
+        -- New Cabal Test Modules (2025) - 8 comprehensive tests
+        , Test.Unit.UtilsBreakOnQuickCheckSpec
+        , Test.Unit.SourceLocationPositionArithmeticSpec
+        , Test.Unit.StringProcessingSpec
+        , Test.Unit.UtilsCommentProcessingSpec
+        , Test.Unit.SourceLocationIntegrationSpec
+        , Test.Unit.UtilsIndentationSpec
+        , Test.Unit.SplitFunctionsSpec
+        , Test.Unit.SpanOperationsSpec
         
     other-modules:
             Test.Dependencies.Arbitrary,

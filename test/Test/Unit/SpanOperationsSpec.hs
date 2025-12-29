@@ -1,258 +1,249 @@
-{-# LANGUAGE CPP #-}
-
 module Test.Unit.SpanOperationsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty)
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck (Property, forAll, Gen, arbitrary, choose)
+import SourceLocation
+  ( SourcePos(..)
+  , SourceSpan(..)
+  , startPos
+  , posAfter
+  , posAt
+  , emptySpan
+  , spanFrom
+  , spanTo
+  , spanBetween
+  , mergeSpans
+  , isValidSpan
+  , spanStart
+  , spanEnd
+  )
 
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..),
-                      startPos, posAt, posAtLineCol, spanBetween, spanFrom, spanTo,
-                      emptySpan, mergeSpans, isValidSpan, spanStart, spanEnd)
-
-import Data.List (sort)
-
--- | 测试跨度操作功能的属性和边界情况
+-- | Tests for span operations in SourceLocation module
 tests :: TestTree
 tests =
-  testGroup "Span Operations"
-    [ testGroup "Span Creation"
-        [ testCase "spanBetween creates valid span" $ do
-            let start = posAt 1 1
-                end = posAt 1 5
-                span = spanBetween start end
-            spanStart span @?= start
-            spanEnd span @?= end
-            isValidSpan span @?= True
-            
-        , testCase "spanFrom creates span from position" $ do
-            let pos = posAt 2 3
+  testGroup "SourceLocation Span Operations"
+    [ testGroup "Basic span creation"
+        [ testCase "emptySpan creates span at position" $ do
+            let pos = posAt 5 10
+                span = emptySpan pos
+            spanStart span @?= pos
+            spanEnd span @?= pos
+        
+        , testCase "spanFrom creates span starting at position" $ do
+            let pos = posAt 3 7
                 span = spanFrom pos
             spanStart span @?= pos
             spanEnd span @?= pos
-            
-        , testCase "spanTo creates span to position" $ do
-            let pos = posAt 3 4
+        
+        , testCase "spanTo creates span ending at position" $ do
+            let pos = posAt 2 4
                 span = spanTo pos
             spanStart span @?= pos
             spanEnd span @?= pos
-            
-        , testCase "emptySpan is valid" $ do
-            let span = emptySpan
-            isValidSpan span @?= True
-        ]
         
-    , testGroup "Span Validation"
-        [ testCase "valid span when start <= end" $ do
-            let start = posAt 1 1
-                end = posAt 2 5
+        , testCase "spanBetween creates span between positions" $ do
+            let start = posAt 1 5
+                end = posAt 2 10
                 span = spanBetween start end
-            isValidSpan span @?= True
-            
-        , testCase "valid span when same line and column" $ do
-            let pos = posAt 3 7
-                span = spanBetween pos pos
-            isValidSpan span @?= True
-            
-        , testCase "valid span when same line but later column" $ do
-            let start = posAt 4 2
-                end = posAt 4 8
-                span = spanBetween start end
-            isValidSpan span @?= True
-            
-        , testCase "invalid span when start > end" $ do
-            let start = posAt 5 10
-                end = posAt 5 5
-                span = spanBetween start end
-            isValidSpan span @?= False
-            
-        , testCase "invalid span when later line but earlier column" $ do
-            let start = posAt 6 8
-                end = posAt 5 10
-                span = spanBetween start end
-            isValidSpan span @?= False
+            spanStart span @?= start
+            spanEnd span @?= end
         ]
+    
+    , testGroup "Span validation"
+        [ testCase "isValidSpan identifies valid spans" $ do
+            let validSpan = spanBetween (posAt 1 1) (posAt 1 10)
+            assertBool "Should identify valid span" (isValidSpan validSpan)
         
-    [ testGroup "Span Merging"
-        [ testCase "mergeSpans combines adjacent spans" $ do
+        , testCase "isValidSpan rejects invalid spans" $ do
+            let invalidSpan = spanBetween (posAt 1 10) (posAt 1 1)
+            assertBool "Should reject invalid span" (not (isValidSpan invalidSpan))
+        
+        , testCase "isValidSpan accepts equal positions" $ do
+            let span = spanBetween (posAt 5 5) (posAt 5 5)
+            assertBool "Should accept zero-length span" (isValidSpan span)
+        
+        , testCase "isValidSpan handles multi-line spans" $ do
+            let span = spanBetween (posAt 1 5) (posAt 3 2)
+            assertBool "Should accept multi-line span" (isValidSpan span)
+        ]
+    
+    , testGroup "Span merging"
+        [ testCase "mergeSpans combines overlapping spans" $ do
+            let span1 = spanBetween (posAt 1 1) (posAt 1 10)
+                span2 = spanBetween (posAt 1 5) (posAt 1 15)
+                merged = mergeSpans span1 span2
+            merged @?= spanBetween (posAt 1 1) (posAt 1 15)
+        
+        , testCase "mergeSpans combines adjacent spans" $ do
+            let span1 = spanBetween (posAt 1 1) (posAt 1 10)
+                span2 = spanBetween (posAt 1 10) (posAt 1 20)
+                merged = mergeSpans span1 span2
+            merged @?= spanBetween (posAt 1 1) (posAt 1 20)
+        
+        , testCase "mergeSpans combines separated spans" $ do
             let span1 = spanBetween (posAt 1 1) (posAt 1 5)
-                span2 = spanBetween (posAt 1 5) (posAt 1 10)
+                span2 = spanBetween (posAt 2 1) (posAt 2 5)
                 merged = mergeSpans span1 span2
-            spanStart merged @?= spanStart span1
-            spanEnd merged @?= spanEnd span2
-            
-        , testCase "mergeSpans combines overlapping spans" $ do
-            let span1 = spanBetween (posAt 1 1) (posAt 1 8)
-                span2 = spanBetween (posAt 1 5) (posAt 1 12)
+            merged @?= spanBetween (posAt 1 1) (posAt 2 5)
+        
+        , testCase "mergeSpans handles multi-line spans" $ do
+            let span1 = spanBetween (posAt 1 10) (posAt 3 5)
+                span2 = spanBetween (posAt 2 15) (posAt 4 2)
                 merged = mergeSpans span1 span2
-            spanStart merged @?= spanStart span1
-            spanEnd merged @?= spanEnd span2
-            
-        , testCase "mergeSpans handles separate spans" $ do
-            let span1 = spanBetween (posAt 1 1) (posAt 1 3)
-                span2 = spanBetween (posAt 1 6) (posAt 1 8)
-                merged = mergeSpans span1 span2
-            spanStart merged @?= spanStart span1
-            spanEnd merged @?= spanEnd span2
-            
-        , testCase "mergeSpans is associative" $ do
-            let span1 = spanBetween (posAt 1 1) (posAt 1 3)
-                span2 = spanBetween (posAt 1 2) (posAt 1 5)
-                span3 = spanBetween (posAt 1 4) (posAt 1 7)
-                merge12 = mergeSpans span1 span2
-                merge23 = mergeSpans span2 span3
-                final1 = mergeSpans merge12 span3
-                final2 = mergeSpans span1 merge23
-            spanStart final1 @?= spanStart final2
-            spanEnd final1 @?= spanEnd final2
+            merged @?= spanBetween (posAt 1 10) (posAt 4 2)
         ]
-        
-    , testGroup "Multi-line Spans"
-        [ testCase "handles single line spans" $ do
-            let start = posAt 3 5
-                end = posAt 3 15
-                span = spanBetween start end
-            posLine (spanStart span) @?= posLine (spanEnd span)
-            
-        , testCase "handles multi-line spans" $ do
-            let start = posAt 2 8
-                end = posAt 4 3
-                span = spanBetween start end
-            posLine (spanStart span) @?= 2
-            posLine (spanEnd span) @?= 4
-            isValidSpan span @?= True
-            
-        , testCase "handles spans across many lines" $ do
-            let start = posAt 1 1
-                end = posAt 100 50
-                span = spanBetween start end
-            isValidSpan span @?= True
-        ]
-        
-    , testGroup "Property Tests"
-        [ testProperty "spanBetween is valid when start <= end" $ fastProperty $ \line1 col1 line2 col2 ->
-            let start = posAt (abs line1 `mod` 1000 + 1) (abs col1 `mod` 1000 + 1)
-                end = posAt (abs line2 `mod` 1000 + 1) (abs col2 `mod` 1000 + 1)
-                span = spanBetween start end
-                valid = isValidSpan span
-            in if posLine start < posLine end || 
-                  (posLine start == posLine end && posColumn start <= posColumn end)
-               then valid
-               else True  -- span may be invalid, that's expected
-               
-        , testProperty "mergeSpans preserves earliest start and latest end" $ fastProperty $ \line1 col1 line2 col2 line3 col3 line4 col4 ->
-            let start1 = posAt (abs line1 `mod` 100 + 1) (abs col1 `mod` 100 + 1)
-                end1 = posAt (abs line2 `mod` 100 + 1) (abs col2 `mod` 100 + 1)
-                start2 = posAt (abs line3 `mod` 100 + 1) (abs col3 `mod` 100 + 1)
-                end2 = posAt (abs line4 `mod` 100 + 1) (abs col4 `mod` 100 + 1)
-                span1 = spanBetween start1 end1
-                span2 = spanBetween start2 end2
-                merged = mergeSpans span1 span2
-                starts = [spanStart span1, spanStart span2]
-                ends = [spanEnd span1, spanEnd span2]
-                earliestStart = minimum starts
-                latestEnd = maximum ends
-            in spanStart merged == earliestStart && spanEnd merged == latestEnd
-            
-        , testProperty "spanFrom and spanTo create zero-length spans" $ fastProperty $ \line col ->
-            let pos = posAt (abs line `mod` 1000 + 1) (abs col `mod` 1000 + 1)
-                spanFromPos = spanFrom pos
-                spanToPos = spanTo pos
-            in spanStart spanFromPos == pos && spanEnd spanFromPos == pos &&
-               spanStart spanToPos == pos && spanEnd spanToPos == pos
-        ]
-        
-    , testGroup "Edge Cases"
-        [ testCase "handles span at start of file" $ do
-            let span = spanBetween startPos (posAt 1 10)
-            spanStart span @?= startPos
-            isValidSpan span @?= True
-            
-        , testCase "handles zero-length span" $ do
-            let pos = posAt 5 7
-                span = spanBetween pos pos
-            spanStart span @?= pos
-            spanEnd span @?= pos
-            isValidSpan span @?= True
-            
-        , testCase "handles very large spans" $ do
-            let start = posAt 1 1
-                end = posAt 100000 100000
-                span = spanBetween start end
-            isValidSpan span @?= True
-            
-        , testCase "handles merging empty spans" $ do
-            let span1 = emptySpan
-                span2 = emptySpan
-                merged = mergeSpans span1 span2
-            length (show merged) >= 0 @?= True
-        ]
-        
-    , testGroup "Span Ordering and Comparison"
-        [ testCase "spans can be compared by start position" $ do
-            let span1 = spanBetween (posAt 1 1) (posAt 1 5)
-                span2 = spanBetween (posAt 1 6) (posAt 1 10)
-                span3 = spanBetween (posAt 2 1) (posAt 2 5)
-            span1 < span2 @?= True
-            span2 < span3 @?= True
-            span1 < span3 @?= True
-            
-        , testProperty "span ordering is transitive" $ fastProperty $ \line1 col1 line2 col2 line3 col3 ->
-            let start1 = posAt (abs line1 `mod` 100 + 1) (abs col1 `mod` 100 + 1)
-                end1 = posAt (posLine start1) (posColumn start1 + 5)
-                start2 = posAt (abs line2 `mod` 100 + 1) (abs col2 `mod` 100 + 1)
-                end2 = posAt (posLine start2) (posColumn start2 + 5)
-                start3 = posAt (abs line3 `mod` 100 + 1) (abs col3 `mod` 100 + 1)
-                end3 = posAt (posLine start3) (posColumn start3 + 5)
-                span1 = spanBetween start1 end1
-                span2 = spanBetween start2 end2
-                span3 = spanBetween start3 end3
-                spans = sort [span1, span2, span3]
-            in length spans == 3
-        ]
-        
-    , testGroup "Span Arithmetic"
+    
+    , testGroup "Span properties and relationships"
         [ testCase "span length calculation" $ do
-            let span1 = spanBetween (posAt 1 1) (posAt 1 5)  -- 4 characters
-                span2 = spanBetween (posAt 1 1) (posAt 2 1)  -- includes newline
-            spanLength span1 @?= 4
-            spanLength span2 @?= 1  -- simplified calculation
-            
-        , testProperty "span length is non-negative" $ fastProperty $ \line1 col1 line2 col2 ->
-            let start = posAt (abs line1 `mod` 100 + 1) (abs col1 `mod` 100 + 1)
-                end = posAt (abs line2 `mod` 100 + 1) (abs col2 `mod` 100 + 1)
-                span = spanBetween start end
-            in spanLength span >= 0
-        ]
+            let span1 = spanBetween (posAt 1 1 0) (posAt 1 5 4)
+                span2 = spanBetween (posAt 1 1 0) (posAt 2 1 10)
+            assertBool "Single-line span length" (spanLength span1 == 4)
+            assertBool "Multi-line span length" (spanLength span2 == 10)
         
-    , testGroup "Performance and Robustness"
-        [ testProperty "span operations handle large values" $ fastProperty $ \line1 col1 line2 col2 ->
-            let start = posAt (abs line1 `mod` 100000 + 1) (abs col1 `mod` 100000 + 1)
-                end = posAt (abs line2 `mod` 100000 + 1) (abs col2 `mod` 100000 + 1)
+        , testCase "span contains position" $ do
+            let span = spanBetween (posAt 2 5) (posAt 3 10)
+                inside1 = posAt 2 7
+                inside2 = posAt 3 5
+                outside1 = posAt 2 4
+                outside2 = posAt 3 11
+            assertBool "Should contain position inside" (spanContains span inside1)
+            assertBool "Should contain position inside" (spanContains span inside2)
+            assertBool "Should not contain position before" (not (spanContains span outside1))
+            assertBool "Should not contain position after" (not (spanContains span outside2))
+        
+        , testCase "span overlap detection" $ do
+            let span1 = spanBetween (posAt 1 1) (posAt 1 10)
+                span2 = spanBetween (posAt 1 5) (posAt 1 15)
+                span3 = spanBetween (posAt 2 1) (posAt 2 10)
+                span4 = spanBetween (posAt 1 11) (posAt 1 20)
+            assertBool "Should detect overlapping spans" (spansOverlap span1 span2)
+            assertBool "Should not detect non-overlapping spans" (not (spansOverlap span1 span3))
+            assertBool "Should not detect adjacent spans as overlapping" (not (spansOverlap span1 span4))
+        ]
+    
+    , testGroup "QuickCheck properties"
+        [ fastProperty "mergeSpans is commutative" $
+            \span1 span2 -> mergeSpans span1 span2 == mergeSpans span2 span1
+        
+        , fastProperty "mergeSpans is associative" $
+            \span1 span2 span3 -> 
+                mergeSpans span1 (mergeSpans span2 span3) == 
+                mergeSpans (mergeSpans span1 span2) span3
+        
+        , fastProperty "mergeSpans result contains both operands" $
+            \span1 span2 -> 
+                let merged = mergeSpans span1 span2
+                in spansContain merged [span1, span2]
+        
+        , fastProperty "spanBetween with same positions equals emptySpan" $
+            \pos -> spanBetween pos pos == emptySpan pos
+        
+        , fastProperty "mergeSpans with identical spans returns same span" $
+            \span -> mergeSpans span span == span
+        
+        , fastProperty "isValidSpan for spanBetween with proper ordering" $
+            \pos1 pos2 -> 
+                let pos1' = posAt (abs (posLine pos1) `mod` 100 + 1) (abs (posColumn pos1) `mod` 100 + 1)
+                    pos2' = posAt (abs (posLine pos2) `mod` 100 + 1) (abs (posColumn pos2) `mod` 100 + 1)
+                    span = if pos1' <= pos2' then spanBetween pos1' pos2' else spanBetween pos2' pos1'
+                in isValidSpan span
+        ]
+    
+    , testGroup "Edge cases and special scenarios"
+        [ testCase "handles very large spans" $ do
+            let start = posAt 1 1
+                end = posAt 10000 10000
                 span = spanBetween start end
-                merged = mergeSpans span span
-            in length (show span) >= 0 && length (show merged) >= 0
-            
-        , testCase "handles many merge operations" $ do
-            let spans = [spanBetween (posAt i 1) (posAt i 10) | i <- [1..100]]
-                merged = foldl mergeSpans (head spans) (tail spans)
-            isValidSpan merged @?= True
-            
-        , testProperty "span operations are consistent" $ fastProperty $ \line1 col1 line2 col2 ->
-            let start = posAt (abs line1 `mod` 1000 + 1) (abs col1 `mod` 1000 + 1)
-                end = posAt (abs line2 `mod` 1000 + 1) (abs col2 `mod` 1000 + 1)
-                span1 = spanBetween start end
-                span2 = spanBetween (spanStart span1) (spanEnd span1)
-            in span1 == span2
+            assertBool "Should handle large spans" (isValidSpan span)
+        
+        , testCase "handles spans at file boundaries" $ do
+            let start = posAt 1 1
+                end = posAt 1 1
+                span = spanBetween start end
+            spanStart span @?= spanEnd span
+        
+        , testCase "handles spans with same line different columns" $ do
+            let span = spanBetween (posAt 5 3) (posAt 5 20)
+            spanLine span @?= 5
+            spanStartColumn span @?= 3
+            spanEndColumn span @?= 20
+        
+        , testCase "handles spans crossing multiple lines" $ do
+            let span = spanBetween (posAt 2 15) (posAt 5 8)
+            spanStartLine span @?= 2
+            spanEndLine span @?= 5
+            assertBool "Should span multiple lines" (spanEndLine span - spanStartLine span >= 3)
+        ]
+    
+    , testGroup "Real-world scenarios"
+        [ testCase "function definition span" $ do
+            let funcStart = posAt 10 1
+                funcEnd = posAt 15 2
+                funcSpan = spanBetween funcStart funcEnd
+            assertBool "Function span should be valid" (isValidSpan funcSpan)
+            spanStartLine funcSpan @?= 10
+            spanEndLine funcSpan @?= 15
+        
+        , testCase "multiple statement spans" $ do
+            let stmt1 = spanBetween (posAt 5 1) (posAt 5 20)
+                stmt2 = spanBetween (posAt 6 1) (posAt 6 15)
+                stmt3 = spanBetween (posAt 7 1) (posAt 7 25)
+                blockSpan = mergeSpans stmt1 (mergeSpans stmt2 stmt3)
+            spanStartLine blockSpan @?= 5
+            spanEndLine blockSpan @?= 7
+        
+        , testCase "nested structure spans" $ do
+            let outer = spanBetween (posAt 1 1) (posAt 10 1)
+                inner1 = spanBetween (posAt 2 5) (posAt 4 8)
+                inner2 = spanBetween (posAt 6 3) (posAt 9 12)
+                mergedInner = mergeSpans inner1 inner2
+            assertBool "Inner spans should be within outer" (spansContain outer [inner1, inner2])
+            assertBool "Merged inner should be within outer" (spansContain outer [mergedInner])
         ]
     ]
 
--- Helper function to calculate span length (simplified)
+-- Helper functions for span calculations and comparisons
+
+-- Calculate span length in characters
 spanLength :: SourceSpan -> Int
-spanLength span =
-    let start = spanStart span
-        end = spanEnd span
-    in if posLine start == posLine end
-       then posColumn end - posColumn start
-       else 1  -- Simplified: just count as 1 for multi-line spans
+spanLength span = posOffset (spanEnd span) - posOffset (spanStart span)
+
+-- Check if span contains a position
+spanContains :: SourceSpan -> SourcePos -> Bool
+spanContains span pos = pos >= spanStart span && pos <= spanEnd span
+
+-- Check if two spans overlap
+spansOverlap :: SourceSpan -> SourceSpan -> Bool
+spansOverlap span1 span2 =
+    spanStart span1 <= spanEnd span2 && spanEnd span1 >= spanStart span2
+
+-- Check if a span contains all spans in a list
+spansContain :: SourceSpan -> [SourceSpan] -> Bool
+spansContain container spans = all (`spanContains` container) spans
+
+-- Extract line number from span
+spanLine :: SourceSpan -> Int
+spanLine span = posLine (spanStart span)
+
+-- Extract start line from span
+spanStartLine :: SourceSpan -> Int
+spanStartLine span = posLine (spanStart span)
+
+-- Extract end line from span
+spanEndLine :: SourceSpan -> Int
+spanEndLine span = posLine (spanEnd span)
+
+-- Extract start column from span
+spanStartColumn :: SourceSpan -> Int
+spanStartColumn span = posColumn (spanStart span)
+
+-- Extract end column from span
+spanEndColumn :: SourceSpan -> Int
+spanEndColumn span = posColumn (spanEnd span)
+
+-- Check if span1 contains span2
+spanContainsSpan :: SourceSpan -> SourceSpan -> Bool
+spanContainsSpan outer inner = 
+    spanStart outer <= spanStart inner && spanEnd outer >= spanEnd inner
