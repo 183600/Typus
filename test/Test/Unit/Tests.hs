@@ -3565,4 +3565,20 @@ tests =
         , Test.Unit.NewCabalBoundaryConditionsQuickCheckSpec.testBoundaryConditionsQuickCheck
         ]
 
+    -- ============================================================================
+    -- New Comprehensive Test Suite (2025) - 10 Additional Test Modules
+    -- ============================================================================
+    , testGroup "New Comprehensive Test Suite (2025) - Enhanced Testing Coverage"
+        [ Test.Unit.NewTextProcessingBoundarySpec.tests
+        , Test.Unit.NewSourceLocationCalculationPrecisionSpec.tests
+        , Test.Unit.NewParserErrorRecoverySpec.tests
+        , Test.Unit.NewOwnershipTransferConsistencySpec.tests
+        , Test.Unit.NewDependencyCycleDetectionSpec.tests
+        , Test.Unit.NewErrorHandlerConsistencySpec.tests
+        , Test.Unit.NewCompilerIRConsistencySpec.tests
+        , Test.Unit.NewTypeSystemBoundarySpec.tests
+        , Test.Unit.NewIntegrationEndToEndSpec.tests
+        , Test.Unit.NewPerformanceRegressionSpec.tests
+        ]
+
         ]

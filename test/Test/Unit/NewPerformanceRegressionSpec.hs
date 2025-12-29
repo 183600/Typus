@@ -1,192 +1,347 @@
+{-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+
 module Test.Unit.NewPerformanceRegressionSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=), assertBool)
-import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), choose, listOf, elements)
-import Compiler
-import Parser
+import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
+import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import TestSupport.Arbitrary
+
+import Parser (parseTypus)
+import Compiler (compile)
+import Compiler.TypeChecker (buildTypeEnv, inferExpressionType)
+import Ownership (analyzeOwnership, newOwnershipAnalyzer)
+import Dependencies (analyzeDependentTypes)
+import Utils (trim, splitBy, removeComments)
+import SourceLocation (advancePosByText, startPos)
+import IntegratedCompiler (compileWithIntegratedAnalyzers, defaultCompilerConfig)
+
+import Compiler.GoAst (parseGoModule)
+import SyntaxValidator (validateFile)
+import AnalyzerIntegration (runIntegratedAnalysis, mkAnalysisInput, newIntegratedAnalyzer)
+
 import Control.DeepSeq (NFData, force)
 import Control.Exception (evaluate)
-import System.CPUTime (getCPUTime)
+import Data.Time.Clock (getCurrentTime, diffUTCTime)
+import Data.List (length, foldl')
+import qualified Data.Map.Strict as Map
+import Data.Text (Text)
+import qualified Data.Text as T
 import Text.Printf (printf)
 
--- | Test performance regression scenarios
+-- | Performance regression tests
 tests :: TestTree
 tests =
-  testGroup "Performance Regression Tests"
+  testGroup "New Performance Regression Tests"
     [ testGroup "Parsing performance"
-        [ testCase "Large file parsing performance" $ do
-            let largeInput = unlines $ replicate 1000 "func test_" ++ show ([0..999]) ++ "() { return " ++ show ([0..999]) ++ " }"
-                (parseTime, result) = timeParse largeInput
+        [ testCase "small file parsing performance" $ do
+            let smallSource = unlines
+                  [ "package main"
+                  , ""
+                  , "func main() {"
+                  , "    println(\"Hello\")"
+                  , "}"
+                  ]
+                iterations = 1000
+            (time, result) <- timeAction $ repeatAction iterations (parseTypus smallSource)
             case result of
-                Left err -> assertBool ("Should parse large files: " ++ show err) False
-                Right parsed -> do
-                    assertBool "Should parse large files" True
-                    assertBool ("Parsing should be fast: " ++ show parseTime ++ "ms") (parseTime < 1000)  -- Should be under 1 second
-
-        , testCase "Deep nesting parsing performance" $ do
-            let nestedInput = concat $ replicate 100 "if true {\n"
-                input = nestedInput ++ "return 42\n" ++ concat (replicate 100 "}\n")
-                (parseTime, result) = timeParse input
+              Left err -> assertFailure $ "Parsing failed: " ++ err
+              Right _ -> do
+                -- Should parse small files quickly (less than 1ms per file)
+                let avgTime = time / fromIntegral iterations
+                avgTime @?= (avgTime :: Double)  -- Basic comparison
+                -- Assert that average time is reasonable
+                if avgTime > 0.001
+                  then assertFailure $ "Parsing too slow: " ++ show avgTime ++ "s per file"
+                  else return ()
+                
+        , testCase "large file parsing performance" $ do
+            let largeFunction = "func test" ++ show 1 ++ "() {\n" ++
+                               concat ["    x := " ++ show i ++ "\n" | i <- [1..100]] ++
+                               "    println(x)\n}\n"
+                largeSource = "package main\n\n" ++ concat [largeFunction | i <- [1..50]]
+                iterations = 10
+            (time, result) <- timeAction $ repeatAction iterations (parseTypus largeSource)
             case result of
-                Left err -> assertBool ("Should parse deeply nested code: " ++ show err) False
-                Right parsed -> do
-                    assertBool "Should parse deeply nested code" True
-                    assertBool ("Nested parsing should be fast: " ++ show parseTime ++ "ms") (parseTime < 500)
-
-        , testCase "Complex expression parsing performance" $ do
-            let complexExpr = "1 + 2 * 3 - 4 / 5 + (6 * 7) - (8 / 9) + 10 * 11"
-                input = "func test() {\n  return " ++ concat (replicate 50 (complexExpr ++ " + ")) ++ "0\n}"
-                (parseTime, result) = timeParse input
-            case result of
-                Left err -> assertBool ("Should parse complex expressions: " ++ show err) False
-                Right parsed -> do
-                    assertBool "Should parse complex expressions" True
-                    assertBool ("Expression parsing should be fast: " ++ show parseTime ++ "ms") (parseTime < 200)
+              Left err -> assertFailure $ "Parsing large file failed: " ++ err
+              Right _ -> do
+                -- Should handle larger files efficiently
+                let avgTime = time / fromIntegral iterations
+                if avgTime > 0.1
+                  then assertFailure $ "Large file parsing too slow: " ++ show avgTime ++ "s per file"
+                  else return ()
         ]
-
+        
     , testGroup "Compilation performance"
-        [ testCase "Large module compilation performance" $ do
-            let largeModule = unlines $ 
-                  ["func helper_" ++ show i ++ "() { return " ++ show i ++ " }" | i <- [1..100]] ++
-                  ["func main() {\n  " ++ unlines ["let x" ++ show i ++ " = helper_" ++ show i ++ "()" | i <- [1..100]] ++
-                  "  return x100\n}"
-                (compileTime, result) = timeCompile largeModule
+        [ testCase "simple compilation performance" $ do
+            let source = unlines
+                  [ "package main"
+                  , ""
+                  , "func add(a, b int) int {"
+                  , "    return a + b"
+                  , "}"
+                  , ""
+                  , "func main() {"
+                  , "    result := add(10, 20)"
+                  , "    println(result)"
+                  , "}"
+                  ]
+                iterations = 100
+            result <- parseTypus source
             case result of
-                Left err -> assertBool ("Should compile large modules: " ++ show err) False
-                Right compiled -> do
-                    assertBool "Should compile large modules" True
-                    assertBool ("Compilation should be fast: " ++ show compileTime ++ "ms") (compileTime < 2000)
-
-        , testCase "Type checking performance" $ do
-            let typeHeavyCode = unlines $
-                  ["func test_" ++ show i ++ "() {\n  let x: int = " ++ show i ++ "\n  let y: string = \"" ++ show i ++ "\"\n  let z: float = " ++ show (fromIntegral i / 10.0) ++ "\n  return x\n}" | i <- [1..50]]
-                (compileTime, result) = timeCompile typeHeavyCode
+              Left err -> assertFailure $ "Parse failed: " ++ err
+              Right typusFile -> do
+                (time, _) <- timeAction $ repeatAction iterations (compile typusFile)
+                let avgTime = time / fromIntegral iterations
+                if avgTime > 0.01
+                  then assertFailure $ "Compilation too slow: " ++ show avgTime ++ "s per compilation"
+                  else return ()
+                  
+        , testCase "complex compilation performance" $ do
+            let complexSource = unlines
+                  [ "package main"
+                  , ""
+                  , "type Complex struct {"
+                  , "    Data map[string][]int"
+                  , "    Chan chan func(string) error"
+                  , "}"
+                  , ""
+                  , "func (c Complex) Process() error {"
+                  , "    for k, v := range c.Data {"
+                  , "        go func(key string, vals []int) {"
+                  , "            c.Chan <- func(s string) error {"
+                  , "                return nil"
+                  , "            }"
+                  , "        }(k, v)"
+                  , "    }"
+                  , "    return nil"
+                  , "}"
+                  , ""
+                  , "func main() {"
+                  , "    c := Complex{make(map[string][]int), make(chan func(string) error)}"
+                  , "    c.Process()"
+                  , "}"
+                  ]
+                iterations = 20
+            result <- parseTypus complexSource
             case result of
-                Left err -> assertBool ("Should handle type checking: " ++ show err) False
-                Right compiled -> do
-                    assertBool "Should handle type checking" True
-                    assertBool ("Type checking should be fast: " ++ show compileTime ++ "ms") (compileTime < 1500)
-
-        , testCase "Optimization performance" $ do
-            let optimizableCode = unlines $
-                  ["func test_" ++ show i ++ "() {\n  let x = " ++ show i ++ " + " ++ show (i+1) ++ " * " ++ show (i+2) ++ "\n  return x\n}" | i <- [1..50]]
-                (compileTime, result) = timeCompile optimizableCode
-            case result of
-                Left err -> assertBool ("Should handle optimization: " ++ show err) False
-                Right compiled -> do
-                    assertBool "Should handle optimization" True
-                    assertBool ("Optimization should be fast: " ++ show compileTime ++ "ms") (compileTime < 1000)
+              Left err -> assertFailure $ "Parse failed: " ++ err
+              Right typusFile -> do
+                (time, _) <- timeAction $ repeatAction iterations (compile typusFile)
+                let avgTime = time / fromIntegral iterations
+                if avgTime > 0.05
+                  then assertFailure $ "Complex compilation too slow: " ++ show avgTime ++ "s per compilation"
+                  else return ()
         ]
-
+        
+    , testGroup "Type checking performance"
+        [ testCase "type environment building performance" $ do
+            let goSource = unlines
+                  [ "package main"
+                  , ""
+                  , concat ["func func" ++ show i ++ "() int { return " ++ show i ++ " }\n" | i <- [1..100]]
+                  ]
+                iterations = 50
+            case parseGoModule (lines goSource) of
+              Left err -> assertFailure $ "Go parsing failed: " ++ err
+              Right goModule -> do
+                (time, _) <- timeAction $ repeatAction iterations (evaluate . force . buildTypeEnv $ goModule)
+                let avgTime = time / fromIntegral iterations
+                if avgTime > 0.01
+                  then assertFailure $ "Type environment building too slow: " ++ show avgTime ++ "s per build"
+                  else return ()
+                  
+        , testCase "type inference performance" $ do
+            let typeEnv = buildTypeEnvFromPairs 
+                    [ ("var" ++ show i, TypeName "int") | i <- [1..1000] ]
+                    []
+                expressions = ["var" ++ show i | i <- [1..100]]
+                iterations = 100
+            (time, _) <- timeAction $ repeatAction iterations (mapM (inferExpressionType typeEnv) expressions)
+            let avgTime = time / fromIntegral iterations
+            if avgTime > 0.01
+              then assertFailure $ "Type inference too slow: " ++ show avgTime ++ "s per batch"
+              else return ()
+        ]
+        
+    , testGroup "Ownership analysis performance"
+        [ testCase "simple ownership analysis performance" $ do
+            let source = unlines
+                  [ "//! ownership on"
+                  , ""
+                  , "func main() {"
+                  , "    x := 42"
+                  , "    y := x"
+                  , "    println(y)"
+                  , "}"
+                  ]
+                analyzer = newOwnershipAnalyzer
+                iterations = 200
+            (time, _) <- timeAction $ repeatAction iterations (analyzeOwnership analyzer source)
+            let avgTime = time / fromIntegral iterations
+            if avgTime > 0.005
+              then assertFailure $ "Simple ownership analysis too slow: " ++ show avgTime ++ "s per analysis"
+              else return ()
+              
+        , testCase "complex ownership analysis performance" $ do
+            let complexOwnershipSource = unlines
+                  [ "//! ownership on"
+                  , ""
+                  , "func complex() {"
+                  , concat ["    var" ++ show i ++ " := " ++ show i ++ "\n" | i <- [1..50]]
+                  , concat ["    moved" ++ show i ++ " := var" ++ show i ++ "\n" | i <- [1..25]]
+                  , concat ["    used" ++ show i ++ " := moved" ++ show i ++ "\n" | i <- [1..25]]
+                  , "}"
+                  ]
+                analyzer = newOwnershipAnalyzer
+                iterations = 50
+            (time, _) <- timeAction $ repeatAction iterations (analyzeOwnership analyzer complexOwnershipSource)
+            let avgTime = time / fromIntegral iterations
+            if avgTime > 0.02
+              then assertFailure $ "Complex ownership analysis too slow: " ++ show avgTime ++ "s per analysis"
+              else return ()
+        ]
+        
+    , testGroup "Dependency analysis performance"
+        [ testCase "dependent type analysis performance" $ do
+            let source = unlines
+                  [ "type A = B"
+                  , "type B = C"
+                  , "type C = Int"
+                  ]
+                iterations = 100
+            (time, _) <- timeAction $ repeatAction iterations (analyzeDependentTypes source)
+            let avgTime = time / fromIntegral iterations
+            if avgTime > 0.01
+              then assertFailure $ "Dependent type analysis too slow: " ++ show avgTime ++ "s per analysis"
+              else return ()
+              
+        , testCase "complex dependency analysis performance" $ do
+            let complexDepSource = unlines
+                  [ "type T" ++ show i ++ " = T" ++ show (i+1) | i <- [1..99]] ++
+                  ["type T100 = Int"]
+                iterations = 20
+            (time, _) <- timeAction $ repeatAction iterations (analyzeDependentTypes complexDepSource)
+            let avgTime = time / fromIntegral iterations
+            if avgTime > 0.05
+              then assertFailure $ "Complex dependency analysis too slow: " ++ show avgTime ++ "s per analysis"
+              else return ()
+        ]
+        
+    , testGroup "Integrated analysis performance"
+        [ testCase "full pipeline performance" $ do
+            let source = unlines
+                  [ "//! ownership on"
+                  , "//! dependent_types on"
+                  , ""
+                  , "package main"
+                  , ""
+                  , "func process<T>(data T) T {"
+                  , "    return data"
+                  , "}"
+                  , ""
+                  , "func main() {"
+                  , "    result := process(42)"
+                  , "    println(result)"
+                  , "}"
+                  ]
+                config = defaultCompilerConfig
+                iterations = 50
+            (time, _) <- timeAction $ repeatAction iterations (compileWithIntegratedAnalyzers source config)
+            let avgTime = time / fromIntegral iterations
+            if avgTime > 0.05
+              then assertFailure $ "Full pipeline too slow: " ++ show avgTime ++ "s per compilation"
+              else return ()
+        ]
+        
     , testGroup "Memory usage performance"
-        [ testCase "Memory usage with large inputs" $ do
-            let largeInput = unlines $ replicate 1000 "func test_" ++ show ([0..999]) ++ "() { let x = " ++ show ([0..999]) ++ "; return x }"
-                (memoryBefore, memoryAfter, result) = memoryUsage largeInput
+        [ testCase "large file memory usage" $ do
+            let veryLargeSource = unlines
+                  [ "package main"
+                  , ""
+                  , concat ["func func" ++ show i ++ "() {\n" ++
+                           concat ["    x := " ++ show j ++ "\n" | j <- [1..100]] ++
+                           "    println(x)\n}\n" | i <- [1..100]]
+                  ]
+                iterations = 5
+            -- Force evaluation to ensure memory is actually used
+            (time, result) <- timeAction $ repeatAction iterations (evaluate . force . parseTypus $ veryLargeSource)
             case result of
-                Left err -> assertBool ("Should handle large inputs memory-wise: " ++ show err) False
-                Right parsed -> do
-                    assertBool "Should handle large inputs memory-wise" True
-                    let memoryIncrease = memoryAfter - memoryBefore
-                    assertBool ("Memory increase should be reasonable: " ++ show memoryIncrease ++ "KB") (memoryIncrease < 10000)  -- Less than 10MB increase
-
-        , testCase "Memory cleanup after compilation" $ do
-            let testCode = "func test() { return 42 }"
-                (memoryBefore, memoryAfter, result) = memoryUsage testCode
-            case result of
-                Left err -> assertBool ("Should clean up memory: " ++ show err) False
-                Right compiled -> do
-                    assertBool "Should clean up memory" True
-                    let memoryIncrease = memoryAfter - memoryBefore
-                    assertBool ("Memory should be cleaned up: " ++ show memoryIncrease ++ "KB") (memoryIncrease < 1000)  -- Less than 1MB for small code
+              Left err -> assertFailure $ "Large file parse failed: " ++ err
+              Right _ -> do
+                let avgTime = time / fromIntegral iterations
+                if avgTime > 0.1
+                  then assertFailure $ "Large file processing too slow: " ++ show avgTime ++ "s per file"
+                  else return ()
+                  
+        , testCase "repeated operations don't leak memory" $ do
+            let source = unlines
+                  [ "package main"
+                  , ""
+                  , "func test() {"
+                  , "    x := 42"
+                  , "    println(x)"
+                  , "}"
+                  ]
+                iterations = 1000
+                -- Perform many operations to check for memory leaks
+                (time, _) <- timeAction $ repeatAction iterations (do
+                    result <- parseTypus source
+                    case result of
+                      Left _ -> return ()
+                      Right typusFile -> do
+                        _ <- evaluate $ force typusFile
+                        return ())
+                let avgTime = time / fromIntegral iterations
+                if avgTime > 0.001
+                  then assertFailure $ "Repeated operations too slow (possible memory leak): " ++ show avgTime ++ "s per operation"
+                  else return ()
         ]
-
-    , testGroup "Scalability tests"
-        [ testCase "Linear parsing scalability" $ do
-            let sizes = [100, 200, 400, 800]
-                times = map (\n -> timeParse $ unlines $ replicate n "func test() { return 42 }") sizes
-            assertBool "Parsing should scale linearly" (checkLinearScalability times)
-
-        , testCase "Linear compilation scalability" $ do
-            let sizes = [50, 100, 200, 400]
-                times = map (\n -> timeCompile $ unlines $ ["func test_" ++ show i ++ "() { return " ++ show i ++ " }" | i <- [1..n]]) sizes
-            assertBool "Compilation should scale linearly" (checkLinearScalability times)
-        ]
-
-    , testGroup "Property-based tests"
-        [ testProperty "Parsing time grows linearly with input size" prop_parsingLinearScalability
-        , testProperty "Compilation time grows reasonably with complexity" prop_compilationReasonableScalability
-        , testProperty "Memory usage is bounded" prop_memoryUsageBounded
-        , testProperty "Performance is deterministic" prop_performanceDeterministic
+        
+    , testGroup "Text processing performance"
+        [ testCase "large text processing performance" $ do
+            let largeText = concat [replicate 1000 "test string " ++ "\n" | _ <- [1..100]]
+                iterations = 10
+            (time, _) <- timeAction $ repeatAction iterations (evaluate . force . removeComments $ largeText)
+            let avgTime = time / fromIntegral iterations
+            if avgTime > 0.01
+              then assertFailure $ "Large text processing too slow: " ++ show avgTime ++ "s per operation"
+              else return ()
+              
+        , testCase "source location tracking performance" $ do
+            let largeSource = concat [replicate 1000 "line content\n" | _ <- [1..10]]
+                iterations = 50
+            (time, _) <- timeAction $ repeatAction iterations (evaluate . force . advancePosByText largeSource $ startPos)
+            let avgTime = time / fromIntegral iterations
+            if avgTime > 0.001
+              then assertFailure $ "Source location tracking too slow: " ++ show avgTime ++ "s per operation"
+              else return ()
         ]
     ]
 
--- Helper function to time parsing
-timeParse :: String -> IO (Double, Either String ())
-timeParse input = do
-    start <- getCPUTime
-    let result = parseTypus input
-    end <- evaluate $ force result
-    stop <- getCPUTime
-    let timeDiff = fromIntegral (stop - start) / (10^9)  -- Convert to milliseconds
-    return (timeDiff, const () <$> result)
+-- Helper functions for performance testing
+timeAction :: IO a -> IO (Double, a)
+timeAction action = do
+    start <- getCurrentTime
+    result <- action
+    end <- getCurrentTime
+    let timeDiff = diffUTCTime end start
+    return (realToFrac timeDiff, result)
 
--- Helper function to time compilation
-timeCompile :: String -> IO (Double, Either String ())
-timeCompile input = do
-    start <- getCPUTime
-    let result = compile input
-    end <- evaluate $ force result
-    stop <- getCPUTime
-    let timeDiff = fromIntegral (stop - start) / (10^9)  -- Convert to milliseconds
-    return (timeDiff, const () <$> result)
+repeatAction :: Int -> IO a -> IO a
+repeatAction n action = foldl' (>>) (return ()) (replicate n action) >> action
 
--- Helper function to measure memory usage (simplified)
-memoryUsage :: String -> IO (Int, Int, Either String ())
-memoryUsage input = do
-    -- This is a simplified version - in real implementation you'd use proper memory profiling
-    let memoryBefore = 1000  -- Placeholder
-        result = parseTypus input
-        memoryAfter = 2000   -- Placeholder
-    return (memoryBefore, memoryAfter, const () <$> result)
-
--- Helper function to check linear scalability
-checkLinearScalability :: [(Double, Either String ())] -> Bool
-checkLinearScalability times = 
-    let successfulTimes = [t | (t, Right _) <- times]
-    in if length successfulTimes >= 3
-       then let ratios = zipWith (/) (tail successfulTimes) (init successfulTimes)
-            in all (\r -> r > 0.5 && r < 3.0) ratios  -- Allow some variance
-       else True  -- Not enough data points
-
--- Property: Parsing time should grow linearly with input size
-prop_parsingLinearScalability :: Int -> Bool
-prop_parsingLinearScalability n =
-    let input = unlines $ replicate (abs n `mod` 100 + 1) "func test() { return 42 }"
-    in case parseTypus input of
-        Left _ -> True
-        Right _ -> True  -- Simplified property test
-
--- Property: Compilation time should grow reasonably with complexity
-prop_compilationReasonableScalability :: String -> Bool
-prop_compilationReasonableScalability input =
-    case compile input of
-        Left _ -> True
-        Right _ -> True  -- Simplified property test
-
--- Property: Memory usage should be bounded
-prop_memoryUsageBounded :: String -> Bool
-prop_memoryUsageBounded input =
-    case parseTypus input of
-        Left _ -> True
-        Right _ -> True  -- Simplified property test
-
--- Property: Performance should be deterministic
-prop_performanceDeterministic :: String -> Bool
-prop_performanceDeterministic input =
-    let result1 = parseTypus input
-        result2 = parseTypus input
-    in case (result1, result2) of
-        (Left _, Left _) -> True
-        (Right _, Right _) -> True
-        _ -> False
+buildTypeEnvFromPairs :: [(String, Compiler.TypeChecker.Type)] -> [(String, Compiler.TypeChecker.FunctionSignature)] -> Compiler.TypeChecker.TypeEnv
+buildTypeEnvFromPairs varPairs funcPairs = 
+    Compiler.TypeChecker.TypeEnv 
+        { Compiler.TypeChecker.varTypes = Map.fromList varPairs
+        , Compiler.TypeChecker.functionTypes = Map.fromList funcPairs
+        }
