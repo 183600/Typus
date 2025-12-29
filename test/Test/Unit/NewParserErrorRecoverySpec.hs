@@ -10,194 +10,253 @@
 module Test.Unit.NewParserErrorRecoverySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
+import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck 
-  ( Property
-  , (===)
-  , (==>)
-  , forAll
-  , counterexample
-  , classify
-  , property
-  , (.&&.)
-  , (.||.)
-  , Arbitrary(..)
-  , Gen
-  , choose
-  , listOf
-  , elements
-  , oneof
-  , sized
-  , resize
-  )
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import TestSupport.Arbitrary
 
 import Parser
-  ( BlockDirectives(..)
-  , CodeBlock(..)
+  ( parseTypus
   , FileDirectives(..)
+  , BlockDirectives(..)
+  , CodeBlock(..)
   , TypusFile(..)
-  , parseTypus
-  )
-import SourceLocation
-  ( Located(..)
-  , SourcePos(..)
-  , SourceSpan(..)
-  , locatedValue
-  , spanEnd
-  , spanStart
+  , defaultFileDirectives
+  , defaultBlockDirectives
   )
 
-import Data.Char (isSpace, toLower)
-import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort)
+import SourceLocation (SourceSpan(..), SourcePos(..), spanStart, spanEnd, posAt)
+import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Char (isSpace)
+import Data.List (isPrefixOf)
 
--- Test parser error recovery with malformed syntax
-test_parser_error_recovery :: TestTree
-test_parser_error_recovery = testCase "Parser recovers from syntax errors" $ do
-  let source = unlines
-        [ "//! ownership: on"
-        , "package main"
-        , "func main() {"
-        , "    x := 5"
-        , "    // Missing closing brace"
-        , "    y := x + 1"
-        , "}"
-        ]
-  case parseTypus source of
-    Left err -> do
-      -- Should fail with a meaningful error message
-      assertBool "Error message should contain line info" $ isInfixOf "line" err
-      assertBool "Error message should be descriptive" $ isInfixOf "syntax" err
-    Right _ -> assertFailure "Expected parse failure due to missing closing brace"
-
--- Test parser handles empty input gracefully
-test_parser_empty_input :: TestTree
-test_parser_empty_input = testCase "Parser handles empty input" $ do
-  case parseTypus "" of
-    Left err -> assertFailure $ "parseTypus failed on empty input: " <> err
-    Right typusFile -> do
-      -- Should parse empty file successfully
-      tfCodeBlocks typusFile @?= []
-
--- Test parser handles whitespace-only input
-test_parser_whitespace_only :: TestTree
-test_parser_whitespace_only = testCase "Parser handles whitespace-only input" $ do
-  let source = unlines ["", "   ", "\t", "  \t  ", ""]
-  case parseTypus source of
-    Left err -> assertFailure $ "parseTypus failed on whitespace-only input: " <> err
-    Right typusFile -> do
-      -- Should parse whitespace-only file successfully
-      tfCodeBlocks typusFile @?= []
-
--- Test parser handles very long lines
-test_parser_long_lines :: TestTree
-test_parser_long_lines = testCase "Parser handles very long lines" $ do
-  let longString = replicate 1000 'a'
-      source = unlines
-        [ "//! ownership: on"
-        , "package main"
-        , "func main() {"
-        , "    x := \"" ++ longString ++ "\""
-        , "}"
-        ]
-  case parseTypus source of
-    Left err -> assertFailure $ "parseTypus failed on long lines: " <> err
-    Right _ -> pure () -- Should parse successfully
-
--- Test parser handles Unicode characters
-test_parser_unicode :: TestTree
-test_parser_unicode = testCase "Parser handles Unicode characters" $ do
-  let source = unlines
-        [ "//! ownership: on"
-        , "package main"
-        , "func main() {"
-        , "    // 测试中文注释"
-        , "    x := \"测试Unicode字符串\""
-        , "    y := \"🚀 Rocket emoji\""
-        , "}"
-        ]
-  case parseTypus source of
-    Left err -> assertFailure $ "parseTypus failed on Unicode: " <> err
-    Right _ -> pure () -- Should parse successfully
-
--- Test parser handles nested structures
-test_parser_nested_structures :: TestTree
-test_parser_nested_structures = testCase "Parser handles nested structures" $ do
-  let source = unlines
-        [ "//! ownership: on"
-        , "package main"
-        , "func main() {"
-        , "    if true {"
-        , "        for i := 0; i < 10; i++ {"
-        , "            if i % 2 == 0 {"
-        , "                x := i * 2"
-        , "            } else {"
-        , "                y := i + 1"
-        , "            }"
-        , "        }"
-        , "    }"
-        , "}"
-        ]
-  case parseTypus source of
-    Left err -> assertFailure $ "parseTypus failed on nested structures: " <> err
-    Right _ -> pure () -- Should parse successfully
-
--- Property: Parser should handle arbitrary strings without crashing
-prop_parser_no_crash :: String -> Property
-prop_parser_no_crash input = 
-  let result = parseTypus input
-  in property $ case result of
-    Left _ -> True -- Failing is OK, just shouldn't crash
-    Right _ -> True -- Success is also OK
-
--- Property: Parser should preserve line numbers in error messages
-prop_parser_line_numbers :: String -> Property
-prop_parser_line_numbers input = 
-  let linesCount = length (lines input)
-      result = parseTypus input
-  in classify (linesCount > 1) "multi-line input" $
-     case result of
-       Left err -> property $ isInfixOf "line" err
-       Right _ -> property True
-
--- Property: Parser should handle comments gracefully
-prop_parser_comments :: String -> Property
-prop_parser_comments baseInput = 
-  let withComments = unlines 
-        [ "// Single line comment"
-        , "/* Multi-line"
-        , "   comment */"
-        , baseInput
-        , "// Another comment"
-        ]
-      result = parseTypus withComments
-  in property $ case result of
-    Left _ -> True -- Failing is OK, just shouldn't crash due to comments
-    Right _ -> True -- Success is also OK
-
--- Property: Parser should handle indentation variations
-prop_parser_indentation :: String -> Property
-prop_parser_indentation baseInput = 
-  let indentedInputs = 
-        [ baseInput -- Original
-        , unlines $ map ("    " ++) (lines baseInput) -- 4-space indent
-        , unlines $ map ("\t" ++) (lines baseInput) -- Tab indent
-        , unlines $ map ("  " ++) (lines baseInput) -- 2-space indent
-        ]
-      results = map parseTypus indentedInputs
-  in property $ all (\r -> case r of Left _ -> True; Right _ -> True) results
-
+-- | Parser error recovery tests
 tests :: TestTree
-tests = testGroup "New Parser Error Recovery Tests"
-  [ test_parser_error_recovery
-  , test_parser_empty_input
-  , test_parser_whitespace_only
-  , test_parser_long_lines
-  , test_parser_unicode
-  , test_parser_nested_structures
-  , fastProperty "Parser doesn't crash on arbitrary input" prop_parser_no_crash
-  , fastProperty "Parser reports line numbers in errors" prop_parser_line_numbers
-  , fastProperty "Parser handles comments gracefully" prop_parser_comments
-  , fastProperty "Parser handles indentation variations" prop_parser_indentation
-  ]
+tests =
+  testGroup "New Parser Error Recovery Tests"
+    [ testGroup "Malformed directive recovery"
+        [ testCase "parseTypus recovers from invalid boolean values" $ do
+            let input = unlines
+                  [ "//! ownership on"
+                  , "//! dependent_types invalid_value"
+                  , "//! constraints off"
+                  , ""
+                  , "some code here"
+                  ]
+                result = parseTypus input
+            case result of
+              Left err -> 
+                assertFailure $ "Should recover from invalid directive, but got: " ++ err
+              Right typusFile -> do
+                case fdOwnership (tfDirectives typusFile) of
+                  Nothing -> assertFailure "Expected ownership directive"
+                  Just _ -> return ()
+                -- dependent_types should be None due to invalid value
+                fdDependentTypes (tfDirectives typusFile) @?= Nothing
+                
+        , testCase "parseTypus recovers from unknown directive keys" $ do
+            let input = unlines
+                  [ "//! ownership on"
+                  , "//! unknown_directive on"
+                  , "//! constraints off"
+                  , ""
+                  , "code block"
+                  ]
+                result = parseTypus input
+            case result of
+              Left err -> 
+                assertFailure $ "Should recover from unknown directive, but got: " ++ err
+              Right typusFile -> do
+                -- Should parse valid directives and ignore unknown ones
+                case fdOwnership (tfDirectives typusFile) of
+                  Nothing -> assertFailure "Expected ownership directive"
+                  Just _ -> return ()
+                case fdConstraints (tfDirectives typusFile) of
+                  Nothing -> assertFailure "Expected constraints directive"
+                  Just _ -> return ()
+        ]
+        
+    , testGroup "Block directive error recovery"
+        [ testCase "parseTypus recovers from malformed block directives" $ do
+            let input = unlines
+                  [ "//! ownership on"
+                  , ""
+                  , "//typus: ownership invalid"
+                  , "code in block with invalid directive"
+                  , "more code"
+                  , ""
+                  , "//typus: constraints on"
+                  , "valid block"
+                  ]
+                result = parseTypus input
+            case result of
+              Left err -> 
+                assertFailure $ "Should recover from malformed block directive, but got: " ++ err
+              Right typusFile -> do
+                let blocks = tfBlocks typusFile
+                length blocks @?= 2
+                -- First block should have default directives due to error
+                cbDirectives (head blocks) @?= defaultBlockDirectives
+                -- Second block should have valid constraints
+                case bdConstraints (cbDirectives (last blocks)) of
+                  Nothing -> assertFailure "Expected constraints directive in second block"
+                  Just _ -> return ()
+        ]
+        
+    , testGroup "Syntax error tolerance"
+        [ testCase "parseTypus continues after unclosed blocks" $ do
+            let input = unlines
+                  [ "//! ownership on"
+                  , ""
+                  , "func main() {"
+                  , "    if true {"
+                  , "        println(\"hello\")"
+                  , "    // missing closing brace"
+                  , ""
+                  , "func other() {"
+                  , "    return 42"
+                  , "}"
+                  ]
+                result = parseTypus input
+            case result of
+              Left err -> 
+                assertFailure $ "Should parse with syntax errors, but got: " ++ err
+              Right typusFile -> do
+                let blocks = tfBlocks typusFile
+                -- Should still parse blocks despite syntax errors
+                length blocks @>= 1
+        ]
+        
+    , testGroup "Malformed build tag handling"
+        [ testCase "parseTypus recovers from invalid build tags" $ do
+            let input = unlines
+                  [ "//! ownership on"
+                  , "//go:build valid_tag"
+                  , "// +build malformed without space"
+                  , "//go:build another_valid"
+                  , ""
+                  , "code content"
+                  ]
+                result = parseTypus input
+            case result of
+              Left err -> 
+                assertFailure $ "Should recover from malformed build tags, but got: " ++ err
+              Right typusFile -> do
+                let buildTags = tfBuildTags typusFile
+                -- Should parse valid build tags
+                length buildTags @?= 2
+        ]
+        
+    , testGroup "Encoding and character handling"
+        [ testCase "parseTypus handles mixed line endings gracefully" $ do
+            let input = "//! ownership on\r\n\r\n//typus: constraints on\n\ncode here\r\n"
+                result = parseTypus input
+            case result of
+              Left err -> 
+                assertFailure $ "Should handle mixed line endings, but got: " ++ err
+              Right typusFile -> do
+                tfDirectives typusFile @?= FileDirectives 
+                  { fdOwnership = Just (posAt 1 1, True)
+                  , fdDependentTypes = Just (posAt 1 1, True)  -- constraints enables dependent_types
+                  , fdConstraints = Just (posAt 1 1, True)
+                  }
+                length (tfBlocks typusFile) @?= 1
+        ]
+        
+    , testGroup "Partial recovery scenarios"
+        [ testCase "parseTypus recovers from directive syntax errors" $ do
+            let input = unlines
+                  [ "//! ownership on"
+                  , "//! malformed directive without equals"
+                  , "//! constraints off"
+                  , ""
+                  , "code"
+                  ]
+                result = parseTypus input
+            case result of
+              Left err -> 
+                assertFailure $ "Should recover from directive syntax error, but got: " ++ err
+              Right typusFile -> do
+                -- Should parse valid directives and skip malformed ones
+                case fdOwnership (tfDirectives typusFile) of
+                  Nothing -> assertFailure "Expected ownership directive"
+                  Just _ -> return ()
+                case fdConstraints (tfDirectives typusFile) of
+                  Nothing -> assertFailure "Expected constraints directive"
+                  Just _ -> return ()
+        ]
+        
+    , testGroup "Error accumulation"
+        [ testCase "parseTypus collects multiple errors without failing" $ do
+            let input = unlines
+                  [ "//! ownership invalid"
+                  , "//! dependent_types also_invalid"
+                  , ""
+                  , "//typus: constraints not_boolean"
+                  , "code with multiple directive errors"
+                  , ""
+                  , "//typus: ownership another_error"
+                  , "more code"
+                  ]
+                result = parseTypus input
+            case result of
+              Left err -> 
+                assertFailure $ "Should accumulate errors and continue, but got: " ++ err
+              Right typusFile -> do
+                -- Should parse structure despite multiple directive errors
+                let blocks = tfBlocks typusFile
+                length blocks @>= 1
+                -- Directives should be defaulted due to errors
+                tfDirectives typusFile @?= defaultFileDirectives
+        ]
+        
+    , testGroup "Robustness edge cases"
+        [ testCase "parseTypus handles completely malformed input" $ do
+            let input = unlines
+                  [ "!!! not a valid directive !!!"
+                  , "/// also not valid"
+                  , "random text with symbols !@#$%^&*()"
+                  , ""
+                  , "still should parse something"
+                  ]
+                result = parseTypus input
+            case result of
+              Left err -> 
+                assertFailure $ "Should handle completely malformed input, but got: " ++ err
+              Right typusFile -> do
+                -- Should create default structure
+                tfDirectives typusFile @?= defaultFileDirectives
+                length (tfBlocks typusFile) @>= 1
+        ]
+        
+    , testGroup "Recovery with nested structures"
+        [ testCase "parseTypus recovers from nested block errors" $ do
+            let input = unlines
+                  [ "//! ownership on"
+                  , ""
+                  , "//typus: constraints on"
+                  , "func outer() {"
+                  , "    //typus: ownership invalid"
+                  , "    if condition {"
+                  , "        //typus: dependent_types malformed"
+                  , "        nested code"
+                  , "    }"
+                  , "}"
+                  , ""
+                  , "//typus: constraints off"
+                  , "valid code block"
+                  ]
+                result = parseTypus input
+            case result of
+              Left err -> 
+                assertFailure $ "Should recover from nested block errors, but got: " ++ err
+              Right typusFile -> do
+                let blocks = tfBlocks typusFile
+                length blocks @?= 2
+                -- Should have at least one valid block
+                case bdConstraints (cbDirectives (last blocks)) of
+                  Nothing -> assertFailure "Expected constraints directive"
+                  Just _ -> return ()
+        ]
+    ]

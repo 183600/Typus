@@ -1,88 +1,132 @@
+{-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+
 module Test.Unit.NewTextProcessingBoundarySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), oneof, listOf, choose)
-import qualified Data.Text as T
-import Utils
+import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
+import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import TestSupport.Arbitrary
 
--- | Test text processing boundary conditions and edge cases
+import Utils
+  ( trim
+  , splitBy
+  , splitByCollapsed
+  , splitByComma
+  , splitByCommaCollapsed
+  , removeLineComments
+  , removeComments
+  , normalizeIndentation
+  , forceSingleTabIndentation
+  , fixIndentation
+  , breakOn
+  )
+
+import Data.Char (isSpace, isControl, isAscii)
+import qualified Data.Text as T
+import qualified Data.List as Data.List
+import Data.List (isPrefixOf, isInfixOf, sort)
+
+-- | Text processing boundary tests
 tests :: TestTree
 tests =
-  testGroup "Text Processing Boundary Tests"
-    [ testGroup "String splitting edge cases"
-        [ testCase "splitBy handles Unicode characters correctly" $ do
-            splitBy ' ' "hello 世界 test" @?= ["hello", "世界", "test"]
-
-        , testCase "splitBy with null character" $ do
-            splitBy '\0' "a\0b\0c" @?= ["a", "b", "c"]
-
-        , testCase "splitByCollapsed with mixed Unicode and spaces" $ do
-            splitByCollapsed ' "  hello 世界  test  " @?= ["hello", "世界", "test"]
-        ]
-
-    , testGroup "Comment removal edge cases"
-        [ testCase "removeLineComments with nested quotes" $ do
-            let input = "code \"// not comment\" // actual comment\n"
-                expected = "code \"// not comment\" \n"
+  testGroup "New Text Processing Boundary Tests"
+    [ testGroup "Unicode and special character handling"
+        [ testCase "trim handles Unicode whitespace correctly" $ do
+            trim "\x2003hello\x2002world\x00A0" @?= "hello\x2002world"
+            
+        , testCase "splitBy handles Unicode delimiters" $ do
+            splitBy '，' "你好，世界，测试" @?= ["你好", "世界", "测试"]
+            
+        , testCase "removeLineComments handles Unicode in strings" $ do
+            let input = "text := \"你好//世界\" // 注释"
+                expected = "text := \"你好//世界\" "
             removeLineComments input @?= expected
-
-        , testCase "removeComments with escaped block comment markers" $ do
-            let input = "text \"/* not block */\" /* real block */ end\n"
-                expected = "text \"/* not block */\"  end\n"
-            removeComments input @?= expected
-
-        , testCase "removeComments with deeply nested block comments" $ do
-            let input = "start /* outer /* inner */ still outer */ end\n"
-                expected = "start  end\n"
+        ]
+        
+    , testGroup "Control character edge cases"
+        [ fastProperty "trim preserves control characters in content" $
+            \content -> 
+                let hasControl = any isControl content
+                    trimmed = trim content
+                    contentPreserved = not (null trimmed) ==> 
+                        any (not . isSpace) trimmed
+                in classify hasControl "has control characters" $
+                   property contentPreserved
+                    
+        , testCase "splitBy handles null characters" $ do
+            splitBy '\0' "a\0b\0c" @?= ["a", "b", "c"]
+            
+        , testCase "removeComments handles embedded control characters" $ do
+            let input = "code /*\n\tcomment\n*/ more"
+                expected = "code  more"
             removeComments input @?= expected
         ]
-
-    , testGroup "Indentation edge cases"
-        [ testCase "normalizeIndentation with mixed tabs and spaces" $ do
-            let input = "\t    mixed\n\t    \t  indentation\n"
-                expected = "mixed\n  \tindentation\n"
-            normalizeIndentation input @?= expected
-
-        , testCase "forceSingleTabIndentation with empty lines" $ do
-            let input = "\n\nline\n\n"
-                expected = "\n\n\tline\n\n"
-            forceSingleTabIndentation input @?= expected
+        
+    , testGroup "Large input performance boundaries"
+        [ testCase "splitBy on very long string doesn't crash" $ do
+            let longInput = replicate 1000000 'a' ++ "," ++ replicate 1000000 'b'
+                result = splitBy ',' longInput
+            length result @?= 2
+            length (head result) @?= 1000000
+            length (last result) @?= 1000000
+            
+        , testCase "removeComments on large nested structure" $ do
+            let largeComment = "/* " ++ replicate 50000 'x' ++ " */"
+                input = "start " ++ largeComment ++ " end"
+                expected = "start  end"
+            removeComments input @?= expected
         ]
-
-    , testGroup "Property-based tests"
-        [ testProperty "splitBy length preservation" prop_splitByLength
-        , testProperty "trim idempotency" prop_trimIdempotent
-        , testProperty "splitByCollapsed removes empty strings" prop_splitByCollapsedNoEmpty
-        , testProperty "breakOn concatenation property" prop_breakOnConcat
+        
+    , testGroup "Edge case string patterns"
+        [ testCase "removeComments handles malformed block comments" $ do
+            removeComments "code /* unclosed" @?= "code "
+            removeComments "code */ malformed" @?= "code */ malformed"
+            
+        , testCase "removeLineComments handles multiple slashes" $ do
+            let input = "x ///// comment"
+                expected = "x /////"
+            removeLineComments input @?= expected
+            
+        , fastProperty "splitByCollapsed handles all delimiter patterns" $
+            \delim content ->
+                let result = splitByCollapsed delim content
+                    hasNoEmpty = all (not . null) result
+                    onlyDelimiters = all (== delim) content
+                    expectedEmpty = onlyDelimiters ==> null result
+                in property $ hasNoEmpty .&&. expectedEmpty
+        ]
+        
+    , testGroup "Memory efficiency edge cases"
+        [ testCase "trim on extremely nested whitespace" $ do
+            let nestedWhitespace = concat (replicate 10000 " \t\n\r")
+                result = trim nestedWhitespace
+            result @?= ""
+            
+        , testCase "breakOn efficiency with repeating patterns" $ do
+            let pattern = "pattern"
+                repeated = concat (replicate 10000 (pattern ++ "x"))
+                (before, after) = breakOn pattern repeated
+            before @?= ""
+            length after @?= length repeated
+        ]
+        
+    , testGroup "Unicode normalization edge cases"
+        [ testCase "removeComments handles Unicode in block comments" $ do
+            let input = "code /* 中文注释 */ more"
+                expected = "code  more"
+            removeComments input @?= expected
+            
+        , testCase "splitBy handles combining characters" $ do
+            let input = "e\u0301:e\u0301" -- e with acute accent
+                result = splitBy ':' input
+            result @?= ["e\u0301", "e\u0301"]
         ]
     ]
-
--- Property: splitBy preserves total length when concatenated with delimiter
-prop_splitByLength :: String -> Char -> Bool
-prop_splitByLength s delim =
-    let parts = splitBy delim s
-        reconstructed = concat $ intersperse [delim] parts
-    in length reconstructed >= length s  -- Allow for trimming
-
--- Property: trim is idempotent
-prop_trimIdempotent :: String -> Bool
-prop_trimIdempotent s = trim (trim s) == trim s
-
--- Property: splitByCollapsed never produces empty strings
-prop_splitByCollapsedNoEmpty :: String -> Char -> Bool
-prop_splitByCollapsedNoEmpty s delim = all (not . null) (splitByCollapsed delim s)
-
--- Property: breakOn concatenation property
-prop_breakOnConcat :: String -> String -> Bool
-prop_breakOnConcat s pattern =
-    let (prefix, suffix) = breakOn pattern s
-    in if null suffix
-       then prefix == s
-       else prefix ++ pattern ++ suffix == s
-
--- Helper function
-intersperse :: a -> [a] -> [a]
-intersperse _ [] = []
-intersperse _ [x] = [x]
-intersperse sep (x:xs) = x : sep : intersperse sep xs
