@@ -879,6 +879,16 @@ test-suite typus-test
         , Test.Unit.ErrorHandlingCabalTestsSpec
         , Test.Unit.IntegrationCabalTestsSpec
 
+        -- New Compact Test Modules (2025) - 8 comprehensive tests
+        , Test.Unit.NewCompactUtilsSpec
+        , Test.Unit.NewCompactSourceLocationSpec
+        , Test.Unit.NewCompactParserSpec
+        , Test.Unit.NewCompactErrorHandlerSpec
+        , Test.Unit.NewCompactOwnershipSpec
+        , Test.Unit.NewCompactDependenciesSpec
+        , Test.Unit.NewCompactCompilerIRSpec
+        , Test.Unit.NewCompactIntegrationSpec
+
         -- New Comprehensive Cabal Test Modules (2025)
         , Test.Unit.NewCabalComprehensiveTestsSpec
         , Test.Unit.NewParserQuickCheckTestsSpec

@@ -90,6 +90,16 @@ import qualified Test.Unit.ValueAnalysisBasicSpec
 import qualified Test.Unit.ErrorHandlerRecoverySpec
 import qualified Test.Unit.SyntaxValidatorValidationSpec
 
+-- New Compact Test Modules (2025) - 8 comprehensive tests
+import qualified Test.Unit.NewCompactUtilsSpec
+import qualified Test.Unit.NewCompactSourceLocationSpec
+import qualified Test.Unit.NewCompactParserSpec
+import qualified Test.Unit.NewCompactErrorHandlerSpec
+import qualified Test.Unit.NewCompactOwnershipSpec
+import qualified Test.Unit.NewCompactDependenciesSpec
+import qualified Test.Unit.NewCompactCompilerIRSpec
+import qualified Test.Unit.NewCompactIntegrationSpec
+
 -- New Core Module QuickCheck Test Suite (2025) - 8 comprehensive tests
 import qualified Test.Unit.NewCoreUtilsQuickCheckSpec
 import qualified Test.Unit.NewCoreSourceLocationQuickCheckSpec
@@ -3405,6 +3415,20 @@ tests =
         , Test.Unit.NewCompilerQuickCheckPropertiesSpec.tests
         , Test.Unit.NewParserQuickCheckPropertiesSpec.tests
         , Test.Unit.NewUtilsQuickCheckPropertiesSpec.tests
+        ]
+
+    -- ============================================================================
+    -- New Compact Test Modules (2025) - 8 comprehensive tests
+    -- ============================================================================
+    , testGroup "New Compact Core Functionality Tests"
+        [ Test.Unit.NewCompactUtilsSpec.tests
+        , Test.Unit.NewCompactSourceLocationSpec.tests
+        , Test.Unit.NewCompactParserSpec.tests
+        , Test.Unit.NewCompactErrorHandlerSpec.tests
+        , Test.Unit.NewCompactOwnershipSpec.tests
+        , Test.Unit.NewCompactDependenciesSpec.tests
+        , Test.Unit.NewCompactCompilerIRSpec.tests
+        , Test.Unit.NewCompactIntegrationSpec.tests
         ]
 
         ]
