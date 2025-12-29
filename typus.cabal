@@ -1130,6 +1130,9 @@ test-suite typus-test
         , Test.Unit.NewMemoryLeakPreventionQuickCheckSpec
         , Test.Unit.NewConcurrentSafetyQuickCheckSpec
         
+        -- New Comprehensive QuickCheck Test Module (2025) - 10 additional tests
+        , Test.Unit.NewComprehensiveQuickCheckTestSpec
+        
     other-modules:
             Test.Dependencies.Arbitrary,
             Test.Unit.NewCabalQuickCheckTestSuite,

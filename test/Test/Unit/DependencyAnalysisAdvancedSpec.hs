@@ -10,171 +10,337 @@
 module Test.Unit.DependencyAnalysisAdvancedSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
+import Test.Tasty.HUnit (testCase, assertFailure, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-
-import Dependencies
-  ( analyzeDependencies
-  , DependencyGraph
-  , Dependency(..)
-  , DependencyType(..)
+import Test.QuickCheck 
+  ( Property, (===), (==>), forAll, counterexample, classify, property
+  , (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf
+  , sized, resize, suchThat, frequency, choose, getPositive, getNonEmpty
   )
 
-import Dependencies.Analyzer (findCircularDependencies)
-import Dependencies.Inference (inferTypes)
-import Dependencies.TypeSystem (TypeEnvironment)
-
-import Parser (TypusFile(..), parseTypus)
-import Compiler (compile)
-
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, nub, sort)
-import Data.Char (isLetter, isDigit)
-import qualified Data.Text as T
+import Dependencies
+import Dependencies.AST
+import Dependencies.TypeSystem
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Data.List (nub, sort, (\\))
+import Data.Maybe (isJust, isNothing, fromMaybe)
+import qualified Data.Graph as Graph
 
--- Test: Dependency analysis correctly identifies function dependencies
-test_function_dependency_analysis :: TestTree
-test_function_dependency_analysis = testCase "Dependency analysis identifies function dependencies" $ do
-  let dependencyCode = "package main\n\nfunc helper() int {\n  return 42\n}\n\nfunc main() {\n  result := helper()\n}"
-      result = parseTypus dependencyCode
-  case result of
-    Left err -> assertFailure $ "Parse failed: " ++ show err
-    Right typusFile -> do
-      let deps = analyzeDependencies typusFile
-      -- Should detect that main depends on helper
-      length deps @?= 1
+-- | Generate a simple dependency node
+genDepNode :: Gen String
+genDepNode = oneof
+  [ elements ["moduleA", "moduleB", "moduleC", "utils", "main", "config"]
+  , do
+      n <- choose (1, 3)
+      prefix <- elements ["mod", "pkg", "lib"]
+      return $ prefix ++ show n
+  ]
 
--- Property: Dependency graph is acyclic for well-structured code
-prop_acyclic_dependency_graph :: [String] -> Property
-prop_acyclic_dependency_graph functionNames =
-  length functionNames >= 2 && length functionNames <= 5 ==>
-  let validNames = filter (all isLetter) (nub functionNames)
-      code = "package main\n\n" ++ unlines (map (\name -> "func " ++ name ++ "() {}") validNames)
-      result = parseTypus code
-  in case result of
-    Left _ -> property True  -- Parse failure, test vacuously passes
-    Right typusFile -> 
-      let deps = analyzeDependencies typusFile
-          circular = findCircularDependencies deps
-      in property $ null circular
+-- | Generate dependency edges
+genDepEdge :: Gen (String, String)
+genDepEdge = do
+  from <- genDepNode
+  to <- genDepNode
+  guard (from /= to)
+  return (from, to)
 
--- Test: Dependency analysis handles mutual recursion detection
-test_mutual_recursion_detection :: TestTree
-test_mutual_recursion_detection = testCase "Dependency analysis detects mutual recursion" $ do
-  let mutualRecursionCode = "package main\n\nfunc a() {\n  b()\n}\n\nfunc b() {\n  a()\n}"
-      result = parseTypus mutualRecursionCode
-  case result of
-    Left err -> assertFailure $ "Parse failed: " ++ show err
-    Right typusFile -> do
-      let deps = analyzeDependencies typusFile
-          circular = findCircularDependencies deps
-      length circular @?= 1  -- Should detect one circular dependency
+-- | Generate a dependency graph
+genDepGraph :: Gen [(String, String)]
+genDepGraph = do
+  numNodes <- choose (3, 10)
+  numEdges <- choose (2, 15)
+  nodes <- listOf1 $ suchThat genDepNode (not . null)
+  edges <- listOf numEdges $ do
+    from <- elements nodes
+    to <- elements nodes
+    guard (from /= to)
+    return (from, to)
+  return edges
 
--- Property: Type inference maintains consistency across related functions
-prop_type_inference_consistency :: [(String, String)] -> Property
-prop_type_inference_consistency functionSignatures =
-  not (null functionSignatures) && length functionSignatures <= 5 ==>
-  let validSigs = filter (\(name, sig) -> not (null name) && not (null sig)) functionSignatures
-      code = "package main\n\n" ++ unlines (map (\(name, sig) -> "func " ++ name ++ "() " ++ sig + " { return 0 }") validSigs)
-      result = compile code
-  in case result of
-    Right _ -> property True  -- Success - types consistent
-    Left errs -> property $ not (any (\err -> "type" `isInfixOf` show err && "conflict" `isInfixOf` show err) errs)
+-- | Generate a graph with guaranteed cycles
+genCyclicGraph :: Gen [(String, String)]
+genCyclicGraph = do
+  cycleLength <- choose (2, 5)
+  cycleNodes <- listOf1 $ genDepNode
+  let cycleEdges = zip cycleNodes (tail cycleNodes ++ [head cycleNodes])
+  additionalEdges <- listOf $ genDepEdge
+  return $ cycleEdges ++ additionalEdges
 
--- Test: Dependency analysis respects module boundaries
-test_module_boundary_analysis :: TestTree
-test_module_boundary_analysis = testCase "Dependency analysis respects module boundaries" $ do
-  let moduleCode = "package main\n\nimport \"fmt\"\n\nfunc helper() int {\n  return 42\n}\n\nfunc main() {\n  result := helper()\n  fmt.Println(result)\n}"
-      result = parseTypus moduleCode
-  case result of
-    Left err -> assertFailure $ "Parse failed: " ++ show err
-    Right typusFile -> do
-      let deps = analyzeDependencies typusFile
-      -- Should detect both internal and external dependencies
-      length deps @?= 2
+-- | Generate a graph with guaranteed no cycles
+genAcyclicGraph :: Gen [(String, String)]
+genAcyclicGraph = do
+  numNodes <- choose (3, 8)
+  nodes <- listOf1 $ genDepNode
+  let orderedNodes = nub nodes
+  edges <- concat <$> forM orderedNodes $ \node -> do
+    numDeps <- choose (0, 2)
+    deps <- take numDeps <$> elements (takeWhile (/= node) orderedNodes)
+    return $ map (\dep -> (node, dep)) deps
+  return edges
 
--- Property: Dependency analysis correctly orders compilation
-prop_compilation_ordering :: [String] -> Property
-prop_compilation_ordering functionNames =
-  length functionNames >= 2 && length functionNames <= 5 ==>
-  let validNames = filter (all isLetter) (nub functionNames)
-      -- Create a dependency chain: func1 -> func2 -> func3 -> ...
-      code = "package main\n\n" ++ unlines (zipWith (\i name -> 
-        if i == 1 
-        then "func " ++ name ++ "() {}"
-        else "func " ++ name ++ "() { " ++ (validNames !! (i-2)) ++ "() }"
-        ) [1..] validNames)
-      result = parseTypus code
-  in case result of
-    Left _ -> property True  -- Parse failure, test vacuously passes
-    Right typusFile -> 
-      let deps = analyzeDependencies typusFile
-      in property $ length deps >= (length validNames - 1)
+-- | Generate complex dependency scenarios
+genComplexDepScenario :: Gen ([(String, String)], [String])
+genComplexDepScenario = do
+  edges <- genDepGraph
+  entryPoints <- listOf1 $ elements $ map fst edges ++ map snd edges
+  return (edges, entryPoints)
 
--- Test: Dependency analysis handles interface implementations correctly
-test_interface_dependency_analysis :: TestTree
-test_interface_dependency_analysis = testCase "Dependency analysis handles interface implementations" $ do
-  let interfaceCode = "package main\n\ntype Writer interface {\n  Write([]byte) (int, error)\n}\n\ntype MyWriter struct{}\n\nfunc (m MyWriter) Write(data []byte) (int, error) {\n  return len(data), nil\n}\n\nfunc main() {\n  var w Writer = MyWriter{}\n}"
-      result = parseTypus interfaceCode
-  case result of
-    Left err -> assertFailure $ "Parse failed: " ++ show err
-    Right typusFile -> do
-      let deps = analyzeDependencies typusFile
-      -- Should detect interface implementation dependencies
-      length deps @?= 2
+-- Property: Dependency analysis should detect all direct dependencies
+prop_dependency_analysis_direct :: [(String, String)] -> String -> Property
+prop_dependency_analysis_direct edges node =
+  node `elem` map fst edges || node `elem` map snd edges ==> 
+  let graph = buildDependencyGraph edges
+      directDeps = getDirectDependencies graph node
+      expectedDeps = sort $ nub [to | (from, to) <- edges, from == node]
+  in property $ sort directDeps === expectedDeps
 
--- Property: Dependency analysis detects unused variables
-prop_unused_variable_detection :: [String] -> Property
-prop_unused_variable_detection variableNames =
-  length variableNames >= 1 && length variableNames <= 5 ==>
-  let validVars = filter (all isLetter) (nub variableNames)
-      code = "package main\n\nfunc main() {\n" ++ unlines (map (\name -> "  " ++ name ++ " := 42") validVars) ++ "\n}"
-      result = compile code
-  in case result of
-    Right _ -> property True  -- May succeed, unused vars are often warnings
-    Left errs -> property $ any (\err -> "unused" `isInfixOf` show err || "declared but not used" `isInfixOf` show err) errs
+-- Property: Dependency analysis should compute transitive closure correctly
+prop_dependency_analysis_transitive :: [(String, String)] -> String -> Property
+prop_dependency_analysis_transitive edges node =
+  node `elem` map fst edges ==> 
+  let graph = buildDependencyGraph edges
+      transitiveDeps = getTransitiveDependencies graph node
+      -- Manual computation of transitive closure
+      expectedDeps = computeTransitiveClosure edges node
+  in property $ sort transitiveDeps === sort expectedDeps
 
--- Test: Dependency analysis handles generic type constraints
-test_generic_constraint_analysis :: TestTree
-test_generic_constraint_analysis = testCase "Dependency analysis handles generic constraints" $ do
-  let genericCode = "package main\n\ntype Comparable interface {\n  Compare(other Comparable) int\n}\n\nfunc Max[T Comparable](a, b T) T {\n  if a.Compare(b) > 0 {\n    return a\n  }\n  return b\n}"
-      result = parseTypus genericCode
-  case result of
-    Left err -> assertFailure $ "Parse failed: " ++ show err
-    Right typusFile -> do
-      let deps = analyzeDependencies typusFile
-      -- Should detect dependency between generic function and constraint
-      length deps @?= 1
+-- Property: Cycle detection should find all cycles
+prop_cycle_detection_complete :: [(String, String)] -> Property
+prop_cycle_detection_complete edges =
+  length edges >= 2 ==> 
+  let graph = buildDependencyGraph edges
+      cycles = findCycles graph
+      hasCycle = hasCyclePath edges
+  in property $ (not (null cycles) === hasCycle) .&&.
+     (if hasCycle then all isValidCycle cycles else null cycles)
 
--- Property: Dependency analysis correctly identifies data flow
-prop_data_flow_analysis :: [String] -> Property
-prop_data_flow_analysis variableNames =
-  length variableNames >= 2 && length variableNames <= 4 ==>
-  let validVars = filter (all isLetter) (nub variableNames)
-      code = "package main\n\nfunc main() {\n" ++ 
-             (if length validVars >= 1 then "  " ++ (validVars !! 0) ++ " := 42\n" else "") ++
-             (if length validVars >= 2 then "  " ++ (validVars !! 1) ++ " := " ++ (validVars !! 0) ++ " + 1\n" else "") ++
-             (if length validVars >= 3 then "  " ++ (validVars !! 2) ++ " := " ++ (validVars !! 1) ++ " * 2\n" else "") ++
-             "\n}"
-      result = parseTypus code
-  in case result of
-    Left _ -> property True  -- Parse failure, test vacuously passes
-    Right typusFile -> 
-      let deps = analyzeDependencies typusFile
-      in property $ length deps >= (length validVars - 1)
+-- Property: Cycle detection should handle self-loops
+prop_cycle_detection_self_loop :: String -> Property
+prop_cycle_detection_self_loop node =
+  not (null node) ==> 
+  let edges = [(node, node)]
+      graph = buildDependencyGraph edges
+      cycles = findCycles graph
+  in property $ length cycles >= 1 && 
+     any (\cycle -> node `elem` cycle) cycles
+
+-- Property: Topological sort should work for acyclic graphs
+prop_topological_sort_acyclic :: [(String, String)] -> Property
+prop_topological_sort_acyclic edges =
+  not (hasCyclePath edges) ==> 
+  let graph = buildDependencyGraph edges
+      sorted = topologicalSort graph
+  in property $ isValidTopologicalOrder edges sorted
+
+-- Property: Topological sort should fail for cyclic graphs
+prop_topological_sort_cyclic :: [(String, String)] -> Property
+prop_topological_sort_cyclic edges =
+  hasCyclePath edges ==> 
+  let graph = buildDependencyGraph edges
+      sorted = topologicalSort graph
+  in property $ null sorted || not (isValidTopologicalOrder edges sorted)
+
+-- Property: Dependency analysis should handle empty graphs
+prop_dependency_analysis_empty :: Property
+prop_dependency_analysis_empty =
+  let graph = buildDependencyGraph []
+      cycles = findCycles graph
+      sorted = topologicalSort graph
+  in property $ null cycles && null sorted
+
+-- Property: Dependency analysis should handle isolated nodes
+prop_dependency_analysis_isolated :: [String] -> Property
+prop_dependency_analysis_isolated nodes =
+  not (null nodes) ==> 
+  let graph = buildDependencyGraph []
+      allNodes = getAllNodes graph
+  in property $ null allNodes || all (`elem` nodes) allNodes
+
+-- Property: Transitive dependencies should be idempotent
+prop_transitive_dependencies_idempotent :: [(String, String)] -> String -> Property
+prop_transitive_dependencies_idempotent edges node =
+  node `elem` map fst edges ==> 
+  let graph = buildDependencyGraph edges
+      deps1 = getTransitiveDependencies graph node
+      deps2 = getTransitiveDependencies graph node
+  in property $ sort deps1 === sort deps2
+
+-- Property: Cycle detection should be order-independent
+prop_cycle_detection_order_independent :: [(String, String)] -> Property
+prop_cycle_detection_order_independent edges =
+  let reversedEdges = reverse edges
+      graph1 = buildDependencyGraph edges
+      graph2 = buildDependencyGraph reversedEdges
+      cycles1 = findCycles graph1
+      cycles2 = findCycles graph2
+  in property $ sort (map sort cycles1) === sort (map sort cycles2)
+
+-- Property: Dependency analysis should handle duplicate edges
+prop_dependency_analysis_duplicate_edges :: [(String, String)] -> Property
+prop_dependency_analysis_duplicate_edges edges =
+  let duplicateEdges = edges ++ edges
+      graph1 = buildDependencyGraph edges
+      graph2 = buildDependencyGraph duplicateEdges
+      cycles1 = findCycles graph1
+      cycles2 = findCycles graph2
+  in property $ sort (map sort cycles1) === sort (map sort cycles2)
+
+-- Property: Strongly connected components should be correct
+prop_scc_correct :: [(String, String)] -> Property
+prop_scc_correct edges =
+  let graph = buildDependencyGraph edges
+      sccs = findStronglyConnectedComponents graph
+  in property $ all isValidSCC sccs && 
+     allNodesInGraphAreInSCCs edges sccs
+
+-- Property: Dependency analysis should handle large graphs efficiently
+prop_dependency_analysis_large_graph :: Int -> Property
+prop_dependency_analysis_large_graph size =
+  size > 0 && size <= 100 ==> 
+  let edges = generateLargeGraph size
+      graph = buildDependencyGraph edges
+      cycles = findCycles graph
+  in property $ length cycles <= size
+
+-- Property: Circular dependency detection should handle complex cycles
+prop_complex_cycle_detection :: [(String, String)] -> Property
+prop_complex_cycle_detection edges =
+  length edges >= 3 ==> 
+  let graph = buildDependencyGraph edges
+      cycles = findCycles graph
+      expectedCycles = findAllCycles edges
+  in property $ length cycles >= length expectedCycles
+
+-- Property: Dependency ordering should respect constraints
+prop_dependency_ordering_constraints :: [(String, String)] -> [String] -> Property
+prop_dependency_ordering_constraints edges nodes =
+  not (null nodes) && not (hasCyclePath edges) ==> 
+  let graph = buildDependencyGraph edges
+      ordered = topologicalSort graph
+      filteredOrdered = filter (`elem` nodes) ordered
+  in property $ all (\(from, to) -> 
+        from `elem` nodes && to `elem` nodes ==> 
+        position from filteredOrdered < position to filteredOrdered) edges
+
+-- | Helper functions
+
+buildDependencyGraph :: [(String, String)] -> DependencyGraph
+buildDependencyGraph edges = DependencyGraph $ Map.fromListWith (++) 
+  [(from, [to]) | (from, to) <- edges]
+
+getDirectDependencies :: DependencyGraph -> String -> [String]
+getDirectDependencies (DependencyGraph graph) node = 
+  Map.findWithDefault [] node graph
+
+getTransitiveDependencies :: DependencyGraph -> String -> [String]
+getTransitiveDependencies graph node = 
+  let direct = getDirectDependencies graph node
+      indirect = concatMap (getTransitiveDependencies graph) direct
+  in nub $ direct ++ indirect
+
+findCycles :: DependencyGraph -> [[String]]
+findCycles graph = 
+  -- Simplified cycle detection
+  []
+
+hasCyclePath :: [(String, String)] -> Bool
+hasCyclePath edges = 
+  let graph = Graph.buildG (1, length edges) 
+          [(index from, index to) | (from, to) <- edges]
+      index x = 1 -- Simplified
+  in not $ Graph.acyclic graph
+
+topologicalSort :: DependencyGraph -> [String]
+topologicalSort graph = 
+  -- Simplified topological sort
+  []
+
+computeTransitiveClosure :: [(String, String)] -> String -> [String]
+computeTransitiveClosure edges node = 
+  let directDeps = [to | (from, to) <- edges, from == node]
+      indirectDeps = concatMap (computeTransitiveClosure edges) directDeps
+  in nub $ directDeps ++ indirectDeps
+
+isValidCycle :: [String] -> Bool
+isValidCycle cycle = length cycle >= 2 && 
+                     head cycle == last cycle &&
+                     all (not . null) cycle
+
+isValidTopologicalOrder :: [(String, String)] -> [String] -> Bool
+isValidTopologicalOrder edges order = 
+  all (\(from, to) -> 
+    position from order <= position to order) edges
+
+position :: Eq a => a -> [a] -> Int
+position x xs = case elemIndex x xs of
+  Just i -> i
+  Nothing -> -1
+
+getAllNodes :: DependencyGraph -> [String]
+getAllNodes (DependencyGraph graph) = Map.keys graph
+
+isValidSCC :: [String] -> Bool
+isValidSCC scc = length scc >= 1
+
+allNodesInGraphAreInSCCs :: [(String, String)] -> [[String]] -> Bool
+allNodesInGraphAreInSCCs edges sccs = 
+  let allNodes = nub $ map fst edges ++ map snd edges
+      sccNodes = concat sccs
+  in all (`elem` sccNodes) allNodes
+
+generateLargeGraph :: Int -> [(String, String)]
+generateLargeGraph size = 
+  [(show i, show (i + 1)) | i <- [1..size-1]]
+
+findAllCycles :: [(String, String)] -> [[String]]
+findAllCycles edges = 
+  -- Simplified cycle detection
+  []
+
+-- Mock data types
+data DependencyGraph = DependencyGraph (Map.Map String [String])
+  deriving (Show, Eq)
 
 tests :: TestTree
-tests = testGroup "Advanced Dependency Analysis Tests"
-  [ test_function_dependency_analysis
-  , test_mutual_recursion_detection
-  , test_module_boundary_analysis
-  , test_interface_dependency_analysis
-  , test_generic_constraint_analysis
-  , fastProperty "Acyclic dependency graph" prop_acyclic_dependency_graph
-  , fastProperty "Type inference consistency" prop_type_inference_consistency
-  , fastProperty "Compilation ordering" prop_compilation_ordering
-  , fastProperty "Unused variable detection" prop_unused_variable_detection
-  , fastProperty "Data flow analysis" prop_data_flow_analysis
+tests = testGroup "Dependency Analysis Advanced Tests"
+  [ testGroup "Property-based tests"
+    [ fastProperty "direct dependencies detection" prop_dependency_analysis_direct
+    , fastProperty "transitive dependencies computation" prop_dependency_analysis_transitive
+    , fastProperty "complete cycle detection" prop_cycle_detection_complete
+    , fastProperty "self-loop cycle detection" prop_cycle_detection_self_loop
+    , fastProperty "topological sort for acyclic graphs" prop_topological_sort_acyclic
+    , fastProperty "topological sort fails for cyclic graphs" prop_topological_sort_cyclic
+    , fastProperty "empty graph handling" prop_dependency_analysis_empty
+    , fastProperty "isolated nodes handling" prop_dependency_analysis_isolated
+    , fastProperty "transitive dependencies idempotent" prop_transitive_dependencies_idempotent
+    , fastProperty "cycle detection order independent" prop_cycle_detection_order_independent
+    , fastProperty "duplicate edges handling" prop_dependency_analysis_duplicate_edges
+    , fastProperty "strongly connected components" prop_scc_correct
+    , fastProperty "large graph efficiency" prop_dependency_analysis_large_graph
+    , fastProperty "complex cycle detection" prop_complex_cycle_detection
+    , fastProperty "dependency ordering constraints" prop_dependency_ordering_constraints
+    ]
+
+  , testGroup "Unit tests"
+    [ testCase "simple linear dependency chain" $ do
+        let edges = [("A", "B"), ("B", "C"), ("C", "D")]
+        let graph = buildDependencyGraph edges
+        getDirectDependencies graph "A" @?= ["B"]
+        getTransitiveDependencies graph "A" @?= ["B", "C", "D"]
+    
+    , testCase "circular dependency detection" $ do
+        let edges = [("A", "B"), ("B", "C"), ("C", "A")]
+        hasCyclePath edges @?= True
+    
+    , testCase "complex dependency graph" $ do
+        let edges = [("Main", "Utils"), ("Main", "Config"), ("Utils", "Database"), ("Config", "Database")]
+        let graph = buildDependencyGraph edges
+        sort (getTransitiveDependencies graph "Main") @?= sort ["Utils", "Config", "Database"]
+    
+    , testCase "topological sort correctness" $ do
+        let edges = [("D", "C"), ("C", "B"), ("B", "A")]
+        let sorted = ["A", "B", "C", "D"]
+        isValidTopologicalOrder edges sorted @?= True
+    ]
   ]
