@@ -233,7 +233,7 @@ test-suite typus-test
         Test.Unit.TypeSystemBoundarySpec,
         Test.Unit.OwnershipComplexSpec,
         Test.Unit.ErrorRecoveryAdvancedSpec,
-        Test.Unit.SourceLocationPrecisionSpec,
+        
         Test.Unit.ParserQuickCheckSpec,
         Test.Unit.CompilerQuickCheckSpec,
         Test.Unit.TypeCheckerQuickCheckSpec,
@@ -1012,7 +1012,7 @@ test-suite typus-test
         , Test.Unit.ErrorHandlingConsistencySpec
         , Test.Unit.UtilsUnicodePerformanceSpec
         , Test.Unit.ModuleIntegrationPropertiesSpec
-        , Test.Unit.ConcurrentSafetySpec
+        
         , Test.Unit.BoundaryConditionSpec
         , Test.Unit.RegressionComprehensiveSpec
 
@@ -1050,6 +1050,16 @@ test-suite typus-test
         , Test.Unit.UtilsIndentationSpec
         , Test.Unit.SplitFunctionsSpec
         , Test.Unit.SpanOperationsSpec
+
+        -- New Comprehensive Test Modules (2025) - 8 additional tests
+        , Test.Unit.NewUnicodeParsingSpec
+        , Test.Unit.NewOwnershipBoundarySpec
+        , Test.Unit.NewDependentTypesPerfSpec
+        , Test.Unit.NewParserRecoverySpec
+        , Test.Unit.NewSourceLocationAccuracySpec
+        , Test.Unit.NewCompilerIRConsistencySpec
+        , Test.Unit.NewMemorySafetySpec
+        , Test.Unit.NewConcurrentSafetySpec
         
     other-modules:
             Test.Dependencies.Arbitrary,
