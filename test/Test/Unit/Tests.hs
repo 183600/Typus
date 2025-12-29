@@ -48,6 +48,20 @@ import qualified Test.Unit.OwnershipTransferConsistencyQuickCheckSpec
 import qualified Test.Unit.DependencyCycleDetectionQuickCheckSpec
 import qualified Test.Unit.TypeSystemBoundaryQuickCheckSpec
 
+-- ============================================================================
+-- New Advanced QuickCheck Test Modules (2024) - 10 Comprehensive Tests
+-- ============================================================================
+import qualified Test.Unit.SourceLocationAdvancedQuickCheckSpec
+import qualified Test.Unit.ParserAdvancedQuickCheckSpec
+import qualified Test.Unit.ErrorHandlerAdvancedQuickCheckSpec
+import qualified Test.Unit.UtilsAdvancedQuickCheckSpec
+import qualified Test.Unit.OwnershipAdvancedQuickCheckSpec
+import qualified Test.Unit.DependenciesAdvancedQuickCheckSpec
+import qualified Test.Unit.CompilerAdvancedQuickCheckSpec
+import qualified Test.Unit.GoToolchainAdvancedQuickCheckSpec
+import qualified Test.Unit.SyntaxValidatorAdvancedQuickCheckSpec
+import qualified Test.Unit.IntegrationAdvancedQuickCheckSpec
+
 -- New Cabal Test Modules
 import qualified Test.Unit.NewCabalUtilsSpec
 import qualified Test.Unit.NewCabalSourceLocationSpec
@@ -3555,6 +3569,22 @@ tests =
         , Test.Unit.OwnershipTransferConsistencyQuickCheckSpec.tests
         , Test.Unit.DependencyCycleDetectionQuickCheckSpec.tests
         , Test.Unit.TypeSystemBoundaryQuickCheckSpec.tests
+        ]
+
+    -- ============================================================================
+    -- New Advanced QuickCheck Test Modules (2024) - 10 Comprehensive Tests
+    -- ============================================================================
+    , testGroup "New Advanced QuickCheck Test Modules (2024) - Comprehensive Testing"
+        [ Test.Unit.SourceLocationAdvancedQuickCheckSpec.tests
+        , Test.Unit.ParserAdvancedQuickCheckSpec.tests
+        , Test.Unit.ErrorHandlerAdvancedQuickCheckSpec.tests
+        , Test.Unit.UtilsAdvancedQuickCheckSpec.tests
+        , Test.Unit.OwnershipAdvancedQuickCheckSpec.tests
+        , Test.Unit.DependenciesAdvancedQuickCheckSpec.tests
+        , Test.Unit.CompilerAdvancedQuickCheckSpec.tests
+        , Test.Unit.GoToolchainAdvancedQuickCheckSpec.tests
+        , Test.Unit.SyntaxValidatorAdvancedQuickCheckSpec.tests
+        , Test.Unit.IntegrationAdvancedQuickCheckSpec.tests
         ]
 
     -- ============================================================================

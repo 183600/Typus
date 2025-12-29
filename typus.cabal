@@ -1216,7 +1216,13 @@ test-suite typus-test
         Test.Unit.OwnershipBoundarySpec,
         Test.Unit.DependentTypesBoundarySpec,
         Test.Unit.StringUtilsBoundarySpec,
-        Test.Unit.PerformanceBoundarySpec
+        Test.Unit.PerformanceBoundarySpec,
+        
+        -- New Enhanced QuickCheck Test Modules (2025) - 4 comprehensive tests
+        -- (These modules are already listed above),
+        
+        -- New Advanced QuickCheck Test Modules (2024) - 10 Comprehensive Tests
+        -- (These modules are already listed above)
     build-depends:
         base >=4.7 && <5,
         typus,
