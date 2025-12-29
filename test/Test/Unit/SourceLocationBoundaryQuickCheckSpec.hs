@@ -1,123 +1,198 @@
-{-# LANGUAGE TemplateHaskell #-}
+module Test.Unit.SourceLocationBoundaryQuickCheckSpec (tests) where
 
--- | Boundary condition tests for SourceLocation module
-module Test.Unit.SourceLocationBoundaryQuickCheckSpec where
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
+import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck (Arbitrary(..), Gen, choose, listOf, suchThat, oneof, elements, frequency)
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, posAfter, spanBetween, mergeSpans, isValidSpan, locatedAt, locatedWithSpan, mapLocated, _isPosInSpan, _doSpansOverlap, _spanLength)
 
-import Test.Tasty
-import Test.Tasty.QuickCheck
-import SourceLocation 
-  ( SourcePos(..)
-  , SourceSpan(..)
-  , spanStart
-  , spanEnd
-  , Located(..)
-  , locatedWithSpan
-  , posLine
-  , posColumn
-  )
-import Data.Ord (comparing)
+-- | Generate arbitrary source positions with boundary-focused values
+instance Arbitrary SourcePos where
+  arbitrary = frequency 
+    [ (5, do -- Normal positions
+        line <- choose (1, 100)
+        column <- choose (1, 100)
+        offset <- choose (0, 10000)
+        return $ SourcePos line column offset)
+    , (1, do -- Edge case: line 1
+        column <- choose (1, 100)
+        offset <- choose (0, 100)
+        return $ SourcePos 1 column offset)
+    , (1, do -- Edge case: column 1
+        line <- choose (1, 100)
+        offset <- choose (0, 100)
+        return $ SourcePos line 1 offset)
+    , (1, do -- Edge case: offset 0
+        line <- choose (1, 100)
+        column <- choose (1, 100)
+        return $ SourcePos line column 0)
+    ]
 
--- ============================================================================
--- Test Properties
--- ============================================================================
+-- | Generate arbitrary source spans with boundary conditions
+instance Arbitrary SourceSpan where
+  arbitrary = frequency
+    [ (5, do -- Normal spans
+        startLine <- choose (1, 50)
+        startCol <- choose (1, 50)
+        endLineOffset <- choose (0, 10)
+        endColOffset <- choose (0, 50)
+        let endLine = startLine + endLineOffset
+            endCol = if endLine == startLine then startCol + endColOffset else choose (1, 100)
+        let start = SourcePos startLine startCol (startLine * 100 + startCol)
+            end = SourcePos endLine endCol (endLine * 100 + endCol)
+        return $ SourceSpan start end)
+    , (2, do -- Zero-length spans
+        pos <- arbitrary
+        return $ SourceSpan pos pos)
+    , (1, do -- Single character spans
+        pos <- arbitrary
+        let endPos = posAfter 'x' pos
+        return $ SourceSpan pos endPos)
+    ]
 
--- | SourcePos should handle extreme line numbers
-prop_sourcepos_extreme_lines :: Positive Int -> Property
-prop_sourcepos_extreme_lines (Positive line) =
-  let pos = SourcePos line 1
-  in posLine pos === line
+-- | Generate arbitrary located values
+instance Arbitrary a => Arbitrary (Located a) where
+  arbitrary = do
+    value <- arbitrary
+    pos <- arbitrary
+    span <- arbitrary
+    return $ Located value pos span
 
--- | SourcePos should handle extreme column numbers
-prop_sourcepos_extreme_columns :: Positive Int -> Property
-prop_sourcepos_extreme_columns (Positive col) =
-  let pos = SourcePos 1 col
-  in posColumn pos === col
+-- | Generate strings for position advancement with boundary cases
+genBoundaryText :: Gen String
+genBoundaryText = frequency
+    [ (5, listOf $ elements ['a'..'z', 'A'..'Z', '0'..'9', ' '])
+    , (2, return $ replicate 10 '\n') -- Many newlines
+    , (2, return $ replicate 10 '\t') -- Many tabs
+    , (1, return "") -- Empty string
+    ]
 
--- | SourcePos should handle zero values gracefully
-prop_sourcepos_zero_values :: Property
-prop_sourcepos_zero_values =
-  let pos = SourcePos 0 0
-  in posLine pos === 0 .&&. posColumn pos === 0
+tests :: TestTree
+tests =
+  testGroup "SourceLocation boundary conditions QuickCheck tests"
+    [ testGroup "Position boundary conditions"
+        [ testCase "posAfter handles all boundary characters" $ do
+            let pos = startPos { posColumn = 5, posOffset = 10 }
+                posNewline = posAfter '\n' pos
+                posTab = posAfter '\t' pos
+                posRegular = posAfter 'x' pos
+            posNewline @?= SourcePos { posLine = 2, posColumn = 1, posOffset = 11 }
+            posTab @?= SourcePos { posLine = 1, posColumn = 9, posOffset = 11 } -- Next tab stop
+            posRegular @?= SourcePos { posLine = 1, posColumn = 6, posOffset = 11 }
 
--- | SourceSpan should handle same position spans
-prop_sourcespan_same_position :: Positive Int -> Positive Int -> Property
-prop_sourcespan_same_position (Positive line) (Positive col) =
-  let pos = SourcePos line col
-      span = SourceSpan pos pos
-  in spanStart span === pos .&&. spanEnd span === pos
+        , fastProperty "posAfter maintains monotonic offset increase" $
+            \pos ch ->
+              let newPos = posAfter ch pos
+              in posOffset newPos > posOffset pos
 
--- | SourceSpan should handle reversed positions
-prop_sourcespan_reversed_positions :: Positive Int -> Positive Int -> Property
-prop_sourcespan_reversed_positions (Positive line1) (Positive col1) =
-  let pos1 = SourcePos line1 col1
-      pos2 = SourcePos (line1 + 1) (col1 + 1)
-      span1 = SourceSpan pos1 pos2
-      span2 = SourceSpan pos2 pos1
-  in spanStart span1 === pos1 .&&. spanEnd span1 === pos2 .&&.
-     spanStart span2 === pos2 .&&. spanEnd span2 === pos1
+        , fastProperty "posAfter newline always sets column to 1" $
+            \pos ->
+              let newPos = posAfter '\n' pos
+              in posColumn newPos == 1
 
--- | Located values should handle extreme spans
-prop_located_extreme_spans :: Positive Int -> Positive Int -> Positive Int -> Positive Int -> String -> Property
-prop_located_extreme_spans (Positive line1) (Positive col1) (Positive line2) (Positive col2) value =
-  let start = SourcePos line1 col1
-      end = SourcePos line2 col2
-      span = SourceSpan start end
-      located = locatedWithSpan span value
-  in locatedSpan located === span
+        , fastProperty "posAfter tab advances to multiple of 8 plus 1" $
+            \pos ->
+              let newPos = posAfter '\t' pos
+                  col = posColumn newPos
+              in (col - 1) `mod` 8 == 0
+        ]
 
--- | SourcePos comparison should handle equal values
-prop_sourcepos_equal_comparison :: Positive Int -> Positive Int -> Property
-prop_sourcepos_equal_comparison (Positive line) (Positive col) =
-  let pos1 = SourcePos line col
-      pos2 = SourcePos line col
-  in pos1 === pos2 .&&. compare pos1 pos2 === EQ
+    , testGroup "Span boundary conditions"
+        [ testCase "zero-length span is valid" $ do
+            let pos = SourcePos 5 10 100
+                span = SourceSpan pos pos
+            isValidSpan span @?= True
 
--- | SourcePos comparison should handle different lines
-prop_sourcepos_line_comparison :: Positive Int -> Positive Int -> Positive Int -> Property
-prop_sourcepos_line_comparison (Positive line1) (Positive line2) (Positive col) =
-  let pos1 = SourcePos line1 col
-      pos2 = SourcePos line2 col
-      expected = if line1 < line2 then LT else if line1 > line2 then GT else EQ
-  in compare pos1 pos2 === expected
+        , testCase "span covering single position has zero length" $ do
+            let pos = SourcePos 3 7 50
+                span = SourceSpan pos pos
+            _spanLength span @?= 0
 
--- | SourcePos comparison should handle different columns
-prop_sourcepos_column_comparison :: Positive Int -> Positive Int -> Positive Int -> Property
-prop_sourcepos_column_comparison (Positive line) (Positive col1) (Positive col2) =
-  let pos1 = SourcePos line col1
-      pos2 = SourcePos line col2
-      expected = if col1 < col2 then LT else if col1 > col2 then GT else EQ
-  in compare pos1 pos2 === expected
+        , fastProperty "span length is non-negative" $
+            \span ->
+              _spanLength span >= 0
 
--- | SourceSpan should handle very large positions
-prop_sourcespan_large_positions :: Property
-prop_sourcespan_large_positions =
-  let largeNum = 1000000
-      start = SourcePos largeNum largeNum
-      end = SourcePos (largeNum + 1) (largeNum + 1)
-      span = SourceSpan start end
-  in spanStart span === start .&&. spanEnd span === end
+        , fastProperty "merged span contains both original spans" $
+            \span1 span2 ->
+              let merged = mergeSpans span1 span2
+              in spanStart merged <= spanStart span1 &&
+                 spanEnd merged >= spanEnd span1 &&
+                 spanStart merged <= spanStart span2 &&
+                 spanEnd merged >= spanEnd span2
 
--- | Located values should extract correctly regardless of span
-prop_located_extraction_boundary :: SourceSpan -> String -> Property
-prop_located_extraction_boundary span value =
-  let located = locatedWithSpan span value
-  case located of
-    Located _ v -> v === value
+        , fastProperty "span overlap detection is symmetric" $
+            \span1 span2 ->
+              _doSpansOverlap span1 span2 == _doSpansOverlap span2 span1
+        ]
 
--- ============================================================================
--- Test Suite
--- ============================================================================
+    , testGroup "Located value boundary conditions"
+        [ testCase "locatedAt creates span with same start and end" $ do
+            let pos = SourcePos 10 20 200
+                value = "test"
+                located = locatedAt pos value
+            locSpan located @?= SourceSpan pos pos
 
-testSuite :: TestTree
-testSuite = testGroup "SourceLocation Boundary QuickCheck Tests"
-  [ testProperty "SourcePos: extreme line numbers" prop_sourcepos_extreme_lines
-  , testProperty "SourcePos: extreme column numbers" prop_sourcepos_extreme_columns
-  , testProperty "SourcePos: zero values" prop_sourcepos_zero_values
-  , testProperty "SourceSpan: same position spans" prop_sourcespan_same_position
-  , testProperty "SourceSpan: reversed positions" prop_sourcespan_reversed_positions
-  , testProperty "Located: extreme spans" prop_located_extreme_spans
-  , testProperty "SourcePos: equal comparison" prop_sourcepos_equal_comparison
-  , testProperty "SourcePos: line comparison" prop_sourcepos_line_comparison
-  , testProperty "SourcePos: column comparison" prop_sourcepos_column_comparison
-  , testProperty "SourceSpan: large positions" prop_sourcespan_large_positions
-  ]
+        , fastProperty "mapLocated preserves position information" $
+            \value1 value2 pos ->
+              let located1 = locatedAt pos value1
+                  located2 = mapLocated (const value2) located1
+              in locPos located2 == locPos located1 && 
+                 locSpan located2 == locSpan located1
+
+        , fastProperty "located values maintain equality structure" $
+            \value pos ->
+              let located1 = locatedAt pos value
+                  located2 = locatedAt pos value
+              in located1 == located2
+        ]
+
+    , testGroup "Position containment and overlap"
+        [ testCase "position containment works for span boundaries" $ do
+            let start = SourcePos 1 1 0
+                end = SourcePos 1 5 4
+                span = SourceSpan start end
+                inside = SourcePos 1 3 2
+                outside = SourcePos 1 6 5
+            _isPosInSpan inside span @?= True
+            _isPosInSpan outside span @?= False
+            _isPosInSpan start span @?= True
+            _isPosInSpan end span @?= True
+
+        , fastProperty "span overlap with zero-length spans" $
+            \pos ->
+              let zeroSpan = SourceSpan pos pos
+                  normalSpan = spanBetween pos (posAfter 'x' pos)
+              in _doSpansOverlap zeroSpan normalSpan
+
+        , fastProperty "identical spans always overlap" $
+            \span ->
+              _doSpansOverlap span span
+
+        , testCase "non-overlapping spans on different lines" $ do
+            let span1 = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
+                span2 = SourceSpan (SourcePos 2 1 10) (SourcePos 2 10 19)
+            _doSpansOverlap span1 span2 @?= False
+        ]
+
+    , testGroup "Extreme boundary conditions"
+        [ testCase "position advancement with empty string" $ do
+            let pos = startPos
+                result = pos `posAfter` ' ' -- Single character
+            posOffset result @?= 1
+
+        , fastProperty "span merging with identical spans preserves identity" $
+            \span ->
+              mergeSpans span span == span
+
+        , testCase "tab advancement at column boundaries" $ do
+            let pos1 = SourcePos 1 1 0 -- Before first tab stop
+                pos2 = SourcePos 1 8 7 -- At tab stop
+                pos3 = SourcePos 1 9 8 -- After tab stop
+                newPos1 = posAfter '\t' pos1
+                newPos2 = posAfter '\t' pos2
+                newPos3 = posAfter '\t' pos3
+            posColumn newPos1 @?= 9 -- Next tab stop
+            posColumn newPos2 @?= 17 -- Next tab stop
+            posColumn newPos3 @?= 17 -- Next tab stop
+        ]
+    ]

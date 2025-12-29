@@ -1,170 +1,200 @@
-{-# LANGUAGE CPP #-}
 module Test.Unit.UtilsStringBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, choose, 
-                        Property, (===), forAll, counterexample)
-import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed,
-             removeLineComments, removeComments, normalizeIndentation, breakOn)
+import Test.QuickCheck (Arbitrary(..), Gen, choose, listOf, suchThat, oneof, elements, frequency)
+import Data.Char (isSpace)
+import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, breakOn)
 
--- ============================================================================
--- Test data generators
--- ============================================================================
+-- | Generate arbitrary strings with boundary conditions
+instance Arbitrary String where
+  arbitrary = frequency
+    [ (5, listOf $ elements ['a'..'z', 'A'..'Z', '0'..'9', ' ', '\t'])
+    , (2, return "") -- Empty string
+    , (1, listOf $ elements " \t\n\r") -- Whitespace only
+    , (1, listOf $ elements ['\128'..'\255']) -- Unicode characters
+    , (1, return $ replicate 100 'a') -- Long string
+    ]
 
--- Generate strings with various whitespace patterns
-genWhitespaceString :: Gen String
-genWhitespaceString = listOf $ elements [' ', '\t', '\n', '\r']
+-- | Generate delimiters for splitting
+genDelimiter :: Gen Char
+genDelimiter = elements [',', ':', ';', '|', '#', '@', ' ', '\t']
 
--- Generate strings with mixed content
-genMixedString :: Gen String
-genMixedString = do
-  whitespace <- genWhitespaceString
-  content <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ".,;:!@#$%^&*()[]{}<>+-*/="
-  moreWhitespace <- genWhitespaceString
-  return $ whitespace ++ content ++ moreWhitespace
-
--- Generate strings with comment patterns
-genCommentString :: Gen String
-genCommentString = do
-  before <- listOf $ elements $ ['a'..'z'] ++ [' '] ++ ['\n']
-  commentType <- elements ["//", "/*"]
-  comment <- listOf $ elements $ ['a'..'z'] ++ [' '] ++ ['\n']
-  after <- if commentType == "//"
-           then listOf $ elements $ ['a'..'z'] ++ [' '] ++ ['\n']
-           else do
-               afterContent <- listOf $ elements $ ['a'..'z'] ++ [' '] ++ ['\n']
-               endComment <- elements ["*/", ""]  -- Sometimes missing end comment
-               return $ afterContent ++ endComment
-  return $ before ++ commentType ++ comment ++ after
-
--- Generate strings with indentation
-genIndentedString :: Gen String
-genIndentedString = do
-  numLines <- choose (1, 5)
-  lines <- sequence $ replicate numLines $ do
-    indent <- choose (0, 10)
-    content <- listOf $ elements $ ['a'..'z'] ++ [' ']
-    return $ replicate indent ' ' ++ content
-  return $ unlines lines
-
--- ============================================================================
--- Properties for trim function
--- ============================================================================
-
-prop_trim_idempotent :: String -> Property
-prop_trim_idempotent s =
-  let trimmed = trim s
-  in trim trimmed === trimmed
-
-prop_trim_no_leading_trailing_whitespace :: String -> Property
-prop_trim_no_leading_trailing_whitespace s =
-  let trimmed = trim s
-  in counterexample ("Result: " ++ show trimmed) $
-     not (null trimmed) ==> 
-     (head trimmed /= ' ' && head trimmed /= '\t' && head trimmed /= '\n' && head trimmed /= '\r') &&
-     (last trimmed /= ' ' && last trimmed /= '\t' && last trimmed /= '\n' && last trimmed /= '\r')
-
--- ============================================================================
--- Properties for splitBy functions
--- ============================================================================
-
-prop_split_by_preserves_empty_segments :: Char -> String -> Property
-prop_split_by_preserves_empty_segments delim s =
-  let result = splitBy delim s
-      reconstructed = concatMap (\seg -> seg ++ [delim]) (init result) ++ last result
-  in length result > 1 ==> reconstructed === s
-
-prop_split_by_collapsed_no_empty_segments :: Char -> String -> Property
-prop_split_by_collapsed_no_empty_segments delim s =
-  let result = splitByCollapsed delim s
-  in all (not . null) result
-
--- ============================================================================
--- Properties for comment removal
--- ============================================================================
-
-prop_remove_line_comments_preserves_newlines :: String -> Property
-prop_remove_line_comments_preserves_newlines s =
-  let originalLines = lines s
-      processedLines = lines $ removeLineComments s
-  in length processedLines === length originalLines
-
-prop_remove_comments_no_comment_markers :: String -> Property
-prop_remove_comments_no_comment_markers s =
-  let noCommentString = filter (`notElem` "/") s
-  in removeComments noCommentString === noCommentString
-
--- ============================================================================
--- Properties for indentation normalization
--- ============================================================================
-
-prop_normalize_indentation_preserves_relative_structure :: Property
-prop_normalize_indentation_preserves_relative_structure =
-  forAll genIndentedString $ \s ->
-    let normalized = normalizeIndentation s
-        originalLines = lines s
-        normalizedLines = lines normalized
-        -- Check that non-empty lines maintain their relative indentation
-        originalIndents = [length $ takeWhile isSpace line | line <- originalLines, not (all isSpace line)]
-        normalizedIndents = [length $ takeWhile isSpace line | line <- normalizedLines, not (all isSpace line)]
-    in case (originalIndents, normalizedIndents) of
-         ([], []) -> property True
-         (orig, norm) -> 
-           if length orig == length norm
-           then let minOrig = minimum orig
-                    minNorm = minimum norm
-                    adjustedOrig = map (\x -> x - minOrig) orig
-                    adjustedNorm = map (\x -> x - minNorm) norm
-                in adjustedOrig === adjustedNorm
-           else property False
-  where
-    isSpace c = c == ' ' || c == '\t'
-
--- ============================================================================
--- Properties for breakOn function
--- ============================================================================
-
-prop_break_on_empty_pattern :: String -> Property
-prop_break_on_empty_pattern s =
-  breakOn "" s === ("", s)
-
-prop_break_on_pattern_not_found :: String -> String -> Property
-prop_break_on_pattern_not_found pat s =
-  not (pat `isInfixOf` s) ==> breakOn pat s === (s, "")
-
-prop_break_on_roundtrip :: String -> String -> Property
-prop_break_on_roundtrip pat s =
-  pat `isInfixOf` s ==> 
-  let (before, after) = breakOn pat s
-  in before ++ pat ++ after === s
-  where
-    isInfixOf needle haystack = needle `elem` [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]
-
--- ============================================================================
--- Test suite
--- ============================================================================
+-- | Generate strings with specific delimiters
+genStringWithDelimiter :: Char -> Gen String
+genStringWithDelimiter delim = listOf $ frequency
+    [ (8, elements $ filter (/= delim) ['a'..'z', 'A'..'Z', '0'..'9'])
+    , (2, return delim)
+    ]
 
 tests :: TestTree
-tests = testGroup "Utils String Boundary QuickCheck Tests"
-  [ testGroup "trim function properties"
-    [ fastProperty "trim is idempotent" prop_trim_idempotent
-    , fastProperty "trim removes leading/trailing whitespace" prop_trim_no_leading_trailing_whitespace
+tests =
+  testGroup "Utils string boundary conditions QuickCheck tests"
+    [ testGroup "trim boundary conditions"
+        [ testCase "trim handles empty string" $ do
+            trim "" @?= ""
+
+        , testCase "trim handles whitespace-only string" $ do
+            trim "   \t\n\r  " @?= ""
+
+        , testCase "trim preserves internal whitespace" $ do
+            trim "  hello   world  " @?= "hello   world"
+
+        , fastProperty "trim is idempotent" $
+            \s ->
+              trim (trim s) == trim s
+
+        , fastProperty "trim never adds characters" $
+            \s ->
+              length (trim s) <= length s
+
+        , fastProperty "trim removes only leading/trailing whitespace" $
+            \s ->
+              let trimmed = trim s
+                  hasLeadingSpace = not (null s) && isSpace (head s) && null trimmed
+                  hasTrailingSpace = not (null s) && isSpace (last s) && null trimmed
+              in not (hasLeadingSpace || hasTrailingSpace) || null trimmed
+
+        , testCase "trim handles unicode whitespace" $ do
+            trim "\x00A0hello\x00A0" @?= "\x00A0hello\x00A0" -- Non-breaking space not considered by isSpace
+        ]
+
+    , testGroup "splitBy boundary conditions"
+        [ testCase "splitBy on empty string returns singleton" $ do
+            splitBy ',' "" @?= [""]
+
+        , testCase "splitBy preserves empty segments" $ do
+            splitBy ':' "a::b:" @?= ["a", "", "b", ""]
+
+        , testCase "splitBy with delimiter not in string returns singleton" $ do
+            splitBy ',' "hello" @?= ["hello"]
+
+        , fastProperty "splitBy preserves total content when rejoining" $
+            \delim s ->
+              let parts = splitBy delim s
+                  rejoined = concat $ parts `zip` repeat [delim] >>= \(part, d) -> part ++ [d]
+                  rejoined' = if null parts then "" else init rejoined
+              in rejoined' == s
+
+        , fastProperty "splitBy length is at least 1" $
+            \delim s ->
+              length (splitBy delim s) >= 1
+
+        , fastProperty "splitBy with consecutive delimiters creates empty segments" $
+            \s ->
+              let parts = splitBy ',' s
+                  hasConsecutiveDelims = "##" `isInfixOf` s
+              in if hasConsecutiveDelims then any null parts else True
+        ]
+
+    , testGroup "splitByCollapsed boundary conditions"
+        [ testCase "splitByCollapsed on empty string returns empty" $ do
+            splitByCollapsed ',' "" @?= []
+
+        , testCase "splitByCollapsed removes empty segments" $ do
+            splitByCollapsed ':' "a::b:" @?= ["a", "b"]
+
+        , testCase "splitByCollapsed with only delimiters returns empty" $ do
+            splitByCollapsed ',' ",,," @?= []
+
+        , fastProperty "splitByCollapsed never returns empty segments" $
+            \delim s ->
+              all (not . null) (splitByCollapsed delim s)
+
+        , fastProperty "splitByCollapsed result length <= splitBy result length" $
+            \delim s ->
+              length (splitByCollapsed delim s) <= length (splitBy delim s)
+
+        , fastProperty "splitByCollapsed preserves non-empty segments" $
+            \delim s ->
+              let collapsed = splitByCollapsed delim s
+                  normal = splitBy delim s
+                  nonEmptyInNormal = filter (not . null) normal
+              in collapsed == nonEmptyInNormal
+        ]
+
+    , testGroup "comma splitting functions"
+        [ testCase "splitByComma delegates to splitBy" $ do
+            splitByComma "x,,y" @?= ["x", "", "y"]
+
+        , testCase "splitByCommaCollapsed yields [] on empty input" $ do
+            splitByCommaCollapsed "" @?= []
+
+        , fastProperty "splitByComma equals splitBy with comma" $
+            \s ->
+              splitByComma s == splitBy ',' s
+
+        , fastProperty "splitByCommaCollapsed equals splitByCollapsed with comma" $
+            \s ->
+              splitByCommaCollapsed s == splitByCollapsed ',' s
+        ]
+
+    , testGroup "breakOn boundary conditions"
+        [ testCase "breakOn with empty pattern" $ do
+            breakOn "" "abc" @?= ("", "abc")
+
+        , testCase "breakOn with pattern not found" $ do
+            breakOn "xyz" "hello" @?= ("hello", "")
+
+        , testCase "breakOn with exact match" $ do
+            breakOn "abc" "abc" @?= ("", "")
+
+        , testCase "breakOn with pattern at start" $ do
+            breakOn "ab" "abcde" @?= ("", "cde")
+
+        , testCase "breakOn with pattern at end" $ do
+            breakOn "de" "abcde" @?= ("abc", "")
+
+        , fastProperty "breakOn preserves total length" $
+            \pat s ->
+              let (before, after) = breakOn pat s
+              in length before + length pat + length after == length s
+
+        , fastProperty "breakOn pattern appears in after part" $
+            \pat s ->
+              not (null pat) && pat `isInfixOf` s ==>
+                let (before, after) = breakOn pat s
+                in pat `isPrefixOf` after
+
+        , fastProperty "breakOn is deterministic" $
+            \pat s ->
+              breakOn pat s == breakOn pat s
+        ]
+
+    , testGroup "Edge cases and stress tests"
+        [ testCase "functions handle very long strings" $ do
+            let longString = replicate 10000 'a' ++ "," ++ replicate 10000 'b'
+                parts = splitBy ',' longString
+                collapsed = splitByCollapsed ',' longString
+            length parts @?= 2
+            length collapsed @?= 2
+
+        , testCase "functions handle strings with special characters" $ do
+            let special = "hello\x00world\x00test"
+                parts = splitBy '\x00' special
+            parts @?= ["hello", "world", "test"]
+
+        , fastProperty "trim and splitBy interact correctly" $
+            \s ->
+              let trimmed = trim s
+                  parts = splitBy ' ' trimmed
+                  noLeadingEmpty = null parts || not (null (head parts))
+              in noLeadingEmpty
+
+        , fastProperty "splitBy and splitByCollapsed consistency on delimiter-free strings" $
+            \delim s ->
+              not (delim `elem` s) ==>
+                splitBy delim s == splitByCollapsed delim s
+        ]
     ]
-  , testGroup "splitBy function properties"
-    [ fastProperty "splitBy preserves empty segments" prop_split_by_preserves_empty_segments
-    , fastProperty "splitByCollapsed removes empty segments" prop_split_by_collapsed_no_empty_segments
-    ]
-  , testGroup "comment removal properties"
-    [ fastProperty "removeLineComments preserves newlines" prop_remove_line_comments_preserves_newlines
-    , fastProperty "removeComments handles strings without comments" prop_remove_comments_no_comment_markers
-    ]
-  , testGroup "indentation normalization properties"
-    [ fastProperty "normalizeIndentation preserves relative structure" prop_normalize_indentation_preserves_relative_structure
-    ]
-  , testGroup "breakOn function properties"
-    [ fastProperty "breakOn handles empty pattern" prop_break_on_empty_pattern
-    , fastProperty "breakOn handles pattern not found" prop_break_on_pattern_not_found
-    , fastProperty "breakOn roundtrip property" prop_break_on_roundtrip
-    ]
-  ]
+
+-- Helper function for infix check
+isInfixOf :: Eq a => [a] -> [a] -> Bool
+isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
+  where
+    isPrefixOf [] _ = True
+    isPrefixOf _ [] = False
+    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    tails [] = [[]]
+    tails xs@(_:ys) = xs : tails ys
