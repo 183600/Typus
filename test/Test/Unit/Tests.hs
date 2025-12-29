@@ -598,6 +598,20 @@ import qualified Test.Unit.NewBoundaryConditionSpec
 import qualified Test.Unit.NewPerformanceSpec
 
 -- ============================================================================
+-- New Cabal Test Modules (Added by user request) - 10 comprehensive tests
+-- ============================================================================
+import qualified Test.Unit.NewCabalCoreSpec
+import qualified Test.Unit.NewCabalParserBoundarySpec
+import qualified Test.Unit.NewCabalCompilerInvariantSpec
+import qualified Test.Unit.NewCabalOwnershipSafetySpec
+import qualified Test.Unit.NewCabalTypeSystemSpec
+import qualified Test.Unit.NewCabalErrorRecoverySpec
+import qualified Test.Unit.NewCabalPerformanceSpec
+import qualified Test.Unit.NewCabalIntegrationSpec
+import qualified Test.Unit.NewCabalQuickCheckSpec
+import qualified Test.Unit.NewCabalEdgeCaseSpec
+
+-- ============================================================================
 -- Enhanced Cabal Test Suite - 8 comprehensive QuickCheck tests
 -- ============================================================================
 import qualified Test.Unit.EnhancedCabalTestSuiteSpec
@@ -3323,6 +3337,22 @@ tests =
         , Test.Unit.IntegrationEndToEndQuickCheckSpec.tests
         , Test.Unit.UtilsBoundaryConditionsQuickCheckSpec.tests
         , Test.Unit.ParserErrorRecoveryQuickCheckSpec.tests
+        ]
+
+    -- ============================================================================
+    -- New Cabal Test Modules (Added by user request) - 10 comprehensive tests
+    -- ============================================================================
+    , testGroup "New Cabal Test Modules - Comprehensive Testing Suite"
+        [ Test.Unit.NewCabalCoreSpec.tests
+        , Test.Unit.NewCabalParserBoundarySpec.tests
+        , Test.Unit.NewCabalCompilerInvariantSpec.tests
+        , Test.Unit.NewCabalOwnershipSafetySpec.tests
+        , Test.Unit.NewCabalTypeSystemSpec.tests
+        , Test.Unit.NewCabalErrorRecoverySpec.tests
+        , Test.Unit.NewCabalPerformanceSpec.tests
+        , Test.Unit.NewCabalIntegrationSpec.tests
+        , Test.Unit.NewCabalQuickCheckSpec.tests
+        , Test.Unit.NewCabalEdgeCaseSpec.tests
         ]
 
         ]
