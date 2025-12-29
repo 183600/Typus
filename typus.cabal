@@ -1118,6 +1118,18 @@ test-suite typus-test
         , Test.Unit.NewSyntaxValidatorValidationQuickCheckSpec
         , Test.Unit.NewGoToolchainIntegrationQuickCheckSpec
         , Test.Unit.NewEndToEndIntegrationQuickCheckSpec
+
+        -- New Enhanced Test Modules (2025) - 10 comprehensive tests
+        , Test.Unit.NewTextEncodingSafetyQuickCheckSpec
+        , Test.Unit.NewErrorRecoveryMechanismsQuickCheckSpec
+        , Test.Unit.NewParserPerformanceBoundaryQuickCheckSpec
+        , Test.Unit.NewCompilerIRConsistencyQuickCheckSpec
+        , Test.Unit.NewOwnershipTransferBoundaryQuickCheckSpec
+        , Test.Unit.NewDependentTypeConstraintValidationQuickCheckSpec
+        , Test.Unit.NewSourceLocationMathPrecisionQuickCheckSpec
+        , Test.Unit.NewStringProcessingUnicodeSafetyQuickCheckSpec
+        , Test.Unit.NewMemoryLeakPreventionQuickCheckSpec
+        , Test.Unit.NewConcurrentSafetyQuickCheckSpec
         
     other-modules:
             Test.Dependencies.Arbitrary,
