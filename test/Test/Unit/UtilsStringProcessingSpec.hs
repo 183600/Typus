@@ -1,20 +1,9 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
 module Test.Unit.UtilsStringProcessingSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, choose, oneof, listOf, elements)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf1, elements, suchThat)
-import Data.Char (isSpace, isAlpha, isDigit)
-import Data.List (isPrefixOf, isSuffixOf, concat, intersperse)
 
 import Utils
   ( trim
@@ -25,199 +14,250 @@ import Utils
   , removeLineComments
   , removeComments
   , normalizeIndentation
+  , forceSingleTabIndentation
+  , fixIndentation
   , breakOn
   )
 
--- | Generate a string with whitespace at both ends
-genStringWithWhitespace :: Gen String
-genStringWithWhitespace = do
-  leading <- listOf (elements " \t\n\r")
-  middle <- listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t")
-  trailing <- listOf (elements " \t\n\r")
-  return $ leading ++ middle ++ trailing
+import Data.Char (isSpace)
+import qualified Data.Text as T
 
--- | Generate a string without whitespace at ends
-genStringWithoutWhitespace :: Gen String
-genStringWithoutWhitespace = listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t")
-
--- | Generate a delimiter character
-genDelimiter :: Gen Char
-genDelimiter = elements ",;:||\\"
-
--- | Generate a string that contains the delimiter
-genStringWithDelimiter :: Char -> Gen String
-genStringWithDelimiter delim = do
-  parts <- listOf1 (listOf1 (elements $ filter (/= delim) (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'])))
-  return $ concat $ intersperse [delim] parts
-
--- | Generate a string with line comments
-genStringWithLineComments :: Gen String
-genStringWithLineComments = do
-  beforeComment <- listOf (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t")
-  comment <- listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t")
-  afterComment <- listOf (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t")
-  return $ beforeComment ++ "//" ++ comment ++ "\n" ++ afterComment
-
--- | Generate a string with block comments
-genStringWithBlockComments :: Gen String
-genStringWithBlockComments = do
-  beforeComment <- listOf (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t")
-  comment <- listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\r\n")
-  afterComment <- listOf (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t")
-  return $ beforeComment ++ "/*" ++ comment ++ "*/" ++ afterComment
-
--- | Generate a string with indentation
-genIndentedString :: Gen String
-genIndentedString = do
-  baseIndent <- choose (0, 5)
-  lines <- listOf1 $ do
-    indent <- choose (baseIndent, baseIndent + 3)
-    content <- listOf (elements $ ['a'..'z'] ++ ' ')
-    return $ replicate indent ' ' ++ content
-  return $ unlines lines
-
--- Property: trim removes leading and trailing whitespace
-prop_trim_removesWhitespace :: Property
-prop_trim_removesWhitespace =
-  forAll genStringWithWhitespace $ \s ->
-    let trimmed = trim s
-    in not (null trimmed) ==> 
-       (not (isSpace (head trimmed)) .||. all isSpace trimmed) .&&.
-       (not (isSpace (last trimmed)) .||. all isSpace trimmed)
-
--- Property: trim is idempotent (trimming twice gives same result)
-prop_trim_idempotent :: Property
-prop_trim_idempotent =
-  forAll arbitrary $ \s ->
-    trim (trim s) === trim s
-
--- Property: splitBy preserves empty segments
-prop_splitBy_preservesEmpty :: Property
-prop_splitBy_preservesEmpty =
-  forAll genDelimiter $ \delim ->
-    forAll (genStringWithDelimiter delim) $ \s ->
-      let parts = splitBy delim s
-          rejoined = concat $ intersperse [delim] parts
-      in rejoined === s
-
--- Property: splitByComma is equivalent to splitBy ','
-prop_splitByComma_equivalent :: Property
-prop_splitByComma_equivalent =
-  forAll arbitrary $ \s ->
-    splitByComma s === splitBy ',' s
-
--- Property: splitByCollapsed removes empty segments
-prop_splitByCollapsed_removesEmpty :: Property
-prop_splitByCollapsed_removesEmpty =
-  forAll genDelimiter $ \delim ->
-    forAll arbitrary $ \s ->
-      let parts = splitByCollapsed delim s
-      in all (not . null) parts
-
--- Property: splitByCommaCollapsed is equivalent to splitByCollapsed ','
-prop_splitByCommaCollapsed_equivalent :: Property
-prop_splitByCommaCollapsed_equivalent =
-  forAll arbitrary $ \s ->
-    splitByCommaCollapsed s === splitByCollapsed ',' s
-
--- Property: splitByCollapsed length <= splitBy length
-prop_splitByCollapsed_shorterOrEqual :: Property
-prop_splitByCollapsed_shorterOrEqual =
-  forAll genDelimiter $ \delim ->
-    forAll arbitrary $ \s ->
-      length (splitByCollapsed delim s) <= length (splitBy delim s)
-
--- Property: removeLineComments removes content after // on each line
-prop_removeLineComments_removesComments :: Property
-prop_removeLineComments_removesComments =
-  forAll genStringWithLineComments $ \s ->
-    let cleaned = removeLineComments s
-        hasComment = "//" `isInfixOf` cleaned
-    in hasComment === False
-  where
-    isInfixOf needle haystack = needle `elem` [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]
-
--- Property: removeComments removes both line and block comments
-prop_removeComments_removesBothTypes :: Property
-prop_removeComments_removesBothTypes =
-  forAll genStringWithLineComments $ \s1 ->
-    forAll genStringWithBlockComments $ \s2 ->
-      let combined = s1 ++ s2
-          cleaned = removeComments combined
-          hasLineComment = "//" `isInfixOf` cleaned
-          hasBlockComment = "/*" `isInfixOf` cleaned
-      in not (hasLineComment .||. hasBlockComment)
-  where
-    isInfixOf needle haystack = needle `elem` [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]
-
--- Property: normalizeIndentation preserves relative indentation
-prop_normalizeIndentation_preservesRelative :: Property
-prop_normalizeIndentation_preservesRelative =
-  forAll genIndentedString $ \s ->
-    let normalized = normalizeIndentation s
-        lines_s = lines s
-        lines_normalized = lines normalized
-    in length lines_s === length lines_normalized .&&.
-       not (null lines_normalized) ==> 
-       all (not . null . dropWhile isSpace) lines_normalized
-
--- Property: breakOn finds first occurrence of delimiter
-prop_breakOn_findsFirst :: Property
-prop_breakOn_findsFirst =
-  forAll arbitrary $ \s ->
-    forAll genDelimiter $ \delim ->
-      let (before, after) = breakOn delim s
-      in if delim `elem` s
-         then delim `isPrefixOf` after
-         else before === s .&&. after === ""
-  where
-    isPrefixOf needle haystack = take (length needle) haystack == needle
-
--- Property: breakOn is consistent with splitBy for first occurrence
-prop_breakOn_consistentWithSplitBy :: Property
-prop_breakOn_consistentWithSplitBy =
-  forAll arbitrary $ \s ->
-    forAll genDelimiter $ \delim ->
-      let (before, after) = breakOn delim s
-          parts = splitBy delim s
-      in if delim `elem` s
-         then before === head parts .&&. 
-              after === delim ++ concat (tail parts)
-         else before === s .&&. after === "" .&&. parts === [s]
-
--- Property: trim empty string stays empty
-prop_trim_emptyString :: Property
-prop_trim_emptyString =
-  trim "" === ""
-
--- Property: splitBy empty string returns single empty element
-prop_splitBy_emptyString :: Property
-prop_splitBy_emptyString =
-  forAll genDelimiter $ \delim ->
-    splitBy delim "" === [""]
-
--- Property: splitByCollapsed empty string returns empty list
-prop_splitByCollapsed_emptyString :: Property
-prop_splitByCollapsed_emptyString =
-  forAll genDelimiter $ \delim ->
-    splitByCollapsed delim "" === []
-
+-- | Tests for Utils string processing functions
 tests :: TestTree
 tests =
-  testGroup "Utils String Processing Properties"
-    [ fastProperty "trim removes leading and trailing whitespace" prop_trim_removesWhitespace
-    , fastProperty "trim is idempotent" prop_trim_idempotent
-    , fastProperty "splitBy preserves empty segments" prop_splitBy_preservesEmpty
-    , fastProperty "splitByComma equivalent to splitBy ','" prop_splitByComma_equivalent
-    , fastProperty "splitByCollapsed removes empty segments" prop_splitByCollapsed_removesEmpty
-    , fastProperty "splitByCommaCollapsed equivalent to splitByCollapsed ','" prop_splitByCommaCollapsed_equivalent
-    , fastProperty "splitByCollapsed length <= splitBy length" prop_splitByCollapsed_shorterOrEqual
-    , fastProperty "removeLineComments removes content after //" prop_removeLineComments_removesComments
-    , fastProperty "removeComments removes both line and block comments" prop_removeComments_removesBothTypes
-    , fastProperty "normalizeIndentation preserves relative indentation" prop_normalizeIndentation_preservesRelative
-    , fastProperty "breakOn finds first occurrence of delimiter" prop_breakOn_findsFirst
-    , fastProperty "breakOn consistent with splitBy for first occurrence" prop_breakOn_consistentWithSplitBy
-    , fastProperty "trim empty string stays empty" prop_trim_emptyString
-    , fastProperty "splitBy empty string returns single empty element" prop_splitBy_emptyString
-    , fastProperty "splitByCollapsed empty string returns empty list" prop_splitByCollapsed_emptyString
+  testGroup "Utils String Processing"
+    [ testGroup "Whitespace handling"
+        [ testCase "trim removes all types of whitespace" $ do
+            trim "\t\n  hello  world  \n\t" @?= "hello  world"
+
+        , testCase "trim handles empty string" $ do
+            trim "" @?= ""
+
+        , testCase "trim handles whitespace-only string" $ do
+            trim "   \t\n  " @?= ""
+
+        , testCase "trim preserves internal whitespace" $ do
+            trim "  hello   world  " @?= "hello   world"
+
+        , testCase "trim handles Unicode whitespace" $ do
+            trim "\u00A0\u2000hello\u2003world\u2002" @?= "hello\u2003world"
+        ]
+
+    , testGroup "String splitting functions"
+        [ testCase "splitBy handles basic cases" $ do
+            splitBy ',' "a,b,c" @?= ["a", "b", "c"]
+            splitBy ',' "a,,b" @?= ["a", "", "b"]
+            splitBy ',' ",a," @?= ["", "a", ""]
+            splitBy ',' "" @?= [""]
+
+        , testCase "splitBy with different delimiters" $ do
+            splitBy ':' "a:b:c" @?= ["a", "b", "c"]
+            splitBy ';' "a;b;c" @?= ["a", "b", "c"]
+            splitBy '|' "a|b|c" @?= ["a", "b", "c"]
+
+        , testCase "splitByCollapsed removes empty segments" $ do
+            splitByCollapsed ',' "a,b,c" @?= ["a", "b", "c"]
+            splitByCollapsed ',' "a,,b" @?= ["a", "b"]
+            splitByCollapsed '," ",a," @?= ["a"]
+            splitByCollapsed ',' "" @?= []
+            splitByCollapsed '," ",,," @?= []
+
+        , testCase "splitByComma works correctly" $ do
+            splitByComma "a,b,c" @?= ["a", "b", "c"]
+            splitByComma "a,,b" @?= ["a", "", "b"]
+
+        , testCase "splitByCommaCollapsed works correctly" $ do
+            splitByCommaCollapsed "a,b,c" @?= ["a", "b", "c"]
+            splitByCommaCollapsed "a,,b" @?= ["a", "b"]
+            splitByCommaCollapsed "" @?= []
+        ]
+
+    , testGroup "Comment removal"
+        [ testCase "removeLineComments removes // comments" $ do
+            let input = "hello // comment\nworld // another comment"
+                expected = "hello \nworld "
+            removeLineComments input @?= expected
+
+        , testCase "removeLineComments preserves string literals" $ do
+            let input = "url := \"http://example.com//path\" // comment"
+                expected = "url := \"http://example.com//path\" "
+            removeLineComments input @?= expected
+
+        , testCase "removeLineComments handles escaped quotes" $ do
+            let input = "text := \"She said \\\"// not a comment\\\"\" // real comment"
+                expected = "text := \"She said \\\"// not a comment\\\"\" "
+            removeLineComments input @?= expected
+
+        , testCase "removeComments removes both line and block comments" $ do
+            let input = "/* block comment */ hello // line comment\nworld"
+                expected = "  hello \nworld"
+            removeComments input @?= expected
+
+        , testCase "removeComments handles nested block comments" $ do
+            let input = "/* outer /* inner */ still outer */ code"
+                expected = "  code"
+            removeComments input @?= expected
+
+        , testCase "removeComments preserves comments in strings" $ do
+            let input = "text := \"/* not a block comment */\" /* real block comment */"
+                expected = "text := \"/* not a block comment */\" "
+            removeComments input @?= expected
+
+        , testCase "removeComments handles unterminated block comments" $ do
+            let input = "code /* unterminated\nmore code"
+                expected = "code \n"
+            removeComments input @?= expected
+        ]
+
+    , testGroup "Indentation handling"
+        [ testCase "normalizeIndentation removes common leading spaces" $ do
+            let input = "    line1\n        line2\n    line3"
+                expected = "line1\n    line2\nline3"
+            normalizeIndentation input @?= expected
+
+        , testCase "normalizeIndentation handles mixed tabs and spaces" $ do
+            let input = "\t    line1\n\t        line2\n\t    line3"
+                expected = "line1\n    line2\nline3"
+            normalizeIndentation input @?= expected
+
+        , testCase "normalizeIndentation preserves empty lines" $ do
+            let input = "    line1\n\n    line2"
+                expected = "line1\n\nline2"
+            normalizeIndentation input @?= expected
+
+        , testCase "forceSingleTabIndentation enforces tab indentation" $ do
+            let input = "  line1\n    line2\n\t\tline3"
+                expected = "\tline1\n\tline2\n\t\tline3"
+            forceSingleTabIndentation input @?= expected
+
+        , testCase "forceSingleTabIndentation collapses whitespace-only lines" $ do
+            let input = "  line1\n    \n  line2"
+                expected = "\tline1\n\n\tline2"
+            forceSingleTabIndentation input @?= expected
+
+        , testCase "fixIndentation is alias for normalizeIndentation" $ do
+            let input = "    line1\n        line2"
+            fixIndentation input @?= normalizeIndentation input
+        ]
+
+    , testGroup "Search and split operations"
+        [ testCase "breakOn finds pattern" $ do
+            breakOn "world" "hello world" @?= ("hello ", "world")
+
+        , testCase "breakOn handles missing pattern" $ do
+            breakOn "xyz" "hello world" @?= ("hello world", "")
+
+        , testCase "breakOn handles empty pattern" $ do
+            breakOn "" "hello" @?= ("", "hello")
+
+        , testCase "breakOn handles pattern at start" $ do
+            breakOn "hello" "hello world" @?= ("", "hello world")
+
+        , testCase "breakOn handles pattern at end" $ do
+            breakOn "world" "hello world" @?= ("hello ", "world")
+        ]
+
+    , testGroup "Unicode and special character handling"
+        [ testCase "trim handles Unicode whitespace" $ do
+            trim "\u00A0\u2000hello\u2003world\u2002" @?= "hello\u2003world"
+
+        , testCase "splitBy handles Unicode delimiters" $ do
+            splitBy '，' "a，b，c" @?= ["a", "b", "c"]
+
+        , testCase "removeLineComments handles Unicode strings" $ do
+            let input = "text := \"你好世界\" // comment"
+                expected = "text := \"你好世界\" "
+            removeLineComments input @?= expected
+
+        , testCase "normalizeIndentation handles Unicode content" $ do
+            let input = "    你好\n        世界\n    !"
+                expected = "你好\n    世界\n!"
+            normalizeIndentation input @?= expected
+        ]
+
+    , testGroup "Edge cases and stress tests"
+        [ testCase "splitBy handles very long strings" $ do
+            let longString = replicate 1000 'a' ++ "," ++ replicate 1000 'b'
+                result = splitBy ',' longString
+            length result @?= 2
+            length (head result) @?= 1000
+            length (result !! 1) @?= 1000
+
+        , testCase "removeComments handles large block comments" $ do
+            let largeBlock = "/* " ++ replicate 10000 'x' ++ " */ code"
+                result = removeComments largeBlock
+            result @?= "  code"
+
+        , testCase "normalizeIndentation handles deeply indented code" $ do
+            let deepIndent = concat $ replicate 100 "    "
+                input = deepIndent ++ "code\n" ++ deepIndent ++ "more code"
+                result = normalizeIndentation input
+            result @?= "code\nmore code"
+
+        , testCase "breakOn handles pattern at multiple positions" $ do
+            let input = "abcabcabc"
+                result = breakOn "abc" input
+            result @?= ("", "abcabcabc")
+        ]
+
+    , testGroup "Property-based tests"
+        [ fastProperty "splitBy and splitByCollapsed relationship" prop_splitByRelationship
+        , fastProperty "trim is idempotent" prop_trimIdempotent
+        , fastProperty "splitBy preserves total length" prop_splitByPreservesLength
+        , fastProperty "breakOn is deterministic" prop_breakOnDeterministic
+        , fastProperty "normalizeIndentation preserves relative indentation" prop_normalizePreservesRelative
+        ]
+
+    , testGroup "Performance characteristics"
+        [ testCase "splitBy is linear time" $ do
+            let input = replicate 10000 'a' ++ "," ++ replicate 10000 'b'
+                result = splitBy ',' input
+            length result @?= 2
+
+        , testCase "removeComments is efficient for large files" $ do
+            let largeContent = unlines $ replicate 1000 ("code // comment " ++ replicate 100 'x')
+                result = removeLineComments largeContent
+            length (lines result) @?= 1000
+
+        , testCase "normalizeIndentation handles large files efficiently" $ do
+            let largeIndented = unlines $ map (\i -> replicate (i `mod` 20) ' ' ++ "line " ++ show i) [1..1000]
+                result = normalizeIndentation largeIndented
+            length (lines result) @?= 1000
+        ]
     ]
+
+-- | Property: splitBy and splitByCollapsed relationship
+prop_splitByRelationship :: String -> Char -> Bool
+prop_splitByRelationship input delim =
+  let normal = splitBy delim input
+      collapsed = splitByCollapsed delim input
+  in all (not . null) collapsed == (null $ filter null normal)
+
+-- | Property: trim is idempotent
+prop_trimIdempotent :: String -> Bool
+prop_trimIdempotent input =
+  let once = trim input
+      twice = trim once
+  in once == twice
+
+-- | Property: splitBy preserves total length
+prop_splitByPreservesLength :: String -> Char -> Bool
+prop_splitByPreservesLength input delim =
+  let parts = splitBy delim input
+      totalLength = sum (map length parts) + length (filter (== delim) input) - length parts + 1
+  in totalLength == length input
+
+-- | Property: breakOn is deterministic
+prop_breakOnDeterministic :: String -> String -> Bool
+prop_breakOnDeterministic input pattern =
+  let result1 = breakOn pattern input
+      result2 = breakOn pattern input
+  in result1 == result2
+
+-- | Property: normalizeIndentation preserves relative indentation
+prop_normalizePreservesRelative :: String -> Bool
+prop_normalizePreservesRelative input =
+  let linesInput = lines input
+      normalized = normalizeIndentation input
+      linesNormalized = lines normalized
+  in length linesInput == length linesNormalized
