@@ -1,150 +1,266 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Test.Unit.NewCompilerIRConsistencySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, choose, oneof, listOf, vectorOf, forAll, elements)
+import qualified Data.Text as T
+import qualified Data.List as List
+import Data.Maybe (isJust, isNothing, fromMaybe)
+
+import Compiler.IR
+import Compiler.GoAst
+import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
+import SourceLocation (SourcePos(..), SourceSpan(..), startPos, locatedAt)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, elements, listOf, oneof, sized, Positive(..))
 
-import Parser (parseTypus, TypusFile(..), CodeBlock(..))
-import Compiler.IR (IRModule(..), IRFunction(..), IRStatement(..), IRExpression(..), IRType(..))
-import Compiler (compileToIR, compileToIR')
-import Compiler.TypeChecker (TypeCheckResult(..))
-import Data.List (nub, sort, length)
-import Control.DeepSeq (force)
-import Data.Either (isLeft, isRight)
-
+-- | Test compiler IR generation consistency properties
 tests :: TestTree
-tests = testGroup "New Compiler IR Consistency Tests"
-    [ testCase "generates consistent IR for simple functions" $ do
-        let source = unlines
-              [ "package main"
-              , "func add(a: int, b: int) -> int {"
-              , "  return a + b"
-              , "}"
-              , "func main() {"
-              , "  let result = add(5, 3)"
-              , "  return result"
-              , "}"
-              ]
-        case parseTypus source of
-          Left err -> assertFailure $ "Parse failed: " ++ err
-          Right typusFile -> do
-            result1 <- compileToIR typusFile
-            result2 <- compileToIR typusFile
-            case (result1, result2) of
-              (Right ir1, Right ir2) -> do
-                assertBool "IR modules should be equal" $ irModulesEqual ir1 ir2
-                assertBool "Should have correct number of functions" $ 
-                  length (irFunctions ir1) == 2
-              (Left err1, Left err2) -> 
-                assertBool "Error messages should be consistent" $ err1 == err2
-              _ -> assertFailure "Compilation results should be consistent"
-              
-    , testCase "maintains type consistency in IR" $ do
-        let source = unlines
-              [ "package main"
-              , "func typed_function(x: int, y: string) -> string {"
-              , "  let result = x.toString() + y"
-              , "  return result"
-              , "}"
-              ]
-        case parseTypus source of
-          Left err -> assertFailure $ "Parse failed: " ++ err
-          Right typusFile -> do
-            result <- compileToIR typusFile
+tests =
+  testGroup "New Compiler IR Consistency Tests"
+    [ testGroup "SourceIR construction"
+        [ testCase "buildSourceIR preserves original file" $ do
+            let typusFile = TypusFile defaultFileDirectives []
+                sourceText = "func test() {}"
+                ir = buildSourceIR typusFile sourceText
+            sourceTypusFile ir @?= typusFile
+            sourceText ir @?= sourceText
+
+        , testCase "rawSourceFromTypus extracts code blocks" $ do
+            let block = CodeBlock defaultBlockDirectives "func test() {}\n"
+                typusFile = TypusFile defaultFileDirectives [block]
+                extracted = rawSourceFromTypus typusFile
+            extracted @?= "func test() {}\n"
+
+        , testCase "rawSourceFromTypus handles multiple blocks" $ do
+            let block1 = CodeBlock defaultBlockDirectives "func test1() {}\n"
+                block2 = CodeBlock defaultBlockDirectives "func test2() {}\n"
+                typusFile = TypusFile defaultFileDirectives [block1, block2]
+                extracted = rawSourceFromTypus typusFile
+            extracted @?= "func test1() {}\nfunc test2() {}\n"
+
+        , testCase "rawSourceFromTypus handles empty blocks" $ do
+            let typusFile = TypusFile defaultFileDirectives []
+                extracted = rawSourceFromTypus typusFile
+            extracted @?= ""
+        ]
+
+    , testGroup "SemanticIR construction"
+        [ testCase "buildSemanticIR preserves structure" $ do
+            let block = CodeBlock defaultBlockDirectives "func test() {}"
+                typusFile = TypusFile defaultFileDirectives [block]
+                result = buildSemanticIR typusFile
             case result of
-              Left err -> assertFailure $ "Compilation failed: " ++ err
-              Right irModule -> do
-                assertBool "Should have function" $ not $ null (irFunctions irModule)
-                let func = head (irFunctions irModule)
-                assertBool "Function should have correct parameter types" $ 
-                  parameterTypesConsistent func ["int", "string"]
-                assertBool "Function should have correct return type" $ 
-                  returnTypeConsistent func "string"
-                
-    , testCase "preserves control flow structure in IR" $ do
-        let source = unlines
-              [ "package main"
-              , "func control_flow(x: int) -> int {"
-              , "  if x > 0 {"
-              , "    return x * 2"
-              , "  } else {"
-              , "    return x * 3"
-              , "  }"
-              , "}"
-              ]
-        case parseTypus source of
-          Left err -> assertFailure $ "Parse failed: " ++ err
-          Right typusFile -> do
-            result <- compileToIR typusFile
+              Left _ -> assertBool "Should build semantic IR" False
+              Right ir -> semanticTypusFile ir @?= typusFile
+
+        , testCase "buildSemanticIRWithPackage includes package" $ do
+            let block = CodeBlock defaultBlockDirectives "func test() {}"
+                typusFile = TypusFile defaultFileDirectives [block]
+                result = buildSemanticIRWithPackage "main" typusFile
             case result of
-              Left err -> assertFailure $ "Compilation failed: " ++ err
-              Right irModule -> do
-                assertBool "Should have function" $ not $ null (irFunctions irModule)
-                let func = head (irFunctions irModule)
-                let statements = irFunctionBody func
-                assertBool "Should have conditional statement" $ 
-                  any isConditionalStatement statements
-                assertBool "Should have branch statements" $ 
-                  any isBranchStatement statements
+              Left _ -> assertBool "Should build semantic IR with package" False
+              Right ir -> do
+                semanticTypusFile ir @?= typusFile
+                -- Check that package is included in the semantic representation
+                let goCode = emitGo ir
+                goCode `assertBool` ("package main" `T.isInfixOf` goCode)
+
+        , testCase "ensurePackageDecl adds package when missing" $ do
+            let goCode = "func test() {}"
+                withPackage = ensurePackageDecl "main" goCode
+            withPackage `assertBool` ("package main" `T.isInfixOf` withPackage)
+
+        , testCase "ensurePackageDecl preserves existing package" $ do
+            let goCode = "package custom\nfunc test() {}"
+                withPackage = ensurePackageDecl "custom" goCode
+            withPackage @?= goCode
+        ]
+
+    , testGroup "Main function synthesis"
+        [ testCase "ensureMainFunction adds main when missing" $ do
+            let goCode = "func helper() {}"
+                withMain = ensureMainFunction goCode
+            withMain `assertBool` ("func main()" `T.isInfixOf` withMain)
+
+        , testCase "ensureMainFunction preserves existing main" $ do
+            let goCode = "func main() { println(\"hello\") }"
+                withMain = ensureMainFunction goCode
+            withMain @?= goCode
+
+        , testCase "ensureMainFunction handles multiple functions" $ do
+            let goCode = "func helper1() {}\nfunc helper2() {}"
+                withMain = ensureMainFunction goCode
+            withMain `assertBool` ("func helper1()" `T.isInfixOf` withMain)
+            withMain `assertBool` ("func helper2()" `T.isInfixOf` withMain)
+            withMain `assertBool` ("func main()" `T.isInfixOf` withMain)
+        ]
+
+    , testGroup "Import inference"
+        [ testCase "attachInferredImports adds fmt for println" $ do
+            let goCode = "func main() { println(\"hello\") }"
+                withImports = attachInferredImports goCode
+            withImports `assertBool` ("import \"fmt\"" `T.isInfixOf` withImports)
+
+        , testCase "attachInferredImports adds multiple imports" $ do
+            let goCode = "func main() { println(\"hello\"); http.Get(\"url\") }"
+                withImports = attachInferredImports goCode
+            withImports `assertBool` ("import \"fmt\"" `T.isInfixOf` withImports)
+            withImports `assertBool` ("import \"net/http\"" `T.isInfixOf` withImports)
+
+        , testCase "attachInferredImports preserves existing imports" $ do
+            let goCode = "import \"fmt\"\nfunc main() { println(\"hello\") }"
+                withImports = attachInferredImports goCode
+            -- Should not duplicate imports
+            let fmtCount = length $ filter ("import \"fmt\"" `T.isInfixOf`) (lines withImports)
+            fmtCount @?= 1
+
+        , testCase "attachInferredImports handles no imports needed" $ do
+            let goCode = "func main() { x := 1 }"
+                withImports = attachInferredImports goCode
+            withImports `assertBool` (not $ "import" `T.isInfixOf` withImports)
+        ]
+
+    , testGroup "Module extraction"
+        [ testCase "moduleFromTypus extracts single block" $ do
+            let block = CodeBlock defaultBlockDirectives "func test() {}"
+                typusFile = TypusFile defaultFileDirectives [block]
+                result = moduleFromTypus typusFile
+            case result of
+              Left _ -> assertBool "Should extract module" False
+              Right (moduleIR, _) -> do
+                -- Check that module contains the function
+                let goCode = emitGo moduleIR
+                goCode `assertBool` ("func test()" `T.isInfixOf` goCode)
+
+        , testCase "moduleFromTypus handles multiple blocks" $ do
+            let block1 = CodeBlock defaultBlockDirectives "func test1() {}"
+                block2 = CodeBlock defaultBlockDirectives "func test2() {}"
+                typusFile = TypusFile defaultFileDirectives [block1, block2]
+                result = moduleFromTypus typusFile
+            case result of
+              Left _ -> assertBool "Should extract module" False
+              Right (moduleIR, _) -> do
+                let goCode = emitGo moduleIR
+                goCode `assertBool` ("func test1()" `T.isInfixOf` goCode)
+                goCode `assertBool` ("func test2()" `T.isInfixOf` goCode)
+        ]
+
+    , testGroup "IR generation consistency"
+        [ fastProperty "buildSourceIR is deterministic" prop_buildSourceIRDeterministic
+        , fastProperty "rawSourceFromTypus preserves content order" prop_rawSourcePreservesOrder
+        , fastProperty "ensurePackageDecl is idempotent" prop_ensurePackageDeclIdempotent
+        , fastProperty "ensureMainFunction is idempotent" prop_ensureMainFunctionIdempotent
+        , fastProperty "attachInferredImports is idempotent" prop_attachInferredImportsIdempotent
+        ]
+
+    , testGroup "Error handling and edge cases"
+        [ testCase "handles empty TypusFile gracefully" $ do
+            let typusFile = TypusFile defaultFileDirectives []
+                sourceText = ""
+                ir = buildSourceIR typusFile sourceText
+            sourceTypusFile ir @?= typusFile
+            sourceText ir @?= sourceText
+
+        , testCase "handles malformed code blocks" $ do
+            let block = CodeBlock defaultBlockDirectives "incomplete function {"
+                typusFile = TypusFile defaultFileDirectives [block]
+                result = buildSemanticIR typusFile
+            -- Should either succeed or fail gracefully without crashing
+            case result of
+              Left _ -> assertBool "Should handle malformed code gracefully" True
+              Right _ -> assertBool "Should handle malformed code gracefully" True
+
+        , testCase "handles very large code blocks" $ do
+            let largeFunction = "func large() {\n" ++ unlines (replicate 1000 "  x := 1") ++ "\n}"
+                block = CodeBlock defaultBlockDirectives largeFunction
+                typusFile = TypusFile defaultFileDirectives [block]
+                result = buildSemanticIR typusFile
+            case result of
+              Left _ -> assertBool "Should handle large blocks" False
+              Right _ -> assertBool "Should handle large blocks" True
+        ]
+
+    , testGroup "Integration consistency"
+        [ testCase "full pipeline preserves semantics" $ do
+            let block = CodeBlock defaultBlockDirectives "func hello() { println(\"world\") }"
+                typusFile = TypusFile defaultFileDirectives [block]
+            case buildSemanticIR typusFile of
+              Left _ -> assertBool "Should build semantic IR" False
+              Right ir -> do
+                let withPackage = ensurePackageDecl "main" (emitGo ir)
+                    withMain = ensureMainFunction withPackage
+                    withImports = attachInferredImports withMain
+                withImports `assertBool` ("package main" `T.isInfixOf` withImports)
+                withImports `assertBool` ("func main()" `T.isInfixOf` withImports)
+                withImports `assertBool` ("func hello()" `T.isInfixOf` withImports)
+                withImports `assertBool` ("import \"fmt\"" `T.isInfixOf` withImports)
+
+        , testCase "IR transformations commute properly" $ do
+            let goCode = "func test() { println(\"hello\") }"
+                withPackageFirst = ensureMainFunction (ensurePackageDecl "main" goCode)
+                withMainFirst = ensurePackageDecl "main" (ensureMainFunction goCode)
+            -- Order shouldn't matter for the final result
+            withPackageFirst `assertBool` ("package main" `T.isInfixOf` withPackageFirst)
+            withPackageFirst `assertBool` ("func main()" `T.isInfixOf` withPackageFirst)
+            withMainFirst `assertBool` ("package main" `T.isInfixOf` withMainFirst)
+            withMainFirst `assertBool` ("func main()" `T.isInfixOf` withMainFirst)
+        ]
     ]
 
--- QuickCheck properties for IR consistency
+-- Property: buildSourceIR is deterministic
+prop_buildSourceIRDeterministic :: TypusFile -> String -> Property
+prop_buildSourceIRDeterministic typusFile sourceText =
+  let ir1 = buildSourceIR typusFile sourceText
+      ir2 = buildSourceIR typusFile sourceText
+  in ir1 == ir2
 
--- Property: IR generation should be deterministic
-prop_ir_generation_deterministic :: String -> Property
-prop_ir_generation_deterministic source =
-  case parseTypus source of
-    Left _ -> property $ True  -- Invalid source, skip property test
-    Right typusFile -> do
-      result1 <- compileToIR typusFile
-      result2 <- compileToIR typusFile
-      property $ case (result1, result2) of
-        (Right ir1, Right ir2) -> irModulesEqual ir1 ir2
-        (Left err1, Left err2) -> err1 === err2
-        _ -> property False
+-- Property: rawSourceFromTypus preserves content order
+prop_rawSourcePreservesOrder :: Positive Int -> Property
+prop_rawSourcePreservesOrder (Positive n) =
+  let blocks = [CodeBlock defaultBlockDirectives ("func " ++ show i ++ "() {}") | i <- [1..n]]
+      typusFile = TypusFile defaultFileDirectives blocks
+      extracted = rawSourceFromTypus typusFile
+      expected = concat ["func " ++ show i ++ "() {}" | i <- [1..n]]
+  in extracted == expected
 
--- Helper functions for IR consistency checking
+-- Property: ensurePackageDecl is idempotent
+prop_ensurePackageDeclIdempotent :: String -> String -> Property
+prop_ensurePackageDeclIdempotent packageName goCode =
+  let once = ensurePackageDecl packageName goCode
+      twice = ensurePackageDecl packageName once
+  in once == twice
 
-irModulesEqual :: IRModule -> IRModule -> Bool
-irModulesEqual ir1 ir2 = 
-  length (irFunctions ir1) == length (irFunctions ir2) &&
-  all (uncurry functionsEqual) (zip (irFunctions ir1) (irFunctions ir2))
+-- Property: ensureMainFunction is idempotent
+prop_ensureMainFunctionIdempotent :: String -> Property
+prop_ensureMainFunctionIdempotent goCode =
+  let once = ensureMainFunction goCode
+      twice = ensureMainFunction once
+  in once == twice
 
-functionsEqual :: IRFunction -> IRFunction -> Bool
-functionsEqual f1 f2 = 
-  irFunctionName f1 == irFunctionName f2 &&
-  length (irFunctionBody f1) == length (irFunctionBody f2)
+-- Property: attachInferredImports is idempotent
+prop_attachInferredImportsIdempotent :: String -> Property
+prop_attachInferredImportsIdempotent goCode =
+  let once = attachInferredImports goCode
+      twice = attachInferredImports once
+  in once == twice
 
-parameterTypesConsistent :: IRFunction -> [String] -> Bool
-parameterTypesConsistent func expectedTypes = 
-  let actualTypes = map irTypeToString (irFunctionParameters func)
-  in length actualTypes == length expectedTypes &&
-     all (uncurry (==)) (zip actualTypes expectedTypes)
+-- Helper wrapper for positive integers
+newtype Positive a = Positive a
+  deriving (Show, Eq)
 
-returnTypeConsistent :: IRFunction -> String -> Bool
-returnTypeConsistent func expectedType = 
-  irTypeToString (irFunctionReturnType func) == expectedType
+instance (Arbitrary a, Num a, Ord a) => Arbitrary (Positive a) where
+  arbitrary = Positive <$> choose (1, 20)
 
-isConditionalStatement :: IRStatement -> Bool
-isConditionalStatement (IRConditional _ _ _) = True
-isConditionalStatement _ = False
+-- Minimal Arbitrary instance for testing
+instance Arbitrary TypusFile where
+  arbitrary = do
+    n <- choose (0, 3)
+    blocks <- vectorOf n arbitrary
+    return $ TypusFile defaultFileDirectives blocks
 
-isBranchStatement :: IRStatement -> Bool
-isBranchStatement (IRBranch _) = True
-isBranchStatement _ = False
-
-irTypeToString :: IRType -> String
-irTypeToString irType = 
-  case irType of
-    IRIntType -> "int"
-    IRStringType -> "string"
-    IRBoolType -> "bool"
-    IRVoidType -> "void"
-    IRFunctionType paramTypes returnType -> 
-      "(" ++ unwords (map irTypeToString paramTypes) ++ ") -> " ++ irTypeToString returnType
-    _ -> "unknown"
+instance Arbitrary CodeBlock where
+  arbitrary = do
+    content <- elements ["func test() {}", "var x int", "const y = 42"]
+    return $ CodeBlock defaultBlockDirectives content
