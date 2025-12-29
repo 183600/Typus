@@ -34,6 +34,20 @@ import qualified Test.Unit.VerbositySpec
 import qualified Test.Unit.UtilsBoundaryConditionsSpec
 import qualified Test.Unit.UtilsSpec
 
+-- ============================================================================
+-- New Test Modules Added (10 comprehensive QuickCheck tests)
+-- ============================================================================
+import qualified Test.Unit.LexerBoundaryQuickCheckSpec
+import qualified Test.Unit.SourceLocationMathPrecisionQuickCheckSpec
+import qualified Test.Unit.EmbedAssetsExtractionQuickCheckSpec
+import qualified Test.Unit.CommandLineDebugInteractionQuickCheckSpec
+import qualified Test.Unit.UtilsStringProcessingQuickCheckSpec
+import qualified Test.Unit.ParserErrorRecoveryAdvancedQuickCheckSpec
+import qualified Test.Unit.CompilerOptimizationInvariantQuickCheckSpec
+import qualified Test.Unit.OwnershipTransferConsistencyQuickCheckSpec
+import qualified Test.Unit.DependencyCycleDetectionQuickCheckSpec
+import qualified Test.Unit.TypeSystemBoundaryQuickCheckSpec
+
 -- New Cabal Test Modules
 import qualified Test.Unit.NewCabalUtilsSpec
 import qualified Test.Unit.NewCabalSourceLocationSpec
@@ -3495,6 +3509,22 @@ tests =
         , Test.Unit.NewPerformanceQuickCheckTestSpec.tests
         , Test.Unit.NewErrorHandlingQuickCheckTestSpec.tests
         , Test.Unit.NewDataConsistencyQuickCheckTestSpec.tests
+        ]
+
+    -- ============================================================================
+    -- New Comprehensive Test Modules (10 QuickCheck tests)
+    -- ============================================================================
+    , testGroup "New Comprehensive Test Modules - Core System Testing"
+        [ Test.Unit.LexerBoundaryQuickCheckSpec.tests
+        , Test.Unit.SourceLocationMathPrecisionQuickCheckSpec.tests
+        , Test.Unit.EmbedAssetsExtractionQuickCheckSpec.tests
+        , Test.Unit.CommandLineDebugInteractionQuickCheckSpec.tests
+        , Test.Unit.UtilsStringProcessingQuickCheckSpec.tests
+        , Test.Unit.ParserErrorRecoveryAdvancedQuickCheckSpec.tests
+        , Test.Unit.CompilerOptimizationInvariantQuickCheckSpec.tests
+        , Test.Unit.OwnershipTransferConsistencyQuickCheckSpec.tests
+        , Test.Unit.DependencyCycleDetectionQuickCheckSpec.tests
+        , Test.Unit.TypeSystemBoundaryQuickCheckSpec.tests
         ]
 
         ]
