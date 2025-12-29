@@ -200,6 +200,20 @@ import qualified Test.Unit.SourceLocationEnhancedQuickCheckSpec
 import qualified Test.Unit.NewTypusCoreQuickCheckSpec
 
 -- ============================================================================
+-- New Additional Test Modules (10 comprehensive QuickCheck tests) - Added 2025
+-- ============================================================================
+import qualified Test.Unit.DependenciesCycleDetectionQuickCheckSpec
+import qualified Test.Unit.ErrorHandlerConsistencyQuickCheckSpec
+import qualified Test.Unit.NewPerformanceRegressionSpec
+import qualified Test.Unit.NewIntegrationEndToEndSpec
+import qualified Test.Unit.SourceLocationBoundaryQuickCheckSpec
+import qualified Test.Unit.StringProcessingQuickCheckSpec
+import qualified Test.Unit.OwnershipTransferBoundaryQuickCheckSpec
+import qualified Test.Unit.TypeSystemBoundaryQuickCheckSpec
+import qualified Test.Unit.MemorySafetyQuickCheckSpec
+import qualified Test.Unit.CompilerOptimizationConsistencySpec
+
+-- ============================================================================
 -- New QuickCheck Test Modules Added (Core Functionality Testing)
 -- ============================================================================
 import qualified Test.Unit.UtilsCorePropertiesQuickCheckSpec
@@ -3579,6 +3593,22 @@ tests =
         , Test.Unit.NewTypeSystemBoundarySpec.tests
         , Test.Unit.NewIntegrationEndToEndSpec.tests
         , Test.Unit.NewPerformanceRegressionSpec.tests
+        ]
+
+    -- ============================================================================
+    -- New Additional Test Modules (10 comprehensive QuickCheck tests) - Added 2025
+    -- ============================================================================
+    , testGroup "New Additional Test Modules (2025) - Comprehensive QuickCheck Testing"
+        [ Test.Unit.DependenciesCycleDetectionQuickCheckSpec.tests
+        , Test.Unit.ErrorHandlerConsistencyQuickCheckSpec.tests
+        , Test.Unit.NewPerformanceRegressionSpec.tests
+        , Test.Unit.NewIntegrationEndToEndSpec.tests
+        , Test.Unit.SourceLocationBoundaryQuickCheckSpec.tests
+        , Test.Unit.StringProcessingQuickCheckSpec.tests
+        , Test.Unit.OwnershipTransferBoundaryQuickCheckSpec.tests
+        , Test.Unit.TypeSystemBoundaryQuickCheckSpec.tests
+        , Test.Unit.MemorySafetyQuickCheckSpec.tests
+        , Test.Unit.CompilerOptimizationConsistencySpec.tests
         ]
 
         ]
