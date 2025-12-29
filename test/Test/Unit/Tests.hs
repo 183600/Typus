@@ -48,6 +48,16 @@ import qualified Test.Unit.DependenciesTypeSystemSpec
 import qualified Test.Unit.ValueAnalysisBasicSpec
 import qualified Test.Unit.ErrorHandlerRecoverySpec
 import qualified Test.Unit.SyntaxValidatorValidationSpec
+
+-- New Core Module QuickCheck Test Suite (2025) - 8 comprehensive tests
+import qualified Test.Unit.NewCoreUtilsQuickCheckSpec
+import qualified Test.Unit.NewCoreSourceLocationQuickCheckSpec
+import qualified Test.Unit.NewCoreParserQuickCheckSpec
+import qualified Test.Unit.NewComprehensiveCoreQuickCheckSpec
+import qualified Test.Unit.NewCoreBoundaryConditionsQuickCheckSpec
+import qualified Test.Unit.NewCorePerformanceQuickCheckSpec
+import qualified Test.Unit.NewCoreErrorHandlingQuickCheckSpec
+import qualified Test.Unit.NewCompleteCoreTestSuiteSpec
 import qualified Test.Unit.AdvancedParserSpec
 import qualified Test.Unit.IntegrationSpec
 import qualified Test.Unit.PerformanceSpec
@@ -2894,5 +2904,19 @@ tests =
     , Test.Unit.NewCabalTest8Spec.tests
     , Test.Unit.NewCabalTest9Spec.tests
     , Test.Unit.NewCabalTest10Spec.tests
+    ]
+
+  -- ============================================================================
+  -- New Core Module QuickCheck Test Suite (2025) - 8 comprehensive tests
+  -- ============================================================================
+  , testGroup "New Core Module QuickCheck Test Suite - Comprehensive Property Testing"
+    [ Test.Unit.NewCoreUtilsQuickCheckSpec.testSuite
+    , Test.Unit.NewCoreSourceLocationQuickCheckSpec.testSuite
+    , Test.Unit.NewCoreParserQuickCheckSpec.testSuite
+    , Test.Unit.NewComprehensiveCoreQuickCheckSpec.testSuite
+    , Test.Unit.NewCoreBoundaryConditionsQuickCheckSpec.testSuite
+    , Test.Unit.NewCorePerformanceQuickCheckSpec.testSuite
+    , Test.Unit.NewCoreErrorHandlingQuickCheckSpec.testSuite
+    , Test.Unit.NewCompleteCoreTestSuiteSpec.testSuite
     ]
   ]

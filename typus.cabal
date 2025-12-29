@@ -1010,6 +1010,16 @@ test-suite typus-test
         , Test.Unit.NewCabalTest8Spec
         , Test.Unit.NewCabalTest9Spec
         , Test.Unit.NewCabalTest10Spec
+
+        -- New Core Module QuickCheck Test Suite (2025) - 8 comprehensive tests
+        , Test.Unit.NewCoreUtilsQuickCheckSpec
+        , Test.Unit.NewCoreSourceLocationQuickCheckSpec
+        , Test.Unit.NewCoreParserQuickCheckSpec
+        , Test.Unit.NewComprehensiveCoreQuickCheckSpec
+        , Test.Unit.NewCoreBoundaryConditionsQuickCheckSpec
+        , Test.Unit.NewCorePerformanceQuickCheckSpec
+        , Test.Unit.NewCoreErrorHandlingQuickCheckSpec
+        , Test.Unit.NewCompleteCoreTestSuiteSpec
         
     other-modules:
             Test.Dependencies.Arbitrary,
