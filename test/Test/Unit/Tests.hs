@@ -121,6 +121,20 @@ import qualified Test.Unit.SourceLocationBoundaryQuickCheckSpec
 import qualified Test.Unit.StringProcessingQuickCheckSpec
 
 -- ============================================================================
+-- New Advanced Test Modules (2025) - 10 Comprehensive Tests
+-- ============================================================================
+import qualified Test.Unit.CompilerErrorRecoveryBoundarySpec
+import qualified Test.Unit.DependencyAnalysisAdvancedSpec
+import qualified Test.Unit.TypeSystemBoundarySpec
+import qualified Test.Unit.OwnershipComplexInteractionSpec
+import qualified Test.Unit.SourceLocationMathPrecisionSpec
+import qualified Test.Unit.ParserUnicodeEncodingSpec
+import qualified Test.Unit.ToolchainIntegrationRobustnessSpec
+import qualified Test.Unit.MemorySafetyResourceManagementSpec
+import qualified Test.Unit.ConcurrentThreadSafetySpec
+import qualified Test.Unit.PerformanceRegressionOptimizationSpec
+
+-- ============================================================================
 -- Additional Test Modules Created for Enhanced Coverage
 -- ============================================================================
 import qualified Test.Unit.AdditionalUtilsSpec
