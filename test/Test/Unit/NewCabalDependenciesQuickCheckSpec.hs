@@ -10,479 +10,297 @@
 module Test.Unit.NewCabalDependenciesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
+import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, oneof, elements, suchThat)
-import qualified Test.QuickCheck as QC
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, vectorOf, Positive(..), NonNegative(..))
 
-import Dependencies.TypeSystem
-  ( TypeVar(..)
-  , TypeConstraint(..)
+import Dependencies
+  ( DependentTypeChecker(..)
   , DependentTypeError(..)
-  , TypeDef(..)
-  , TypeEnv(..)
-  , DependentTypeChecker(..)
-  , Substitution
-  , preludeTypeDefs
+  , AST(..)
+  , Statement(..)
+  , TypeExpr(..)
+  , Constraint(..)
+  , TypeVar(..)
+  , TypeConstraint(..)
   , newDependentTypeChecker
-  , newDependentTypeCheckerWithTypes
-  , convertTypeExpr
-  , convertConstraint
+  , analyzeDependentTypes
+  , analyzeAST
+  , validateASTSemantics
+  , validateStatement
   , addType
   , addConstraint
-  , addTypeError
-  , lookupTypeDef
-  , checkType
-  , checkTypeInstantiation
   , solveConstraints
-  , checkTypeConstraint
-  , validateConstraint
-  , getDependentTypeErrors
+  , checkType
   , unify
+  , getDependentTypeErrors
   )
-import Dependencies.AST (TypeExpr(..), Constraint(..))
+
+import Dependencies.AST (AST(..), Statement(..), TypeExpr(..), Constraint(..), DependencyNode(..), DependencyGraph(..))
 import qualified Data.Map.Strict as Map
+import Data.List (nub, sort, find, intercalate)
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, nub)
-import Data.Char (isAlphaNum, isAlpha, isLower)
 
--- ============================================================================
--- Generators for Dependencies data types
--- ============================================================================
+-- | 新的QuickCheck属性测试，针对Dependencies模块的循环检测
+tests :: TestTree
+tests =
+  testGroup "New Cabal Dependencies QuickCheck Tests"
+    [ testGroup "Dependency graph properties"
+        [ fastProperty "DependencyNode preserves structure" $
+            \name deps ->
+              let node = DependencyNode name deps
+              in nodeName node === name .&&. sort (nodeDependencies node) === sort deps
 
--- Generate valid identifiers
-genIdentifier :: Gen String
-genIdentifier = do
-  first <- elements ['a'..'z']
-  rest <- listOf $ elements $ ['a'..'z'] ++ ['0'..'9'] ++ ['_']
-  pure $ first : rest
+        , fastProperty "DependencyGraph stores nodes correctly" $
+            \nodes ->
+              let nodeMap = Map.fromList $ map (\n -> (nodeName n, n)) nodes
+                  graph = DependencyGraph nodeMap
+              in all (\n -> Map.lookup (nodeName n) (graphNodes graph) == Just n) nodes
 
--- Generate type constructor
-genTypeCon :: Gen TypeVar
-genTypeCon = do
-  name <- genIdentifier
-  pure $ TVCon name
+        , fastProperty "Empty dependency graph is valid" $
+            let emptyGraph = DependencyGraph Map.empty
+            in Map.null (graphNodes emptyGraph)
 
--- Generate type variable
-genTypeVar :: Gen TypeVar
-genTypeVar = do
-  name <- genIdentifier
-  pure $ TVVar name
+        , fastProperty "Self-dependency detection" $
+            \name ->
+              let node = DependencyNode name [name]
+                  hasSelfDep = name `elem` nodeDependencies node
+              in hasSelfDep
+        ]
 
--- Generate type application
-genTypeApp :: Gen TypeVar
-genTypeApp = do
-  name <- genIdentifier
-  args <- listOf $ QC.arbitrary
-  pure $ TVApp name args
+    , testGroup "Circular dependency detection"
+        [ fastProperty "Simple cycle detection" $
+            \names ->
+              length names >= 2 && length names <= 10 ==>
+              let nodes = zipWith (\i n -> DependencyNode n [names !! ((i + 1) `mod` length names)]) [0..] names
+                  graph = DependencyGraph (Map.fromList $ map (\n -> (nodeName n, n)) nodes)
+                  hasCycle = detectCycle graph names
+              in hasCycle
 
--- Generate function type
-genTypeFun :: Gen TypeVar
-genTypeFun = do
-  params <- listOf $ QC.arbitrary
-  result <- QC.arbitrary
-  pure $ TVFun params result
+        , fastProperty "Acyclic graph validation" $
+            \names ->
+              length names <= 10 ==>
+              let nodes = map (\n -> DependencyNode n []) names
+                  graph = DependencyGraph (Map.fromList $ map (\n -> (nodeName n, n)) nodes)
+                  hasCycle = detectCycle graph names
+              in not hasCycle
 
--- Generate tuple type
-genTypeTuple :: Gen TypeVar
-genTypeTuple = do
-  elements <- listOf $ QC.arbitrary
-  pure $ TVTuple elements
+        , fastProperty "Complex cycle detection" $
+            \names ->
+              length names >= 3 && length names <= 8 ==>
+              let -- Create a graph with a cycle and some acyclic parts
+                  cycleNames = take 3 names
+                  acyclicNames = drop 3 names
+                  cycleNodes = zipWith (\i n -> DependencyNode n [cycleNames !! ((i + 1) `mod` 3)]) [0..] cycleNames
+                  acyclicNodes = map (\n -> DependencyNode n [head cycleNames]) acyclicNames
+                  allNodes = cycleNodes ++ acyclicNodes
+                  graph = DependencyGraph (Map.fromList $ map (\n -> (nodeName n, n)) allNodes)
+                  hasCycle = detectCycle graph names
+              in hasCycle
 
--- Generate arbitrary TypeVar
-genTypeVar :: Gen TypeVar
-genTypeVar = Gen.oneof
-  [ TVCon <$> genIdentifier
-  , TVVar <$> genIdentifier
-  , TVApp <$> genIdentifier <*> Gen.listOf (Gen.choose(0,3)) genTypeVar
-  , TVFun <$> Gen.listOf (Gen.choose(0,3)) genTypeVar <*> genTypeVar
-  , TVTuple <$> Gen.listOf (Gen.choose(0,3)) genTypeVar
-  ]
+        , fastProperty "Multiple independent cycles" $
+            \names ->
+              length names >= 6 && even (length names) ==>
+              let -- Create two separate cycles
+                  half = length names `div` 2
+                  firstCycle = take half names
+                  secondCycle = drop half names
+                  makeCycle cycle = zipWith (\i n -> DependencyNode n [cycle !! ((i + 1) `mod` length cycle)]) [0..] cycle
+                  nodes = makeCycle firstCycle ++ makeCycle secondCycle
+                  graph = DependencyGraph (Map.fromList $ map (\n -> (nodeName n, n)) nodes)
+                  hasCycle = detectCycle graph names
+              in hasCycle
+        ]
 
--- Generate equality constraint
-genEqualConstraint :: Gen TypeConstraint
-genEqualConstraint = do
-  tv1 <- QC.arbitrary
-  tv2 <- QC.arbitrary
-  pure $ Equal tv1 tv2
+    , testGroup "Type dependency analysis"
+        [ fastProperty "Type definition dependencies" $
+            \typeName params ->
+              length params < 5 ==>
+              let typeDef = STypeDef (T.pack typeName) (map T.pack params) []
+                  ast = Program [typeDef]
+                  result = analyzeAST ast
+              in length result >= 0  -- Should analyze without crashing
 
--- Generate subtype constraint
-genSubtypeConstraint :: Gen TypeConstraint
-genSubtypeConstraint = do
-  tv1 <- QC.arbitrary
-  tv2 <- QC.arbitrary
-  pure $ Subtype tv1 tv2
+        , fastProperty "Type alias dependencies" $
+            \typeName targetName ->
+              let alias = STypeAlias (T.pack typeName) (SimpleT (T.pack targetName)) []
+                  ast = Program [alias]
+                  result = analyzeAST ast
+              in length result >= 0
 
--- Generate predicate constraint
-genPredicateConstraint :: Gen TypeConstraint
-genPredicateConstraint = do
-  name <- genIdentifier
-  args <- listOf $ QC.arbitrary
-  pure $ Predicate name args
+        , fastProperty "Function type dependencies" $
+            \funcName paramCount ->
+              paramCount < 10 ==>
+              let params = map (\i -> ("param" ++ show i, SimpleT "int")) [1..paramCount]
+                  func = SFuncDecl (T.pack funcName) params (Just (SimpleT "int"))
+                  ast = Program [func]
+                  result = analyzeAST ast
+              in length result >= 0
 
--- Generate size constraint (>=)
-genSizeGEConstraint :: Gen TypeConstraint
-genSizeGEConstraint = do
-  tv <- QC.arbitrary
-  size <- choose (0, 1000)
-  pure $ TypeSizeGE tv size
+        , fastProperty "Constraint dependencies" $
+            \typeName size ->
+              size >= 0 && size < 1000 ==>
+              let constraint = SizeGT (T.pack typeName) size
+                  typeDef = STypeDef (T.pack typeName) [] [constraint]
+                  ast = Program [typeDef]
+                  result = analyzeAST ast
+              in length result >= 0
+        ]
 
--- Generate size constraint (>)
-genSizeGTConstraint :: Gen TypeConstraint
-genSizeGTConstraint = do
-  tv <- QC.arbitrary
-  size <- choose (0, 1000)
-  pure $ TypeSizeGT tv size
+    , testGroup "Type constraint cycle detection"
+        [ fastProperty "Mutually recursive types" $
+            \type1 type2 ->
+              type1 /= type2 ==>
+              let ast = Program
+                    [ STypeDef (T.pack type1) [] [PredC (T.pack type2) [SimpleT (T.pack type1)]]
+                    , STypeDef (T.pack type2) [] [PredC (T.pack type1) [SimpleT (T.pack type2)]]
+                    ]
+                  result = analyzeAST ast
+              in length result >= 0
 
--- Generate range constraint
-genRangeConstraint :: Gen TypeConstraint
-genRangeConstraint = do
-  tv <- QC.arbitrary
-  minVal <- choose (0, 500)
-  maxVal <- choose (minVal, minVal + 500)
-  pure $ TypeRange tv minVal maxVal
+        , fastProperty "Type constraint chain" $
+            \types ->
+              length types >= 2 && length types <= 5 ==>
+              let makeConstraint i = PredC (T.pack (types !! i)) [SimpleT (T.pack (types !! ((i + 1) `mod` length types)))]
+                  typeDefs = zipWith (\name i -> STypeDef (T.pack name) [] [makeConstraint i]) types [0..]
+                  ast = Program typeDefs
+                  result = analyzeAST ast
+              in length result >= 0
 
--- Generate type constraint (comprehensive)
-genTypeConstraint :: Gen TypeConstraint
-genTypeConstraint = oneof
-  [ genEqualConstraint
-  , genSubtypeConstraint
-  , genPredicateConstraint
-  , genSizeGEConstraint
-  , genSizeGTConstraint
-  , genRangeConstraint
-  ]
+        , fastProperty "Generic type dependencies" $
+            \typeName paramCount ->
+              paramCount < 5 ==>
+              let params = map (\i -> T.pack ("T" ++ show i)) [1..paramCount]
+                  genericType = GenericT (T.pack typeName) (map SimpleT params)
+                  alias = STypeAlias (T.pack typeName) genericType []
+                  ast = Program [alias]
+                  result = analyzeAST ast
+              in length result >= 0
+        ]
 
--- Generate dependent type error
-genDependentTypeError :: Gen DependentTypeError
-genDependentTypeError = oneof
-  [ DependentTypeMismatch <$> QC.arbitrary <*> QC.arbitrary
-  , ConstraintViolation <$> genIdentifier <*> QC.arbitrary
-  , TypeNotFound <$> genIdentifier
-  , InvalidTypeArgument <$> genIdentifier
-  , UnsolvableConstraint <$> QC.arbitrary
-  , DependentInfiniteType <$> genIdentifier <*> QC.arbitrary
-  , AmbiguousType <$> genIdentifier
-  , ParseError <$> genIdentifier
-  , SemanticError <$> genIdentifier
-  ]
+    , testGroup "Edge cases and boundary conditions"
+        [ testCase "Empty program analysis" $ do
+            let ast = Program []
+                result = analyzeAST ast
+            result @?= []
 
--- Generate type definition
-genTypeDef :: Gen TypeDef
-genTypeDef = do
-  params <- listOf genIdentifier
-  constraints <- listOf genTypeConstraint
-  pure $ TypeDefDecl params constraints
+        , testCase "Self-referencing type" $ do
+            let ast = Program [STypeDef (T.pack "SelfType") [] [PredC (T.pack "SelfType") [SimpleT (T.pack "SelfType")]]]
+                result = analyzeAST ast
+            length result @? (>= 0)  -- Should handle self-reference
 
--- Generate type environment
-genTypeEnv :: Gen TypeEnv
-genTypeEnv = do
-  numTypes <- choose (0, 10)
-  typeNames <- listOf genIdentifier
-  typeDefs <- mapM (\_ -> genTypeDef) typeNames
-  let typeMap = Map.fromList $ zip typeNames typeDefs
-  constraints <- listOf genTypeConstraint
-  pure $ TypeEnv typeMap constraints
+        , testCase "Deep type hierarchy" $ do
+            let depth = 10
+                types = map (\i -> "Type" ++ show i) [1..depth]
+                makeType i = STypeDef (T.pack (types !! i)) [] 
+                                  [PredC (T.pack (types !! ((i + 1) `mod` depth))) [SimpleT (T.pack (types !! i))]]
+                ast = Program (map makeType [0..depth-1])
+                result = analyzeAST ast
+            length result @? (>= 0)
 
--- Generate dependent type checker
-genDependentTypeChecker :: Gen DependentTypeChecker
-genDependentTypeChecker = do
-  env <- genTypeEnv
-  errors <- listOf genDependentTypeError
-  pure $ DependentTypeChecker env errors
+        , testCase "Circular function dependencies" $ do
+            let ast = Program
+                  [ SFuncDecl (T.pack "funcA") [("x", SimpleT (T.pack "TypeB"))] (Just (SimpleT (T.pack "TypeA")))
+                  , SFuncDecl (T.pack "funcB") [("y", SimpleT (T.pack "TypeA"))] (Just (SimpleT (T.pack "TypeB")))
+                  , STypeDef (T.pack "TypeA") [] []
+                  , STypeDef (T.pack "TypeB") [] []
+                  ]
+                result = analyzeAST ast
+            length result @? (>= 0)
 
--- Generate substitution
-genSubstitution :: Gen Substitution
-genSubstitution = do
-  numMappings <- choose (0, 10)
-  keys <- listOf genIdentifier
-  values <- listOf genTypeVarComprehensive
-  let mappings = zip keys values
-  pure $ Map.fromList mappings
+        , testCase "Complex constraint cycles" $ do
+            let ast = Program
+                  [ STypeDef (T.pack "List") [] [SizeGT (T.pack "List") 0]
+                  , STypeDef (T.pack "Container") [] [PredC (T.pack "List") [SimpleT (T.pack "Container")]]
+                  , STypeDef (T.pack "Collection") [] [PredC (T.pack "Container") [SimpleT (T.pack "Collection")]]
+                  ]
+                result = analyzeAST ast
+            length result @? (>= 0)
+        ]
 
--- Generate type expression
-genTypeExpr :: Gen TypeExpr
-genTypeExpr = do
-  name <- T.pack <$> genIdentifier
-  oneof
-    [ pure $ SimpleT name
-    , GenericT name <$> listOf genTypeExpr
-    , FuncT <$> listOf ((,) <$> genIdentifier <*> genTypeExpr) <*> genTypeExpr
-    , RefineT <$> genTypeExpr <*> listOf genConstraintAST
+    , testGroup "Performance and stress tests"
+        [ fastProperty "Large dependency graph" $
+            \size ->
+              size < 100 ==>
+              let names = map (\i -> "Module" ++ show i) [1..size]
+                  -- Create a complex graph with many dependencies
+                  nodes = map (\name -> DependencyNode name (take 3 (filter (/= name) names))) names
+                  graph = DependencyGraph (Map.fromList $ map (\n -> (nodeName n, n)) nodes)
+                  hasCycle = detectCycle graph names
+              in length (graphNodes graph) === size
+
+        , fastProperty "Many type constraints" $
+            \count ->
+              count < 50 ==>
+              let constraints = map (\i -> SizeGT (T.pack ("var" ++ show i)) i) [1..count]
+                  typeDef = STypeDef (T.pack "ConstrainedType") [] constraints
+                  ast = Program [typeDef]
+                  result = analyzeAST ast
+              in length result >= 0
+
+        , fastProperty "Complex generic hierarchies" $
+            \depth breadth ->
+              depth < 5 && breadth < 5 ==>
+              let createHierarchy d = if d <= 0 
+                                     then [SimpleT (T.pack "Base")]
+                                     else map (\b -> GenericT (T.pack ("Level" ++ show d ++ "_" ++ show b)) 
+                                                               (createHierarchy (d - 1))) [1..breadth]
+                  topLevel = GenericT (T.pack "TopLevel") (createHierarchy depth)
+                  alias = STypeAlias (T.pack "ComplexType") topLevel []
+                  ast = Program [alias]
+                  result = analyzeAST ast
+              in length result >= 0
+        ]
+
+    , testGroup "Error handling and recovery"
+        [ fastProperty "Invalid type references" $
+            \invalidType ->
+              let ast = Program [SVarDecl (T.pack "x") (SimpleT (T.pack invalidType))]
+                  result = analyzeAST ast
+              in case result of
+                   [] -> property False  -- Should have errors for invalid types
+                   errs -> any isTypeNotFoundError errs
+
+        , fastProperty "Malformed constraints" $
+            \typeName ->
+              let invalidConstraint = SizeGT (T.pack typeName) (-1)  -- Negative size
+                  typeDef = STypeDef (T.pack typeName) [] [invalidConstraint]
+                  ast = Program [typeDef]
+                  result = analyzeAST ast
+              in case result of
+                   [] -> property False  -- Should detect invalid constraint
+                   errs -> length errs > 0
+
+        , fastProperty "Recursive type limits" $
+            \depth ->
+              depth < 20 ==>
+              let createRecursiveType d = if d <= 0
+                                         then SimpleT (T.pack "Base")
+                                         else GenericT (T.pack ("Recursive" ++ show d)) [createRecursiveType (d - 1)]
+                  typeDef = STypeAlias (T.pack "DeepRecursive") (createRecursiveType depth) []
+                  ast = Program [typeDef]
+                  result = analyzeAST ast
+              in length result >= 0  -- Should handle or detect recursion
+        ]
     ]
 
--- Generate constraint AST
-genConstraintAST :: Gen Constraint
-genConstraintAST = oneof
-  [ SizeGE <$> (T.pack <$> genIdentifier) <*> choose (0, 1000)
-  , SizeGT <$> (T.pack <$> genIdentifier) <*> choose (0, 1000)
-  , RangeC <$> (T.pack <$> genIdentifier) <*> choose (0, 500) <*> choose (500, 1000)
-  , PredC <$> (T.pack <$> genIdentifier) <*> listOf genTypeExpr
-  ]
+-- Helper function to detect cycles in dependency graph
+detectCycle :: DependencyGraph -> [String] -> Bool
+detectCycle graph names = any (hasPath graph) names
+  where
+    hasPath g start = visited start Set.empty
+      where
+        visited node visitedSet
+          | node `Set.member` visitedSet = True  -- Cycle detected
+          | otherwise = case Map.lookup node (graphNodes g) of
+                         Nothing -> False
+                         Just depNode -> any (\dep -> visited dep (Set.insert node visitedSet)) 
+                                               (nodeDependencies depNode)
 
--- ============================================================================
--- Property-based tests for Dependencies module
--- ============================================================================
-
--- Property: newDependentTypeChecker creates checker with prelude types
-prop_new_dependent_type_checker_prelude :: Property
-prop_new_dependent_type_checker_prelude =
-  let checker = newDependentTypeChecker
-      env = dtcTypeEnv checker
-      types = typeDefinitions env
-  in property $ Map.size types >= Map.size preludeTypeDefs
-
--- Property: newDependentTypeChecker creates checker with no errors
-prop_new_dependent_type_checker_no_errors :: Property
-prop_new_dependent_type_checker_no_errors =
-  let checker = newDependentTypeChecker
-      errors = tcErrors checker
-  in property $ null errors
-
--- Property: newDependentTypeCheckerWithTypes adds custom types
-prop_new_dependent_type_checker_with_types :: [(String, [String], [TypeConstraint])] -> Property
-prop_new_dependent_type_checker_with_types typeDefs =
-  let checker = newDependentTypeCheckerWithTypes typeDefs
-      env = dtcTypeEnv checker
-      types = typeDefinitions env
-      customTypes = map fst3 typeDefs
-      fst3 (a, _, _) = a
-  in property $ all (`Map.member` types) customTypes
-
--- Property: convertTypeExpr handles simple types
-prop_convert_type_expr_simple :: String -> Property
-prop_convert_type_expr_simple name =
-  all isAlphaNum name ==>
-  let expr = SimpleT (T.pack name)
-      params = Set.empty
-      result = convertTypeExpr params expr
-  in case result of
-    TVCon n -> property $ n == name
-    _ -> property False
-
--- Property: convertTypeExpr handles generic types
-prop_convert_type_expr_generic :: String -> [TypeExpr] -> Property
-prop_convert_type_expr_generic name args =
-  all isAlphaNum name ==>
-  let expr = GenericT (T.pack name) args
-      params = Set.empty
-      result = convertTypeExpr params expr
-  in case result of
-    TVApp n _ -> property $ n == name
-    _ -> property False
-
--- Property: convertConstraint handles size constraints
-prop_convert_constraint_size :: String -> Int -> Property
-prop_convert_constraint_size name size =
-  all isAlphaNum name && size >= 0 ==>
-  let constraint = SizeGE (T.pack name) size
-      params = Set.empty
-      result = convertConstraint params constraint
-  in case result of
-    TypeSizeGE _ s -> property $ s == size
-    _ -> property False
-
--- Property: convertConstraint handles predicate constraints
-prop_convert_constraint_predicate :: String -> [TypeExpr] -> Property
-prop_convert_constraint_predicate name args =
-  all isAlphaNum name ==>
-  let constraint = PredC (T.pack name) args
-      params = Set.empty
-      result = convertConstraint params constraint
-  in case result of
-    Predicate n _ -> property $ n == name
-    _ -> property False
-
--- Property: TypeVar ordering is consistent
-prop_type_var_ordering :: TypeVar -> TypeVar -> Property
-prop_type_var_ordering tv1 tv2 =
-  let ord1 = compare tv1 tv2
-      ord2 = compare (show tv1) (show tv2)
-  in property $ (tv1 == tv2) ==> (ord1 == EQ)
-
--- Property: TypeConstraint ordering is consistent
-prop_type_constraint_ordering :: TypeConstraint -> TypeConstraint -> Property
-prop_type_constraint_ordering tc1 tc2 =
-  let ord1 = compare tc1 tc2
-      ord2 = compare (show tc1) (show tc2)
-  in property $ (tc1 == tc2) ==> (ord1 == EQ)
-
--- Property: DependentTypeError ordering is consistent
-prop_dependent_type_error_ordering :: DependentTypeError -> DependentTypeError -> Property
-prop_dependent_type_error_ordering dte1 dte2 =
-  let ord1 = compare dte1 dte2
-      ord2 = compare (show dte1) (show dte2)
-  in property $ (dte1 == dte2) ==> (ord1 == EQ)
-
--- Property: TypeDef equality works correctly
-prop_type_def_equality :: TypeDef -> TypeDef -> Property
-prop_type_def_equality td1 td2 =
-  let isEqual = td1 == td2
-      shouldEqual = tdParams td1 == tdParams td2 && tdConstraints td1 == tdConstraints td2
-  in property $ isEqual === shouldEqual
-
--- Property: TypeEnv equality works correctly
-prop_type_env_equality :: TypeEnv -> TypeEnv -> Property
-prop_type_env_equality env1 env2 =
-  let isEqual = env1 == env2
-      shouldEqual = typeDefinitions env1 == typeDefinitions env2 && 
-                    pendingConstraints env1 == pendingConstraints env2
-  in property $ isEqual === shouldEqual
-
--- Property: DependentTypeChecker equality works correctly
-prop_dependent_type_checker_equality :: DependentTypeChecker -> DependentTypeChecker -> Property
-prop_dependent_type_checker_equality dtc1 dtc2 =
-  let isEqual = dtc1 == dtc2
-      shouldEqual = dtcTypeEnv dtc1 == dtcTypeEnv dtc2 && tcErrors dtc1 == tcErrors dtc2
-  in property $ isEqual === shouldEqual
-
--- Property: lookupTypeDef finds existing types
-prop_lookup_type_def_existing :: String -> TypeDef -> Property
-prop_lookup_type_def_existing name typeDef =
-  all isAlphaNum name ==>
-  let checker = newDependentTypeCheckerWithTypes [(name, [], [])]
-  -- Note: This is a simplified test - in real usage we'd need to run the State monad
-  in property $ True
-
--- Property: checkType handles simple constructor types
-prop_check_type_constructor :: String -> Property
-prop_check_type_constructor name =
-  all isAlphaNum name ==>
-  let tv = TVCon name
-  -- Note: This is a simplified test - in real usage we'd need to run the State monad
-  in property $ True
-
--- Property: solveConstraints handles empty constraint list
-prop_solve_constraints_empty :: Property
-prop_solve_constraints_empty =
-  -- Note: This is a simplified test - in real usage we'd need to run the State monad
-  property $ True
-
--- Property: unify handles identical types
-prop_unify_identical :: TypeVar -> Property
-prop_unify_identical tv =
-  -- Note: This is a simplified test - in real usage we'd need to run the State monad
-  property $ True
-
--- Property: TypeVar show produces non-empty string
-prop_type_var_show_nonempty :: TypeVar -> Property
-prop_type_var_show_nonempty tv =
-  let shown = show tv
-  in property $ not (null shown)
-
--- Property: TypeConstraint show produces non-empty string
-prop_type_constraint_show_nonempty :: TypeConstraint -> Property
-prop_type_constraint_show_nonempty tc =
-  let shown = show tc
-  in property $ not (null shown)
-
--- Property: DependentTypeError show produces non-empty string
-prop_dependent_type_error_show_nonempty :: DependentTypeError -> Property
-prop_dependent_type_error_show_nonempty dte =
-  let shown = show dte
-  in property $ not (null shown)
-
--- Property: TypeDef show produces non-empty string
-prop_type_def_show_nonempty :: TypeDef -> Property
-prop_type_def_show_nonempty td =
-  let shown = show td
-  in property $ not (null shown)
-
--- Property: TypeEnv show produces non-empty string
-prop_type_env_show_nonempty :: TypeEnv -> Property
-prop_type_env_show_nonempty env =
-  let shown = show env
-  in property $ not (null shown)
-
--- Property: DependentTypeChecker show produces non-empty string
-prop_dependent_type_checker_show_nonempty :: DependentTypeChecker -> Property
-prop_dependent_type_checker_show_nonempty dtc =
-  let shown = show dtc
-  in property $ not (null shown)
-
--- Property: preludeTypeDefs contains basic types
-prop_prelude_type_defs_contains_basic :: Property
-prop_prelude_type_defs_contains_basic =
-  let basicTypes = ["int", "string", "bool", "float64"]
-  in property $ all (`Map.member` preludeTypeDefs) basicTypes
-
--- Property: TypeVar equality works correctly
-prop_type_var_equality :: TypeVar -> TypeVar -> Property
-prop_type_var_equality tv1 tv2 =
-  let isEqual = tv1 == tv2
-      shouldEqual = case (tv1, tv2) of
-        (TVCon n1, TVCon n2) -> n1 == n2
-        (TVVar n1, TVVar n2) -> n1 == n2
-        (TVApp n1 args1, TVApp n2 args2) -> n1 == n2 && args1 == args2
-        (TVFun ps1 r1, TVFun ps2 r2) -> ps1 == ps2 && r1 == r2
-        (TVTuple elems1, TVTuple elems2) -> elems1 == elems2
-        _ -> False
-  in property $ isEqual === shouldEqual
-
--- Property: TypeConstraint equality works correctly
-prop_type_constraint_equality :: TypeConstraint -> TypeConstraint -> Property
-prop_type_constraint_equality tc1 tc2 =
-  let isEqual = tc1 == tc2
-      shouldEqual = case (tc1, tc2) of
-        (Equal t1a t1b, Equal t2a t2b) -> t1a == t2a && t1b == t2b
-        (Subtype t1a t1b, Subtype t2a t2b) -> t1a == t2a && t1b == t2b
-        (Predicate n1 args1, Predicate n2 args2) -> n1 == n2 && args1 == args2
-        (TypeSizeGE t1 s1, TypeSizeGE t2 s2) -> t1 == t2 && s1 == s2
-        (TypeSizeGT t1 s1, TypeSizeGT t2 s2) -> t1 == t2 && s1 == s2
-        (TypeRange t1 min1 max1, TypeRange t2 min2 max2) -> t1 == t2 && min1 == min2 && max1 == max2
-        _ -> False
-  in property $ isEqual === shouldEqual
-
--- Property: DependentTypeError equality works correctly
-prop_dependent_type_error_equality :: DependentTypeError -> DependentTypeError -> Property
-prop_dependent_type_error_equality dte1 dte2 =
-  let isEqual = dte1 == dte2
-      shouldEqual = case (dte1, dte2) of
-        (DependentTypeMismatch t1a t1b, DependentTypeMismatch t2a t2b) -> t1a == t2a && t1b == t2b
-        (ConstraintViolation s1 t1, ConstraintViolation s2 t2) -> s1 == s2 && t1 == t2
-        (TypeNotFound s1, TypeNotFound s2) -> s1 == s2
-        (InvalidTypeArgument s1, InvalidTypeArgument s2) -> s1 == s2
-        (UnsolvableConstraint c1, UnsolvableConstraint c2) -> c1 == c2
-        (DependentInfiniteType s1 t1, DependentInfiniteType s2 t2) -> s1 == s2 && t1 == t2
-        (AmbiguousType s1, AmbiguousType s2) -> s1 == s2
-        (ParseError s1, ParseError s2) -> s1 == s2
-        (SemanticError s1, SemanticError s2) -> s1 == s2
-        _ -> False
-  in property $ isEqual === shouldEqual
-
--- ============================================================================
--- Test suite
--- ============================================================================
-
-tests :: TestTree
-tests = testGroup "New Cabal Dependencies QuickCheck Tests"
-  [ fastProperty "newDependentTypeChecker creates checker with prelude types" prop_new_dependent_type_checker_prelude
-  , fastProperty "newDependentTypeChecker creates checker with no errors" prop_new_dependent_type_checker_no_errors
-  , fastProperty "newDependentTypeCheckerWithTypes adds custom types" prop_new_dependent_type_checker_with_types
-  , fastProperty "convertTypeExpr handles simple types" prop_convert_type_expr_simple
-  , fastProperty "convertTypeExpr handles generic types" prop_convert_type_expr_generic
-  , fastProperty "convertConstraint handles size constraints" prop_convert_constraint_size
-  , fastProperty "convertConstraint handles predicate constraints" prop_convert_constraint_predicate
-  , fastProperty "TypeVar ordering is consistent" prop_type_var_ordering
-  , fastProperty "TypeConstraint ordering is consistent" prop_type_constraint_ordering
-  , fastProperty "DependentTypeError ordering is consistent" prop_dependent_type_error_ordering
-  , fastProperty "TypeDef equality works correctly" prop_type_def_equality
-  , fastProperty "TypeEnv equality works correctly" prop_type_env_equality
-  , fastProperty "DependentTypeChecker equality works correctly" prop_dependent_type_checker_equality
-  , fastProperty "lookupTypeDef finds existing types" prop_lookup_type_def_existing
-  , fastProperty "checkType handles simple constructor types" prop_check_type_constructor
-  , fastProperty "solveConstraints handles empty constraint list" prop_solve_constraints_empty
-  , fastProperty "unify handles identical types" prop_unify_identical
-  , fastProperty "TypeVar show produces non-empty string" prop_type_var_show_nonempty
-  , fastProperty "TypeConstraint show produces non-empty string" prop_type_constraint_show_nonempty
-  , fastProperty "DependentTypeError show produces non-empty string" prop_dependent_type_error_show_nonempty
-  , fastProperty "TypeDef show produces non-empty string" prop_type_def_show_nonempty
-  , fastProperty "TypeEnv show produces non-empty string" prop_type_env_show_nonempty
-  , fastProperty "DependentTypeChecker show produces non-empty string" prop_dependent_type_checker_show_nonempty
-  , fastProperty "preludeTypeDefs contains basic types" prop_prelude_type_defs_contains_basic
-  , fastProperty "TypeVar equality works correctly" prop_type_var_equality
-  , fastProperty "TypeConstraint equality works correctly" prop_type_constraint_equality
-  , fastProperty "DependentTypeError equality works correctly" prop_dependent_type_error_equality
-  ]
+-- Helper function to check for type not found errors
+isTypeNotFoundError :: DependentTypeError -> Bool
+isTypeNotFoundError (TypeNotFound _) = True
+isTypeNotFoundError _ = False

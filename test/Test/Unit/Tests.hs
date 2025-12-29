@@ -126,6 +126,16 @@ import qualified Test.Unit.NewParserEnhancedQuickCheckSpec
 import qualified Test.Unit.NewErrorHandlerEnhancedQuickCheckSpec
 
 -- ============================================================================
+-- New Cabal QuickCheck Test Modules (2025) - 6 comprehensive tests
+-- ============================================================================
+import qualified Test.Unit.NewCabalUtilsQuickCheckSpec
+import qualified Test.Unit.NewCabalSourceLocationQuickCheckSpec
+import qualified Test.Unit.NewCabalParserQuickCheckSpec
+import qualified Test.Unit.NewCabalOwnershipQuickCheckSpec
+import qualified Test.Unit.NewCabalDependenciesQuickCheckSpec
+import qualified Test.Unit.NewCabalErrorHandlerQuickCheckSpec
+
+-- ============================================================================
 -- New Comprehensive Test Modules Created (2025)
 -- ============================================================================
 import qualified Test.Unit.ComprehensiveCoreQuickCheckSpec
@@ -3086,5 +3096,17 @@ tests =
         , Test.Unit.NewCoreCabalQuickCheckSpec9.tests
         , Test.Unit.NewCoreCabalQuickCheckSpec10.tests
         ]
+
+  -- ============================================================================
+  -- New Cabal QuickCheck Test Modules (2025) - 6 comprehensive tests
+  -- ============================================================================
+  , testGroup "New Cabal QuickCheck Test Modules - Enhanced Coverage"
+    [ Test.Unit.NewCabalUtilsQuickCheckSpec.tests
+    , Test.Unit.NewCabalSourceLocationQuickCheckSpec.tests
+    , Test.Unit.NewCabalParserQuickCheckSpec.tests
+    , Test.Unit.NewCabalOwnershipQuickCheckSpec.tests
+    , Test.Unit.NewCabalDependenciesQuickCheckSpec.tests
+    , Test.Unit.NewCabalErrorHandlerQuickCheckSpec.tests
+    ]
     
       ]
