@@ -503,7 +503,7 @@ test-suite typus-test
         Test.Unit.SymbolTableManagementSpec,
         Test.Unit.AdditionalCabalQuickCheckTestSpec,
         Test.Unit.AdditionalCabalTestsSpec,
-        Test.Unit.NewComprehensiveCabalTests,
+        Test.Unit.SimpleCabalQuickCheckTests,
         Test.Unit.BasicParsingQuickCheckSpec,
         Test.Unit.CompilerOptimizationsQuickCheckSpec,
         

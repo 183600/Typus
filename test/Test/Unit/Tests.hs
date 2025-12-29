@@ -583,8 +583,8 @@ import qualified Test.Unit.DependentTypeValidationTestSpec
 import qualified Test.Unit.ErrorHandlerRecoveryTestSpec
 import qualified Test.Unit.TypeInferenceAdvancedTestSpec
 
--- New Comprehensive Cabal Test Module
-import qualified Test.Unit.NewComprehensiveCabalTests
+-- Simple Cabal QuickCheck Test Module
+import qualified Test.Unit.SimpleCabalQuickCheckTests
 import qualified Test.Unit.IntegrationEndToEndTestSpec
 import qualified Test.Unit.PerformanceRegressionTestSpec
 import qualified Test.Unit.SecurityValidationTestSpec
@@ -3359,8 +3359,8 @@ tests =
         ]
 
     -- ============================================================================
-    -- New Comprehensive Cabal Tests (8 comprehensive tests)
+    -- Simple Cabal QuickCheck Tests (4 comprehensive tests)
     -- ============================================================================
-    , Test.Unit.NewComprehensiveCabalTests.tests
+    , Test.Unit.SimpleCabalQuickCheckTests.tests
 
         ]
