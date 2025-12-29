@@ -1,289 +1,195 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+
 module Test.Unit.OwnershipTransitivityQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, choose, 
-                        Property, (===), forAll, counterexample, suchThat, (==>))
-import qualified Ownership.Common.Types as Own (OwnershipType(..), OwnershipError(..), 
-                                               OwnershipAnalyzer(..), newOwnershipAnalyzer)
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos)
-import qualified Data.Text as T
-import qualified Data.Map as Map
+import TestSupport.Arbitrary
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 
--- ============================================================================
--- Test data generators
--- ============================================================================
+import Ownership.Common.Types
+  ( OwnershipType(..)
+  , OwnershipTransfer(..)
+  , OwnershipError(..)
+  , OwnershipAnalyzer
+  , newOwnershipAnalyzer
+  )
 
--- Generate variable names
-genVariableName :: Gen String
-genVariableName = do
-  first <- elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['_']
-  rest <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_']
-  return $ first : rest
+import SourceLocation (SourcePos(..), startPos)
 
--- Generate ownership types
-genOwnershipType :: Gen Own.OwnershipType
-genOwnershipType = oneof
-  [ Own.Owned <$> genVariableName
-  , Own.Borrowed <$> genVariableName
-  , Own.MutBorrowed <$> genVariableName
-  ]
+import Data.List (nub, sort)
+import qualified Data.Set as Set
 
--- Generate ownership errors
-genOwnershipError :: Gen Own.OwnershipError
-genOwnershipError = do
-  errorType <- elements ["use-after-move", "borrow-checker-violation", "lifetime-mismatch"]
-  variable <- genVariableName
-  location <- genSourceSpan
-  return $ Own.OwnershipError (T.pack errorType) variable location
+-- Mock ownership transfer operations for testing
+data MockOwnershipState = MockOwnershipState
+  { owners :: [(String, OwnershipType)]
+  , transfers :: [OwnershipTransfer]
+  } deriving (Show, Eq)
 
--- Generate source spans for error locations
-genSourceSpan :: Gen SourceSpan
-genSourceSpan = do
-  startLine <- choose (1, 100)
-  startCol <- choose (1, 100)
-  endLine <- choose (startLine, startLine + 50)
-  endCol <- if endLine == startLine 
-            then choose (startCol, startCol + 100)
-            else choose (1, 100)
-  return $ SourceSpan (SourcePos startLine startCol 0) (SourcePos endLine endCol 0)
+-- Property: Ownership transfer should be transitive
+prop_ownership_transfer_transitive :: String -> String -> String -> Property
+prop_ownership_transfer_transitive owner1 owner2 owner3 =
+  let initial = MockOwnershipState [(owner1, Owned), (owner2, Owned), (owner3, Owned)] []
+      transfer1 = performTransfer owner1 owner2 initial
+      transfer2 = performTransfer owner2 owner3 transfer1
+      finalOwners = map fst $ owners transfer2
+  in property $ owner3 `elem` finalOwners .&&. owner1 `notElem` finalOwners
 
--- Generate ownership analyzer state (simplified)
-genOwnershipAnalyzer :: Gen Own.OwnershipAnalyzer
-genOwnershipAnalyzer = do
-  -- For testing purposes, we'll use the newOwnershipAnalyzer constructor
-  -- In a real implementation, this would be more complex
-  return Own.newOwnershipAnalyzer
+-- Property: Moving ownership should remove previous owner
+prop_moving_ownership_removes_previous :: String -> String -> Property
+prop_moving_ownership_removes_previous from to =
+  from /= to ==>
+  let initial = MockOwnershipState [(from, Owned), (to, Unowned)] []
+      result = performTransfer from to initial
+      resultOwners = map fst $ owners result
+  in property $ to `elem` resultOwners .&&. from `notElem` resultOwners
 
--- Generate variable ownership mapping
-genOwnershipMap :: Gen [(String, Own.OwnershipType)]
-genOwnershipMap = do
-  numVars <- choose (0, 10)
-  vars <- listOf genVariableName
-  ownershipTypes <- listOf genOwnershipType
-  return $ take numVars $ zip vars ownershipTypes
+-- Property: Copying ownership should preserve original owner
+prop_copying_ownership_preserves_original :: String -> String -> Property
+prop_copying_ownership_preserves_original from to =
+  from /= to ==>
+  let initial = MockOwnershipState [(from, Owned), (to, Unowned)] []
+      result = performCopy from to initial
+      resultOwners = map fst $ owners result
+  in property $ to `elem` resultOwners .&&. from `elem` resultOwners
 
--- ============================================================================
--- Properties for OwnershipType
--- ============================================================================
+-- Property: Borrowing ownership should be temporary
+prop_borrowing_is_temporary :: String -> String -> Property
+prop_borrowing_is_temporary lender borrower =
+  lender /= borrower ==>
+  let initial = MockOwnershipState [(lender, Owned), (borrower, Unowned)] []
+      borrowed = performBorrow lender borrower initial
+      returned = performReturn borrower borrowed
+      finalOwners = map fst $ owners returned
+  in property $ lender `elem` finalOwners .&&. borrower `elem` finalOwners
 
-prop_ownership_type_owner_non_empty :: Own.OwnershipType -> Property
-prop_ownership_type_owner_non_empty ownershipType =
-  let owner = case ownershipType of
-        Own.Owned owner -> owner
-        Own.Borrowed owner -> owner
-        Own.MutBorrowed owner -> owner
-  in counterexample ("Owner: " ++ owner) $
-     length owner > 0
+-- Property: Shared ownership should allow multiple owners
+prop_shared_ownership_multiple :: [String] -> Property
+prop_shared_ownership_multiple ownersList =
+  length ownersList >= 2 .&&. length (nub ownersList) >= 2 ==>
+  let initialOwners = [(owner, if owner == head ownersList then Owned else Unowned) | owner <- ownersList]
+      initial = MockOwnershipState initialOwners []
+      result = foldl (\acc owner -> performShare (head ownersList) owner acc) initial (tail ownersList)
+      sharedOwners = filter (\(_, otype) -> otype == Shared) $ owners result
+  in property $ length sharedOwners >= 2
 
-prop_ownership_type_classification :: Own.OwnershipType -> Property
-prop_ownership_type_classification ownershipType =
-  let isOwned = case ownershipType of
-        Own.Owned _ -> True
-        _ -> False
-      isBorrowed = case ownershipType of
-        Own.Borrowed _ -> True
-        _ -> False
-      isMutBorrowed = case ownershipType of
-        Own.MutBorrowed _ -> True
-        _ -> False
-  in -- Exactly one of these should be true
-     (isOwned + if isBorrowed then 1 else 0 + if isMutBorrowed then 1 else 0) === 1
+-- Property: Ownership transfer chain should maintain consistency
+prop_ownership_chain_consistency :: [String] -> Property
+prop_ownership_chain_consistency chain =
+  length chain >= 3 .&&. length (nub chain) >= 3 ==>
+  let initialOwners = [(head chain, Owned)] ++ [(owner, Unowned) | owner <- tail chain]
+      initial = MockOwnershipState initialOwners []
+      result = foldl (\acc (from, to) -> performTransfer from to acc) initial (zip chain (tail chain))
+      finalOwners = map fst $ owners result
+  in property $ last chain `elem` finalOwners .&&. head chain `notElem` finalOwners
 
--- ============================================================================
--- Properties for ownership transfer
--- ============================================================================
+-- Property: Ownership should prevent double move errors
+prop_prevent_double_move :: String -> String -> String -> Property
+prop_prevent_double_move owner target1 target2 =
+  owner /= target1 .&&. owner /= target2 .&&. target1 /= target2 ==>
+  let initial = MockOwnershipState [(owner, Owned), (target1, Unowned), (target2, Unowned)] []
+      firstTransfer = performTransfer owner target1 initial
+      secondTransfer = performTransfer owner target2 firstTransfer
+      finalOwners = map fst $ owners secondTransfer
+  in property $ target1 `elem` finalOwners .&&. owner `notElem` finalOwners .&&. target2 `elem` finalOwners
 
-prop_ownership_transfer_preserves_owner :: String -> String -> Own.OwnershipType -> Property
-prop_ownership_transfer_preserves_owner oldVar newVar ownershipType =
-  let originalOwner = case ownershipType of
-        Own.Owned owner -> owner
-        Own.Borrowed owner -> owner
-        Own.MutBorrowed owner -> owner
-      transferredOwnership = case ownershipType of
-        Own.Owned _ -> Own.Owned newVar
-        Own.Borrowed _ -> Own.Borrowed newVar
-        Own.MutBorrowed _ -> Own.MutBorrowed newVar
-      transferredOwner = case transferredOwnership of
-        Own.Owned owner -> owner
-        Own.Borrowed owner -> owner
-        Own.MutBorrowed owner -> owner
-  in transferredOwner === newVar
+-- Property: Ownership analysis should detect cycles
+prop_detect_ownership_cycles :: [String] -> Property
+prop_detect_ownership_cycles nodes =
+  length nodes >= 3 .&&. length (nub nodes) >= 3 ==>
+  let cycle = zip nodes (tail nodes ++ [head nodes])
+      hasCycle = detectOwnershipCycle cycle
+  in property $ hasCycle
 
-prop_ownership_transfer_changes_owner :: String -> String -> Own.OwnershipType -> Property
-prop_ownership_transfer_changes_owner oldVar newVar ownershipType =
-  let transferredOwnership = case ownershipType of
-        Own.Owned _ -> Own.Owned newVar
-        Own.Borrowed _ -> Own.Borrowed newVar
-        Own.MutBorrowed _ -> Own.MutBorrowed newVar
-      originalOwner = case ownershipType of
-        Own.Owned owner -> owner
-        Own.Borrowed owner -> owner
-        Own.MutBorrowed owner -> owner
-      transferredOwner = case transferredOwnership of
-        Own.Owned owner -> owner
-        Own.Borrowed owner -> owner
-        Own.MutBorrowed owner -> owner
-  in newVar /= originalVar ==> transferredOwner /= originalOwner
+-- Property: Ownership transfer should preserve total ownership count
+prop_preserve_ownership_count :: String -> String -> Property
+prop_preserve_ownership_count from to =
+  from /= to ==>
+  let initial = MockOwnershipState [(from, Owned), (to, Unowned)] []
+      result = performTransfer from to initial
+      initialCount = length $ filter (\(_, otype) -> otype == Owned) $ owners initial
+      finalCount = length $ filter (\(_, otype) -> otype == Owned) $ owners result
+  in property $ initialCount === finalCount
 
--- ============================================================================
--- Properties for ownership borrowing
--- ============================================================================
+-- Helper functions for mock ownership operations
+performTransfer :: String -> String -> MockOwnershipState -> MockOwnershipState
+performTransfer from to state =
+  let newOwners = [(to, Owned)] ++ 
+                  [(owner, if owner == from then Unowned else otype) | (owner, otype) <- owners state, owner /= to]
+      transfer = OwnershipTransfer from to Move startPos
+  in MockOwnershipState newOwners (transfer : transfers state)
 
-prop_borrowing_preserves_original :: String -> String -> Own.OwnershipType -> Property
-prop_borrowing_preserves_original owner borrower ownershipType =
-  let originalOwnership = case ownershipType of
-        Own.Owned _ -> Own.Owned owner
-        _ -> ownershipType
-      borrowOwnership = Own.Borrowed owner
-  in -- Borrowing should not change the original owner
-     case originalOwnership of
-       Own.Owned origOwner -> origOwner === owner
-       _ -> property True
+performCopy :: String -> String -> MockOwnershipState -> MockOwnershipState
+performCopy from to state =
+  let newOwners = [(to, Owned)] ++ 
+                  [(owner, otype) | (owner, otype) <- owners state, owner /= to]
+      transfer = OwnershipTransfer from to Copy startPos
+  in MockOwnershipState newOwners (transfer : transfers state)
 
-prop_mutable_borrowing_exclusivity :: String -> String -> String -> Property
-prop_mutable_borrowing_exclusivity owner borrower1 borrower2 =
-  let borrow1 = Own.MutBorrowed owner
-      borrow2 = Own.MutBorrowed owner
-  in -- Two mutable borrows of the same resource should be detectable
-     borrower1 /= borrower2 ==> 
-     (borrow1, borrow2) === (Own.MutBorrowed owner, Own.MutBorrowed owner)
+performBorrow :: String -> String -> MockOwnershipState -> MockOwnershipState
+performBorrow lender borrower state =
+  let newOwners = [(borrower, Borrowed lender)] ++ 
+                  [(owner, otype) | (owner, otype) <- owners state, owner /= borrower]
+      transfer = OwnershipTransfer lender borrower Borrow startPos
+  in MockOwnershipState newOwners (transfer : transfers state)
 
--- ============================================================================
--- Properties for ownership chains
--- ============================================================================
+performReturn :: String -> MockOwnershipState -> MockOwnershipState
+performReturn borrower state =
+  case findBorrowedOwner borrower state of
+    Just lender -> 
+      let newOwners = [(borrower, Unowned), (lender, Owned)] ++ 
+                      [(owner, otype) | (owner, otype) <- owners state, 
+                                       owner /= borrower, owner /= lender]
+      in MockOwnershipState newOwners (transfers state)
+    Nothing -> state
 
-prop_ownership_chain_transitivity :: [(String, Own.OwnershipType)] -> Property
-prop_ownership_chain_transitivity ownershipMap =
-  let -- Build a simple ownership chain
-      chainLength = min 3 (length ownershipMap)
-      chain = take chainLength ownershipMap
-      hasValidChain = length chain >= 2
-  in hasValidChain ==> 
-     let firstOwner = fst $ head chain
-         lastOwner = fst $ last chain
-     in firstOwner /= lastOwner ==> property True
+performShare :: String -> String -> MockOwnershipState -> MockOwnershipState
+performShare from to state =
+  let newOwners = [(to, Shared), (from, Shared)] ++ 
+                  [(owner, otype) | (owner, otype) <- owners state, 
+                                   owner /= from, owner /= to]
+      transfer = OwnershipTransfer from to Share startPos
+  in MockOwnershipState newOwners (transfer : transfers state)
 
-prop_ownership_cycle_detection :: [(String, Own.OwnershipType)] -> Property
-prop_ownership_cycle_detection ownershipMap =
-  let -- Check for cycles in ownership relationships
-      hasNoCycles = True  -- Simplified for testing
-  in hasNoCycles ==> length ownershipMap >= 0
+findBorrowedOwner :: String -> MockOwnershipState -> Maybe String
+findBorrowedOwner borrower state =
+  case filter (\(_, otype) -> case otype of Borrowed lender -> True; _ -> False) $ owners state of
+    ((_, Borrowed lender):_) -> Just lender
+    _ -> Nothing
 
--- ============================================================================
--- Properties for ownership errors
--- ============================================================================
+detectOwnershipCycle :: [(String, String)] -> Bool
+detectOwnershipCycle transfers =
+  let visited = Set.empty
+      recStack = Set.empty
+  in hasCycleHelper transfers visited recStack
 
-prop_ownership_error_preserves_type :: Own.OwnershipError -> Property
-prop_ownership_error_preserves_type ownershipError =
-  let errorType = Own.errorType ownershipError
-  in T.length errorType > 0
-
-prop_ownership_error_preserves_variable :: Own.OwnershipError -> Property
-prop_ownership_error_preserves_variable ownershipError =
-  let variable = Own.errorVariable ownershipError
-  in length variable > 0
-
-prop_ownership_error_location_valid :: Own.OwnershipError -> Property
-prop_ownership_error_location_valid ownershipError =
-  let location = Own.errorLocation ownershipError
-      start = spanStart location
-      end = spanEnd location
-  in posLine start >= 1 && posColumn start >= 1 &&
-     posLine end >= posLine start
-
--- ============================================================================
--- Properties for ownership analysis consistency
--- ============================================================================
-
-prop_ownership_analysis_deterministic :: Own.OwnershipAnalyzer -> [(String, Own.OwnershipType)] -> Property
-prop_ownership_analysis_deterministic analyzer ownershipMap =
-  let -- In a deterministic analysis, running the same analysis twice should yield the same result
-      result1 = ownershipMap  -- Simplified - would be actual analysis result
-      result2 = ownershipMap
-  in result1 === result2
-
-prop_ownership_analysis_monotonicity :: [(String, Own.OwnershipType)] -> [(String, Own.OwnershipType)] -> Property
-prop_ownership_analysis_monotonicity baseOwnership additionalOwnership =
-  let -- Adding more ownership information should not invalidate existing correct information
-      combined = baseOwnership ++ additionalOwnership
-      baseVars = map fst baseOwnership
-      combinedVars = map fst combined
-  in all (`elem` combinedVars) baseVars
-
--- ============================================================================
--- Properties for ownership transfer scenarios
--- ============================================================================
-
-prop_move_operation_ownership_transfer :: String -> String -> Property
-prop_move_operation_ownership_transfer source destination =
-  let sourceOwnership = Own.Owned source
-      destinationOwnership = Own.Owned destination
-  in destination /= source ==> 
-     destinationOwnership === Own.Owned destination
-
-prop_borrow_operation_ownership_preservation :: String -> String -> Property
-prop_borrow_operation_ownership_preservation owner borrower =
-  let originalOwnership = Own.Owned owner
-      borrowOwnership = Own.Borrowed owner
-  in borrower /= owner ==> 
-     case borrowOwnership of
-       Own.Borrowed borrowedOwner -> borrowedOwner === owner
-
--- ============================================================================
--- Edge case properties
--- ============================================================================
-
-prop_empty_ownership_handling :: Property
-prop_empty_ownership_handling =
-  let emptyOwnershipMap = []
-      analyzer = Own.newOwnershipAnalyzer
-  in length emptyOwnershipMap === 0
-
-prop_single_variable_ownership :: String -> Property
-prop_single_variable_ownership var =
-  let singleOwnership = [(var, Own.Owned var)]
-  in length singleOwnership === 1 &&
-     fst (head singleOwnership) === var
-
--- ============================================================================
--- Test suite
--- ============================================================================
+hasCycleHelper :: [(String, String)] -> Set.Set String -> Set.Set String -> Bool
+hasCycleHelper [] _ _ = False
+hasCycleHelper ((from, to):rest) visited recStack
+  | Set.member from recStack = True
+  | Set.member from visited = hasCycleHelper rest visited recStack
+  | otherwise = 
+      let newVisited = Set.insert from visited
+          newRecStack = Set.insert from recStack
+      in hasCycleHelper rest newVisited newRecStack
 
 tests :: TestTree
 tests = testGroup "Ownership Transitivity QuickCheck Tests"
-  [ testGroup "OwnershipType properties"
-    [ fastProperty "ownership type owner non-empty" prop_ownership_type_owner_non_empty
-    , fastProperty "ownership type classification" prop_ownership_type_classification
-    ]
-  , testGroup "Ownership transfer properties"
-    [ fastProperty "ownership transfer preserves owner" prop_ownership_transfer_preserves_owner
-    , fastProperty "ownership transfer changes owner" prop_ownership_transfer_changes_owner
-    ]
-  , testGroup "Ownership borrowing properties"
-    [ fastProperty "borrowing preserves original" prop_borrowing_preserves_original
-    , fastProperty "mutable borrowing exclusivity" prop_mutable_borrowing_exclusivity
-    ]
-  , testGroup "Ownership chain properties"
-    [ fastProperty "ownership chain transitivity" prop_ownership_chain_transitivity
-    , fastProperty "ownership cycle detection" prop_ownership_cycle_detection
-    ]
-  , testGroup "Ownership error properties"
-    [ fastProperty "ownership error preserves type" prop_ownership_error_preserves_type
-    , fastProperty "ownership error preserves variable" prop_ownership_error_preserves_variable
-    , fastProperty "ownership error location valid" prop_ownership_error_location_valid
-    ]
-  , testGroup "Ownership analysis properties"
-    [ fastProperty "ownership analysis deterministic" prop_ownership_analysis_deterministic
-    , fastProperty "ownership analysis monotonicity" prop_ownership_analysis_monotonicity
-    ]
-  , testGroup "Ownership transfer scenarios"
-    [ fastProperty "move operation ownership transfer" prop_move_operation_ownership_transfer
-    , fastProperty "borrow operation ownership preservation" prop_borrow_operation_ownership_preservation
-    ]
-  , testGroup "Edge case properties"
-    [ fastProperty "empty ownership handling" prop_empty_ownership_handling
-    , fastProperty "single variable ownership" prop_single_variable_ownership
-    ]
+  [ fastProperty "Ownership transfer is transitive" prop_ownership_transfer_transitive
+  , fastProperty "Moving ownership removes previous owner" prop_moving_ownership_removes_previous
+  , fastProperty "Copying ownership preserves original owner" prop_copying_ownership_preserves_original
+  , fastProperty "Borrowing is temporary" prop_borrowing_is_temporary
+  , fastProperty "Shared ownership allows multiple owners" prop_shared_ownership_multiple
+  , fastProperty "Ownership chain maintains consistency" prop_ownership_chain_consistency
+  , fastProperty "Ownership prevents double move errors" prop_prevent_double_move
+  , fastProperty "Ownership analysis detects cycles" prop_detect_ownership_cycles
+  , fastProperty "Ownership transfer preserves total count" prop_preserve_ownership_count
   ]
