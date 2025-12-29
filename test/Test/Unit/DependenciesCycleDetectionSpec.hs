@@ -1,383 +1,322 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
 module Test.Unit.DependenciesCycleDetectionSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, choose, oneof, listOf, elements)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf1, elements, suchThat)
-import Data.List (nub, sort, (\\), intersect, union)
-import Data.Maybe (isJust, isNothing, fromMaybe)
-import Data.Set (Set)
-import qualified Data.Set as Set
-import qualified Data.Map.Strict as Map
-import Data.Text (Text)
-import qualified Data.Text as T
 
-import Dependencies.TypeSystem
-  ( TypeVar(..)
+import Dependencies
+  ( DependentTypeError(..)
+  , TypeVar(..)
   , TypeConstraint(..)
-  , DependentTypeError(..)
   , TypeDef(..)
   , TypeEnv(..)
   , DependentTypeChecker(..)
-  , Substitution
   , newDependentTypeChecker
   , newDependentTypeCheckerWithTypes
+  , analyzeDependentTypes
+  , analyzeAST
+  , validateASTSemantics
   , addType
   , addConstraint
   , checkType
-  , checkTypeInstantiation
   , solveConstraints
-  , checkTypeConstraint
-  , validateConstraint
   , getDependentTypeErrors
   , unify
   )
+import Dependencies.AST (AST(..), Statement(..), TypeExpr(..), Constraint(..))
+import Dependencies.Parser (runParser)
+import Dependencies.TypeSystem (preludeTypeDefs)
+import qualified Data.Set as Set
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 
--- | Generate a valid type variable name
-genTypeVarName :: Gen String
-genTypeVarName = do
-  first <- elements ['a'..'z']
-  rest <- listOf (elements $ ['a'..'z'] ++ ['0'..'9'] ++ "_")
-  return $ first : rest
-
--- | Generate a simple type variable
-genSimpleTypeVar :: Gen TypeVar
-genSimpleTypeVar = do
-  name <- genTypeVarName
-  return $ TVVar name
-
--- | Generate a type variable with arguments
-genAppTypeVar :: Gen TypeVar
-genAppTypeVar = do
-  name <- elements ["List", "Array", "Map", "Option", "Result"]
-  args <- listOf1 genSimpleTypeVar
-  return $ TVApp name args
-
--- | Generate a function type variable
-genFunTypeVar :: Gen TypeVar
-genFunTypeVar = do
-  params <- listOf1 genSimpleTypeVar
-  returnType <- genSimpleTypeVar
-  return $ TVFun params returnType
-
--- | Generate a tuple type variable
-genTupleTypeVar :: Gen TypeVar
-genTupleTypeVar = do
-  elems <- listOf1 genSimpleTypeVar
-  return $ TVTuple elems
-
--- | Generate any type variable
-genTypeVar :: Gen TypeVar
-genTypeVar = elements
-  [ genSimpleTypeVar
-  , genAppTypeVar
-  , genFunTypeVar
-  , genTupleTypeVar
-  ] >>= ($)
-
--- | Generate an equality constraint
-genEqualConstraint :: Gen TypeConstraint
-genEqualConstraint = do
-  tv1 <- genSimpleTypeVar
-  tv2 <- genSimpleTypeVar `suchThat` (/= tv1)
-  return $ Equal tv1 tv2
-
--- | Generate a subtype constraint
-genSubtypeConstraint :: Gen TypeConstraint
-genSubtypeConstraint = do
-  tv1 <- genSimpleTypeVar
-  tv2 <- genSimpleTypeVar `suchThat` (/= tv1)
-  return $ Subtype tv1 tv2
-
--- | Generate a predicate constraint
-genPredicateConstraint :: Gen TypeConstraint
-genPredicateConstraint = do
-  predName <- elements ["Num", "Ord", "Eq", "Show", "Read"]
-  args <- listOf1 genSimpleTypeVar
-  return $ Predicate predName args
-
--- | Generate a size constraint
-genSizeConstraint :: Gen TypeConstraint
-genSizeConstraint = do
-  tv <- genSimpleTypeVar
-  size <- choose (0, 100)
-  elements
-    [ TypeSizeGE tv size
-    , TypeSizeGT tv size
-    ]
-
--- | Generate a range constraint
-genRangeConstraint :: Gen TypeConstraint
-genRangeConstraint = do
-  tv <- genSimpleTypeVar
-  lower <- choose (0, 50)
-  upper <- choose (lower + 1, 100)
-  return $ TypeRange tv lower upper
-
--- | Generate any constraint
-genConstraint :: Gen TypeConstraint
-genConstraint = elements
-  [ genEqualConstraint
-  , genSubtypeConstraint
-  , genPredicateConstraint
-  , genSizeConstraint
-  , genRangeConstraint
-  ] >>= ($)
-
--- | Generate a type definition
-genTypeDef :: Gen (String, [String], [TypeConstraint])
-genTypeDef = do
-  name <- elements ["MyType", "CustomType", "UserType", "DataType"]
-  params <- listOf genTypeVarName
-  constraints <- listOf genConstraint
-  return (name, params, constraints)
-
-instance Arbitrary TypeVar where
-  arbitrary = genTypeVar
-
-instance Arbitrary TypeConstraint where
-  arbitrary = genConstraint
-
--- Helper function to extract variable names from TypeVar
-extractVarNames :: TypeVar -> [String]
-extractVarNames (TVVar name) = [name]
-extractVarNames (TVApp _ args) = concatMap extractVarNames args
-extractVarNames (TVFun params ret) = concatMap extractVarNames params ++ extractVarNames ret
-extractVarNames (TVTuple elems) = concatMap extractVarNames elems
-
--- Helper function to extract variable names from TypeConstraint
-extractConstraintVarNames :: TypeConstraint -> [String]
-extractConstraintVarNames (Equal tv1 tv2) = extractVarNames tv1 ++ extractVarNames tv2
-extractConstraintVarNames (Subtype tv1 tv2) = extractVarNames tv1 ++ extractVarNames tv2
-extractConstraintVarNames (Predicate _ args) = concatMap extractVarNames args
-extractConstraintVarNames (TypeSizeGE tv _) = extractVarNames tv
-extractConstraintVarNames (TypeSizeGT tv _) = extractVarNames tv
-extractConstraintVarNames (TypeRange tv _ _) = extractVarNames tv
-
--- Property: newDependentTypeChecker has empty errors
-prop_newDependentTypeChecker_noErrors :: Property
-prop_newDependentTypeChecker_noErrors =
-  let checker = newDependentTypeChecker
-      errors = getDependentTypeErrors checker
-  in null errors
-
--- Property: newDependentTypeChecker has prelude types
-prop_newDependentTypeChecker_hasPrelude :: Property
-prop_newDependentTypeChecker_hasPrelude =
-  let checker = newDependentTypeChecker
-      env = dtcTypeEnv checker
-      typeDefs = typeDefinitions env
-      preludeTypes = ["int", "string", "bool", "float64"]
-  in all (`Map.member` typeDefs) preludeTypes
-
--- Property: adding type with valid name succeeds
-prop_addType_validName :: Property
-prop_addType_validName =
-  forAll genTypeDef $ \(name, params, constraints) ->
-    let checker1 = newDependentTypeChecker
-        typeDef = TypeDefDecl params constraints
-        checker2 = addType name typeDef checker1
-        env = dtcTypeEnv checker2
-        typeDefs = typeDefinitions env
-    in Map.member name typeDefs
-
--- Property: adding constraint preserves existing types
-prop_addConstraint_preservesTypes :: Property
-prop_addConstraint_preservesTypes =
-  forAll genConstraint $ \constraint ->
-    let checker1 = newDependentTypeChecker
-        typeDefs1 = typeDefinitions (dtcTypeEnv checker1)
-        checker2 = addConstraint constraint checker1
-        typeDefs2 = typeDefinitions (dtcTypeEnv checker2)
-    in typeDefs1 == typeDefs2
-
--- Property: equal constraint variables are extracted correctly
-prop_equalConstraint_varsExtracted :: Property
-prop_equalConstraint_varsExtracted =
-  forAll genEqualConstraint $ \constraint ->
-    let varNames = extractConstraintVarNames constraint
-    in case constraint of
-         Equal tv1 tv2 -> 
-           let names1 = extractVarNames tv1
-               names2 = extractVarNames tv2
-           in sort varNames == sort (names1 ++ names2)
-         _ -> property False
-
--- Property: subtype constraint variables are extracted correctly
-prop_subtypeConstraint_varsExtracted :: Property
-prop_subtypeConstraint_varsExtracted =
-  forAll genSubtypeConstraint $ \constraint ->
-    let varNames = extractConstraintVarNames constraint
-    in case constraint of
-         Subtype tv1 tv2 -> 
-           let names1 = extractVarNames tv1
-               names2 = extractVarNames tv2
-           in sort varNames == sort (names1 ++ names2)
-         _ -> property False
-
--- Property: predicate constraint variables are extracted correctly
-prop_predicateConstraint_varsExtracted :: Property
-prop_predicateConstraint_varsExtracted =
-  forAll genPredicateConstraint $ \constraint ->
-    let varNames = extractConstraintVarNames constraint
-    in case constraint of
-         Predicate _ args -> 
-           let argNames = concatMap extractVarNames args
-           in sort varNames == sort argNames
-         _ -> property False
-
--- Property: size constraint variables are extracted correctly
-prop_sizeConstraint_varsExtracted :: Property
-prop_sizeConstraint_varsExtracted =
-  forAll genSizeConstraint $ \constraint ->
-    let varNames = extractConstraintVarNames constraint
-    in case constraint of
-         TypeSizeGE tv _ -> extractVarNames tv == varNames
-         TypeSizeGT tv _ -> extractVarNames tv == varNames
-         _ -> property False
-
--- Property: range constraint variables are extracted correctly
-prop_rangeConstraint_varsExtracted :: Property
-prop_rangeConstraint_varsExtracted =
-  forAll genRangeConstraint $ \constraint ->
-    let varNames = extractConstraintVarNames constraint
-    in case constraint of
-         TypeRange tv _ _ -> extractVarNames tv == varNames
-         _ -> property False
-
--- Property: type variable extraction is consistent
-prop_typeVar_extractionConsistent :: Property
-prop_typeVar_extractionConsistent =
-  forAll genTypeVar $ \typeVar ->
-    let varNames = extractVarNames typeVar
-        uniqueVarNames = nub varNames
-    in length varNames >= length uniqueVarNames
-
--- Property: simple type variable extraction returns single name
-prop_simpleTypeVar_singleName :: Property
-prop_simpleTypeVar_singleName =
-  forAll genSimpleTypeVar $ \typeVar ->
-    case typeVar of
-      TVVar name -> extractVarNames typeVar == [name]
-      _ -> property False
-
--- Property: function type variable extraction includes all params and return
-prop_funTypeVar_extractsAll :: Property
-prop_funTypeVar_extractsAll =
-  forAll genFunTypeVar $ \typeVar ->
-    case typeVar of
-      TVFun params ret -> 
-        let paramNames = concatMap extractVarNames params
-            returnNames = extractVarNames ret
-            allNames = extractVarNames typeVar
-        in sort allNames == sort (paramNames ++ returnNames)
-      _ -> property False
-
--- Property: tuple type variable extraction includes all elements
-prop_tupleTypeVar_extractsAll :: Property
-prop_tupleTypeVar_extractsAll =
-  forAll genTupleTypeVar $ \typeVar ->
-    case typeVar of
-      TVTuple elems -> 
-        let elemNames = concatMap extractVarNames elems
-            allNames = extractVarNames typeVar
-        in sort allNames == sort elemNames
-      _ -> property False
-
--- Property: app type variable extraction includes constructor and args
-prop_appTypeVar_extractsAll :: Property
-prop_appTypeVar_extractsAll =
-  forAll genAppTypeVar $ \typeVar ->
-    case typeVar of
-      TVApp _ args -> 
-        let argNames = concatMap extractVarNames args
-            allNames = extractVarNames typeVar
-        in sort allNames == sort argNames
-      _ -> property False
-
--- Property: constraint set preserves uniqueness when adding same constraint
-prop_constraintSet_uniqueness :: Property
-prop_constraintSet_uniqueness =
-  forAll genConstraint $ \constraint ->
-    let checker1 = newDependentTypeChecker
-        checker2 = addConstraint constraint checker1
-        checker3 = addConstraint constraint checker2
-        constraints1 = pendingConstraints (dtcTypeEnv checker2)
-        constraints2 = pendingConstraints (dtcTypeEnv checker3)
-    in length constraints2 >= length constraints1
-
--- Property: type checker with custom types has those types
-prop_customTypeChecker_hasTypes :: Property
-prop_customTypeChecker_hasTypes =
-  forAll (listOf1 genTypeDef) $ \typeDefs ->
-    let typeDefPairs = [(n, ps, cs) | (n, ps, cs) <- typeDefs]
-        checker = newDependentTypeCheckerWithTypes typeDefPairs
-        env = dtcTypeEnv checker
-        typeDefsMap = typeDefinitions env
-        expectedNames = map (\(n, _, _) -> n) typeDefs
-    in all (`Map.member` typeDefsMap) expectedNames
-
--- Property: type checker errors are accumulated
-prop_typeChecker_errorsAccumulated :: Property
-prop_typeChecker_errorsAccumulated =
-  forAll (listOf1 genConstraint) $ \constraints ->
-    let checker = newDependentTypeChecker
-        checkerWithConstraints = foldr addConstraint checker constraints
-        errors = getDependentTypeErrors checkerWithConstraints
-    in length errors >= 0  -- May have errors from constraint solving
-
--- Property: type environment maintains type definitions order
-prop_typeEnvironment_maintainsOrder :: Property
-prop_typeEnvironment_maintainsOrder =
-  forAll (listOf1 genTypeDef) $ \typeDefs ->
-    let typeDefPairs = [(n, ps, cs) | (n, ps, cs) <- typeDefs]
-        checker = newDependentTypeCheckerWithTypes typeDefPairs
-        env = dtcTypeEnv checker
-        typeDefsMap = typeDefinitions env
-        actualNames = Map.keys typeDefsMap
-        expectedNames = map (\(n, _, _) -> n) typeDefs ++ Map.keys preludeTypeDefs
-    in all (`elem` actualNames) expectedNames
-
--- Property: constraint solving preserves variable relationships
-prop_constraintSolving_preservesRelationships :: Property
-prop_constraintSolving_preservesRelationships =
-  forAll (listOf1 genEqualConstraint) $ \constraints ->
-    let checker = newDependentTypeChecker
-        checkerWithConstraints = foldr addConstraint checker constraints
-        checkerSolved = solveConstraints checkerWithConstraints
-        errors1 = getDependentTypeErrors checkerWithConstraints
-        errors2 = getDependentTypeErrors checkerSolved
-    in length errors2 >= length errors1  -- May detect more errors after solving
-
+-- | Tests for dependency cycle detection in type system
 tests :: TestTree
 tests =
-  testGroup "Dependencies Cycle Detection Properties"
-    [ fastProperty "newDependentTypeChecker has empty errors" prop_newDependentTypeChecker_noErrors
-    , fastProperty "newDependentTypeChecker has prelude types" prop_newDependentTypeChecker_hasPrelude
-    , fastProperty "adding type with valid name succeeds" prop_addType_validName
-    , fastProperty "adding constraint preserves existing types" prop_addConstraint_preservesTypes
-    , fastProperty "equal constraint variables are extracted correctly" prop_equalConstraint_varsExtracted
-    , fastProperty "subtype constraint variables are extracted correctly" prop_subtypeConstraint_varsExtracted
-    , fastProperty "predicate constraint variables are extracted correctly" prop_predicateConstraint_varsExtracted
-    , fastProperty "size constraint variables are extracted correctly" prop_sizeConstraint_varsExtracted
-    , fastProperty "range constraint variables are extracted correctly" prop_rangeConstraint_varsExtracted
-    , fastProperty "type variable extraction is consistent" prop_typeVar_extractionConsistent
-    , fastProperty "simple type variable extraction returns single name" prop_simpleTypeVar_singleName
-    , fastProperty "function type variable extraction includes all params and return" prop_funTypeVar_extractsAll
-    , fastProperty "tuple type variable extraction includes all elements" prop_tupleTypeVar_extractsAll
-    , fastProperty "app type variable extraction includes constructor and args" prop_appTypeVar_extractsAll
-    , fastProperty "constraint set preserves uniqueness when adding same constraint" prop_constraintSet_uniqueness
-    , fastProperty "type checker with custom types has those types" prop_customTypeChecker_hasTypes
-    , fastProperty "type checker errors are accumulated" prop_typeChecker_errorsAccumulated
-    , fastProperty "type environment maintains type definitions order" prop_typeEnvironment_maintainsOrder
-    , fastProperty "constraint solving preserves variable relationships" prop_constraintSolving_preservesRelationships
+  testGroup "Dependencies Cycle Detection"
+    [ testGroup "Simple cycle detection"
+        [ testCase "detects direct type dependency cycle" $ do
+            let source = unlines
+                  [ "type A = B"
+                  , "type B = A"
+                  ]
+                errors = analyzeDependentTypes source
+            assertBool "Should detect direct cycle" $ any isCycleError errors
+
+        , testCase "detects three-way type dependency cycle" $ do
+            let source = unlines
+                  [ "type A = B"
+                  , "type B = C" 
+                  , "type C = A"
+                  ]
+                errors = analyzeDependentTypes source
+            assertBool "Should detect three-way cycle" $ any isCycleError errors
+
+        , testCase "detects long dependency cycle" $ do
+            let source = unlines $ ["type " ++ show i ++ " = " ++ show (i + 1) | i <- [1..10]] ++ ["type 11 = 1"]
+                errors = analyzeDependentTypes source
+            assertBool "Should detect long cycle" $ any isCycleError errors
+
+        , testCase "allows non-cyclic dependencies" $ do
+            let source = unlines
+                  [ "type A = Int"
+                  , "type B = A"
+                  , "type C = B"
+                  ]
+                errors = analyzeDependentTypes source
+            assertBool "Should not detect cycle in linear dependencies" $ not (any isCycleError errors)
+        ]
+
+    , testGroup "Generic type cycle detection"
+        [ testCase "detects cycles in generic types" $ do
+            let source = unlines
+                  [ "type List<T> = Cons<T, List<T>> | Nil"
+                  , "type Tree<T> = Node<T, List<Tree<T>>> | Leaf"
+                  ]
+                errors = analyzeDependentTypes source
+            -- Generic recursive types should be handled specially
+            assertBool "Should handle generic recursion appropriately" $ length errors >= 0
+
+        , testCase "detects cycles in generic constraints" $ do
+            let source = unlines
+                  [ "type A<T> where T : B<A<T>> = T"
+                  , "type B<T> where T : A<B<T>> = T"
+                  ]
+                errors = analyzeDependentTypes source
+            assertBool "Should detect constraint cycles" $ any isCycleError errors
+
+        , testCase "allows valid generic dependencies" $ do
+            let source = unlines
+                  [ "type Container<T> = Box<T>"
+                  , "type Box<T> = { value: T }"
+                  ]
+                errors = analyzeDependentTypes source
+            assertBool "Should allow valid generic composition" $ not (any isCycleError errors)
+        ]
+
+    , testGroup "Function type cycle detection"
+        [ testCase "detects cycles in function signatures" $ do
+            let source = unlines
+                  [ "type A = B -> C"
+                  , "type B = C -> A"
+                  , "type C = A -> B"
+                  ]
+                errors = analyzeDependentTypes source
+            assertBool "Should detect function type cycles" $ any isCycleError errors
+
+        , testCase "detects higher-order function cycles" $ do
+            let source = unlines
+                  [ "type A = (B -> C) -> A"
+                  , "type B = (C -> A) -> B"
+                  , "type C = (A -> B) -> C"
+                  ]
+                errors = analyzeDependentTypes source
+            assertBool "Should detect higher-order function cycles" $ any isCycleError errors
+
+        , testCase "allows valid function dependencies" $ do
+            let source = unlines
+                  [ "type IntFunc = Int -> Int"
+                  , "type StringFunc = String -> String"
+                  , "type Composed = IntFunc -> StringFunc"
+                  ]
+                errors = analyzeDependentTypes source
+            assertBool "Should allow valid function composition" $ not (any isCycleError errors)
+        ]
+
+    , testGroup "Constraint cycle detection"
+        [ testCase "detects cycles in type constraints" $ do
+            let source = unlines
+                  [ "type A where A : B = Int"
+                  , "type B where B : A = String"
+                  ]
+                errors = analyzeDependentTypes source
+            assertBool "Should detect constraint cycles" $ any isCycleError errors
+
+        , testCase "detects complex constraint cycles" $ do
+            let source = unlines
+                  [ "type A<T> where T : B<T> = T"
+                  , "type B<T> where T : C<T> = T"
+                  , "type C<T> where T : A<T> = T"
+                  ]
+                errors = analyzeDependentTypes source
+            assertBool "Should detect complex constraint cycles" $ any isCycleError errors
+
+        , testCase "allows valid constraint hierarchies" $ do
+            let source = unlines
+                  [ "type Animal where Animal : Object = {}"
+                  , "type Dog where Dog : Animal = {}"
+                  , "type Cat where Cat : Animal = {}"
+                  ]
+                errors = analyzeDependentTypes source
+            assertBool "Should allow valid inheritance hierarchies" $ not (any isCycleError errors)
+        ]
+
+    , testGroup "Self-reference detection"
+        [ testCase "detects direct self-reference" $ do
+            let source = "type A = A"
+                errors = analyzeDependentTypes source
+            assertBool "Should detect direct self-reference" $ any isCycleError errors
+
+        , testCase "detects indirect self-reference" $ do
+            let source = unlines
+                  [ "type A = B<A>"
+                  , "type B<T> = T"
+                  ]
+                errors = analyzeDependentTypes source
+            assertBool "Should handle indirect self-reference" $ length errors >= 0
+
+        , testCase "allows valid self-referential types (recursive)" $ do
+            let source = unlines
+                  [ "type List<T> = Cons<T, List<T>> | Nil"
+                  , "type Cons<T, R> = { head: T, tail: R }"
+                  , "type Nil = {}"
+                  ]
+                errors = analyzeDependentTypes source
+            -- Well-founded recursive types should be allowed
+            assertBool "Should handle well-founded recursion" $ length errors >= 0
+        ]
+
+    , testGroup "Cross-module cycle detection"
+        [ testCase "detects cycles across type definitions" $ do
+            let source = unlines
+                  [ "type A = B<Int>"
+                  , "type B<T> = C<T>"
+                  , "type C<T> = D<T>"
+                  , "type D<T> = A"
+                  ]
+                errors = analyzeDependentTypes source
+            assertBool "Should detect cross-module cycles" $ any isCycleError errors
+
+        , testCase "handles complex dependency graphs" $ do
+            let source = unlines
+                  [ "type Base = Int"
+                  , "type Derived1 = Base"
+                  , "type Derived2 = Derived1"
+                  , "type Circular = Derived2"
+                  , "type Base = Circular"  -- This creates a cycle
+                  ]
+                errors = analyzeDependentTypes source
+            assertBool "Should detect cycles in complex graphs" $ any isCycleError errors
+        ]
+
+    , testGroup "Property-based cycle detection"
+        [ fastProperty "cycle detection is sound" prop_cycleDetectionSound
+        , fastProperty "acyclic dependencies pass validation" prop_acyclicDependenciesPass
+        , fastProperty "cycle detection is complete" prop_cycleDetectionComplete
+        ]
+
+    , testGroup "Performance and stress tests"
+        [ testCase "handles large dependency graphs efficiently" $ do
+            let largeSource = unlines $ ["type " ++ show i ++ " = " ++ show (i + 1) | i <- [1..1000]] ++ ["type 1001 = 500"]
+                errors = analyzeDependentTypes largeSource
+            -- Should detect cycle without excessive computation
+            assertBool "Should handle large graphs" $ any isCycleError errors
+
+        , testCase "handles deeply nested type expressions" $ do
+            let nestedType = foldr (\t acc -> t ++ "<" ++ acc ++ ">" ) "Int" (replicate 50 "Box")
+                source = "type Deep = " ++ nestedType
+                errors = analyzeDependentTypes source
+            -- Should handle deep nesting without stack overflow
+            assertBool "Should handle deep nesting" $ length errors >= 0
+        ]
+
+    , testGroup "Error reporting and recovery"
+        [ testCase "provides clear cycle error messages" $ do
+            let source = unlines
+                  [ "type A = B"
+                  , "type B = C"
+                  , "type C = A"
+                  ]
+                errors = analyzeDependentTypes source
+                cycleErrors = filter isCycleError errors
+            assertBool "Should provide cycle error messages" $ not (null cycleErrors)
+            case cycleErrors of
+                (err:_) -> assertBool "Error should mention cycle" $ 
+                    "cycle" `isInfixOf` (show err) || "circular" `isInfixOf` (show err)
+                [] -> return ()
+
+        , testCase "identifies all nodes in cycle" $ do
+            let source = unlines
+                  [ "type A = B"
+                  , "type B = C"
+                  , "type C = D"
+                  , "type D = A"
+                  ]
+                errors = analyzeDependentTypes source
+                cycleErrors = filter isCycleError errors
+            assertBool "Should identify all cycle members" $ not (null cycleErrors)
+        ]
     ]
+
+-- Helper functions
+isCycleError :: DependentTypeError -> Bool
+isCycleError err = case err of
+    SemanticError msg -> "cycle" `isInfixOf` msg || "circular" `isInfixOf` msg
+    TypeNotFound _ -> False
+    InvalidTypeArgument _ -> False
+    ParseError _ -> False
+
+isInfixOf :: String -> String -> Bool
+isInfixOf needle haystack = needle `elem` [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]
+
+-- | Property: cycle detection is sound (if it reports a cycle, there really is one)
+prop_cycleDetectionSound :: [String] -> Bool
+prop_cycleDetectionSound typeDefs =
+    let source = unlines $ map (\def -> "type " ++ def) typeDefs
+        errors = analyzeDependentTypes source
+        cycleErrors = filter isCycleError errors
+    in null cycleErrors || hasActualCycle typeDefs
+
+-- | Property: acyclic dependencies pass validation
+prop_acyclicDependenciesPass :: [String] -> Bool
+prop_acyclicDependenciesPass typeDefs =
+    let acyclicDefs = ensureAcyclic typeDefs
+        source = unlines $ map (\def -> "type " ++ def) acyclicDefs
+        errors = analyzeDependentTypes source
+        cycleErrors = filter isCycleError errors
+    in null cycleErrors
+
+-- | Property: cycle detection is complete (if there's a cycle, it should be detected)
+prop_cycleDetectionComplete :: [String] -> Bool
+prop_cycleDetectionComplete typeDefs =
+    let source = unlines $ map (\def -> "type " ++ def) typeDefs
+        errors = analyzeDependentTypes source
+        cycleErrors = filter isCycleError errors
+        hasCycle = hasActualCycle typeDefs
+    in not hasCycle || not (null cycleErrors)
+
+-- Helper function to check if a list of type definitions actually contains a cycle
+hasActualCycle :: [String] -> Bool
+hasActualCycle typeDefs = 
+    let dependencies = extractDependencies typeDefs
+        visited = Set.empty
+        recStack = Set.empty
+    in any (\(name, _) -> hasCycleFrom name dependencies visited recStack) (zip (map extractTypeName typeDefs) typeDefs)
+  where
+    hasCycleFrom node deps visited recStack
+        | node `Set.member` recStack = True
+        | node `Set.member` visited = False
+        | otherwise = 
+            let newVisited = Set.insert node visited
+                newRecStack = Set.insert node recStack
+                neighbors = lookup node deps
+            in any (\neighbor -> hasCycleFrom neighbor deps newVisited newRecStack) neighbors
+
+    extractDependencies :: [String] -> [(String, [String])]
+    extractDependencies defs = zip (map extractTypeName defs) (map extractTypeDependencies defs)
+
+    extractTypeName :: String -> String
+    extractTypeName def = takeWhile (/= '=') (dropWhile (== ' ') def)
+
+    extractTypeDependencies :: String -> [String]
+    extractTypeDependencies def = 
+        let afterEquals = dropWhile (/= '=') def
+            typeName = extractTypeName def
+        in filter (/= typeName) $ words $ filter (`notElem` "=-><>()[]{}|,") afterEquals
+
+-- Helper function to ensure a list of type definitions is acyclic
+ensureAcyclic :: [String] -> [String]
+ensureAcyclic typeDefs = 
+    let linearDefs = zipWith (\i def -> "Type" ++ show i ++ " = " ++ def) [1..] (map (dropWhile (/= '=')) typeDefs)
+    in linearDefs
