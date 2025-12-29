@@ -1219,7 +1219,7 @@ test-suite typus-test
         Test.Unit.PerformanceBoundarySpec,
         
         -- New Enhanced QuickCheck Test Modules (2025) - 4 comprehensive tests
-        -- (These modules are already listed above),
+        -- (These modules are already listed above)
         
         -- New Advanced QuickCheck Test Modules (2024) - 10 Comprehensive Tests
         -- (These modules are already listed above)
