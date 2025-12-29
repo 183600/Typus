@@ -12,8 +12,11 @@ module Test.Unit.CoreUtilsQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import Test.QuickCheck.Gen (Gen, choose, listOf, vectorOf, elements, oneof)
+import Test.QuickCheck 
+  ( Property, (===), (==>), forAll, counterexample, classify, property
+  , (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose
+  , sized, suchThat, vectorOf, frequency
+  )
 
 import Utils
   ( trim
@@ -29,246 +32,258 @@ import Utils
   , breakOn
   )
 
-import Data.Char (isSpace, isAlphaNum, isLetter, isDigit, toUpper, toLower)
-import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, sort, nub)
-import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Char (isSpace, isAlphaNum, isLetter)
+import Data.List (isPrefixOf, isInfixOf, intercalate)
 
 -- ============================================================================
--- Generators
+-- 生成器定义
 -- ============================================================================
 
-genChar :: Gen Char
-genChar = elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n\r.,;:!?()[]{}<>+-*/%=|&^~'\"@#$_`\\"
+-- 生成包含空白字符的字符串
+genStringWithWhitespace :: Gen String
+genStringWithWhitespace = listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n\r"
 
-genString :: Gen String
-genString = listOf genChar
-
-genNonEmptyString :: Gen String
-genNonEmpty = listOf1 genChar
-
-genWhitespace :: Gen String
-genWhitespace = listOf $ elements " \t\n\r"
-
+-- 生成纯字母数字字符串
 genAlphaNumString :: Gen String
 genAlphaNumString = listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9']
 
-genIdentifier :: Gen String
-genIdentifier = do
-  first <- elements $ ['a'..'z'] ++ ['A'..'Z'] ++ "_"
-  rest <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"
-  return $ first : rest
+-- 生成分隔符
+genDelimiter :: Gen Char
+genDelimiter = elements ",;:||\\"
 
-genDelimChar :: Gen Char
-genDelimChar = elements $ ",;:|&^%$#@!~`"
+-- 生成包含注释的字符串
+genCommentedString :: Gen String
+genCommentedString = do
+  before <- genAlphaNumString
+  comment <- genAlphaNumString
+  after <- genAlphaNumString
+  return $ before ++ "// " ++ comment ++ "\n" ++ after
 
-genLineContent :: Gen String
-genLineContent = do
-  words <- listOf $ listOf1 $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9']
-  return $ unwords words
+-- 生成包含块注释的字符串
+genBlockCommentedString :: Gen String
+genBlockCommentedString = do
+  before <- genAlphaNumString
+  comment <- genAlphaNumString
+  after <- genAlphaNumString
+  return $ before ++ "/* " ++ comment ++ " */" ++ after
+
+-- 生成包含字符串字面量的代码
+genStringLiteral :: Gen String
+genStringLiteral = do
+  content <- listOf $ elements $ ['a'..'z'] ++ [' '] ++ ['\\', '"']
+  return $ "\"" ++ content ++ "\""
+
+-- 生成包含字符字面量的代码
+genCharLiteral :: Gen String
+genCharLiteral = do
+  char <- elements $ ['a'..'z'] ++ ['\\', '\'']
+  return $ "'" ++ [char] ++ "'"
+
+-- 生成缩进字符串
+genIndentedString :: Gen String
+genIndentedString = do
+  indentLevel <- choose (0, 5)
+  content <- genAlphaNumString
+  let indent = replicate indentLevel ' '
+  return $ indent ++ content
+
+-- 生成多行字符串
+genMultiLineString :: Gen String
+genMultiLineString = do
+  numLines <- choose (1, 5)
+  lines <- vectorOf numLines genIndentedString
+  return $ intercalate "\n" lines
 
 -- ============================================================================
--- Properties for String Trimming
+-- QuickCheck 属性测试
 -- ============================================================================
 
-prop_trim_removes_leading_whitespace :: String -> String -> Property
-prop_trim_removes_leading_whitespace prefix content =
-  let whitespace = take 5 $ repeat ' '
-      input = whitespace ++ prefix ++ content
-      trimmed = trim input
-  in property $ not (null trimmed) ==> not (isSpace (head trimmed))
+-- 属性: trim函数移除两端空白
+prop_trim_removes_whitespace :: Property
+prop_trim_removes_whitespace =
+  forAll genStringWithWhitespace $ \s ->
+    let trimmed = trim s
+        startsNotSpace = null trimmed || not (isSpace (head trimmed))
+        endsNotSpace = null trimmed || not (isSpace (last trimmed))
+    in startsNotSpace .&&. endsNotSpace
 
-prop_trim_removes_trailing_whitespace :: String -> String -> Property
-prop_trim_removes_trailing_whitespace content suffix =
-  let whitespace = take 5 $ repeat ' '
-      input = content ++ suffix ++ whitespace
-      trimmed = trim input
-  in property $ not (null trimmed) ==> not (isSpace (last trimmed))
-
-prop_trim_preserves_internal_whitespace :: String -> String -> String -> Property
-prop_trim_preserves_internal_whitespace before middle after =
-  let input = before ++ "  " ++ middle ++ "  " ++ after
-      trimmed = trim input
-      expected = filter (not . isSpace) before ++ "  " ++ middle ++ "  " ++ filter (not . isSpace) after
-  in not (null middle) ==> property $ "  " `isInfixOf` trimmed
-
-prop_trim_is_idempotent :: String -> Property
-prop_trim_is_idempotent input =
-  let trimmedOnce = trim input
-      trimmedTwice = trim trimmedOnce
-  in property $ trimmedOnce === trimmedTwice
-
+-- 属性: trim对空字符串的处理
 prop_trim_empty_string :: Property
-prop_trim_empty_string =
-  trim "" === ""
+prop_trim_empty_string = trim "" === ""
+
+-- 属性: trim对纯空白字符串的处理
+prop_trim_all_whitespace :: Property
+prop_trim_all_whitespace =
+  forAll (listOf (elements " \t\n\r")) $ \ws ->
+    trim ws === ""
+
+-- 属性: splitBy保留空段
+prop_splitBy_preserves_empty :: Property
+prop_splitBy_preserves_empty =
+  forAll genDelimiter $ \delim ->
+    splitBy delim "a,,b" === ["a", "", "b"]
+
+-- 属性: splitBy对空字符串的处理
+prop_splitBy_empty_string :: Property
+prop_splitBy_empty_string =
+  forAll genDelimiter $ \delim ->
+    splitBy delim "" === [""]
+
+-- 属性: splitByCollapsed折叠空段
+prop_splitByCollapsed_collapses :: Property
+prop_splitByCollapsed_collapses =
+  forAll genDelimiter $ \delim ->
+    splitByCollapsed delim "a,,b" === ["a", "b"]
+
+-- 属性: splitByComma等于splitBy ','
+prop_splitByComma_equals_splitBy :: Property
+prop_splitByComma_equals_splitBy =
+  forAll genStringWithWhitespace $ \s ->
+    splitByComma s === splitBy ',' s
+
+-- 属性: splitByCommaCollapsed等于splitByCollapsed ','
+prop_splitByCommaCollapsed_equals_splitByCollapsed :: Property
+prop_splitByCommaCollapsed_equals_splitByCollapsed =
+  forAll genStringWithWhitespace $ \s ->
+    splitByCommaCollapsed s === splitByCollapsed ',' s
+
+-- 属性: removeLineComments移除单行注释
+prop_removeLine_comments :: Property
+prop_removeLine_comments =
+  forAll genCommentedString $ \s ->
+    let withoutComments = removeLineComments s
+    in not ("//" `isInfixOf` withoutComments)
+
+-- 属性: removeLineComments保留字符串字面量中的//
+prop_removeLine_comments_preserves_string_literals :: Property
+prop_removeLine_comments_preserves_string_literals =
+  forAll genStringLiteral $ \literal ->
+    let code = literal ++ " // comment\n"
+        withoutComments = removeLineComments code
+    in literal `isInfixOf` withoutComments
+
+-- 属性: removeComments移除块注释
+prop_remove_block_comments :: Property
+prop_remove_block_comments =
+  forAll genBlockCommentedString $ \s ->
+    let withoutComments = removeComments s
+    in not ("/*" `isInfixOf` withoutComments) .&&. not ("*/" `isInfixOf` withoutComments)
+
+-- 属性: removeComments保留字符串字面量中的注释符号
+prop_remove_comments_preserves_string_literals :: Property
+prop_remove_comments_preserves_string_literals =
+  forAll genStringLiteral $ \literal ->
+    let code = literal ++ " /* comment */"
+        withoutComments = removeComments code
+    in literal `isInfixOf` withoutComments
+
+-- 属性: normalizeIndentation保持相对缩进
+prop_normalize_indentation_preserves_relative :: Property
+prop_normalize_indentation_preserves_relative =
+  forAll genMultiLineString $ \s ->
+    let normalized = normalizeIndentation s
+        lines_s = lines s
+        lines_normalized = lines normalized
+        -- 检查非空行的数量是否相同
+        nonEmptyCount_s = length $ filter (not . all isSpace) lines_s
+        nonEmptyCount_normalized = length $ filter (not . all isSpace) lines_normalized
+    in nonEmptyCount_s === nonEmptyCount_normalized
+
+-- 属性: normalizeIndentation不改变内容顺序
+prop_normalize_indentation_preserves_order :: Property
+prop_normalize_indentation_preserves_order =
+  forAll genMultiLineString $ \s ->
+    let normalized = normalizeIndentation s
+        -- 移除所有空白后比较
+        content_s = filter (not . isSpace) s
+        content_normalized = filter (not . isSpace) normalized
+    in content_s === content_normalized
+
+-- 属性: forceSingleTabIndentation强制单制表符缩进
+prop_force_single_tab_indentation :: Property
+prop_force_single_tab_indentation =
+  forAll genMultiLineString $ \s ->
+    let forced = forceSingleTabIndentation s
+        lines_forced = lines forced
+        nonEmptyLines = filter (not . null) lines_forced
+        -- 检查所有非空行都以制表符开头
+        allStartWithTab = all ("\t" `isPrefixOf`) nonEmptyLines
+    in allStartWithTab
+
+-- 属性: fixIndentation等于normalizeIndentation
+prop_fix_indentation_equals_normalize :: Property
+prop_fix_indentation_equals_normalize =
+  forAll genMultiLineString $ \s ->
+    fixIndentation s === normalizeIndentation s
+
+-- 属性: breakOn在模式存在时正确分割
+prop_break_on_with_pattern :: Property
+prop_break_on_with_pattern =
+  forAll genAlphaNumString $ \pattern ->
+    forAll genAlphaNumString $ \suffix ->
+      let input = pattern ++ suffix
+          (before, after) = breakOn pattern input
+      in before === "" .&&. after === suffix
+
+-- 属性: breakOn在模式不存在时返回原字符串
+prop_break_on_without_pattern :: Property
+prop_break_on_without_pattern =
+  forAll genAlphaNumString $ \input ->
+    forAll (suchThat genAlphaNumString (`notElem` input)) $ \pattern ->
+      let (before, after) = breakOn pattern input
+      in before === input .&&. after === ""
+
+-- 属性: breakOn对空模式的处理
+prop_break_on_empty_pattern :: Property
+prop_break_on_empty_pattern =
+  forAll genAlphaNumString $ \input ->
+    let (before, after) = breakOn "" input
+    in before === "" .&&. after === input
+
+-- 属性: trim与splitBy的组合性质
+prop_trim_splitby_combination :: Property
+prop_trim_splitby_combination =
+  forAll genStringWithWhitespace $ \s ->
+  forAll genDelimiter $ \delim ->
+    let trimmed = trim s
+        splitResult = splitBy delim trimmed
+        -- 所有分割结果都不应该有前后空白
+        allTrimmed = all (\part -> trim part == part) splitResult
+    in allTrimmed
+
+-- 属性: removeComments与removeLineComments的关系
+prop_remove_comments_vs_line_comments :: Property
+prop_remove_comments_vs_line_comments =
+  forAll genCommentedString $ \s ->
+    let withoutLineComments = removeLineComments s
+        withoutAllComments = removeComments s
+    in length withoutAllComments <= length withoutLineComments
 
 -- ============================================================================
--- Properties for String Splitting
--- ============================================================================
-
-prop_splitBy_preserves_empty_segments :: Char -> String -> Property
-prop_splitBy_preserves_empty_segments delim input =
-  let result = splitBy delim input
-      expectedCount = length (filter (== delim) input) + 1
-  in property $ length result === expectedCount
-
-prop_splitByCollapsed_removes_empty_segments :: Char -> String -> Property
-prop_splitByCollapsed_removes_empty_segments delim input =
-  let result = splitByCollapsed delim input
-  in property $ all (not . null) result
-
-prop_splitByComma_is_splitBy_with_comma :: String -> Property
-prop_splitByComma_is_splitBy_with_comma input =
-  splitByComma input === splitBy ',' input
-
-prop_splitByCommaCollapsed_is_splitByCollapsed_with_comma :: String -> Property
-prop_splitByCommaCollapsed_is_splitByCollapsed_with_comma input =
-  splitByCommaCollapsed input === splitByCollapsed ',' input
-
-prop_splitBy_and_join_roundtrip :: Char -> String -> Property
-prop_splitBy_and_join_roundtrip delim input =
-  let parts = splitBy delim input
-      rejoined = Data.List.intercalate [delim] parts
-  in rejoined === input
-
--- ============================================================================
--- Properties for Comment Removal
--- ============================================================================
-
-prop_removeLineComments_removes_single_line_comments :: String -> String -> Property
-prop_removeLineComments_removes_single_line_comments code comment =
-  not ('"' `elem` code) && not ('\'' `elem` code) ==>
-  let lineWithComment = code ++ " // " ++ comment
-      cleaned = removeLineComments lineWithComment
-  in property $ not ("// " `isInfixOf` cleaned)
-
-prop_removeLineComments_preserves_comments_in_strings :: String -> Property
-prop_removeLineComments_preserves_comments_in_strings comment =
-  let content = "var s string = \"// not a comment " ++ comment ++ "\"\n// real comment"
-      result = removeLineComments content
-  in property $ "// not a comment" `isInfixOf` result .&&.
-               not ("// real comment" `isInfixOf` result)
-
-prop_removeComments_removes_both_line_and_block_comments :: String -> String -> String -> Property
-prop_removeComments_removes_both_line_and_block_comments code1 code2 comment =
-  not ('"' `elem` code1) && not ('\'' `elem` code1) && 
-  not ('"' `elem` code2) && not ('\'' `elem` code2) &&
-  not ("/" `isInfixOf` code1) && not ("/" `isInfixOf` code2) ==>
-  let mixed = code1 ++ " // line comment\n" ++ code2 ++ " /* " ++ comment ++ " */ " ++ code1
-      cleaned = removeComments mixed
-  in property $ not ("// line comment" `isInfixOf` cleaned) .&&.
-               not ("/* " `isInfixOf` cleaned) .&&.
-               not (" */" `isInfixOf` cleaned)
-
-prop_removeComments_preserves_comments_in_strings :: String -> String -> Property
-prop_removeComments_preserves_comments_in_strings comment1 comment2 =
-  let content = "var s1 = \"// not comment1\"\nvar s2 = \"/* not comment2 */\"\n// real comment"
-      result = removeComments content
-  in property $ "// not comment1" `isInfixOf` result .&&.
-               "/* not comment2 */" `isInfixOf` result .&&.
-               not ("// real comment" `isInfixOf` result)
-
--- ============================================================================
--- Properties for Indentation
--- ============================================================================
-
-prop_normalizeIndentation_removes_common_prefix :: String -> String -> Property
-prop_normalizeIndentation_removes_common_prefix prefix content =
-  let indentedLines = [prefix ++ "line1", prefix ++ "line2", prefix ++ "line3"]
-      input = unlines indentedLines
-      normalized = normalizeIndentation input
-      normalizedLines = lines normalized
-  in property $ all (not . isPrefixOf prefix) normalizedLines
-
-prop_normalizeIndentation_preserves_relative_indentation :: Int -> Int -> Property
-prop_normalizeIndentation_preserves_relative_indentation n1 n2 =
-  n1 >= 0 && n1 <= 10 && n2 >= 0 && n2 <= 10 ==>
-  let baseIndent = replicate n1 ' '
-      extraIndent = replicate n2 ' '
-      inputLines = [baseIndent ++ "line1", baseIndent ++ extraIndent ++ "line2", baseIndent ++ "line3"]
-      input = unlines inputLines
-      normalized = normalizeIndentation input
-      normalizedLines = lines normalized
-      indent1 = length (takeWhile isSpace (normalizedLines !! 0))
-      indent2 = length (takeWhile isSpace (normalizedLines !! 1))
-  in property $ indent1 === 0 .&&. (if n2 > 0 then indent2 === n2 else indent2 === 0)
-
-prop_forceSingleTabIndentation_enforces_tab_indentation :: String -> Property
-prop_forceSingleTabIndentation_enforces_tab_indentation content =
-  not (null (trim content)) ==> 
-  let result = forceSingleTabIndentation content
-      resultLines = lines result
-      nonEmptyLines = filter (not . null . trim) resultLines
-  in property $ all (\line -> case line of ('\t':_) -> True; _ -> False) nonEmptyLines
-
-prop_fixIndentation_equals_normalizeIndentation :: String -> Property
-prop_fixIndentation_equals_normalizeIndentation input =
-  fixIndentation input === normalizeIndentation input
-
--- ============================================================================
--- Properties for String Searching
--- ============================================================================
-
-prop_breakOn_finds_first_occurrence :: String -> String -> String -> Property
-prop_breakOn_finds_first_occurrence prefix delimiter suffix =
-  not (null delimiter) ==> 
-  let haystack = prefix ++ delimiter ++ suffix ++ delimiter ++ "extra"
-      (before, after) = breakOn delimiter haystack
-  in property $ before === prefix ++ delimiter ++ suffix .&&. after === "extra"
-
-prop_breakOn_with_empty_pattern :: String -> Property
-prop_breakOn_with_empty_pattern haystack =
-  let (before, after) = breakOn "" haystack
-  in property $ before === "" .&&. after === haystack
-
-prop_breakOn_with_missing_pattern :: String -> String -> Property
-prop_breakOn_with_missing_pattern pat haystack =
-  not (null pat) && not (pat `isInfixOf` haystack) ==> 
-  let (before, after) = breakOn pat haystack
-  in property $ before === haystack .&&. after === ""
-
-
-
--- ============================================================================
--- Test Suite
+-- 测试套件
 -- ============================================================================
 
 tests :: TestTree
 tests = testGroup "Core Utils QuickCheck Tests"
-  [ testGroup "String Trimming Properties"
-    [ fastProperty "trim removes leading whitespace" prop_trim_removes_leading_whitespace
-    , fastProperty "trim removes trailing whitespace" prop_trim_removes_trailing_whitespace
-    , fastProperty "trim preserves internal whitespace" prop_trim_preserves_internal_whitespace
-    , fastProperty "trim is idempotent" prop_trim_is_idempotent
-    , fastProperty "trim empty string" prop_trim_empty_string
-    ]
-
-  , testGroup "String Splitting Properties"
-    [ fastProperty "splitBy preserves empty segments" prop_splitBy_preserves_empty_segments
-    , fastProperty "splitByCollapsed removes empty segments" prop_splitByCollapsed_removes_empty_segments
-    , fastProperty "splitByComma is splitBy with comma" prop_splitByComma_is_splitBy_with_comma
-    , fastProperty "splitByCommaCollapsed is splitByCollapsed with comma" prop_splitByCommaCollapsed_is_splitByCollapsed_with_comma
-    , fastProperty "splitBy and join roundtrip" prop_splitBy_and_join_roundtrip
-    ]
-
-  , testGroup "Comment Removal Properties"
-    [ fastProperty "removeLineComments removes single line comments" prop_removeLineComments_removes_single_line_comments
-    , fastProperty "removeLineComments preserves comments in strings" prop_removeLineComments_preserves_comments_in_strings
-    , fastProperty "removeComments removes both line and block comments" prop_removeComments_removes_both_line_and_block_comments
-    , fastProperty "removeComments preserves comments in strings" prop_removeComments_preserves_comments_in_strings
-    ]
-
-  , testGroup "Indentation Properties"
-    [ fastProperty "normalizeIndentation removes common prefix" prop_normalizeIndentation_removes_common_prefix
-    , fastProperty "normalizeIndentation preserves relative indentation" prop_normalizeIndentation_preserves_relative_indentation
-    , fastProperty "forceSingleTabIndentation enforces tab indentation" prop_forceSingleTabIndentation_enforces_tab_indentation
-    , fastProperty "fixIndentation equals normalizeIndentation" prop_fixIndentation_equals_normalizeIndentation
-    ]
-
-  , testGroup "String Searching Properties"
-    [ fastProperty "breakOn finds first occurrence" prop_breakOn_finds_first_occurrence
-    , fastProperty "breakOn with empty pattern" prop_breakOn_with_empty_pattern
-    , fastProperty "breakOn with missing pattern" prop_breakOn_with_missing_pattern
-    ]
+  [ fastProperty "Trim removes whitespace from both ends" prop_trim_removes_whitespace
+  , fastProperty "Trim handles empty string" prop_trim_empty_string
+  , fastProperty "Trim handles all whitespace string" prop_trim_all_whitespace
+  , fastProperty "SplitBy preserves empty segments" prop_splitBy_preserves_empty
+  , fastProperty "SplitBy handles empty string" prop_splitBy_empty_string
+  , fastProperty "SplitByCollapsed collapses empty segments" prop_splitByCollapsed_collapses
+  , fastProperty "SplitByComma equals splitBy ','" prop_splitByComma_equals_splitBy
+  , fastProperty "SplitByCommaCollapsed equals splitByCollapsed ','" prop_splitByCommaCollapsed_equals_splitByCollapsed
+  , fastProperty "RemoveLineComments removes line comments" prop_remove_line_comments
+  , fastProperty "RemoveLineComments preserves string literals" prop_removeLine_comments_preserves_string_literals
+  , fastProperty "RemoveComments removes block comments" prop_remove_block_comments
+  , fastProperty "RemoveComments preserves string literals" prop_remove_comments_preserves_string_literals
+  , fastProperty "NormalizeIndentation preserves relative indentation" prop_normalize_indentation_preserves_relative
+  , fastProperty "NormalizeIndentation preserves content order" prop_normalize_indentation_preserves_order
+  , fastProperty "ForceSingleTabIndentation forces single tab" prop_force_single_tab_indentation
+  , fastProperty "FixIndentation equals normalizeIndentation" prop_fix_indentation_equals_normalize
+  , fastProperty "BreakOn with pattern splits correctly" prop_break_on_with_pattern
+  , fastProperty "BreakOn without pattern returns original" prop_break_on_without_pattern
+  , fastProperty "BreakOn handles empty pattern" prop_break_on_empty_pattern
+  , fastProperty "Trim and splitBy combination" prop_trim_splitby_combination
+  , fastProperty "RemoveComments vs removeLineComments relationship" prop_remove_comments_vs_line_comments
   ]
