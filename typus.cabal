@@ -1014,6 +1014,14 @@ test-suite typus-test
         -- New Comprehensive Cabal QuickCheck Tests (10 tests)
         , Test.Unit.NewEnhancedCabalQuickCheckTestSpec
         
+        -- New QuickCheck Test Modules (Added for enhanced coverage)
+        , Test.Unit.NewUtilsQuickCheckPropertyTestsSpec
+        , Test.Unit.NewSourceLocationMathPropertiesSpec
+        , Test.Unit.NewParserCombinatorPropertiesSpec
+        , Test.Unit.NewStringProcessingBoundarySpec
+        , Test.Unit.NewErrorHandlerConsistencySpec
+        , Test.Unit.NewComprehensiveQuickCheckTestSuite
+        
         -- New Typus QuickCheck Test Modules (2025) - Core Functionality Testing
         , Test.Unit.NewTypusCoreQuickCheckSpec
         , Test.Unit.NewTypusParserQuickCheckSpec
