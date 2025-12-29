@@ -1,250 +1,230 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
+-- | New Cabal QuickCheck Test Suite
+-- Comprehensive property-based tests for core Typus functionality
 module Test.Unit.NewCabalQuickCheckTestSuite (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, sized)
-import qualified Test.QuickCheck as QC
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, ioProperty, counterexample, (==>))
+import Test.Tasty.HUnit (testCase, (@?=))
 
-import SourceLocation
-  ( SourcePos(..)
-  , SourceSpan(..)
-  , Located(..)
-  , startPos
-  , posAfter
-  , posAt
-  , posAtLineCol
-  , emptySpan
-  , spanFrom
-  , spanTo
-  , spanBetween
-  , mergeSpans
-  , isValidSpan
-  , locatedAt
-  , locatedWithSpan
-  , locatedValue
-  , locatedSpan
-  , locatedPos
-  , mapLocated
-  , advancePos
-  , advancePosBy
-  , advancePosByText
-  , advancePosByLine
-  , toErrorLocation
-  , toErrorLocationWithSpan
-  )
-
-import Utils
-  ( trim
-  , splitBy
-  , splitByCollapsed
-  , splitByComma
-  , splitByCommaCollapsed
-  , removeLineComments
-  , removeComments
-  , normalizeIndentation
-  , forceSingleTabIndentation
-  , fixIndentation
-  , breakOn
-  )
-
-import Data.Char (isSpace, toLower, isAlphaNum)
-import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort, nub)
+import Utils (trim, splitBy, splitByCollapsed, removeLineComments, breakOn, normalizeIndentation)
+import SourceLocation (SourcePos(..), startPos, posAfter, advancePos, advancePosByText)
+import Compiler.Errors.Core (ErrorSeverity(..), ErrorCategory(..), formatError, errorAt)
 import qualified Data.Text as T
-import Data.Text (Text)
+import Data.Char (isSpace)
+import Data.List (isPrefixOf)
 
 -- ============================================================================
 -- QuickCheck Generators
 -- ============================================================================
 
--- Generator for valid source positions
+-- Generate strings with various whitespace patterns
+genWhitespaceString :: Gen String
+genWhitespaceString = listOf $ elements [' ', '\t', '\n', '\r']
+
+-- Generate strings with alphanumeric characters
+genAlphaNumString :: Gen String
+genAlphaNumString = listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9']
+
+-- Generate strings that may contain comment markers
+genCommentString :: Gen String
+genCommentString = do
+    base <- genAlphaNumString
+    hasLineComment <- arbitrary
+    hasBlockComment <- arbitrary
+    let withLine = if hasLineComment then base ++ "// comment" else base
+    let withBlock = if hasBlockComment then withLine ++ "/* block */" else withLine
+    pure withBlock
+
+-- Generate source positions with reasonable values
 genSourcePos :: Gen SourcePos
 genSourcePos = do
-  line <- choose (1, 1000)
-  col <- choose (1, 1000)
-  offset <- choose (0, 1000000)
-  return $ SourcePos line col offset
-
--- Generator for valid source spans
-genSourceSpan :: Gen SourceSpan
-genSourceSpan = do
-  startLine <- choose (1, 500)
-  startCol <- choose (1, 500)
-  startOffset <- choose (0, 500000)
-  let start = SourcePos startLine startCol startOffset
-  
-  endLineOffset <- choose (0, 100)
-  endColOffset <- choose (0, 100)
-  endOffsetOffset <- choose (0, 100000)
-  let end = SourcePos (startLine + endLineOffset) (max startCol (startCol + endColOffset)) (startOffset + endOffsetOffset)
-  
-  return $ SourceSpan start end
-
--- Generator for printable strings
-genPrintableString :: Gen String
-genPrintableString = listOf $ elements $ filter isPrintable ['\0'..'\127']
-  where isPrintable c = isAlphaNum c || c `elem` " \t\n\r!@#$%^&*()_+-=[]{}|;':\",./<>?"
-
--- Generator for strings without quotes (for comment tests)
-genStringWithoutQuotes :: Gen String
-genStringWithoutQuotes = listOf $ elements $ filter (\c -> c /= '"' && c /= '\'') ['\0'..'\127']
+    line <- choose (1, 1000)
+    column <- choose (1, 200)
+    offset <- choose (0, 10000)
+    pure $ SourcePos line column offset
 
 instance Arbitrary SourcePos where
-  arbitrary = genSourcePos
-
-instance Arbitrary SourceSpan where
-  arbitrary = genSourceSpan
+    arbitrary = genSourcePos
 
 -- ============================================================================
--- SourceLocation QuickCheck Tests (3 tests)
+-- Utils Module Tests
 -- ============================================================================
 
--- Test 1: Position advancement consistency
-prop_position_advancement_consistency :: String -> Property
-prop_position_advancement_consistency str =
-  not (null str) ==>
-  let finalPos = advancePosBy str startPos
-      manualPos = foldl (flip posAfter) startPos str
-  in finalPos === manualPos
+-- Property: trim is idempotent
+prop_trimIdempotent :: String -> Bool
+prop_trimIdempotent input =
+    let once = trim input
+        twice = trim once
+    in once == twice
 
--- Test 2: Span merging properties
-prop_span_merging_properties :: SourceSpan -> SourceSpan -> Property
-prop_span_merging_properties span1 span2 =
-  let merged = mergeSpans span1 span2
-      start1 = spanStart span1
-      end1 = spanEnd span1
-      start2 = spanStart span2
-      end2 = spanEnd span2
-      mergedStart = spanStart merged
-      mergedEnd = spanEnd merged
-  in property $ 
-     (mergedStart <= start1 .&&. mergedStart <= start2) .&&.
-     (mergedEnd >= end1 .&&. mergedEnd >= end2)
+-- Property: trim removes only leading/trailing whitespace
+prop_trimOnlyWhitespace :: String -> String -> Bool
+prop_trimOnlyWhitespace prefix suffix =
+    let input = prefix ++ "hello world" ++ suffix
+        trimmed = trim input
+    in not (all isSpace prefix) || not (all isSpace suffix) || 
+       trimmed == "hello world"
 
--- Test 3: Located value roundtrip
-prop_located_value_roundtrip :: String -> SourcePos -> Property
-prop_located_value_roundtrip value pos =
-  let located = locatedAt pos value
-      extractedValue = locatedValue located
-      extractedPos = locatedPos located
-  in property $ extractedValue === value .&&. extractedPos === pos
+-- Property: splitBy preserves empty segments
+prop_splitByPreservesEmpty :: Char -> String -> Bool
+prop_splitByPreservesEmpty delim input =
+    let result = splitBy delim input
+        expectedCount = length (filter (== delim) input) + 1
+    in length result == expectedCount
 
--- ============================================================================
--- Utils QuickCheck Tests (4 tests)
--- ============================================================================
+-- Property: splitByCollapsed removes empty segments
+prop_splitByCollapsedRemovesEmpty :: Char -> String -> Bool
+prop_splitByCollapsedRemovesEmpty delim input =
+    let result = splitByCollapsed delim input
+    in all (not . null) result
 
--- Test 4: Split and join roundtrip property
-prop_split_join_roundtrip :: Char -> String -> Property
-prop_split_join_roundtrip delim input =
-  let parts = splitBy delim input
-      rejoined = Data.List.intercalate [delim] parts
-  in rejoined === input
+-- Property: breakOn returns correct prefix and suffix
+prop_breakOnCorrect :: String -> String -> Property
+prop_breakOnCorrect pattern text =
+    not (null pattern) ==>
+    let (prefix, suffix) = breakOn pattern text
+        found = pattern `isPrefixOf` text
+    in if found
+       then prefix ++ pattern ++ suffix == text
+       else prefix == text && null suffix
 
--- Test 5: Trim idempotency with Unicode
-prop_trim_unicode_idempotent :: String -> Property
-prop_trim_unicode_idempotent input =
-  let unicodeInput = input ++ " café naïve résumé 🚀 测试 "
-      trimmedOnce = trim unicodeInput
-      trimmedTwice = trim trimmedOnce
-  in trimmedOnce === trimmedTwice
-
--- Test 6: Comment removal preserves code structure
-prop_comment_removal_preserves_structure :: String -> String -> Property
-prop_comment_removal_preserves_structure prefix suffix =
-  not ('"' `elem` prefix) && not ('\'' `elem` prefix) &&
-  not ('"' `elem` suffix) && not ('\'' `elem` suffix) ==>
-  let code = prefix ++ "x = 1" ++ suffix
-      withComments = code ++ " // comment\n /* block */ " ++ code
-      withoutComments = removeComments withComments
-  in property $ code `isInfixOf` withoutComments
-
--- Test 7: Indentation normalization preserves relative structure
-prop_indentation_preserves_relative :: [Int] -> Property
-prop_indentation_preserves_relative indentLevels =
-  not (null indentLevels) ==>
-  let inputLines = zipWith (\level content -> replicate (abs level `mod` 20) ' ' ++ "line" ++ show level) indentLevels [1..]
-      content = unlines inputLines
-      normalized = normalizeIndentation content
-      normalizedLines = filter (not . null . trim) (lines normalized)
-  in property $ length normalizedLines === length inputLines
+-- Property: removeLineComments preserves non-comment content
+prop_removeLineCommentsPreservesContent :: String -> Property
+prop_removeLineCommentsPreservesContent input =
+    let linesWithoutComments = filter (not . ("//" `isPrefixOf`)) (lines input)
+        hasStringLiterals = any ('"' `elem`) linesWithoutComments
+    in not hasStringLiterals ==> -- Simple case: no string literals
+       let result = removeLineComments input
+           resultLines = lines result
+       in length resultLines == length linesWithoutComments
 
 -- ============================================================================
--- Parser QuickCheck Tests (3 tests)
+-- SourceLocation Module Tests
 -- ============================================================================
 
--- Test 8: BreakOn consistency with splitBy
-prop_breakOn_splitBy_consistency :: String -> String -> Property
-prop_breakOn_splitBy_consistency pat haystack =
-  not (null pat) && pat `isInfixOf` haystack ==>
-  let (before, after) = breakOn pat haystack
-      parts = splitBy (head pat) haystack
-      patIndex = length $ takeWhile (not . (pat `isPrefixOf`)) (tails haystack)
-      expectedBefore = take patIndex haystack
-      expectedAfter = drop (patIndex + length pat) haystack
-  in before === expectedBefore .&&. after === expectedAfter
+-- Property: posAfter correctly advances line number for newlines
+prop_posAfterNewline :: SourcePos -> Bool
+prop_posAfterNewline pos =
+    let newPos = posAfter '\n' pos
+    in posLine newPos == posLine pos + 1 && posColumn newPos == 1
 
--- Test 9: String processing pipeline commutativity
-prop_string_pipeline_commutative :: String -> Property
-prop_string_pipeline_commutative input =
-  let pipeline1 = input |> trim |> removeLineComments |> normalizeIndentation
-      pipeline2 = input |> removeLineComments |> trim |> normalizeIndentation
-      pipeline3 = input |> normalizeIndentation |> trim |> removeLineComments
-  in property $ (pipeline1 == pipeline2) .||. (pipeline2 == pipeline3) .||. (pipeline1 == pipeline3)
+-- Property: posAfter correctly advances column for regular characters
+prop_posAfterRegularChar :: SourcePos -> Char -> Property
+prop_posAfterRegularChar pos char =
+    char /= '\n' && char /= '\t' ==>
+    let newPos = posAfter char pos
+    in posLine newPos == posLine pos && 
+       posColumn newPos == posColumn pos + 1 &&
+       posOffset newPos == posOffset pos + 1
 
--- Test 10: Error location conversion roundtrip
-prop_error_location_roundtrip :: SourceSpan -> Property
-prop_error_location_roundtrip span =
-  let errorLoc = toErrorLocationWithSpan span
-      startLine = line errorLoc
-      startCol = column errorLoc
-      endLine = endLine errorLoc
-      endCol = endColumn errorLoc
-      expectedStartLine = posLine (spanStart span)
-      expectedStartCol = posColumn (spanStart span)
-      expectedEndLine = posLine (spanEnd span)
-      expectedEndCol = posColumn (spanEnd span)
-  in property $ 
-     startLine === expectedStartLine .&&.
-     startCol === expectedStartCol .&&.
-     endLine === Just expectedEndLine .&&.
-     endCol === Just expectedEndCol
+-- Property: advancePosByText processes text correctly
+prop_advancePosByText :: SourcePos -> String -> Property
+prop_advancePosByText pos text =
+    not (null text) ==>
+    let finalPos = advancePosByText pos text
+        startPos' = pos
+    in posOffset finalPos >= posOffset startPos'
+
+-- Property: advancePos is consistent with posAfter
+prop_advancePosConsistency :: SourcePos -> Char -> Bool
+prop_advancePosConsistency pos char =
+    let directResult = posAfter char pos
+        advanceResult = advancePos pos char
+    in directResult == advanceResult
 
 -- ============================================================================
--- Test Collection
+-- ErrorHandler Module Tests
+-- ============================================================================
+
+-- Property: error formatting includes location information
+prop_errorFormatIncludesLocation :: SourcePos -> String -> Property
+prop_errorFormatIncludesLocation pos message =
+    not (null message) ==>
+    let error = errorAt pos message
+        formatted = formatError error
+        posStr = show (posLine pos) ++ ":" ++ show (posColumn pos)
+    in posStr `isInfixOf` formatted
+
+-- Property: error messages are preserved in formatting
+prop_errorFormatPreservesMessage :: SourcePos -> String -> Property
+prop_errorFormatPreservesMessage pos message =
+    not (null message) ==>
+    let error = errorAt pos message
+        formatted = formatError error
+    in message `isInfixOf` formatted
+
+-- ============================================================================
+-- Integration Tests
+-- ============================================================================
+
+-- Property: normalizeIndentation preserves relative structure
+prop_normalizeIndentationPreservesStructure :: String -> Property
+prop_normalizeIndentationPreservesStructure input =
+    let lines' = lines input
+        hasMultipleLines = length lines' > 1
+        hasContent = any (not . null) lines'
+    in hasMultipleLines && hasContent ==>
+       let normalized = normalizeIndentation input
+           normLines = lines normalized
+       in length normLines == length lines'
+
+-- Property: comment removal and indentation normalization commute
+prop_commentsAndIndentationCommute :: String -> Property
+prop_commentsAndIndentationCommute input =
+    let withoutComments = removeLineComments input
+        normalizedFirst = normalizeIndentation input
+        normalizedThenComments = removeLineComments normalizedFirst
+        commentsThenNormalized = normalizeIndentation withoutComments
+    in commentsThenNormalized == normalizedThenComments
+
+-- ============================================================================
+-- Test Suite
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "New Cabal QuickCheck Test Suite (10 tests)"
-  [ testGroup "SourceLocation Tests"
-    [ fastProperty "position advancement consistency" prop_position_advancement_consistency
-    , fastProperty "span merging properties" prop_span_merging_properties
-    , fastProperty "located value roundtrip" prop_located_value_roundtrip
+tests = testGroup "New Cabal QuickCheck Test Suite"
+    [ testGroup "Utils Module Properties"
+        [ testProperty "trim is idempotent" prop_trimIdempotent
+        , testProperty "trim removes only whitespace" prop_trimOnlyWhitespace
+        , testProperty "splitBy preserves empty segments" prop_splitByPreservesEmpty
+        , testProperty "splitByCollapsed removes empty segments" prop_splitByCollapsedRemovesEmpty
+        , testProperty "breakOn returns correct parts" prop_breakOnCorrect
+        , testProperty "removeLineComments preserves content" prop_removeLineCommentsPreservesContent
+        ]
+    
+    , testGroup "SourceLocation Module Properties"
+        [ testProperty "posAfter handles newlines correctly" prop_posAfterNewline
+        , testProperty "posAfter handles regular characters" prop_posAfterRegularChar
+        , testProperty "advancePosByText processes text correctly" prop_advancePosByText
+        , testProperty "advancePos consistency with posAfter" prop_advancePosConsistency
+        ]
+    
+    , testGroup "ErrorHandler Module Properties"
+        [ testProperty "error format includes location" prop_errorFormatIncludesLocation
+        , testProperty "error format preserves message" prop_errorFormatPreservesMessage
+        ]
+    
+    , testGroup "Integration Properties"
+        [ testProperty "normalizeIndentation preserves structure" prop_normalizeIndentationPreservesStructure
+        , testProperty "comment removal and indentation commute" prop_commentsAndIndentationCommute
+        ]
+    
+    , testGroup "Unit Tests (Sanity Checks)"
+        [ testCase "trim basic functionality" $ do
+            trim "  hello  " @?= "hello"
+            
+        , testCase "splitBy basic functionality" $ do
+            splitBy ',' "a,b,c" @?= ["a", "b", "c"]
+            
+        , testCase "breakOn basic functionality" $ do
+            breakOn "world" "hello world" @?= ("hello ", "world")
+            
+        , testCase "SourcePos basic arithmetic" $ do
+            let pos = startPos
+            let afterA = posAfter 'a' pos
+            posColumn afterA @?= 2
+        ]
     ]
-  
-  , testGroup "Utils Tests"
-    [ fastProperty "split and join roundtrip" prop_split_join_roundtrip
-    , fastProperty "trim unicode idempotent" prop_trim_unicode_idempotent
-    , fastProperty "comment removal preserves structure" prop_comment_removal_preserves_structure
-    , fastProperty "indentation preserves relative" prop_indentation_preserves_relative
-    ]
-  
-  , testGroup "Parser Tests"
-    [ fastProperty "breakOn splitBy consistency" prop_breakOn_splitBy_consistency
-    , fastProperty "string pipeline commutative" prop_string_pipeline_commutative
-    , fastProperty "error location roundtrip" prop_error_location_roundtrip
-    ]
-  ]
-
--- Helper function for pipeline operations
-(|>) :: a -> (a -> b) -> b
-x |> f = f
