@@ -3383,6 +3383,20 @@ tests =
     , Test.Unit.SimpleCabalQuickCheckTests.tests
 
     -- ============================================================================
+    -- New QuickCheck Test Modules (2025) - 8 comprehensive tests
+    -- ============================================================================
+    , testGroup "New QuickCheck Test Modules - Core Functionality Testing"
+        [ Test.Unit.NewCoreParsingQuickCheckSpec.tests
+        , Test.Unit.NewTypeSystemQuickCheckSpec.tests
+        , Test.Unit.NewMemorySafetyQuickCheckSpec.tests
+        , Test.Unit.NewErrorRecoveryQuickCheckSpec.tests
+        , Test.Unit.NewPerformanceQuickCheckSpec.tests
+        , Test.Unit.NewIntegrationQuickCheckSpec.tests
+        , Test.Unit.NewOwnershipAnalysisQuickCheckSpec.tests
+        , Test.Unit.NewCompilerOptimizationQuickCheckSpec.tests
+        ]
+
+    -- ============================================================================
     -- New QuickCheck Property Test Modules (Added for enhanced testing)
     -- ============================================================================
     , testGroup "New QuickCheck Property Test Modules - Core Functionality"

@@ -321,6 +321,16 @@ test-suite typus-test
         Test.Unit.NewDependenciesInferenceCoreQuickCheckSpec,
         Test.Unit.NewEnhancedErrorHandlerConsistencyQuickCheckSpec,
         Test.Unit.NewIntegrationEndToEndCoreQuickCheckSpec,
+
+        -- New QuickCheck Test Modules (2025) - 8 comprehensive tests
+        Test.Unit.NewCoreParsingQuickCheckSpec,
+        Test.Unit.NewTypeSystemQuickCheckSpec,
+        Test.Unit.NewMemorySafetyQuickCheckSpec,
+        Test.Unit.NewErrorRecoveryQuickCheckSpec,
+        Test.Unit.NewPerformanceQuickCheckSpec,
+        Test.Unit.NewIntegrationQuickCheckSpec,
+        Test.Unit.NewOwnershipAnalysisQuickCheckSpec,
+        Test.Unit.NewCompilerOptimizationQuickCheckSpec,
         Test.Unit.SourceLocationBoundaryQuickCheckSpec,
         Test.Unit.StringProcessingQuickCheckSpec,
         Test.Unit.NewQuickCheckSpec,
