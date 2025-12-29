@@ -99,6 +99,19 @@ import qualified Test.Unit.NewCabalOwnershipQuickCheckTestsSpec
 import qualified Test.Unit.NewCabalDependenciesQuickCheckTestsSpec
 
 -- ============================================================================
+-- New Cabal QuickCheck Test Modules (2025) - 10 comprehensive tests
+-- ============================================================================
+import qualified Test.Unit.NewCabalStringUtilsQuickCheckSpec
+import qualified Test.Unit.NewCabalSourceLocationMathQuickCheckSpec
+import qualified Test.Unit.NewCabalParserDirectivesQuickCheckSpec
+import qualified Test.Unit.NewCabalErrorHandlerConsistencyQuickCheckSpec
+import qualified Test.Unit.NewCabalDependenciesTypeSystemQuickCheckSpec
+import qualified Test.Unit.NewCabalOwnershipTransferQuickCheckSpec
+import qualified Test.Unit.NewCabalCompilerIRConsistencyQuickCheckSpec
+import qualified Test.Unit.NewCabalIntegrationEndToEndQuickCheckSpec
+import qualified Test.Unit.NewCabalBoundaryConditionsQuickCheckSpec
+
+-- ============================================================================
 -- Additional Enhanced QuickCheck Test Modules (10 comprehensive tests)
 -- ============================================================================
 import qualified Test.Unit.EnhancedTextProcessingQuickCheckSpec
@@ -3535,6 +3548,21 @@ tests =
     -- ============================================================================
     , testGroup "Enhanced Cabal Core Properties - Comprehensive QuickCheck Testing"
         [ Test.Unit.EnhancedCabalCorePropertiesSpec.tests
+        ]
+
+    -- ============================================================================
+    -- New Cabal QuickCheck Test Modules (2025) - 10 Comprehensive Tests
+    -- ============================================================================
+    , testGroup "New Cabal QuickCheck Test Modules (2025) - Comprehensive Testing"
+        [ Test.Unit.NewCabalStringUtilsQuickCheckSpec.testStringUtilsQuickCheck
+        , Test.Unit.NewCabalSourceLocationMathQuickCheckSpec.testSourceLocationMathQuickCheck
+        , Test.Unit.NewCabalParserDirectivesQuickCheckSpec.testParserDirectivesQuickCheck
+        , Test.Unit.NewCabalErrorHandlerConsistencyQuickCheckSpec.testErrorHandlerConsistencyQuickCheck
+        , Test.Unit.NewCabalDependenciesTypeSystemQuickCheckSpec.testDependenciesTypeSystemQuickCheck
+        , Test.Unit.NewCabalOwnershipTransferQuickCheckSpec.testOwnershipTransferQuickCheck
+        , Test.Unit.NewCabalCompilerIRConsistencyQuickCheckSpec.testCompilerIRConsistencyQuickCheck
+        , Test.Unit.NewCabalIntegrationEndToEndQuickCheckSpec.testIntegrationEndToEndQuickCheck
+        , Test.Unit.NewCabalBoundaryConditionsQuickCheckSpec.testBoundaryConditionsQuickCheck
         ]
 
         ]
