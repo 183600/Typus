@@ -51,6 +51,18 @@ import qualified Test.Unit.NewCoreFunctionalityQuickCheckTests
 -- Core Functionality Properties Tests
 import qualified Test.Unit.CoreFunctionalityPropertiesSpec
 
+-- ============================================================================
+-- New QuickCheck Test Modules (Added for enhanced coverage) - 8 comprehensive tests
+-- ============================================================================
+import qualified Test.Unit.NewUtilsQuickCheckTestSpec
+import qualified Test.Unit.NewSourceLocationQuickCheckTestSpec
+import qualified Test.Unit.NewParserQuickCheckTestSpec
+import qualified Test.Unit.NewIntegrationQuickCheckTestSpec
+import qualified Test.Unit.NewBoundaryConditionQuickCheckTestSpec
+import qualified Test.Unit.NewPerformanceQuickCheckTestSpec
+import qualified Test.Unit.NewErrorHandlingQuickCheckTestSpec
+import qualified Test.Unit.NewDataConsistencyQuickCheckTestSpec
+
 -- New QuickCheck Property Test Modules (Added for enhanced testing)
 import qualified Test.Unit.NewSourceLocationQuickCheckPropertiesSpec
 import qualified Test.Unit.NewErrorHandlerQuickCheckPropertiesSpec
@@ -3443,6 +3455,20 @@ tests =
     -- ============================================================================
     , testGroup "Core Functionality Properties Tests"
         [ Test.Unit.CoreFunctionalityPropertiesSpec.tests
+        ]
+
+    -- ============================================================================
+    -- New QuickCheck Test Modules (Added for enhanced coverage) - 8 comprehensive tests
+    -- ============================================================================
+    , testGroup "New QuickCheck Test Modules - Enhanced Coverage"
+        [ Test.Unit.NewUtilsQuickCheckTestSpec.tests
+        , Test.Unit.NewSourceLocationQuickCheckTestSpec.tests
+        , Test.Unit.NewParserQuickCheckTestSpec.tests
+        , Test.Unit.NewIntegrationQuickCheckTestSpec.tests
+        , Test.Unit.NewBoundaryConditionQuickCheckTestSpec.tests
+        , Test.Unit.NewPerformanceQuickCheckTestSpec.tests
+        , Test.Unit.NewErrorHandlingQuickCheckTestSpec.tests
+        , Test.Unit.NewDataConsistencyQuickCheckTestSpec.tests
         ]
 
         ]

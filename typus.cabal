@@ -1210,7 +1210,18 @@ test-suite typus-test
         Test.Unit.NewCabalCompilerQuickCheckTestSpec,
         Test.Unit.NewCabalSyntaxValidatorQuickCheckTestSpec,
         Test.Unit.NewCabalGoToolchainQuickCheckTestSpec,
-        Test.Unit.NewCabalIntegrationQuickCheckTestSpec
+        Test.Unit.NewCabalIntegrationQuickCheckTestSpec,
+        
+        -- New Boundary Test Modules (2025)
+        Test.Unit.ParserBoundarySpec,
+        Test.Unit.SourceLocationMathSpec,
+        Test.Unit.CompilerErrorHandlingSpec,
+        Test.Unit.UtilsBoundarySpec,
+        Test.Unit.IntegrationBoundarySpec,
+        Test.Unit.OwnershipBoundarySpec,
+        Test.Unit.DependentTypesBoundarySpec,
+        Test.Unit.StringUtilsBoundarySpec,
+        Test.Unit.PerformanceBoundarySpec
     build-depends:
         base >=4.7 && <5,
         typus,
