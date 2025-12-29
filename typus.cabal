@@ -324,9 +324,9 @@ test-suite typus-test
 
         -- New QuickCheck Test Modules (2025) - 8 comprehensive tests
         Test.Unit.NewCoreParsingQuickCheckSpec,
-        Test.Unit.NewTypeSystemQuickCheckSpec,
+        Test.Unit.NewAdvancedTypeSystemQuickCheckSpec,
         Test.Unit.NewMemorySafetyQuickCheckSpec,
-        Test.Unit.NewErrorRecoveryQuickCheckSpec,
+        Test.Unit.NewAdvancedErrorRecoveryQuickCheckSpec,
         Test.Unit.NewPerformanceQuickCheckSpec,
         Test.Unit.NewIntegrationQuickCheckSpec,
         Test.Unit.NewOwnershipAnalysisQuickCheckSpec,

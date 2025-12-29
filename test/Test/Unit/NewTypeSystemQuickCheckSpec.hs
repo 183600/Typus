@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module Test.Unit.NewTypeSystemQuickCheckSpec (tests) where
+module Test.Unit.NewAdvancedTypeSystemQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))

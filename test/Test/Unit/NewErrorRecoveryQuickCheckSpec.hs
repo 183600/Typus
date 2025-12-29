@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module Test.Unit.NewErrorRecoveryQuickCheckSpec (tests) where
+module Test.Unit.NewAdvancedErrorRecoveryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))

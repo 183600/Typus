@@ -103,9 +103,9 @@ import qualified Test.Unit.NewCoreErrorHandlingQuickCheckSpec
 -- New QuickCheck Test Modules (2025) - 8 comprehensive tests
 -- ============================================================================
 import qualified Test.Unit.NewCoreParsingQuickCheckSpec
-import qualified Test.Unit.NewTypeSystemQuickCheckSpec
+import qualified Test.Unit.NewAdvancedTypeSystemQuickCheckSpec
 import qualified Test.Unit.NewMemorySafetyQuickCheckSpec
-import qualified Test.Unit.NewErrorRecoveryQuickCheckSpec
+import qualified Test.Unit.NewAdvancedErrorRecoveryQuickCheckSpec
 import qualified Test.Unit.NewPerformanceQuickCheckSpec
 import qualified Test.Unit.NewIntegrationQuickCheckSpec
 import qualified Test.Unit.NewOwnershipAnalysisQuickCheckSpec
@@ -3387,9 +3387,9 @@ tests =
     -- ============================================================================
     , testGroup "New QuickCheck Test Modules - Core Functionality Testing"
         [ Test.Unit.NewCoreParsingQuickCheckSpec.tests
-        , Test.Unit.NewTypeSystemQuickCheckSpec.tests
+        , Test.Unit.NewAdvancedTypeSystemQuickCheckSpec.tests
         , Test.Unit.NewMemorySafetyQuickCheckSpec.tests
-        , Test.Unit.NewErrorRecoveryQuickCheckSpec.tests
+        , Test.Unit.NewAdvancedErrorRecoveryQuickCheckSpec.tests
         , Test.Unit.NewPerformanceQuickCheckSpec.tests
         , Test.Unit.NewIntegrationQuickCheckSpec.tests
         , Test.Unit.NewOwnershipAnalysisQuickCheckSpec.tests
