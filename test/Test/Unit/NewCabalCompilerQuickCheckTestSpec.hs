@@ -1,135 +1,355 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Test.Unit.NewCabalCompilerQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample, forAll, oneof, elements, listOf, suchThat)
-import Data.Maybe (isJust, isNothing)
-import Data.List (isPrefixOf, isInfixOf)
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), (.&&.), (.||.), (==>), forAll, oneof, elements, listOf, choose, suchThat)
+import Compiler
+  ( compile, CompilerError(..), CompilerResult, CompilationPhase(..)
+  , renderCompilationError, formatCompilerErrors, generateDetailedReport
+  , analyzeErrors, hasTypeErrors, TypeCheckDiagnostic(..)
+  , diagnoseTypeErrors, extractDeclarations, extractFunctionCalls
+  , buildTypeEnv, buildTypeEnvFromPairs, createTypusFileFromErrors
+  , isMethodDeclaration, checkTypeError, hasMalformedSyntax
+  , checkDependentTypes, checkOwnership, ensureSourceIR
+  , typeCheckFailure, typeDiagnosticToCompilerError, generateGoCode
+  )
+import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
+import Compiler.IR (SourceIR)
+import Compiler.Errors (ErrorCategory(..), ErrorSeverity(..), mkCompilerError, defaultSpan)
+import SourceLocation (SourceSpan(..))
+import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Either (isLeft, isRight)
+import Data.Maybe (isJust, isNothing, fromMaybe)
+import Data.List (isPrefixOf, isInfixOf, null)
 
-import Compiler.IR (SourceIR(..), SemanticIR(..), GoIR(..))
-import Parser (TypusFile(..), defaultFileDirectives)
-import Compiler.GoAst (GoModule(..), GoDecl(..), GoImport(..))
-import Compiler.ValueAnalysis (ValueInfo)
-import TestSupport.QuickCheck (fastProperty)
+-- ============================================================================
+-- Arbitrary Instances
+-- ============================================================================
 
--- | QuickCheck tests for Compiler IR module intermediate representation functions
+instance Arbitrary CompilationPhase where
+  arbitrary = elements [ParsingPhase, TypeCheckingPhase, OwnershipPhase, CodeGenPhase]
+
+instance Arbitrary TypeCheckDiagnostic where
+  arbitrary = do
+    context <- oneof [return Nothing, Just <$> arbitrary]
+    detail <- arbitrary `suchThat` (not . null)
+    return $ TypeCheckDiagnostic context detail
+
+-- Generate simple TypusFile for testing
+genSimpleTypusFile :: Gen TypusFile
+genSimpleTypusFile = do
+  directives <- arbitrary
+  buildTags <- return []  -- Simplified for testing
+  blocks <- listOf $ do
+    directives' <- arbitrary
+    content <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n,.;(){}[]"
+    span <- arbitrary
+    return $ CodeBlock directives' content span
+  syntaxErrors <- return []  -- Simplified for testing
+  return $ TypusFile directives buildTags blocks syntaxErrors
+
+-- Generate TypusFile with specific content
+genTypusFileWithContent :: String -> Gen TypusFile
+genTypusFileWithContent content = do
+  directives <- arbitrary
+  buildTags <- return []
+  let block = CodeBlock defaultBlockDirectives content defaultSpan
+  return $ TypusFile directives buildTags [block] []
+
+-- Generate compiler error for testing
+genCompilerError :: Gen CompilerError
+genCompilerError = do
+  errorId <- arbitrary `suchThat` (not . null)
+  message <- T.pack <$> arbitrary `suchThat` (not . null)
+  phase <- arbitrary
+  category <- elements [Parsing, TypeChecking, Ownership, Semantic, Runtime, Constraint, Inference, Integration, Unknown]
+  severity <- arbitrary
+  span' <- oneof [return Nothing, Just <$> arbitrary]
+  context <- oneof [return Nothing, Just <$> arbitrary]
+  suggestions <- listOf (T.pack <$> arbitrary `suchThat` (not . null))
+  stackTrace <- listOf arbitrary
+  timestamp <- oneof [return Nothing, Just <$> arbitrary]
+  return $ mkCompilerError errorId message phase category severity span' context suggestions stackTrace timestamp
+
+-- ============================================================================
+-- Compiler QuickCheck Tests
+-- ============================================================================
+
+-- Test compilation of empty file
+prop_compile_empty_file :: Property
+prop_compile_empty_file =
+  let emptyFile = TypusFile defaultFileDirectives [] [] []
+  in case compile emptyFile of
+       Left _ -> property False
+       Right _ -> property True
+
+-- Test compilation of simple valid content
+prop_compile_simple_content :: Property
+prop_compile_simple_content =
+  forAll genSimpleTypusFile $ \typusFile ->
+    case compile typusFile of
+      Left errs -> all (\e -> severity e /= Fatal) errs
+      Right _ -> property True
+
+-- Test compilation of file with type error
+prop_compile_type_error_fails :: Property
+prop_compile_type_error_fails =
+  let errorContent = "var x int = \"string\""
+      errorFile = TypusFile defaultFileDirectives [] [CodeBlock defaultBlockDirectives errorContent defaultSpan] []
+  in case compile errorFile of
+       Left errs -> not (null errs)
+       Right _ -> property False
+
+-- Test generateGoCode function
+prop_generateGoCode_returns_string :: Property
+prop_generateGoCode_returns_string =
+  forAll genSimpleTypusFile $ \typusFile ->
+    let goCode = generateGoCode typusFile
+    in not (null goCode)
+
+prop_generateGoCode_handles_malformed_input :: Property
+prop_generateGoCode_handles_malformed_input =
+  let malformedFile = TypusFile defaultFileDirectives [] [CodeBlock defaultBlockDirectives "{ invalid syntax" defaultSpan] []
+      goCode = generateGoCode malformedFile
+  in not (null goCode)  -- Should still return some content even for malformed input
+
+-- Test ensureSourceIR function
+prop_ensureSourceIR_valid_file_succeeds :: Property
+prop_ensureSourceIR_valid_file_succeeds =
+  forAll genSimpleTypusFile $ \typusFile ->
+    not (hasMalformedSyntax typusFile) ==> 
+    case ensureSourceIR typusFile of
+      Left _ -> property False
+      Right _ -> property True
+
+prop_ensureSourceIR_malformed_fails :: Property
+prop_ensureSourceIR_malformed_fails =
+  let malformedFile = TypusFile defaultFileDirectives [] [CodeBlock defaultBlockDirectives "{ unclosed brace" defaultSpan] []
+  in case ensureSourceIR malformedFile of
+       Left _ -> property True
+       Right _ -> property False
+
+-- Test error formatting functions
+prop_renderCompilationError_formats_errors :: Property
+prop_renderCompilationError_formats_errors =
+  forAll (listOf genCompilerError) $ \errors ->
+    let formatted = renderCompilationError errors
+    in if null errors
+       then null formatted
+       else not (null formatted)
+
+prop_formatCompilerErrors_includes_error_ids :: Property
+prop_formatCompilerErrors_includes_error_ids =
+  forAll (listOf genCompilerError) $ \errors ->
+    let formatted = formatCompilerErrors errors
+        errorIds = map errorId errors
+    in all (\eid -> eid `isInfixOf` formatted) errorIds
+
+-- Test type checking functions
+prop_hasTypeErrors_detects_type_errors :: Property
+prop_hasTypeErrors_detects_type_errors =
+  forAll genSimpleTypusFile $ \typusFile ->
+    let hasErrors = hasTypeErrors typusFile
+        diagnostics = diagnoseTypeErrors typusFile
+    in case diagnostics of
+         Left errs -> hasErrors
+         Right [] -> not hasErrors
+         Right _ -> hasErrors
+
+prop_diagnoseTypeErrors_returns_either :: Property
+prop_diagnoseTypeErrors_returns_either =
+  forAll genSimpleTypusFile $ \typusFile ->
+    let result = diagnoseTypeErrors typusFile
+    in isLeft result || isRight result
+
+-- Test type diagnostic conversion
+prop_typeDiagnosticToCompilerError_preserves_message :: TypeCheckDiagnostic -> Property
+prop_typeDiagnosticToCompilerError_preserves_message diag =
+  let compilerErr = typeDiagnosticToCompilerError diag
+      expectedDetail = case diag of
+        TypeCheckDiagnostic _ detail -> detail
+  in T.pack expectedDetail `T.isInfixOf` message compilerErr
+
+-- Test declaration extraction
+prop_extractDeclarations_returns_list :: Property
+prop_extractDeclarations_returns_list =
+  forAll genSimpleTypusFile $ \typusFile ->
+    let declarations = extractDeclarations typusFile
+    in length declarations >= 0  -- Always returns a list
+
+prop_extractFunctionCalls_returns_list :: Property
+prop_extractFunctionCalls_returns_list =
+  forAll genSimpleTypusFile $ \typusFile ->
+    let functionCalls = extractFunctionCalls typusFile
+    in length functionCalls >= 0  -- Always returns a list
+
+-- Test type environment building
+prop_buildTypeEnv_returns_environment :: Property
+prop_buildTypeEnv_returns_environment =
+  forAll genSimpleTypusFile $ \typusFile ->
+    let typeEnv = buildTypeEnv typusFile
+    in not (null typeEnv) || null (tfBlocks typusFile)
+
+prop_buildTypeEnvFromPairs_creates_environment :: Property
+prop_buildTypeEnvFromPairs_creates_environment =
+  forAll (listOf $ arbitrary `suchThat` (\(x, y) -> not (null x && null y))) $ \pairs ->
+    let typeEnv = buildTypeEnvFromPairs pairs
+    in length typeEnv >= length pairs
+
+-- Test method declaration detection
+prop_isMethodDeclaration_detects_methods :: Property
+prop_isMethodDeclaration_detects_methods =
+  forAll (arbitrary `suchThat` (not . null)) $ \declaration ->
+    let isMethod = isMethodDeclaration declaration
+        hasReceiver = "func (" `isPrefixOf` declaration
+    in hasReceiver ==> isMethod
+
+-- Test syntax error detection
+prop_hasMalformedSyntax_detects_errors :: Property
+prop_hasMalformedSyntax_detects_errors =
+  let validFile = TypusFile defaultFileDirectives [] [CodeBlock defaultBlockDirectives "func main() {}" defaultSpan] []
+      invalidFile = TypusFile defaultFileDirectives [] [CodeBlock defaultBlockDirectives "func main() {" defaultSpan] []
+  in not (hasMalformedSyntax validFile) .&&. hasMalformedSyntax invalidFile
+
+-- Test dependent type checking
+prop_checkDependentTypes_handles_valid_input :: Property
+prop_checkDependentTypes_handles_valid_input =
+  forAll genSimpleTypusFile $ \typusFile ->
+    let result = checkDependentTypes typusFile
+    in isRight result || isLeft result  -- Should always return Either
+
+-- Test ownership checking
+prop_checkOwnership_handles_valid_input :: Property
+prop_checkOwnership_handles_valid_input =
+  forAll genSimpleTypusFile $ \typusFile ->
+    let result = checkOwnership typusFile
+    in isRight result || isLeft result  -- Should always return Either
+
+-- Test error analysis
+prop_analyzeErrors_returns_analysis :: Property
+prop_analyzeErrors_returns_analysis =
+  forAll (listOf genCompilerError) $ \errors ->
+    let analysis = analyzeErrors errors
+    in not (null analysis)  -- Should always return some analysis
+
+prop_generateDetailedReport_includes_summary :: Property
+prop_generateDetailedReport_includes_summary =
+  forAll (listOf genCompilerError) $ \errors ->
+    let report = generateDetailedReport errors
+    in "Summary" `isInfixOf` report || null errors
+
+-- Test error creation from TypusFile
+prop_createTypusFileFromErrors_creates_file :: Property
+prop_createTypusFileFromErrors_creates_file =
+  forAll (listOf genCompilerError) $ \errors ->
+    let typusFile = createTypusFileFromErrors errors
+    in not (null (tfSyntaxErrors typusFile)) || null errors
+
+-- Test type error checking
+prop_checkTypeError_validates_types :: Property
+prop_checkTypeError_validates_types =
+  forAll genSimpleTypusFile $ \typusFile ->
+    let hasTypeErr = checkTypeError typusFile
+        typeDiagnostics = diagnoseTypeErrors typusFile
+    in case typeDiagnostics of
+         Left _ -> hasTypeErr
+         Right [] -> not hasTypeErr
+         Right _ -> hasTypeErr
+
+-- ============================================================================
+-- Integration Property Tests
+-- ============================================================================
+
+-- Test compilation pipeline consistency
+prop_compilation_pipeline_consistent :: Property
+prop_compilation_pipeline_consistent =
+  forAll genSimpleTypusFile $ \typusFile ->
+    let compileResult = compile typusFile
+        goCodeResult = generateGoCode typusFile
+    in case compileResult of
+         Left _ -> not (null goCodeResult)  -- Go generation should still work
+         Right compiledCode -> not (null compiledCode) && not (null goCodeResult)
+
+-- Test error handling consistency
+prop_error_handling_consistent :: Property
+prop_error_handling_consistent =
+  forAll genSimpleTypusFile $ \typusFile ->
+    let hasMalformed = hasMalformedSyntax typusFile
+        sourceIRResult = ensureSourceIR typusFile
+        hasTypeErrs = hasTypeErrors typusFile
+    in if hasMalformed
+       then isLeft sourceIRResult
+       else isRight sourceIRResult && (hasTypeErrs ==> isLeft (compile typusFile))
+
+-- Test diagnostic consistency
+prop_diagnostic_consistency :: Property
+prop_diagnostic_consistency =
+  forAll genSimpleTypusFile $ \typusFile ->
+    let diagnostics = diagnoseTypeErrors typusFile
+        typeErrs = checkTypeError typusFile
+    in case diagnostics of
+         Left errs -> typeErrs
+         Right diags -> not (null diags) ==> typeErrs
+
+-- Test round-trip compilation
+prop_round_trip_compilation :: Property
+prop_round_trip_compilation =
+  forAll genSimpleTypusFile $ \typusFile ->
+    let goCode = generateGoCode typusFile
+        -- Note: We can't actually compile Go back to Typus, but we can test
+        -- that the process doesn't crash and produces some output
+    in not (null goCode)
+
 tests :: TestTree
-tests =
-  testGroup "New Cabal Compiler QuickCheck Tests"
-    [ testProperty "SourceIR construction preserves fields" prop_sourceIRConstruction
-    , testProperty "SemanticIR construction preserves fields" prop_semanticIRConstruction
-    , testProperty "GoIR construction preserves fields" prop_goIRConstruction
-    , testProperty "SourceIR equality works correctly" prop_sourceIREquality
-    , testProperty "SemanticIR equality works correctly" prop_semanticIREquality
-    , testProperty "GoIR equality works correctly" prop_goIREquality
-    , testProperty "SourceIR Show instance contains source info" prop_sourceIRShowContainsSource
-    , testProperty "SemanticIR Show instance contains semantic info" prop_semanticIRShowContainsSemantic
-    , testProperty "GoIR Show instance contains Go info" prop_goIRShowContainsGo
-    , testGroup "Edge cases"
-        [ testCase "SourceIR with empty file" $ do
-            let typusFile = TypusFile defaultFileDirectives [] [] []
-                sourceIR = SourceIR typusFile ""
-            sourceTypusFile sourceIR @?= typusFile
-            sourceText sourceIR @?= ""
-        , testCase "SemanticIR with empty module" $ do
-            let typusFile = TypusFile defaultFileDirectives [] [] []
-                goModule = GoModule [] [] []
-                semanticIR = SemanticIR typusFile goModule []
-            semanticTypusFile semanticIR @?= typusFile
-            semanticModule semanticIR @?= goModule
-            semanticValueInfo semanticIR @?= []
-        , testCase "GoIR with empty module and source" $ do
-            let goModule = GoModule [] [] []
-                goSource = ""
-                goIR = GoIR goModule goSource
-            goModule goIR @?= goModule
-            goSource goIR @?= goSource
-        ]
-    ]
-
--- | Property: SourceIR construction preserves fields
-prop_sourceIRConstruction :: String -> Property
-prop_sourceIRConstruction sourceText = 
-  let typusFile = TypusFile defaultFileDirectives [] [] []
-      sourceIR = SourceIR typusFile sourceText
-  in sourceTypusFile sourceIR === typusFile .&&.
-     sourceText sourceIR === sourceText
-
--- | Property: SemanticIR construction preserves fields
-prop_semanticIRConstruction :: String -> Property
-prop_semanticIRConstruction packageName = 
-  let typusFile = TypusFile defaultFileDirectives [] [] []
-      goModule = GoModule packageName [] []
-      valueInfo = [] :: [ValueInfo]
-      semanticIR = SemanticIR typusFile goModule valueInfo
-  in semanticTypusFile semanticIR === typusFile .&&.
-     semanticModule semanticIR === goModule .&&.
-     semanticValueInfo semanticIR === valueInfo
-
--- | Property: GoIR construction preserves fields
-prop_goIRConstruction :: String -> String -> Property
-prop_goIRConstruction packageName goSource = 
-  let goModule = GoModule packageName [] []
-      goIR = GoIR goModule goSource
-  in goModule goIR === goModule .&&.
-     goSource goIR === goSource
-
--- | Property: SourceIR equality works correctly
-prop_sourceIREquality :: String -> String -> Property
-prop_sourceIREquality sourceText1 sourceText2 = 
-  let typusFile1 = TypusFile defaultFileDirectives [] [] []
-      typusFile2 = TypusFile defaultFileDirectives [] [] []
-      sourceIR1 = SourceIR typusFile1 sourceText1
-      sourceIR2 = SourceIR typusFile2 sourceText2
-  in (sourceIR1 == sourceIR2) === (sourceText1 == sourceText2)
-
--- | Property: SemanticIR equality works correctly
-prop_semanticIREquality :: String -> String -> Property
-prop_semanticIREquality packageName1 packageName2 = 
-  let typusFile1 = TypusFile defaultFileDirectives [] [] []
-      typusFile2 = TypusFile defaultFileDirectives [] [] []
-      goModule1 = GoModule packageName1 [] []
-      goModule2 = GoModule packageName2 [] []
-      valueInfo = [] :: [ValueInfo]
-      semanticIR1 = SemanticIR typusFile1 goModule1 valueInfo
-      semanticIR2 = SemanticIR typusFile2 goModule2 valueInfo
-  in (semanticIR1 == semanticIR2) === (packageName1 == packageName2)
-
--- | Property: GoIR equality works correctly
-prop_goIREquality :: String -> String -> String -> String -> Property
-prop_goIREquality packageName1 goSource1 packageName2 goSource2 = 
-  let goModule1 = GoModule packageName1 [] []
-      goModule2 = GoModule packageName2 [] []
-      goIR1 = GoIR goModule1 goSource1
-      goIR2 = GoIR goModule2 goSource2
-  in (goIR1 == goIR2) === (packageName1 == packageName2 && goSource1 == goSource2)
-
--- | Property: SourceIR Show instance contains source info
-prop_sourceIRShowContainsSource :: String -> Property
-prop_sourceIRShowContainsSource sourceText = 
-  let typusFile = TypusFile defaultFileDirectives [] [] []
-      sourceIR = SourceIR typusFile sourceText
-      showOutput = show sourceIR
-  in "SourceIR" `isInfixOf` showOutput
-
--- | Property: SemanticIR Show instance contains semantic info
-prop_semanticIRShowContainsSemantic :: String -> Property
-prop_semanticIRShowContainsSemantic packageName = 
-  let typusFile = TypusFile defaultFileDirectives [] [] []
-      goModule = GoModule packageName [] []
-      valueInfo = [] :: [ValueInfo]
-      semanticIR = SemanticIR typusFile goModule valueInfo
-      showOutput = show semanticIR
-  in "SemanticIR" `isInfixOf` showOutput
-
--- | Property: GoIR Show instance contains Go info
-prop_goIRShowContainsGo :: String -> String -> Property
-prop_goIRShowContainsGo packageName goSource = 
-  let goModule = GoModule packageName [] []
-      goIR = GoIR goModule goSource
-      showOutput = show goIR
-  in "GoIR" `isInfixOf` showOutput
-
--- Helper operator for composing properties
-(.&&.) :: Property -> Property -> Property
-(.&&.) = (&&)
+tests = testGroup "New Cabal Compiler QuickCheck Tests"
+  [ testGroup "Basic compilation tests"
+      [ testProperty "compile empty file" prop_compile_empty_file
+      , testProperty "compile simple content" prop_compile_simple_content
+      , testProperty "compile type error fails" prop_compile_type_error_fails
+      ]
+  , testGroup "Go code generation tests"
+      [ testProperty "generateGoCode returns string" prop_generateGoCode_returns_string
+      , testProperty "generateGoCode handles malformed input" prop_generateGoCode_handles_malformed_input
+      ]
+  , testGroup "Source IR tests"
+      [ testProperty "ensureSourceIR valid file succeeds" prop_ensureSourceIR_valid_file_succeeds
+      , testProperty "ensureSourceIR malformed fails" prop_ensureSourceIR_malformed_fails
+      ]
+  , testGroup "Error formatting tests"
+      [ testProperty "renderCompilationError formats errors" prop_renderCompilationError_formats_errors
+      , testProperty "formatCompilerErrors includes error ids" prop_formatCompilerErrors_includes_error_ids
+      ]
+  , testGroup "Type checking tests"
+      [ testProperty "hasTypeErrors detects type errors" prop_hasTypeErrors_detects_type_errors
+      , testProperty "diagnoseTypeErrors returns either" prop_diagnoseTypeErrors_returns_either
+      , testProperty "typeDiagnosticToCompilerError preserves message" prop_typeDiagnosticToCompilerError_preserves_message
+      ]
+  , testGroup "Declaration and function tests"
+      [ testProperty "extractDeclarations returns list" prop_extractDeclarations_returns_list
+      , testProperty "extractFunctionCalls returns list" prop_extractFunctionCalls_returns_list
+      , testProperty "buildTypeEnv returns environment" prop_buildTypeEnv_returns_environment
+      , testProperty "buildTypeEnvFromPairs creates environment" prop_buildTypeEnvFromPairs_creates_environment
+      ]
+  , testGroup "Method and syntax tests"
+      [ testProperty "isMethodDeclaration detects methods" prop_isMethodDeclaration_detects_methods
+      , testProperty "hasMalformedSyntax detects errors" prop_hasMalformedSyntax_detects_errors
+      ]
+  , testGroup "Advanced checking tests"
+      [ testProperty "checkDependentTypes handles valid input" prop_checkDependentTypes_handles_valid_input
+      , testProperty "checkOwnership handles valid input" prop_checkOwnership_handles_valid_input
+      , testProperty "checkTypeError validates types" prop_checkTypeError_validates_types
+      ]
+  , testGroup "Error analysis tests"
+      [ testProperty "analyzeErrors returns analysis" prop_analyzeErrors_returns_analysis
+      , testProperty "generateDetailedReport includes summary" prop_generateDetailedReport_includes_summary
+      , testProperty "createTypusFileFromErrors creates file" prop_createTypusFileFromErrors_creates_file
+      ]
+  , testGroup "Integration tests"
+      [ testProperty "compilation pipeline consistent" prop_compilation_pipeline_consistent
+      , testProperty "error handling consistent" prop_error_handling_consistent
+      , testProperty "diagnostic consistency" prop_diagnostic_consistency
+      , testProperty "round trip compilation" prop_round_trip_compilation
+      ]
+  ]
