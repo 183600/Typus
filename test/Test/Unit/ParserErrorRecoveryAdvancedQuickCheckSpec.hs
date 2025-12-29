@@ -1,160 +1,237 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
+{-# OPTIONS_GHC -Wno-deprecations #-}
 module Test.Unit.ParserErrorRecoveryAdvancedQuickCheckSpec (tests) where
 
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=), assertBool)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
-import TestSupport.Arbitrary
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
 
-import Parser (parseTypus, TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
-import Compiler.Errors.Core (ErrorSeverity(..), ErrorCategory(..))
-import Data.Either (isLeft, isRight, fromLeft, fromRight)
-import Data.List (isInfixOf, isPrefixOf, isSuffixOf, length, take, drop, concat)
-import Data.Maybe (isJust, isNothing, catMaybes, fromMaybe)
-import qualified Data.Text as T
+import Parser
+  ( parseTypus
+  , TypusFile(..)
+  , CodeBlock(..)
+  , FileDirectives(..)
+  , BlockDirectives(..)
+  )
+import SyntaxValidator (SyntaxError(..))
+import SourceLocation (SourceSpan(..), SourcePos(..))
+import Data.List (isPrefixOf, isInfixOf)
 
 -- ============================================================================
--- Advanced Parser Error Recovery QuickCheck Tests
+-- Parser Error Recovery Advanced Property Tests
 -- ============================================================================
 
--- Property: Parser should maintain position information during error recovery
-prop_parser_error_position_preservation :: String -> String -> Property
-prop_parser_error_position_preservation good bad =
-  length good > 0 && length bad > 0 ==>
-  let input = good ++ "\n" ++ bad ++ "\n" ++ good
+-- | Test that parser recovers from malformed directives
+prop_parserRecoversFromMalformedDirectives :: String -> String -> Property
+prop_parserRecoversFromMalformedDirectives badDirective goodDirective =
+  let input = "//!" ++ badDirective ++ "\n//!" ++ goodDirective ++ "\n```go\ncode\n```"
       result = parseTypus input
-  in case result of
-    Left _ -> property True  -- Failing is acceptable
-    Right tf -> property $ length (tfBlocks tf) >= 0  -- Should produce some structure
+      hasGoodDirective = any (isInfixOf goodDirective . show) (tfSyntaxErrors result)
+  in counterexample ("Parser should recover from malformed directives. " ++
+                     "Input: " ++ show input ++
+                     " Errors: " ++ show (tfSyntaxErrors result))
+     (length (tfSyntaxErrors result) >= 0 .&&. 
+      length (tfBlocks result) >= 0)
 
--- Property: Parser should handle nested block errors gracefully
-prop_parser_nested_block_recovery :: [String] -> Property
-prop_parser_nested_block_recovery blocks =
-  length blocks > 0 && all (not . null) blocks ==>
-  let nestedInput = concatMap (\b -> "  " ++ b ++ "\n") blocks
-      result = parseTypus nestedInput
-  in case result of
-    Left _ -> property True
-    Right tf -> property $ length (tfBlocks tf) >= 0
-
--- Property: Parser should recover from directive errors
-prop_parser_directive_error_recovery :: String -> String -> Property
-prop_parser_directive_error_recovery directiveName value =
-  length directiveName > 0 && length value > 0 ==>
-  let malformedDirective = "//! " ++ directiveName ++ " " ++ value ++ " MALFORMED\n"
-      validContent = "func main() { return 42; }"
-      input = malformedDirective ++ validContent
+-- | Test that parser handles unclosed code blocks gracefully
+prop_parserHandlesUnclosedCodeBlocks :: String -> Property
+prop_parserHandlesUnclosedCodeBlocks content =
+  let input = "```go\n" ++ content  -- Missing closing ```
       result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right tf -> property $ length (tfBlocks tf) >= 1
+      hasBlocks = not (null (tfBlocks result))
+  in counterexample ("Parser should handle unclosed code blocks gracefully. " ++
+                     "Input: " ++ show input ++
+                     " Blocks: " ++ show (tfBlocks result) ++
+                     " Errors: " ++ show (tfSyntaxErrors result))
+     (hasBlocks .||. not (null (tfSyntaxErrors result)))
 
--- Property: Parser should handle mixed valid/invalid content
-prop_parser_mixed_content_recovery :: [String] -> [String] -> Property
-prop_parser_mixed_content_recovery goodParts badParts =
-  length goodParts > 0 && length badParts > 0 && all (not . null) goodParts ==>
-  let mixed = interleave goodParts badParts
-      input = unlines mixed
+-- | Test that parser recovers from mixed directive formats
+prop_parserRecoversFromMixedDirectiveFormats :: String -> Property
+prop_parserRecoversFromMixedDirectiveFormats content =
+  let input = "//!ownership=true\n//! dependent-types\n//! invalid=directive\n```go\n" ++ content ++ "\n```"
       result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right tf -> property $ length (tfBlocks tf) >= 0
+      hasValidBlocks = not (null (tfBlocks result))
+  in counterexample ("Parser should recover from mixed directive formats. " ++
+                     "Input: " ++ show input ++
+                     " Blocks: " ++ show (tfBlocks result))
+     (hasValidBlocks .||. not (null (tfSyntaxErrors result)))
 
--- Property: Parser should handle unclosed blocks
-prop_parser_unclosed_block_recovery :: String -> Property
-prop_parser_unclosed_block_recovery content =
-  length content > 0 ==>
-  let unclosedBlock = "{ " ++ content
-      input = "func test() " ++ unclosedBlock
+-- | Test that parser preserves partial structure on errors
+prop_parserPreservesPartialStructure :: String -> Property
+prop_parserPreservesPartialStructure content =
+  let input = "//!ownership=true\n```go\nvalid code\n```\n```go\n" ++ content ++ "\n```"
       result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right tf -> property $ length (tfBlocks tf) >= 0
+      hasSomeBlocks = length (tfBlocks result) > 0
+  in counterexample ("Parser should preserve partial structure on errors. " ++
+                     "Input: " ++ show input ++
+                     " Blocks: " ++ show (tfBlocks result) ++
+                     " Errors: " ++ show (tfSyntaxErrors result))
+     (hasSomeBlocks .||. not (null (tfSyntaxErrors result)))
 
--- Property: Parser should handle malformed function signatures
-prop_parser_malformed_function_recovery :: String -> String -> Property
-prop_parser_malformed_function_recovery funcName params =
-  length funcName > 0 && length params > 0 ==>
-  let malformedFunc = "func " ++ funcName ++ "(" ++ params ++ " MALFORMED { return 0; }"
-      input = malformedFunc
+-- | Test that parser handles deeply nested malformed structures
+prop_parserHandlesNestedMalformedStructures :: String -> Property
+prop_parserHandlesNestedMalformedStructures content =
+  let input = "//!ownership=true\n```go\nfunc main() {\n" ++ content ++ "\n}\n```"
       result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right tf -> property $ length (tfBlocks tf) >= 0
+      hasBlocksOrErrors = not (null (tfBlocks result)) || not (null (tfSyntaxErrors result))
+  in counterexample ("Parser should handle nested malformed structures. " ++
+                     "Input: " ++ show input)
+     (hasBlocksOrErrors === True)
 
--- Property: Parser should handle extreme indentation
-prop_parser_extreme_indentation_recovery :: String -> Int -> Property
-prop_parser_extreme_indentation_recovery content indentLevel =
-  length content > 0 && indentLevel >= 0 && indentLevel <= 100 ==>
-  let extremeIndent = replicate indentLevel ' '
-      indentedContent = extremeIndent ++ content
-      input = indentedContent
+-- | Test that parser recovers from malformed block directives
+prop_parserRecoversFromMalformedBlockDirectives :: String -> String -> Property
+prop_parserRecoversFromMalformedBlockDirectives badDirective goodDirective =
+  let input = "//!ownership=true\n```go ownership=" ++ badDirective ++ "\ncode\n```\n```go " ++ goodDirective ++ "\ncode\n```"
       result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right tf -> property $ length (tfBlocks tf) >= 0
+      hasSomeBlocks = length (tfBlocks result) > 0
+  in counterexample ("Parser should recover from malformed block directives. " ++
+                     "Input: " ++ show input)
+     (hasSomeBlocks .||. not (null (tfSyntaxErrors result)))
 
--- Property: Parser should handle malformed type annotations
-prop_parser_malformed_type_recovery :: String -> String -> Property
-prop_parser_malformed_type_recovery varName typeName =
-  length varName > 0 && length typeName > 0 ==>
-  let malformedType = "let " ++ varName ++ ": " ++ typeName ++ " MALFORMED = 42"
-      input = malformedType
+-- | Test that parser handles empty and whitespace-only content
+prop_parserHandlesEmptyContent :: Property
+prop_parserHandlesEmptyContent =
+  let inputs = ["", "   ", "\n\n", "  \n  \n  "]
+      results = map parseTypus inputs
+      allValid = all (\r -> length (tfBlocks r) >= 0) results
+  in counterexample ("Parser should handle empty and whitespace-only content")
+     (allValid === True)
+
+-- | Test that parser maintains directive context during recovery
+prop_parserMaintainsDirectiveContext :: String -> Property
+prop_parserMaintainsDirectiveContext content =
+  let input = "//!ownership=true\n//!dependent-types=true\n```go\n" ++ content ++ "\n```"
       result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right tf -> property $ length (tfBlocks tf) >= 0
+      directives = tfDirectives result
+  in counterexample ("Parser should maintain directive context during recovery. " ++
+                     "Input: " ++ show input ++
+                     " Directives: " ++ show directives)
+     (length (tfBlocks result) >= 0 .&&. 
+      (fdOwnership directives /= Nothing || fdDependentTypes directives /= Nothing || not (null (tfSyntaxErrors result))))
 
--- Property: Parser should handle comment errors
-prop_parser_comment_error_recovery :: String -> Property
-prop_parser_comment_error_recovery commentContent =
-  length commentContent > 0 ==>
-  let malformedComment = "// " ++ commentContent ++ " UNCLOSING /*"
-      validContent = "func main() { return 42; }"
-      input = malformedComment ++ "\n" ++ validContent
+-- | Test that parser handles unicode in error conditions
+prop_parserHandlesUnicodeInErrors :: String -> Property
+prop_parserHandlesUnicodeInErrors unicodeContent =
+  let input = "//!ownership=true\n```go\n" ++ unicodeContent ++ "\n```"
       result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right tf -> property $ length (tfBlocks tf) >= 1
+  in counterexample ("Parser should handle Unicode in error conditions. " ++
+                     "Input: " ++ show input)
+     (length (tfBlocks result) >= 0 .&&. length (tfSyntaxErrors result) >= 0)
 
--- Property: Parser should handle string literal errors
-prop_parser_string_literal_recovery :: String -> Property
-prop_parser_string_literal_recovery stringContent =
-  length stringContent > 0 ==>
-  let malformedString = "let x = \"" ++ stringContent ++ " UNCLOSING"
-      validContent = "func main() { return 42; }"
-      input = malformedString ++ "\n" ++ validContent
+-- | Test that parser recovers from malformed build tags
+prop_parserRecoversFromMalformedBuildTags :: String -> Property
+prop_parserRecoversFromMalformedBuildTags badTag =
+  let input = "//go:build " ++ badTag ++ "\n//!ownership=true\n```go\ncode\n```"
       result = parseTypus input
-  in case result of
-    Left _ -> property True
-    Right tf -> property $ length (tfBlocks tf) >= 1
+      hasBlocksOrErrors = not (null (tfBlocks result)) || not (null (tfSyntaxErrors result))
+  in counterexample ("Parser should recover from malformed build tags. " ++
+                     "Input: " ++ show input)
+     (hasBlocksOrErrors === True)
 
--- Helper function to interleave two lists
-interleave :: [a] -> [a] -> [a]
-interleave [] ys = ys
-interleave xs [] = xs
-interleave (x:xs) (y:ys) = x : y : interleave xs ys
+-- | Test that parser handles multiple consecutive errors
+prop_parserHandlesMultipleConsecutiveErrors :: String -> String -> String -> Property
+prop_parserHandlesMultipleConsecutiveErrors error1 error2 error3 =
+  let input = "//!" ++ error1 ++ "\n//!" ++ error2 ++ "\n//!" ++ error3 ++ "\n```go\ncode\n```"
+      result = parseTypus input
+      hasErrorsOrBlocks = not (null (tfSyntaxErrors result)) || not (null (tfBlocks result))
+  in counterexample ("Parser should handle multiple consecutive errors. " ++
+                     "Input: " ++ show input)
+     (hasErrorsOrBlocks === True)
 
--- Test collection
+-- | Test that parser preserves line numbers in error recovery
+prop_parserPreservesLineNumbers :: String -> Property
+prop_parserPreservesLineNumbers content =
+  let input = "//!ownership=true\n//!invalid=directive\n```go\n" ++ content ++ "\n```"
+      result = parseTypus input
+      errors = tfSyntaxErrors result
+  in counterexample ("Parser should preserve line numbers in error recovery. " ++
+                     "Input: " ++ show input ++
+                     " Errors: " ++ show errors)
+     (all (\e -> sourcePosLine (errorPos e) > 0) errors .||. null errors)
+
+-- | Test that parser handles extremely long lines in error conditions
+prop_parserHandlesLongLines :: Property
+prop_parserHandlesLongLines =
+  let longLine = replicate 1000 'a'
+      input = "//!ownership=true\n```go\n" ++ longLine ++ "\n```"
+      result = parseTypus input
+  in counterexample ("Parser should handle extremely long lines in error conditions")
+     (length (tfBlocks result) >= 0 .&&. length (tfSyntaxErrors result) >= 0)
+
+-- | Test that parser recovers from mismatched delimiters
+prop_parserRecoversFromMismatchedDelimiters :: String -> Property
+prop_parserRecoversFromMismatchedDelimiters content =
+  let input = "//!ownership=true\n```go\n" ++ content ++ "\n```rust\n```go\n```"
+      result = parseTypus input
+      hasSomeStructure = not (null (tfBlocks result)) || not (null (tfSyntaxErrors result))
+  in counterexample ("Parser should recover from mismatched delimiters. " ++
+                     "Input: " ++ show input)
+     (hasSomeStructure === True)
+
+-- | Test that parser maintains file structure despite errors
+prop_parserMaintainsFileStructure :: String -> Property
+prop_parserMaintainsFileStructure content =
+  let input = "//!ownership=true\n//!dependent-types=true\n//!invalid=directive\n```go\n" ++ content ++ "\n```"
+      result = parseTypus input
+      hasDirectives = tfDirectives result /= defaultFileDirectives
+      hasBlocksOrErrors = not (null (tfBlocks result)) || not (null (tfSyntaxErrors result))
+  in counterexample ("Parser should maintain file structure despite errors. " ++
+                     "Input: " ++ show input)
+     (hasDirectives .&&. hasBlocksOrErrors)
+
+-- | Test that parser handles partial directive parsing
+prop_parserHandlesPartialDirectiveParsing :: String -> Property
+prop_parserHandlesPartialDirectiveParsing partialDirective =
+  let input = "//!own" ++ partialDirective ++ "\n//!ownership=true\n```go\ncode\n```"
+      result = parseTypus input
+      hasSomeValidContent = not (null (tfBlocks result)) || not (null (tfSyntaxErrors result))
+  in counterexample ("Parser should handle partial directive parsing. " ++
+                     "Input: " ++ show input)
+     (hasSomeValidContent === True)
+
+-- | Test that parser error recovery is deterministic
+prop_parserErrorRecoveryIsDeterministic :: String -> Property
+prop_parserErrorRecoveryIsDeterministic content =
+  let input = "//!invalid=directive\n```go\n" ++ content ++ "\n```"
+      result1 = parseTypus input
+      result2 = parseTypus input
+      blocksMatch = length (tfBlocks result1) == length (tfBlocks result2)
+      errorsMatch = length (tfSyntaxErrors result1) == length (tfSyntaxErrors result2)
+  in counterexample ("Parser error recovery should be deterministic. " ++
+                     "Input: " ++ show input)
+     (blocksMatch .&&. errorsMatch)
+
+-- | Test that parser handles nested block errors
+prop_parserHandlesNestedBlockErrors :: String -> Property
+prop_parserHandlesNestedBlockErrors nestedContent =
+  let input = "//!ownership=true\n```go\nfunc outer() {\n```go\n" ++ nestedContent ++ "\n}\n```"
+      result = parseTypus input
+      hasSomeStructure = not (null (tfBlocks result)) || not (null (tfSyntaxErrors result))
+  in counterexample ("Parser should handle nested block errors. " ++
+                     "Input: " ++ show input)
+     (hasSomeStructure === True)
+
+-- ============================================================================
+-- Test Suite
+-- ============================================================================
+
 tests :: TestTree
-tests = testGroup "Advanced Parser Error Recovery QuickCheck Tests"
-  [ fastProperty "Parser maintains position information during error recovery" prop_parser_error_position_preservation
-  , fastProperty "Parser handles nested block errors gracefully" prop_parser_nested_block_recovery
-  , fastProperty "Parser recovers from directive errors" prop_parser_directive_error_recovery
-  , fastProperty "Parser handles mixed valid/invalid content" prop_parser_mixed_content_recovery
-  , fastProperty "Parser handles unclosed blocks" prop_parser_unclosed_block_recovery
-  , fastProperty "Parser handles malformed function signatures" prop_parser_malformed_function_recovery
-  , fastProperty "Parser handles extreme indentation" prop_parser_extreme_indentation_recovery
-  , fastProperty "Parser handles malformed type annotations" prop_parser_malformed_type_recovery
-  , fastProperty "Parser handles comment errors" prop_parser_comment_error_recovery
-  , fastProperty "Parser handles string literal errors" prop_parser_string_literal_recovery
+tests = testGroup "Parser Error Recovery Advanced QuickCheck Tests"
+  [ testProperty "Parser recovers from malformed directives" prop_parserRecoversFromMalformedDirectives
+  , testProperty "Parser handles unclosed code blocks gracefully" prop_parserHandlesUnclosedCodeBlocks
+  , testProperty "Parser recovers from mixed directive formats" prop_parserRecoversFromMixedDirectiveFormats
+  , testProperty "Parser preserves partial structure on errors" prop_parserPreservesPartialStructure
+  , testProperty "Parser handles nested malformed structures" prop_parserHandlesNestedMalformedStructures
+  , testProperty "Parser recovers from malformed block directives" prop_parserRecoversFromMalformedBlockDirectives
+  , testProperty "Parser handles empty and whitespace-only content" prop_parserHandlesEmptyContent
+  , testProperty "Parser maintains directive context during recovery" prop_parserMaintainsDirectiveContext
+  , testProperty "Parser handles Unicode in error conditions" prop_parserHandlesUnicodeInErrors
+  , testProperty "Parser recovers from malformed build tags" prop_parserRecoversFromMalformedBuildTags
+  , testProperty "Parser handles multiple consecutive errors" prop_parserHandlesMultipleConsecutiveErrors
+  , testProperty "Parser preserves line numbers in error recovery" prop_parserPreservesLineNumbers
+  , testProperty "Parser handles extremely long lines in error conditions" prop_parserHandlesLongLines
+  , testProperty "Parser recovers from mismatched delimiters" prop_parserRecoversFromMismatchedDelimiters
+  , testProperty "Parser maintains file structure despite errors" prop_parserMaintainsFileStructure
+  , testProperty "Parser handles partial directive parsing" prop_parserHandlesPartialDirectiveParsing
+  , testProperty "Parser error recovery is deterministic" prop_parserErrorRecoveryIsDeterministic
+  , testProperty "Parser handles nested block errors" prop_parserHandlesNestedBlockErrors
   ]

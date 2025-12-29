@@ -25,6 +25,10 @@ import qualified Test.Unit.SymbolTableSpec
 import qualified Test.Unit.SourceLocationSpec
 import qualified Test.Unit.SourceLocationAdvancedPropertiesSpec
 import qualified Test.Unit.SyntaxValidatorSpec
+import qualified Test.Unit.UserAddedSyntaxValidatorSpec
+import qualified Test.Unit.SimpleUserAddedSpec
+import qualified Test.Unit.UserAddedTestsSpec
+import qualified Test.Unit.UserAddedQuickCheckSpec
 import qualified Test.Unit.ValueAnalysisSpec
 import qualified Test.Unit.VerbositySpec
 import qualified Test.Unit.UtilsBoundaryConditionsSpec
@@ -98,6 +102,14 @@ import qualified Test.Unit.NewEndToEndIntegrationQuickCheckSpec
 import qualified Test.Unit.SourceLocationBasicPropertiesSpec
 import qualified Test.Unit.ParserBasicFunctionsSpec
 import qualified Test.Unit.CompilerErrorHandlingSpec
+
+-- New Comprehensive Test Modules (2025)
+import qualified Test.Unit.NewSourceLocationMathPropertiesSpec
+import qualified Test.Unit.NewParserBoundaryTestsSpec
+import qualified Test.Unit.NewErrorHandlerConsistencySpec
+import qualified Test.Unit.NewUtilsBoundaryConditionsSpec
+import qualified Test.Unit.NewCompilerIRConsistencySpec
+import qualified Test.Unit.NewOwnershipTransferSpec
 import qualified Test.Unit.OwnershipAnalysisBasicSpec
 import qualified Test.Unit.UtilsStringProcessingSpec
 import qualified Test.Unit.DependenciesTypeSystemSpec
@@ -1675,6 +1687,10 @@ tests =
     , Test.Unit.SourceLocationSpec.tests
     , Test.Unit.SourceLocationAdvancedPropertiesSpec.tests
     , Test.Unit.SyntaxValidatorSpec.tests
+    , Test.Unit.UserAddedSyntaxValidatorSpec.tests
+    , Test.Unit.SimpleUserAddedSpec.tests
+    , Test.Unit.UserAddedTestsSpec.tests
+    , Test.Unit.UserAddedQuickCheckSpec.tests
     , Test.Unit.CompilerSpec.tests
     , Test.Unit.CompilerIRConsistencyAdvancedSpec.tests
     , Test.Unit.ValueAnalysisSpec.tests
@@ -1720,6 +1736,16 @@ tests =
         , Test.Unit.ValueAnalysisBasicSpec.tests
         , Test.Unit.ErrorHandlerRecoverySpec.tests
         , Test.Unit.SyntaxValidatorValidationSpec.tests
+        ]
+
+    -- New Comprehensive Test Modules (2025)
+    , testGroup "New Comprehensive Test Modules"
+        [ Test.Unit.NewSourceLocationMathPropertiesSpec.tests
+        , Test.Unit.NewParserBoundaryTestsSpec.tests
+        , Test.Unit.NewErrorHandlerConsistencySpec.tests
+        , Test.Unit.NewUtilsBoundaryConditionsSpec.tests
+        , Test.Unit.NewCompilerIRConsistencySpec.tests
+        , Test.Unit.NewOwnershipTransferSpec.tests
         ]
 
     -- New Cabal Test Modules (2025) - 8 comprehensive tests

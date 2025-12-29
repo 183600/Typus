@@ -1,139 +1,160 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
+{-# OPTIONS_GHC -Wno-deprecations #-}
 module Test.Unit.LexerBoundaryQuickCheckSpec (tests) where
 
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), elements, listOf1, choose, Positive(..), NonEmptyList(..))
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
 
-import Compiler.GoLexer (GoToken(..), GoTokenKind(..), lexGoCode)
-import Parser (parseTypus)
+import Compiler.GoLexer (GoToken(..), GoTokenKind(..), tokenizeGo)
+import Data.Char (isSpace, isDigit, isAlphaNum)
+import Data.List (isPrefixOf)
 
-import Data.List (sort, nub, group, sortBy, find)
-import Data.Maybe (isJust, isNothing, catMaybes, fromMaybe)
-import Data.Char (isSpace, isLetter, isDigit, isPunctuation)
-import qualified Data.Text as T
-import qualified Data.Map as Map
-import qualified Data.Set as Set
+-- ============================================================================
+-- Lexer Boundary Property Tests
+-- ============================================================================
 
--- Property: Lexer handles empty input gracefully
-prop_lexer_handles_empty_input :: Property
-prop_lexer_handles_empty_input =
-  let tokens = lexGoCode ""
-  in null tokens
+-- | Test that tokenization preserves the original text length
+prop_tokenizationPreservesLength :: String -> Property
+prop_tokenizationPreservesLength input =
+  let tokens = tokenizeGo input
+      combinedText = concatMap tokenText tokens
+  in length combinedText === length input
 
--- Property: Lexer tokenization is deterministic
-prop_lexer_tokenization_deterministic :: String -> Property
-prop_lexer_tokenization_deterministic input =
-  let tokens1 = lexGoCode input
-      tokens2 = lexGoCode input
-  in tokens1 === tokens2
+-- | Test that whitespace tokens contain only whitespace characters
+prop_whitespaceTokensContainOnlyWhitespace :: String -> Property
+prop_whitespaceTokensContainOnlyWhitespace input =
+  let tokens = tokenizeGo input
+      whitespaceTokens = filter (\t -> tokenKind t == TokWhitespace) tokens
+      allWhitespace = all (\t -> all isSpace (tokenText t)) whitespaceTokens
+  in counterexample ("Found non-whitespace in whitespace tokens: " ++ show whitespaceTokens) allWhitespace
 
--- Property: Lexer preserves token order
-prop_lexer_preserves_token_order :: String -> Property
-prop_lexer_preserves_token_order input =
-  let tokens = lexGoCode input
-      originalPositions = extractTokenPositions input tokens
-      sortedPositions = sort originalPositions
-  in originalPositions === sortedPositions
+-- | Test that string tokens start and end with quotes
+prop_stringTokensHaveQuotes :: String -> Property
+prop_stringTokensHaveQuotes input =
+  let tokens = tokenizeGo input
+      stringTokens = filter (\t -> tokenKind t == TokString) tokens
+      validStringTokens = all (\t -> 
+        let text = tokenText t
+        in (head text == '"' && last text == '"') ||
+           (head text == '\'' && last text == '\'') ||
+           (head text == '`' && last text == '`')
+        ) stringTokens
+  in counterexample ("Invalid string token format: " ++ show stringTokens) validStringTokens
 
--- Property: Lexer handles whitespace correctly
-prop_lexer_handles_whitespace_correctly :: String -> Property
-prop_lexer_handles_whitespace_correctly input =
-  let withWhitespace = insertRandomWhitespace input
-      tokens1 = lexGoCode input
-      tokens2 = lexGoCode withWhitespace
-  in tokenContentEquality tokens1 tokens2
+-- | Test that comment tokens start with // or /*
+prop_commentTokensHavePrefix :: String -> Property
+prop_commentTokensHavePrefix input =
+  let tokens = tokenizeGo input
+      commentTokens = filter (\t -> tokenKind t == TokComment) tokens
+      validCommentTokens = all (\t ->
+        let text = tokenText t
+        in "//" `isPrefixOf` text || "/*" `isPrefixOf` text
+        ) commentTokens
+  in counterexample ("Invalid comment token format: " ++ show commentTokens) validCommentTokens
 
--- Property: Lexer handles special characters
-prop_lexer_handles_special_characters :: String -> Property
-prop_lexer_handles_special_characters input =
-  let specialChars = filter isPunctuation input
-      tokens = lexGoCode input
-      recognizedSpecials = countSpecialTokens tokens
-  in not (null specialChars) ==> recognizedSpecials > 0
+-- | Test that number tokens contain only digits and at most one decimal point
+prop_numberTokensAreValid :: String -> Property
+prop_numberTokensAreValid input =
+  let tokens = tokenizeGo input
+      numberTokens = filter (\t -> tokenKind t == TokNumber) tokens
+      isValidNumber text = 
+        let digitsOnly = filter isDigit text
+            decimalPoints = length $ filter (== '.') text
+        in not (null digitsOnly) && decimalPoints <= 1
+      validNumberTokens = all (\t -> isValidNumber (tokenText t)) numberTokens
+  in counterexample ("Invalid number token format: " ++ show numberTokens) validNumberTokens
 
--- Property: Lexer token positions are accurate
-prop_lexer_token_positions_accurate :: String -> Property
-prop_lexer_token_positions_accurate input =
-  let tokens = lexGoCode input
-  in all (hasValidPosition input) tokens
+-- | Test that tokenization is idempotent - tokenizing each token individually
+-- should produce the same token structure
+prop_tokenizationIsIdempotent :: String -> Property
+prop_tokenizationIsIdempotent input =
+  let tokens = tokenizeGo input
+      individualTokens = concatMap (tokenizeGo . tokenText) tokens
+      kindsMatch = length tokens == length individualTokens &&
+                   all (\(a, b) -> tokenKind a == tokenKind b) (zip tokens individualTokens)
+  in counterexample ("Tokenization not idempotent. Original: " ++ show tokens ++ 
+                     " Re-tokenized: " ++ show individualTokens) kindsMatch
 
--- Property: Lexer handles unicode characters
-prop_lexer_handles_unicode_characters :: String -> Property
-prop_lexer_handles_unicode_characters input =
-  let unicodeInput = addUnicodeChars input
-      tokens = lexGoCode unicodeInput
-  in not (null unicodeInput) ==> not (null tokens)
+-- | Test that tokenization handles empty input gracefully
+prop_emptyInputProducesNoTokens :: Property
+prop_emptyInputProducesNoTokens =
+  let tokens = tokenizeGo ""
+  in null tokens === True
 
--- Property: Lexer handles large inputs efficiently
-prop_lexer_handles_large_inputs_efficiently :: Positive Int -> Property
-prop_lexer_handles_large_inputs_efficiently (Positive n) =
-  let largeInput = replicate (n `mod` 1000) 'x'
-      tokens = lexGoCode largeInput
-  in length tokens > 0
+-- | Test that tokenization handles whitespace-only input
+prop_whitespaceOnlyInput :: Property
+prop_whitespaceOnlyInput =
+  forAll arbitrary $ \ws ->
+    let whitespaceOnly = filter isSpace ws
+        tokens = tokenizeGo whitespaceOnly
+        allWhitespace = all (\t -> tokenKind t == TokWhitespace) tokens
+    in counterexample ("Non-whitespace token found in whitespace-only input: " ++ show tokens) allWhitespace
 
--- Property: Lexer error recovery is robust
-prop_lexer_error_recovery_robust :: String -> Property
-prop_lexer_error_recovery_robust input =
-  let problematicInput = addLexerErrors input
-      tokens = lexGoCode problematicInput
-  in hasErrorTokens tokens || not (null tokens)
+-- | Test that tokenization handles very long identifiers
+prop_longIdentifiers :: Property
+prop_longIdentifiers =
+  forAll (vectorOf 1000 (elements ['a'..'z'])) $ \chars ->
+    let longIdent = "veryLongIdentifier" ++ chars
+        tokens = tokenizeGo longIdent
+        identifierTokens = filter (\t -> tokenKind t == TokIdentifier) tokens
+    in counterexample ("Failed to tokenize long identifier: " ++ longIdent) 
+       (length identifierTokens === 1)
 
--- Helper functions (these would need to be implemented in the actual modules)
-extractTokenPositions :: String -> [GoToken] -> [Int]
-extractTokenPositions _ tokens = map tokenPosition tokens
-  where
-    tokenPosition (GoToken _ pos _) = pos
+-- | Test that tokenization handles nested block comment scenarios
+prop_nestedBlockCommentHandling :: String -> String -> Property
+prop_nestedBlockCommentHandling prefix suffix =
+  let input = prefix ++ "/* /* nested */ */" ++ suffix
+      tokens = tokenizeGo input
+      commentTokens = filter (\t -> tokenKind t == TokComment) tokens
+      hasCommentBlock = any (\t -> "/*" `isPrefixOf` tokenText t) commentTokens
+  in counterexample ("Failed to handle nested block comments in: " ++ input) hasCommentBlock
 
-insertRandomWhitespace :: String -> String
-insertRandomWhitespace [] = []
-insertRandomWhitespace (c:cs) = c : ' ' : insertRandomWhitespace cs
+-- | Test that tokenization preserves line structure in comments
+prop_lineStructureInComments :: Property
+prop_lineStructureInComments =
+  forAll (listOf1 (elements ['a'..'z'])) $ \words ->
+    let commentText = "// " ++ unwords words ++ "\nsecond line"
+        tokens = tokenizeGo commentText
+        commentTokens = filter (\t -> tokenKind t == TokComment) tokens
+        containsNewline = any (\t -> '\n' `elem` tokenText t) commentTokens
+    in counterexample ("Line structure not preserved in comment: " ++ commentText) 
+       (length commentTokens >= 1 &&==> containsNewline)
 
-tokenContentEquality :: [GoToken] -> [GoToken] -> Bool
-tokenContentEquality tokens1 tokens2 = 
-  length tokens1 == length tokens2 &&
-  all (\(t1, t2) -> tokenValue t1 == tokenValue t2) (zip tokens1 tokens2)
-  where
-    tokenValue (GoToken _ _ value) = value
+-- | Test that tokenization handles escape sequences in strings
+prop_stringEscapeSequences :: Property
+prop_stringEscapeSequences =
+  let stringWithEscapes = "\"Hello \\\"World\\\" \\n \\t \\\\\""
+      tokens = tokenizeGo stringWithEscapes
+      stringTokens = filter (\t -> tokenKind t == TokString) tokens
+  in counterexample ("Failed to handle string with escape sequences: " ++ stringWithEscapes)
+     (length stringTokens === 1)
 
-countSpecialTokens :: [GoToken] -> Int
-countSpecialTokens = length . filter isSpecialToken
-  where
-    isSpecialToken (GoToken kind _ _) = kind `elem` [TokenOperator, TokenDelimiter]
+-- | Test that tokenization handles Unicode characters
+prop_unicodeCharacters :: Property
+prop_unicodeCharacters =
+  let unicodeString = "héllo 世界 🌟 identifier_测试"
+      tokens = tokenizeGo unicodeString
+      identifierTokens = filter (\t -> tokenKind t == TokIdentifier) tokens
+  in counterexample ("Failed to handle Unicode characters: " ++ unicodeString)
+     (length identifierTokens >= 1)
 
-hasValidPosition :: String -> GoToken -> Bool
-hasValidPosition input (GoToken _ pos _) = pos >= 0 && pos < length input
-
-addUnicodeChars :: String -> String
-addUnicodeChars input = input ++ "αβγδε"
-
-hasErrorTokens :: [GoToken] -> Bool
-hasErrorTokens = any isErrorToken
-  where
-    isErrorToken (GoToken TokenError _ _) = True
-    isErrorToken _ = False
-
-addLexerErrors :: String -> String
-addLexerErrors input = input ++ "§¶†‡"
+-- ============================================================================
+-- Test Suite
+-- ============================================================================
 
 tests :: TestTree
 tests = testGroup "Lexer Boundary QuickCheck Tests"
-  [ fastProperty "Lexer handles empty input" prop_lexer_handles_empty_input
-  , fastProperty "Lexer tokenization deterministic" prop_lexer_tokenization_deterministic
-  , fastProperty "Lexer preserves token order" prop_lexer_preserves_token_order
-  , fastProperty "Lexer handles whitespace correctly" prop_lexer_handles_whitespace_correctly
-  , fastProperty "Lexer handles special characters" prop_lexer_handles_special_characters
-  , fastProperty "Lexer token positions accurate" prop_lexer_token_positions_accurate
-  , fastProperty "Lexer handles unicode characters" prop_lexer_handles_unicode_characters
-  , fastProperty "Lexer handles large inputs efficiently" prop_lexer_handles_large_inputs_efficiently
-  , fastProperty "Lexer error recovery robust" prop_lexer_error_recovery_robust
+  [ testProperty "Tokenization preserves input length" prop_tokenizationPreservesLength
+  , testProperty "Whitespace tokens contain only whitespace" prop_whitespaceTokensContainOnlyWhitespace
+  , testProperty "String tokens have proper quote boundaries" prop_stringTokensHaveQuotes
+  , testProperty "Comment tokens have proper prefixes" prop_commentTokensHavePrefix
+  , testProperty "Number tokens are valid" prop_numberTokensAreValid
+  , testProperty "Tokenization is idempotent" prop_tokenizationIsIdempotent
+  , testProperty "Empty input produces no tokens" prop_emptyInputProducesNoTokens
+  , testProperty "Whitespace-only input produces only whitespace tokens" prop_whitespaceOnlyInput
+  , testProperty "Long identifiers are tokenized correctly" prop_longIdentifiers
+  , testProperty "Nested block comment handling" prop_nestedBlockCommentHandling
+  , testProperty "Line structure preserved in comments" prop_lineStructureInComments
+  , testProperty "String escape sequences handled correctly" prop_stringEscapeSequences
+  , testProperty "Unicode characters handled correctly" prop_unicodeCharacters
   ]

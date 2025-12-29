@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module Test.Unit.NewUtilsBoundarySpec (tests) where
+module Test.Unit.NewUtilsBoundaryConditionsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
