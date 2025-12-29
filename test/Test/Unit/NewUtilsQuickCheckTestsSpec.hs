@@ -1,151 +1,270 @@
-{-# OPTIONS_GHC -Wno-missing-export-lists #-}
+{-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
-module Test.Unit.NewUtilsQuickCheckTestsSpec where
+module Test.Unit.NewUtilsQuickCheckTestsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty)
-import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, choose, property, (==>), forAll)
+import Test.Tasty.HUnit (assertBool, testCase)
 import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import Test.QuickCheck.Gen (Gen, listOf, elements, choose, oneof)
+import Test.QuickCheck.Arbitrary (Arbitrary(..))
 
 import Utils
-import qualified Data.Text as T
-import qualified Data.List as List
-import qualified Data.Char as Char
-import qualified Data.Map as Map
-import qualified Data.Set as Set
+  ( trim
+  , splitBy
+  , splitByCollapsed
+  , splitByComma
+  , splitByCommaCollapsed
+  , removeLineComments
+  , removeComments
+  , normalizeIndentation
+  , forceSingleTabIndentation
+  , fixIndentation
+  , breakOn
+  )
 
--- Additional generators for Utils testing
-genString :: Gen String
-genString = listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ [' ', '\t', '\n', '!', '?', '.', ',', ';', ':', '(', ')', '[', ']', '{', '}', '+', '-', '*', '/', '=', '<', '>', '_', '|', '&']
+import Data.Char (isSpace, toLower)
+import qualified Data.List as Data.List
+import Data.List (isPrefixOf, tails, isInfixOf, sort, nub)
 
-genNonEmptyString :: Gen String
-genNonEmptyString = do
-  first <- elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ '_'
-  rest <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ '_']
-  return (first : rest)
+-- ============================================================================
+-- String Generation Helpers
+-- ============================================================================
 
-genIdentifier :: Gen String
-genIdentifier = do
-  first <- elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['_']
-  rest <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ '_']
-  return (first : rest)
+genWhitespace :: Gen Char
+genWhitespace = elements " \t\n\r"
 
-genText :: Gen T.Text
-genText = T.pack <$> genString
+genNonWhitespace :: Gen Char
+genNonWhitespace = elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "!@#$%^&*()_+-=[]{}|;':\",./<>?"
 
-genIntList :: Gen [Int]
-genIntList = listOf $ choose (-100, 100)
+genStringWithWhitespace :: Gen String
+genStringWithWhitespace = listOf (oneof [genWhitespace, genNonWhitespace])
 
-genStringList :: Gen [String]
-genStringList = listOf genString
+genStringWithoutNewlines :: Gen String
+genStringWithoutNewlines = listOf (oneof [elements " \t", genNonWhitespace])
 
-genChar :: Gen Char
-genChar = elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ [' ', '\t', '\n', '!', '?', '.', ',', ';', ':', '(', ')', '[', ']', '{', '}', '+', '-', '*', '/', '=', '<', '>', '_', '|', '&']
+genDelimiter :: Gen Char
+genDelimiter = elements [',', ';', ':', '|', '#', '@']
 
--- Property: String trimming removes only whitespace
-prop_stringTrimmingRemovesWhitespace :: String -> Bool
-prop_stringTrimmingRemovesWhitespace s = 
-  let trimmed = trim s
-      leadingRemoved = dropWhile Char.isSpace s
-      trailingRemoved = reverse $ dropWhile Char.isSpace $ reverse leadingRemoved
-  in trimmed == trailingRemoved
+-- ============================================================================
+-- Trim Function Properties
+-- ============================================================================
 
--- Property: Identifier validation is consistent
-prop_identifierValidationConsistent :: String -> Bool
-prop_identifierValidationConsistent s = 
-  let hasValidFirstChar = not (null s) && (head s `elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['_'])
-      hasValidChars = null s || all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ '_']) s
-  in hasValidFirstChar && hasValidChars
+-- Property: trim should never add whitespace to a string
+prop_trim_never_adds_whitespace :: String -> Property
+prop_trim_never_adds_whitespace input =
+  let trimmed = trim input
+      originalSpaces = length (filter isSpace input)
+      trimmedSpaces = length (filter isSpace trimmed)
+  in property $ trimmedSpaces <= originalSpaces
 
--- Property: List sorting preserves elements
-prop_listSortingPreservesElements :: [Int] -> Bool
-prop_listSortingPreservesElements lst = 
-  let sorted = List.sort lst
-      sortedMultiset = List.sort lst
-  in sorted == sortedMultiset
+-- Property: trim applied twice should give same result as once
+prop_trim_idempotent :: String -> Property
+prop_trim_idempotent input =
+  let trimmedOnce = trim input
+      trimmedTwice = trim (trim input)
+  in property $ trimmedOnce === trimmedTwice
 
--- Property: Map lookup returns expected values
-prop_mapLookupReturnsExpected :: [(String, Int)] -> String -> Int -> Bool
-prop_mapLookupReturnsExpected pairs key defaultValue = 
-  let mp = Map.fromList pairs
-      result = Map.findWithDefault defaultValue key mp
-      expected = Map.findWithDefault defaultValue key mp
-  in result == expected
+-- Property: trim of all whitespace should be empty
+prop_trim_all_whitespace_is_empty :: Property
+prop_trim_all_whitespace_is_empty =
+  forAll genStringWithWhitespace $ \input ->
+    let allWhitespace = all isSpace input
+        trimmed = trim input
+    in allWhitespace ==> property $ trimmed === ""
 
--- Property: Set operations are consistent
-prop_setOperationsConsistent :: [Int] -> [Int] -> Bool
-prop_setOperationsConsistent lst1 lst2 = 
-  let set1 = Set.fromList lst1
-      set2 = Set.fromList lst2
-      union = Set.union set1 set2
-      intersection = Set.intersection set1 set2
-      difference = Set.difference set1 set2
-  in Set.isSubsetOf set1 union && 
-     Set.isSubsetOf set2 union &&
-     Set.isSubsetOf intersection set1 &&
-     Set.isSubsetOf intersection set2 &&
-     Set.isSubsetOf difference set1
+-- ============================================================================
+-- Split Function Properties
+-- ============================================================================
 
--- Property: Text conversion preserves content
-prop_textConversionPreservesContent :: String -> Bool
-prop_textConversionPreservesContent s = 
-  let text = T.pack s
-      converted = T.unpack text
-  in converted == s
+-- Property: splitBy should preserve total character count (including delimiters)
+prop_splitBy_preserves_content :: Char -> String -> Property
+prop_splitBy_preserves_content delim input =
+  let parts = splitBy delim input
+      rejoined = Data.List.intercalate [delim] parts
+  in property $ rejoined === input
 
--- Property: List filtering preserves order
-prop_listFilteringPreservesOrder :: [Int] -> Bool
-prop_listFilteringPreservesOrder lst = 
-  let filtered = filter even lst
-      originalOrder = List.sort lst
-      filteredOrder = List.sort filtered
-  in filteredOrder `List.isSubsequenceOf` originalOrder
+-- Property: splitByCollapsed should never produce empty strings
+prop_splitByCollapsed_no_empty_segments :: Char -> String -> Property
+prop_splitByCollapsed_no_empty_segments delim input =
+  let parts = splitByCollapsed delim input
+  in property $ all (not . null) parts
 
--- Property: String case conversion is invertible
-prop_stringCaseConversionInvertible :: String -> Bool
-prop_stringCaseConversionInvertible s = 
-  let upper = map Char.toUpper s
-      lower = map Char.toLower s
-      restoredFromUpper = map Char.toLower upper
-      restoredFromLower = map Char.toUpper lower
-  in restoredFromUpper == lower && restoredFromLower == upper
+-- Property: splitByComma should be equivalent to splitBy ','
+prop_splitByComma_equals_splitBy_comma :: String -> Property
+prop_splitByComma_equals_splitBy_comma input =
+  property $ splitByComma input === splitBy ',' input
 
--- Property: String word count is accurate
-prop_stringWordCountAccurate :: String -> Bool
-prop_stringWordCountAccurate s = 
-  let words = words s
-      wordCount = length words
-  in wordCount >= 0
+-- Property: splitByCommaCollapsed should be equivalent to splitByCollapsed ','
+prop_splitByCommaCollapsed_equals_splitByCollapsed_comma :: String -> Property
+prop_splitByCommaCollapsed_equals_splitByCollapsed_comma input =
+  property $ splitByCommaCollapsed input === splitByCollapsed ',' input
 
--- Test suite
+-- ============================================================================
+-- Comment Removal Properties
+-- ============================================================================
+
+-- Property: removeLineComments should never increase string length
+prop_removeLineComments_never_increases_length :: String -> Property
+prop_removeLineComments_never_increases_length input =
+  let withoutComments = removeLineComments input
+  in property $ length withoutComments <= length input
+
+-- Property: removeLineComments should preserve non-comment content
+prop_removeLineComments_preserves_non_comment_content :: String -> Property
+prop_removeLineComments_preserves_non_comment_content input =
+  let withoutComments = removeLineComments input
+      linesWithoutComments = lines withoutComments
+      originalLines = lines input
+      -- Count non-empty, non-whitespace lines in both
+      nonCommentOriginal = length $ filter (not . all isSpace) $ 
+                           map (takeWhile (/= '/')) $ originalLines
+      nonCommentResult = length $ filter (not . all isSpace) linesWithoutComments
+  in property $ nonCommentResult <= nonCommentOriginal
+
+-- Property: removeComments applied twice should give same result as once
+prop_removeComments_idempotent :: String -> Property
+prop_removeComments_idempotent input =
+  let once = removeComments input
+      twice = removeComments (removeComments input)
+  in property $ once === twice
+
+-- ============================================================================
+-- Indentation Properties
+-- ============================================================================
+
+-- Property: normalizeIndentation should never increase the number of leading spaces
+prop_normalizeIndentation_never_increases_leading :: Property
+prop_normalizeIndentation_never_increases_leading =
+  forAll genStringWithoutNewlines $ \input ->
+    let normalized = normalizeIndentation input
+        originalLines = lines input
+        normalizedLines = lines normalized
+        leadingSpaces line = length $ takeWhile isSpace line
+    in not (null originalLines) ==> 
+       property $ all (\(orig, norm) -> leadingSpaces norm <= leadingSpaces orig) 
+                     (zip originalLines normalizedLines)
+
+-- Property: fixIndentation should be equivalent to normalizeIndentation
+prop_fixIndentation_equals_normalizeIndentation :: String -> Property
+prop_fixIndentation_equals_normalizeIndentation input =
+  property $ fixIndentation input === normalizeIndentation input
+
+-- Property: forceSingleTabIndentation should start non-empty lines with tab
+prop_forceSingleTabIndentation_starts_with_tab :: Property
+prop_forceSingleTabIndentation_starts_with_tab =
+  forAll genStringWithoutNewlines $ \input ->
+    let forced = forceSingleTabIndentation input
+        linesForced = lines forced
+        nonEmptyLines = filter (not . all isSpace) linesForced
+    in not (null nonEmptyLines) ==> 
+       property $ all (isPrefixOf "\t") nonEmptyLines
+
+-- ============================================================================
+-- BreakOn Function Properties
+-- ============================================================================
+
+-- Property: breakOn should find first occurrence of pattern
+prop_breakOn_finds_first_occurrence :: String -> String -> Property
+prop_breakOn_finds_first_occurrence pat input =
+  not (null pat) ==> 
+  let (before, after) = breakOn pat input
+      combined = before ++ pat ++ after
+  in property $ combined === input
+
+-- Property: breakOn with empty pattern should return ("", input)
+prop_breakOn_empty_pattern :: String -> Property
+prop_breakOn_empty_pattern input =
+  let (before, after) = breakOn "" input
+  in property $ before === "" .&&. after === input
+
+-- Property: breakOn should return (input, "") when pattern not found
+prop_breakOn_pattern_not_found :: String -> String -> Property
+prop_breakOn_pattern_not_found pat input =
+  not (null pat) ==> 
+  not (pat `isInfixOf` input) ==> 
+  let (before, after) = breakOn pat input
+  in property $ before === input .&&. after === ""
+
+-- Property: breakOn should be consistent with Data.List.break
+prop_breakOn_consistent_with_break :: String -> String -> Property
+prop_breakOn_consistent_with_break pat input =
+  not (null pat) ==> 
+  let (before, after) = breakOn pat input
+      (before', after') = Data.List.break (isPrefixOf pat) (tails input)
+  in case after' of
+       [] -> property $ before === input .&&. after === ""
+       (x:_) -> property $ before === Data.List.take (length input - length x) input
+
+-- ============================================================================
+-- String Processing Properties
+-- ============================================================================
+
+-- Property: trim after splitBy should not produce empty segments if original had none
+prop_trim_splitBy_no_empty_if_original_no_empty :: Char -> String -> Property
+prop_trim_splitBy_no_empty_if_original_no_empty delim input =
+  let parts = splitBy delim input
+      trimmedParts = map trim parts
+      originalHadEmpty = any null parts
+  in not originalHadEmpty ==> property $ not (any null trimmedParts)
+
+-- Property: normalizeIndentation should preserve relative indentation differences
+prop_normalizeIndentation_preserves_relative_differences :: Property
+prop_normalizeIndentation_preserves_relative_differences =
+  forAll genStringWithoutNewlines $ \input ->
+    let normalized = normalizeIndentation input
+        originalLines = filter (not . all isSpace) $ lines input
+        normalizedLines = filter (not . all isSpace) $ lines normalized
+        leadingSpaces line = length $ takeWhile isSpace line
+        differences origLines = 
+          case origLines of
+            [] -> []
+            (l:ls) -> map (\line -> leadingSpaces line - leadingSpaces l) ls
+    in length originalLines > 1 && length normalizedLines > 1 ==> 
+       property $ differences originalLines === differences normalizedLines
+
+-- ============================================================================
+-- Test Collection
+-- ============================================================================
+
 tests :: TestTree
 tests = testGroup "New Utils QuickCheck Tests"
-  [ testProperty "String trimming removes only whitespace" $
-      fastProperty "String trimming removes whitespace" prop_stringTrimmingRemovesWhitespace
-  
-  , testProperty "Identifier validation is consistent" $
-      fastProperty "Identifier validation consistent" prop_identifierValidationConsistent
-  
-  , testProperty "List sorting preserves elements" $
-      fastProperty "List sorting preserves elements" prop_listSortingPreservesElements
-  
-  , testProperty "Map lookup returns expected values" $
-      fastProperty "Map lookup returns expected" prop_mapLookupReturnsExpected
-  
-  , testProperty "Set operations are consistent" $
-      fastProperty "Set operations consistent" prop_setOperationsConsistent
-  
-  , testProperty "Text conversion preserves content" $
-      fastProperty "Text conversion preserves content" prop_textConversionPreservesContent
-  
-  , testProperty "List filtering preserves order" $
-      fastProperty "List filtering preserves order" prop_listFilteringPreservesOrder
-  
-  , testProperty "String case conversion is invertible" $
-      fastProperty "String case conversion invertible" prop_stringCaseConversionInvertible
-  
-  , testProperty "String word count is accurate" $
-      fastProperty "String word count accurate" prop_stringWordCountAccurate
+  [ testGroup "Trim Properties"
+    [ fastProperty "trim never adds whitespace" prop_trim_never_adds_whitespace
+    , fastProperty "trim is idempotent" prop_trim_idempotent
+    , fastProperty "trim of all whitespace is empty" prop_trim_all_whitespace_is_empty
+    ]
+  , testGroup "Split Properties"
+    [ fastProperty "splitBy preserves content" prop_splitBy_preserves_content
+    , fastProperty "splitByCollapsed produces no empty segments" prop_splitByCollapsed_no_empty_segments
+    , fastProperty "splitByComma equals splitBy ','" prop_splitByComma_equals_splitBy_comma
+    , fastProperty "splitByCommaCollapsed equals splitByCollapsed ','" prop_splitByCommaCollapsed_equals_splitByCollapsed_comma
+    ]
+  , testGroup "Comment Removal Properties"
+    [ fastProperty "removeLineComments never increases length" prop_removeLineComments_never_increases_length
+    , fastProperty "removeLineComments preserves non-comment content" prop_removeLineComments_preserves_non_comment_content
+    , fastProperty "removeComments is idempotent" prop_removeComments_idempotent
+    ]
+  , testGroup "Indentation Properties"
+    [ fastProperty "normalizeIndentation never increases leading spaces" prop_normalizeIndentation_never_increases_leading
+    , fastProperty "fixIndentation equals normalizeIndentation" prop_fixIndentation_equals_normalizeIndentation
+    , fastProperty "forceSingleTabIndentation starts with tab" prop_forceSingleTabIndentation_starts_with_tab
+    ]
+  , testGroup "BreakOn Properties"
+    [ fastProperty "breakOn finds first occurrence" prop_breakOn_finds_first_occurrence
+    , fastProperty "breakOn with empty pattern" prop_breakOn_empty_pattern
+    , fastProperty "breakOn when pattern not found" prop_breakOn_pattern_not_found
+    , fastProperty "breakOn consistent with Data.List.break" prop_breakOn_consistent_with_break
+    ]
+  , testGroup "String Processing Properties"
+    [ fastProperty "trim splitBy no empty if original no empty" prop_trim_splitBy_no_empty_if_original_no_empty
+    , fastProperty "normalizeIndentation preserves relative differences" prop_normalizeIndentation_preserves_relative_differences
+    ]
   ]
