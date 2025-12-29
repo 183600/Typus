@@ -582,6 +582,9 @@ import qualified Test.Unit.OwnershipMemorySafetyTestSpec
 import qualified Test.Unit.DependentTypeValidationTestSpec
 import qualified Test.Unit.ErrorHandlerRecoveryTestSpec
 import qualified Test.Unit.TypeInferenceAdvancedTestSpec
+
+-- Additional Cabal QuickCheck Test Module
+import qualified Test.Unit.AdditionalCabalQuickCheckTests
 import qualified Test.Unit.IntegrationEndToEndTestSpec
 import qualified Test.Unit.PerformanceRegressionTestSpec
 import qualified Test.Unit.SecurityValidationTestSpec
@@ -3354,5 +3357,10 @@ tests =
         , Test.Unit.NewCabalQuickCheckSpec.tests
         , Test.Unit.NewCabalEdgeCaseSpec.tests
         ]
+
+    -- ============================================================================
+    -- Additional Cabal QuickCheck Tests (8 comprehensive tests)
+    -- ============================================================================
+    , Test.Unit.AdditionalCabalQuickCheckTests.tests
 
         ]
