@@ -102,6 +102,18 @@ import qualified Test.Unit.NewComprehensiveCabalQuickCheckTestSuite
 -- New Cabal QuickCheck Test Suite (2025) - 10 comprehensive tests
 import qualified Test.Unit.NewCabalQuickCheckTestSuite
 
+-- New Cabal Test Modules (2025) - 10 Comprehensive Tests
+import qualified Test.Unit.NewCabalTest1Spec
+import qualified Test.Unit.NewCabalTest2Spec
+import qualified Test.Unit.NewCabalTest3Spec
+import qualified Test.Unit.NewCabalTest4Spec
+import qualified Test.Unit.NewCabalTest5Spec
+import qualified Test.Unit.NewCabalTest6Spec
+import qualified Test.Unit.NewCabalTest7Spec
+import qualified Test.Unit.NewCabalTest8Spec
+import qualified Test.Unit.NewCabalTest9Spec
+import qualified Test.Unit.NewCabalTest10Spec
+
 -- New Comprehensive Test Modules Added (2025)
 import qualified Test.Unit.NewParserPropertiesSpec
 import qualified Test.Unit.NewSourceLocationMathSpec
@@ -2842,5 +2854,21 @@ tests =
   -- ============================================================================
   , testGroup "New Cabal QuickCheck Test Suite - Enhanced Property Testing"
     [ Test.Unit.NewCabalQuickCheckTestSuite.tests
+    ]
+
+  -- ============================================================================
+  -- New Cabal Test Modules (2025) - 10 Comprehensive Tests
+  -- ============================================================================
+  , testGroup "New Cabal Test Modules - Comprehensive Testing Coverage"
+    [ Test.Unit.NewCabalTest1Spec.tests
+    , Test.Unit.NewCabalTest2Spec.tests
+    , Test.Unit.NewCabalTest3Spec.tests
+    , Test.Unit.NewCabalTest4Spec.tests
+    , Test.Unit.NewCabalTest5Spec.tests
+    , Test.Unit.NewCabalTest6Spec.tests
+    , Test.Unit.NewCabalTest7Spec.tests
+    , Test.Unit.NewCabalTest8Spec.tests
+    , Test.Unit.NewCabalTest9Spec.tests
+    , Test.Unit.NewCabalTest10Spec.tests
     ]
   ]

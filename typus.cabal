@@ -999,6 +999,18 @@ test-suite typus-test
         -- New Comprehensive Core Test Module
         , Test.Unit.NewCabalCoreTestsSpec
         
+        -- New Cabal Test Modules (2025) - 10 Comprehensive Tests
+        , Test.Unit.NewCabalTest1Spec
+        , Test.Unit.NewCabalTest2Spec
+        , Test.Unit.NewCabalTest3Spec
+        , Test.Unit.NewCabalTest4Spec
+        , Test.Unit.NewCabalTest5Spec
+        , Test.Unit.NewCabalTest6Spec
+        , Test.Unit.NewCabalTest7Spec
+        , Test.Unit.NewCabalTest8Spec
+        , Test.Unit.NewCabalTest9Spec
+        , Test.Unit.NewCabalTest10Spec
+        
     other-modules:
             Test.Dependencies.Arbitrary,
             Test.Unit.NewCabalQuickCheckTestSuite
