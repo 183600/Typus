@@ -1143,9 +1143,23 @@ test-suite typus-test
 
         -- New Enhanced QuickCheck Test Modules (8 tests)
         , Test.Unit.NewEnhancedParserCombinatorQuickCheckSpec
-        -- Removed duplicate modules that are already listed above
+        , Test.Unit.NewEnhancedCompilerOptimizationQuickCheckSpec
+        , Test.Unit.NewEnhancedOwnershipMemorySafetyQuickCheckSpec
+        , Test.Unit.NewEnhancedErrorHandlerConsistencyQuickCheckSpec
+        , Test.Unit.NewEnhancedSourceLocationMathPropertiesQuickCheckSpec
+        , Test.Unit.NewEnhancedUtilsStringProcessingQuickCheckSpec
         , Test.Unit.NewEnhancedDependenciesCycleDetectionQuickCheckSpec
         , Test.Unit.NewEnhancedIntegrationEndToEndQuickCheckSpec
+
+        -- Enhanced Cabal Test Suite - 8 comprehensive QuickCheck tests
+        , Test.Unit.EnhancedCabalTestSuiteSpec
+        , Test.Unit.CompilerIRConsistencyQuickCheckSpec
+        , Test.Unit.OwnershipTransitivityQuickCheckSpec
+        , Test.Unit.DependentTypeBoundaryQuickCheckSpec
+        , Test.Unit.SyntaxValidatorRobustnessQuickCheckSpec
+        , Test.Unit.IntegrationEndToEndQuickCheckSpec
+        , Test.Unit.UtilsBoundaryConditionsQuickCheckSpec
+        , Test.Unit.ParserErrorRecoveryQuickCheckSpec
         
     other-modules:
             Test.Dependencies.Arbitrary,

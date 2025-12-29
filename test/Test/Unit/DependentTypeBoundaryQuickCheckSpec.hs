@@ -1,4 +1,4 @@
-module Test.Unit.DependentTypeBoundaryQuickCheckSpec (tests) where
+module Test.Unit.NewDependentTypeBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))

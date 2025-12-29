@@ -1,4 +1,4 @@
-module Test.Unit.CompilerIRConsistencyQuickCheckSpec (tests) where
+module Test.Unit.NewCompilerIRConsistencyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
