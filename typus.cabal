@@ -319,7 +319,7 @@ test-suite typus-test
         Test.Unit.NewParserBoundaryCoreQuickCheckSpec,
         Test.Unit.NewOwnershipBasicCoreQuickCheckSpec,
         Test.Unit.NewDependenciesInferenceCoreQuickCheckSpec,
-        Test.Unit.ErrorHandlerConsistencyQuickCheckSpec,
+        Test.Unit.NewEnhancedErrorHandlerConsistencyQuickCheckSpec,
         Test.Unit.NewIntegrationEndToEndCoreQuickCheckSpec,
         Test.Unit.SourceLocationBoundaryQuickCheckSpec,
         Test.Unit.StringProcessingQuickCheckSpec,
@@ -396,7 +396,6 @@ test-suite typus-test
         Test.Unit.AdvancedQuickCheckTestSpec,
         
         Test.Unit.FinalQuickCheckTestSpec,
-        Test.Unit.ParserConsistencyQuickCheckSpec,
         Test.Unit.StringUtilsQuickCheckTestSpec,
         Test.Unit.CompilerErrorHandlingQuickCheckTestSpec,
         Test.Unit.SourceLocationTrackingQuickCheckTestSpec,
@@ -748,6 +747,15 @@ test-suite typus-test
         Test.Unit.ParserErrorRecoveryCabalsSpec,
         Test.Unit.CompilerOptimizationCabalsSpec,
         Test.Unit.OwnershipMemorySafetyCabalsSpec,
+        
+        -- New QuickCheck Test Modules (Added for enhanced coverage)
+        Test.Unit.SourceLocationMathQuickCheckSpec,
+        Test.Unit.ParserConsistencyQuickCheckSpec,
+        Test.Unit.ErrorHandlingRecoveryQuickCheckSpec,
+        Test.Unit.DependencyCycleQuickCheckSpec,
+        Test.Unit.CompilerIROptimizationQuickCheckSpec,
+        Test.Unit.StringProcessingBoundaryQuickCheckSpec,
+        Test.Unit.TypeSystemInferenceQuickCheckSpec,
         Test.Unit.DependentTypeValidationCabalsSpec,
         Test.Unit.SourceLocationPrecisionCabalsSpec,
         Test.Unit.ErrorHandlerConsistencyCabalsSpec,
@@ -773,8 +781,8 @@ test-suite typus-test
         
         Test.Unit.ParserRobustnessQuickCheckSpec,
         Test.Unit.ErrorRecoveryEnhancedQuickCheckSpec,
-        Test.Unit.CompilerOptimizationQuickCheckSpec,
-        Test.Unit.OwnershipMemorySafetyQuickCheckSpec,
+        Test.Unit.NewEnhancedCompilerOptimizationQuickCheckSpec,
+        Test.Unit.NewEnhancedOwnershipMemorySafetyQuickCheckSpec,
         Test.Unit.DependentTypeValidationQuickCheckSpec,
         Test.Unit.TypeInferenceBoundaryQuickCheckSpec,
         
@@ -1132,6 +1140,16 @@ test-suite typus-test
         
         -- New Comprehensive QuickCheck Test Module (2025) - 10 additional tests
         , Test.Unit.NewComprehensiveQuickCheckTestSpec
+
+        -- New Enhanced QuickCheck Test Modules (8 tests)
+        , Test.Unit.NewEnhancedParserCombinatorQuickCheckSpec
+        , Test.Unit.NewEnhancedCompilerOptimizationQuickCheckSpec
+        , Test.Unit.NewEnhancedOwnershipMemorySafetyQuickCheckSpec
+        , Test.Unit.NewEnhancedErrorHandlerConsistencyQuickCheckSpec
+        , Test.Unit.NewEnhancedSourceLocationMathPropertiesQuickCheckSpec
+        , Test.Unit.NewEnhancedUtilsStringProcessingQuickCheckSpec
+        , Test.Unit.NewEnhancedDependenciesCycleDetectionQuickCheckSpec
+        , Test.Unit.NewEnhancedIntegrationEndToEndQuickCheckSpec
         
     other-modules:
             Test.Dependencies.Arbitrary,

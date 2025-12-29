@@ -7,7 +7,7 @@
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
-module Test.Unit.SourceLocationMathPropertiesQuickCheckSpec (tests) where
+module Test.Unit.NewEnhancedSourceLocationMathPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)

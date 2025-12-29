@@ -7,7 +7,7 @@
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
-module Test.Unit.CompilerOptimizationQuickCheckSpec (tests) where
+module Test.Unit.NewEnhancedCompilerOptimizationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)

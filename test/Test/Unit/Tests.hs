@@ -52,7 +52,7 @@ import qualified Test.Unit.NewCoreFunctionalityQuickCheckTests
 -- Additional Enhanced QuickCheck Test Modules (10 comprehensive tests)
 -- ============================================================================
 import qualified Test.Unit.EnhancedTextProcessingQuickCheckSpec
-import qualified Test.Unit.SourceLocationMathPropertiesQuickCheckSpec
+import qualified Test.Unit.NewEnhancedSourceLocationMathPropertiesQuickCheckSpec
 import qualified Test.Unit.ParserErrorRecoveryQuickCheckSpec
 import qualified Test.Unit.CrossModuleIntegrationQuickCheckSpec
 import qualified Test.Unit.PerformanceBoundaryQuickCheckSpec
@@ -114,7 +114,7 @@ import qualified Test.Unit.NewSourceLocationMathCoreQuickCheckSpec
 import qualified Test.Unit.NewParserBoundaryCoreQuickCheckSpec
 import qualified Test.Unit.NewOwnershipBasicCoreQuickCheckSpec
 import qualified Test.Unit.NewDependenciesInferenceCoreQuickCheckSpec
-import qualified Test.Unit.ErrorHandlerConsistencyQuickCheckSpec
+import qualified Test.Unit.NewEnhancedErrorHandlerConsistencyQuickCheckSpec
 import qualified Test.Unit.NewCompilerIRCoreQuickCheckSpec
 import qualified Test.Unit.NewIntegrationEndToEndCoreQuickCheckSpec
 import qualified Test.Unit.SourceLocationBoundaryQuickCheckSpec
@@ -355,8 +355,8 @@ import qualified Test.Unit.UtilsBoundaryQuickCheckSpec
 import qualified Test.Unit.SourceLocationMathQuickCheckSpec
 import qualified Test.Unit.ParserRobustnessQuickCheckSpec
 import qualified Test.Unit.ErrorRecoveryEnhancedQuickCheckSpec
-import qualified Test.Unit.CompilerOptimizationQuickCheckSpec
-import qualified Test.Unit.OwnershipMemorySafetyQuickCheckSpec
+import qualified Test.Unit.NewEnhancedCompilerOptimizationQuickCheckSpec
+import qualified Test.Unit.NewEnhancedOwnershipMemorySafetyQuickCheckSpec
 import qualified Test.Unit.DependentTypeValidationQuickCheckSpec
 import qualified Test.Unit.TypeInferenceBoundaryQuickCheckSpec
 import qualified Test.Unit.IntegrationEndToEndQuickCheckSpec
@@ -398,6 +398,18 @@ import qualified Test.Unit.CabalBoundaryConditionsSpec
 import qualified Test.Unit.CabalUnicodeHandlingSpec
 import qualified Test.Unit.CabalConcurrentParsingSpec
 import qualified Test.Unit.CabalMemorySafetySpec
+
+-- ============================================================================
+-- New QuickCheck Test Modules (Added for enhanced coverage)
+-- ============================================================================
+import qualified Test.Unit.SourceLocationMathQuickCheckSpec
+import qualified Test.Unit.ParserConsistencyQuickCheckSpec
+import qualified Test.Unit.ErrorHandlingRecoveryQuickCheckSpec
+import qualified Test.Unit.OwnershipTransitivityQuickCheckSpec
+import qualified Test.Unit.DependencyCycleQuickCheckSpec
+import qualified Test.Unit.CompilerIROptimizationQuickCheckSpec
+import qualified Test.Unit.StringProcessingBoundaryQuickCheckSpec
+import qualified Test.Unit.TypeSystemInferenceQuickCheckSpec
 import qualified Test.Unit.CabalRegressionSpec
 import qualified Test.Unit.CabalEndToEndSpec
 import qualified Test.Unit.NewQuickCheckPropertiesSpec
@@ -947,7 +959,6 @@ import qualified Test.Unit.CoreGoToolchainQuickCheckSpec
 import qualified Test.Unit.CoreIntegratedCompilerQuickCheckSpec
 
 -- New Comprehensive QuickCheck Test Modules
-import qualified Test.Unit.ParserConsistencyQuickCheckSpec
 import qualified Test.Unit.StringUtilsQuickCheckTestSpec
 import qualified Test.Unit.CompilerErrorHandlingQuickCheckTestSpec
 import qualified Test.Unit.SourceLocationTrackingQuickCheckTestSpec
@@ -2418,8 +2429,8 @@ tests =
     , Test.Unit.SourceLocationMathQuickCheckSpec.tests
     , Test.Unit.ParserRobustnessQuickCheckSpec.tests
     , Test.Unit.ErrorRecoveryEnhancedQuickCheckSpec.tests
-    , Test.Unit.CompilerOptimizationQuickCheckSpec.tests
-    , Test.Unit.OwnershipMemorySafetyQuickCheckSpec.tests
+    , Test.Unit.NewEnhancedCompilerOptimizationQuickCheckSpec.tests
+    , Test.Unit.NewEnhancedOwnershipMemorySafetyQuickCheckSpec.tests
     , Test.Unit.DependentTypeValidationQuickCheckSpec.tests
     , Test.Unit.TypeInferenceBoundaryQuickCheckSpec.tests
     , Test.Unit.IntegrationEndToEndQuickCheckSpec.tests
@@ -3133,7 +3144,7 @@ tests =
   -- ============================================================================
   , testGroup "Additional Enhanced QuickCheck Test Modules - Comprehensive Testing"
     [ Test.Unit.EnhancedTextProcessingQuickCheckSpec.tests
-    , Test.Unit.SourceLocationMathPropertiesQuickCheckSpec.tests
+    , Test.Unit.NewEnhancedSourceLocationMathPropertiesQuickCheckSpec.tests
     , Test.Unit.ParserErrorRecoveryQuickCheckSpec.tests
     , Test.Unit.CrossModuleIntegrationQuickCheckSpec.tests
     , Test.Unit.PerformanceBoundaryQuickCheckSpec.tests
@@ -3238,15 +3249,24 @@ tests =
         , Test.Unit.NewParserBoundaryCoreQuickCheckSpec.testSuite
         , Test.Unit.NewOwnershipBasicCoreQuickCheckSpec.testSuite
         , Test.Unit.NewDependenciesInferenceCoreQuickCheckSpec.testSuite
-        , Test.Unit.ErrorHandlerConsistencyQuickCheckSpec.testSuite
+        , Test.Unit.NewEnhancedErrorHandlerConsistencyQuickCheckSpec.tests
         , Test.Unit.NewCompilerIRCoreQuickCheckSpec.testSuite
         , Test.Unit.NewIntegrationEndToEndCoreQuickCheckSpec.testSuite
         , Test.Unit.SourceLocationBoundaryQuickCheckSpec.testSuite
         , Test.Unit.StringProcessingQuickCheckSpec.testSuite
         ]
 
-  
-
-      
+    -- ============================================================================
+    -- New QuickCheck Test Modules (Added for enhanced coverage)
+    -- ============================================================================
+    , testGroup "New QuickCheck Test Modules - Enhanced Coverage"
+        [ Test.Unit.SourceLocationMathQuickCheckSpec.tests
+        , Test.Unit.ErrorHandlingRecoveryQuickCheckSpec.tests
+        , Test.Unit.OwnershipTransitivityQuickCheckSpec.tests
+        , Test.Unit.DependencyCycleQuickCheckSpec.tests
+        , Test.Unit.CompilerIROptimizationQuickCheckSpec.tests
+        , Test.Unit.StringProcessingBoundaryQuickCheckSpec.tests
+        , Test.Unit.TypeSystemInferenceQuickCheckSpec.tests
+        ]
 
         ]

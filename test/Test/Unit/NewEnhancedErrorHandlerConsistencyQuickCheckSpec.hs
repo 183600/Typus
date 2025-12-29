@@ -7,7 +7,7 @@
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
-module Test.Unit.ErrorHandlerConsistencyQuickCheckSpec (tests) where
+module Test.Unit.NewEnhancedErrorHandlerConsistencyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
