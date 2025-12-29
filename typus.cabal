@@ -305,6 +305,17 @@ test-suite typus-test
         Test.Unit.SimpleParserQuickCheckSpec,
         Test.Unit.SimpleQuickCheckSpec,
         Test.Unit.SimpleTypeCheckerQuickCheckSpec,
+
+        -- New QuickCheck Test Modules Added
+        Test.Unit.UtilsCorePropertiesQuickCheckSpec,
+        Test.Unit.NewSourceLocationMathCoreQuickCheckSpec,
+        Test.Unit.NewParserBoundaryCoreQuickCheckSpec,
+        Test.Unit.NewOwnershipBasicCoreQuickCheckSpec,
+        Test.Unit.NewDependenciesInferenceCoreQuickCheckSpec,
+        Test.Unit.ErrorHandlerConsistencyQuickCheckSpec,
+        Test.Unit.NewIntegrationEndToEndCoreQuickCheckSpec,
+        Test.Unit.SourceLocationBoundaryQuickCheckSpec,
+        Test.Unit.StringProcessingQuickCheckSpec,
         Test.Unit.NewQuickCheckSpec,
         Test.Unit.FocusedQuickCheckSpec,
         Test.Unit.BasicPropertiesQuickCheckSpec,
@@ -332,7 +343,7 @@ test-suite typus-test
         Test.Unit.SimpleQuickCheckTestSpec,
         Test.Unit.WorkingQuickCheckSpec,
         Test.Unit.ComprehensiveQuickCheckSpec,
-        Test.Unit.CompilerIRQuickCheckSpec,
+        
         Test.Unit.TypeSystemQuickCheckSpec,
         Test.Unit.AdditionalOwnershipAnalysisQuickCheckSpec,
         Test.Unit.AdditionalCoreQuickCheckSpec,
@@ -403,7 +414,7 @@ test-suite typus-test
         Test.Unit.NewSimpleCabalQuickCheckSpec,
         Test.Unit.CompilerBasicQuickCheckSpec,
         Test.Unit.ParserBasicQuickCheckSpec,
-        Test.Unit.OwnershipBasicQuickCheckSpec,
+        
         Test.Unit.TypeCheckerBasicQuickCheckSpec,
         Test.Unit.IRBasicQuickCheckSpec,
         Test.Unit.AnalyzerBasicQuickCheckSpec,
@@ -550,7 +561,7 @@ test-suite typus-test
         
         Test.Unit.ErrorHandlerBoundaryQuickCheckSpec,
         Test.Unit.ParserEdgeCaseQuickCheckSpec,
-        Test.Unit.DependenciesInferenceQuickCheckSpec,
+        
         Test.Unit.UtilsEfficiencyQuickCheckSpec,
         Test.Unit.UtilsPropertiesExtendedSpec,
         Test.Unit.ValueAnalysisFlowQuickCheckSpec,
@@ -565,7 +576,7 @@ test-suite typus-test
         Test.Unit.OwnershipRobustnessQuickCheckSpec,
         Test.Unit.SourceLocationPrecisionQuickCheckSpec,
         Test.Unit.ErrorHandlingConsistencyQuickCheckSpec,
-        Test.Unit.ParserBoundaryQuickCheckSpec,
+        
         Test.Unit.UtilsRobustnessQuickCheckSpec,
         Test.Unit.AdditionalDependencyAnalysisQuickCheckSpec,
         Test.Unit.CompilerIntegrationQuickCheckSpec,
@@ -753,14 +764,14 @@ test-suite typus-test
 
         -- New Additional QuickCheck Test Modules (2025)
         Test.Unit.UtilsBoundaryQuickCheckSpec,
-        Test.Unit.SourceLocationMathQuickCheckSpec,
+        
         Test.Unit.ParserRobustnessQuickCheckSpec,
         Test.Unit.ErrorRecoveryEnhancedQuickCheckSpec,
         Test.Unit.CompilerOptimizationQuickCheckSpec,
         Test.Unit.OwnershipMemorySafetyQuickCheckSpec,
         Test.Unit.DependentTypeValidationQuickCheckSpec,
         Test.Unit.TypeInferenceBoundaryQuickCheckSpec,
-        Test.Unit.IntegrationEndToEndQuickCheckSpec,
+        
         Test.Unit.PerformanceEnhancedQuickCheckSpec,
 
 -- New Cabal Test Modules (10 comprehensive tests added)

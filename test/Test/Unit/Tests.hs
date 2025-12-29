@@ -100,6 +100,20 @@ import qualified Test.Unit.SourceLocationEnhancedQuickCheckSpec
 import qualified Test.Unit.NewTypusCoreQuickCheckSpec
 
 -- ============================================================================
+-- New QuickCheck Test Modules Added (Core Functionality Testing)
+-- ============================================================================
+import qualified Test.Unit.UtilsCorePropertiesQuickCheckSpec
+import qualified Test.Unit.NewSourceLocationMathCoreQuickCheckSpec
+import qualified Test.Unit.NewParserBoundaryCoreQuickCheckSpec
+import qualified Test.Unit.NewOwnershipBasicCoreQuickCheckSpec
+import qualified Test.Unit.NewDependenciesInferenceCoreQuickCheckSpec
+import qualified Test.Unit.ErrorHandlerConsistencyQuickCheckSpec
+import qualified Test.Unit.NewCompilerIRCoreQuickCheckSpec
+import qualified Test.Unit.NewIntegrationEndToEndCoreQuickCheckSpec
+import qualified Test.Unit.SourceLocationBoundaryQuickCheckSpec
+import qualified Test.Unit.StringProcessingQuickCheckSpec
+
+-- ============================================================================
 -- Additional Test Modules Created for Enhanced Coverage
 -- ============================================================================
 import qualified Test.Unit.AdditionalUtilsSpec
@@ -3164,6 +3178,22 @@ tests =
       , Test.Unit.NewCabalIntegrationQuickCheckTestSpec.tests
 
       ]
+
+    -- ============================================================================
+    -- New QuickCheck Test Modules Added (Core Functionality Testing)
+    -- ============================================================================
+    , testGroup "New QuickCheck Test Modules - Core Functionality"
+        [ Test.Unit.UtilsCorePropertiesQuickCheckSpec.testSuite
+        , Test.Unit.NewSourceLocationMathCoreQuickCheckSpec.testSuite
+        , Test.Unit.NewParserBoundaryCoreQuickCheckSpec.testSuite
+        , Test.Unit.NewOwnershipBasicCoreQuickCheckSpec.testSuite
+        , Test.Unit.NewDependenciesInferenceCoreQuickCheckSpec.testSuite
+        , Test.Unit.ErrorHandlerConsistencyQuickCheckSpec.testSuite
+        , Test.Unit.NewCompilerIRCoreQuickCheckSpec.testSuite
+        , Test.Unit.NewIntegrationEndToEndCoreQuickCheckSpec.testSuite
+        , Test.Unit.SourceLocationBoundaryQuickCheckSpec.testSuite
+        , Test.Unit.StringProcessingQuickCheckSpec.testSuite
+        ]
 
   
 
