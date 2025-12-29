@@ -1,286 +1,328 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
 module Test.Unit.ErrorHandlerBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
+import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import TestSupport.Arbitrary
-
-import ErrorHandler
-import EnhancedErrorHandler
-import Compiler.Errors.Core
-  ( ErrorSeverity(..)
-  , ErrorLocation(..)
-  , ErrorContext(..)
-  , ErrorRecovery(..)
-  , emptyContext
-  , TypeError(..)
-  )
-import Compiler.Errors (CompilationPhase(..), CompilerError(..))
-import SourceLocation (SourcePos, SourceSpan, Located(..))
-import Utils (trim)
-
-import Data.List (isPrefixOf, isInfixOf)
+import Test.QuickCheck (Arbitrary(..), Gen, choose, listOf, suchThat, oneof, elements, frequency)
 import qualified Data.Text as T
+import Data.Maybe (isJust, isNothing, fromMaybe)
+import Data.List (sort, nub)
+import Compiler.Errors.Core
 
--- | Boundary condition tests for ErrorHandler modules
-tests :: TestTree
-tests =
-  testGroup "ErrorHandler Boundary QuickCheck Tests"
-    [ fastProperty "Error severity ordering is consistent" prop_error_severity_ordering
-    , fastProperty "Error context merging preserves information" prop_error_context_merge_preserves
-    , fastProperty "Error recovery strategies are applicable" prop_error_recovery_applicable
-    , fastProperty "Error location validation is accurate" prop_error_location_validation
-    , fastProperty "Error message formatting preserves content" prop_error_message_formatting
-    , fastProperty "Error chain maintains causality" prop_error_chain_causality
-    , fastProperty "Error aggregation preserves severity hierarchy" prop_error_aggregation_severity
-    , fastProperty "Error filtering respects criteria" prop_error_filtering_criteria
-    , fastProperty "Error transformation preserves core information" prop_error_transformation_preserves
-    , fastProperty "Error recovery maintains consistency" prop_error_recovery_consistency
-    , fastProperty "Error context propagation is correct" prop_error_context_propagation
-    , fastProperty "Error location tracking is accurate" prop_error_location_tracking
-    , fastProperty "Error severity escalation is monotonic" prop_error_severity_escalation
-    , fastProperty "Error recovery suggestions are relevant" prop_error_recovery_suggestions
-    , fastProperty "Error handling is idempotent" prop_error_handling_idempotent
+-- | Generate boundary case strings
+genBoundaryString :: Gen String
+genBoundaryString = frequency
+    [ (2, return "") -- Empty string
+    , (2, return " ") -- Single space
+    , (2, return "\n") -- Single newline
+    , (1, return "\t") -- Single tab
+    , (1, return "\0") -- Null character
+    , (1, listOf $ elements "\n\t\r\f\v") -- Only whitespace
+    , (1, return $ replicate 1000 'a') -- Very long string
+    , (1, return $ concat (replicate 100 "test ")) -- Repeated pattern
     ]
 
--- Property: Error severity ordering is consistent
-prop_error_severity_ordering :: ErrorSeverity -> ErrorSeverity -> ErrorSeverity -> Property
-prop_error_severity_ordering sev1 sev2 sev3 =
-  let order1 = compareSeverity sev1 sev2
-      order2 = compareSeverity sev2 sev3
-      order3 = compareSeverity sev1 sev3
-  in (order1 <= 0 && order2 <= 0) ==> order3 <= 0
-  where
-    compareSeverity ErrorCritical _ = GT
-    compareSeverity ErrorError ErrorCritical = LT
-    compareSeverity ErrorError _ = GT
-    compareSeverity ErrorWarning ErrorCritical = LT
-    compareSeverity ErrorWarning ErrorError = LT
-    compareSeverity ErrorWarning _ = GT
-    compareSeverity ErrorInfo _ = LT
+-- | Generate extreme severity combinations
+genExtremeSeverity :: Gen ErrorSeverity
+genExtremeSeverity = elements [Fatal, Info] -- Focus on extremes
 
--- Property: Error context merging preserves information
-prop_error_context_merge_preserves :: ErrorContext -> ErrorContext -> Property
-prop_error_context_merge_preserves ctx1 ctx2 =
-  let merged = mergeContexts ctx1 ctx2
-      ctx1Info = contextInfo ctx1
-      ctx2Info = contextInfo ctx2
-      mergedInfo = contextInfo merged
-  in property $ ctx1Info `isInfixOf` mergedInfo .&&. ctx2Info `isInfixOf` mergedInfo
-  where
-    mergeContexts c1 c2 = emptyContext 
-      { contextInfo = contextInfo c1 ++ " | " ++ contextInfo c2 }
-    contextInfo ctx = "context-info" -- Simplified for testing
+-- | Generate extreme location values
+genExtremeLocation :: Gen ErrorLocation
+genExtremeLocation = frequency
+    [ (2, return _unknownLocation) -- Unknown location
+    , (1, return $ ErrorLocation Nothing 0 0 Nothing Nothing) -- Zero position
+    , (1, return $ ErrorLocation Nothing 999999 999999 Nothing Nothing) -- Very large position
+    , (1, do
+        line <- choose (1, 10)
+        return $ ErrorLocation Nothing line (-1) Nothing Nothing) -- Negative column
+    , (1, do
+        line <- choose (1, 10)
+        column <- choose (1, 10)
+        return $ ErrorLocation Nothing line column (Just (line - 1)) Nothing) -- End before start
+    ]
 
--- Property: Error recovery strategies are applicable
-prop_error_recovery_applicable :: ErrorRecovery -> String -> Property
-prop_error_recovery_applicable recovery errorMsg =
-  not (null errorMsg) ==>
-  let isApplicable = recoveryStrategyApplicable recovery errorMsg
-  in property $ isApplicable ==> recoveryStrategyValid recovery errorMsg
-  where
-    recoveryStrategyApplicable _ _ = True -- Simplified
-    recoveryStrategyValid _ _ = True -- Simplified
+-- | Generate extreme recovery strategies
+genExtremeRecovery :: Gen ErrorRecovery
+genExtremeRecovery = frequency
+    [ (1, return fatalRecovery) -- Fatal recovery
+    , (1, return infoRecovery) -- Info recovery
+    , (1, customRecovery False False Nothing Nothing 100 0.0) -- Worst case
+    , (1, customRecovery True True Nothing Nothing 0 1.0) -- Best case
+    , (1, do
+        cost <- choose (0, 100)
+        confidence <- choose (0.0, 1.0)
+        customRecovery True True (Just "action") (Just "hint") cost confidence)
+    ]
 
--- Property: Error location validation is accurate
-prop_error_location_validation :: SourcePos -> SourcePos -> Property
-prop_error_location_validation start end =
-  let span = SourceSpan start end
-      isValid = validateErrorSpan span
-  in property $ isValid == (posCompare start end <= 0)
-  where
-    posCompare pos1 pos2 = 
-      let (SourcePos l1 c1 o1) = pos1
-          (SourcePos l2 c2 o2) = pos2
-      in compare (l1, c1, o1) (l2, c2, o2)
-    validateErrorSpan (SourceSpan s e) = posCompare s e <= 0
+tests :: TestTree
+tests =
+  testGroup "ErrorHandler boundary conditions QuickCheck tests"
+    [ testGroup "Severity boundary conditions"
+        [ testCase "severity priority handles all values" $ do
+            severityPriority Fatal @?= 100
+            severityPriority Error @?= 80
+            severityPriority Warning @?= 30
+            severityPriority Info @?= 10
 
--- Property: Error message formatting preserves content
-prop_error_message_formatting :: String -> String -> Property
-prop_error_message_formatting prefix message =
-  not (null message) ==>
-  let formatted = formatErrorMessage prefix message
-      trimmed = trim formatted
-  in property $ prefix `isPrefixOf` formatted .&&. message `isInfixOf` formatted
-  where
-    formatErrorMessage p m = p ++ ": " ++ m
+        , fastProperty "isAtLeast boundary cases" $
+            \sev ->
+              isAtLeast Info sev &&  -- Info is least severe
+              isAtLeast sev Fatal     -- Fatal is most severe
 
--- Property: Error chain maintains causality
-prop_error_chain_causality :: [String] -> Property
-prop_error_chain_causality messages =
-  not (null messages) ==>
-  let chain = createErrorChain messages
-      isCausal = checkChainCausality chain
-  in property $ isCausal
-  where
-    createErrorChain msgs = zip msgs (tail msgs)
-    checkChainCausality = all (\(cause, effect) -> cause `isInfixOf` effect)
+        , fastProperty "severity comparison handles equal values" $
+            \sev ->
+              compareSeverity sev sev == EQ
 
--- Property: Error aggregation preserves severity hierarchy
-prop_error_aggregation_severity :: [ErrorSeverity] -> Property
-prop_error_aggregation_severity severities =
-  not (null severities) ==>
-  let aggregated = aggregateSeverity severities
-      maxSeverity = maximum severities
-  in property $ aggregated >= maxSeverity
-  where
-    aggregateSeverity = maximum
+        , testCase "recoverability boundaries" $ do
+            _isRecoverable Fatal @?= False
+            _isRecoverable Error @?= True
+            _isRecoverable Warning @?= True
+            _isRecoverable Info @?= True
 
--- Property: Error filtering respects criteria
-prop_error_filtering_criteria :: [String] -> String -> Property
-prop_error_filtering_criteria errors filterText =
-  not (null errors) ==>
-  let filtered = filterErrors errors filterText
-      allMatch = all (`isInfixOf` filterText) filtered
-  in property $ allMatch
-  where
-    filterErrors errs f = filter (`isInfixOf` f) errs
+        , fastProperty "user action required boundaries" $
+            \sev ->
+              let userAction = _isUserActionRequired sev
+              in if sev `elem` [Fatal, Error]
+                 then userAction
+                 else not userAction
+        ]
 
--- Property: Error transformation preserves core information
-prop_error_transformation_preserves :: String -> String -> Property
-prop_error_transformation_preserves original transformation =
-  not (null original) ==>
-  let transformed = transformError original transformation
-      preserved = original `isInfixOf` transformed
-  in property $ preserved
-  where
-    transformError orig trans = orig ++ " [" ++ trans ++ "]"
+    , testGroup "Location boundary conditions"
+        [ testCase "unknown location properties" $ do
+            getErrorLine _unknownLocation @?= 0
+            getErrorColumn _unknownLocation @?= 0
+            filePath _unknownLocation @?= Nothing
+            endLine _unknownLocation @?= Nothing
+            endColumn _unknownLocation @?= Nothing
 
--- Property: Error recovery maintains consistency
-prop_error_recovery_consistency :: ErrorRecovery -> String -> Property
-prop_error_recovery_consistency recovery errorMsg =
-  not (null errorMsg) ==>
-  let recovered1 = applyRecovery recovery errorMsg
-      recovered2 = applyRecovery recovery errorMsg
-  in recovered1 === recovered2
-  where
-    applyRecovery _ msg = msg ++ " [recovered]"
+        , testCase "extreme location values" $ do
+            let zeroLoc = ErrorLocation Nothing 0 0 Nothing Nothing
+                maxLoc = ErrorLocation Nothing 999999 999999 (Just 999999) (Just 999999)
+            getErrorLine zeroLoc @?= 0
+            getErrorColumn zeroLoc @?= 0
+            getErrorLine maxLoc @?= 999999
+            getErrorColumn maxLoc @?= 999999
 
--- Property: Error context propagation is correct
-prop_error_context_propagation :: ErrorContext -> [String] -> Property
-prop_error_context_propagation ctx messages =
-  not (null messages) ==>
-  let propagated = propagateContext ctx messages
-      allHaveContext = all (hasContext ctx) propagated
-  in property $ allHaveContext
-  where
-    propagateContext c msgs = map (`withContext` c) msgs
-    hasContext _ _ = True -- Simplified
-    withContext msg _ = msg
+        , fastProperty "location creation with boundary values" $
+            \line col ->
+              let loc = _atLocation line col
+              in line >= 0 && col >= 0 ==> 
+                 getErrorLine loc == max 0 line && 
+                 getErrorColumn loc == max 0 col
 
--- Property: Error location tracking is accurate
-prop_error_location_tracking :: SourcePos -> Int -> Property
-prop_error_location_tracking pos offset =
-  offset >= 0 && offset <= 1000 ==> -- Reasonable bounds
-  let tracked = trackErrorLocation pos offset
-      expectedPos = pos { sourcePosOffset = sourcePosOffset pos + offset }
-  in tracked === expectedPos
-  where
-    trackErrorLocation p o = p { sourcePosOffset = sourcePosOffset p + o }
+        , fastProperty "range location handles edge cases" $
+            \startLine startCol endLine endCol ->
+              let loc = _atRange startLine startCol endLine endCol
+              in if endLine >= startLine && endCol >= startCol
+                 then endLine loc == Just endLine && endColumn loc == Just endCol
+                 else True -- May create invalid location but shouldn't crash
 
--- Property: Error severity escalation is monotonic
-prop_error_severity_escalation :: ErrorSeverity -> ErrorSeverity -> Property
-prop_error_severity_escalation initial escalated =
-  let escalation = escalateSeverity initial escalated
-  in property $ escalation >= initial
-  where
-    escalateSeverity init esc = max init esc
+        , testCase "file location with empty file path" $ do
+            let loc = _atFileLocation "" 10 5
+            filePath loc @?= Just ""
+            getErrorLine loc @?= 10
+            getErrorColumn loc @?= 5
+        ]
 
--- Property: Error recovery suggestions are relevant
-prop_error_recovery_suggestions :: String -> [String] -> Property
-prop_error_recovery_suggestions errorMsg suggestions =
-  not (null errorMsg) && not (null suggestions) ==>
-  let relevant = filterRelevantSuggestions errorMsg suggestions
-      allRelevant = all (isRelevantTo errorMsg) relevant
-  in property $ allRelevant
-  where
-    filterRelevantSuggestions _ sugs = sugs -- Simplified
-    isRelevantTo _ _ = True -- Simplified
+    , testGroup "Context boundary conditions"
+        [ testCase "empty context serialization" $ do
+            let ctx = emptyContext
+            contextCode ctx @?= Nothing
+            contextFunction ctx @?= Nothing
+            contextVariable ctx @?= Nothing
+            contextType ctx @?= Nothing
+            contextAdditional ctx @?= []
 
--- Property: Error handling is idempotent
-prop_error_handling_idempotent :: String -> Property
-prop_error_handling_idempotent errorMsg =
-  not (null errorMsg) ==>
-  let handled1 = handleError errorMsg
-      handled2 = handleError handled1
-  in handled1 === handled2
-  where
-    handleError msg = "[HANDLED] " ++ msg
+        , fastProperty "context with empty strings" $
+            \additional ->
+              let ctx = ErrorContext (Just "") (Just "") (Just "") (Just "") additional
+              in isJust (contextCode ctx) &&
+                 isJust (contextFunction ctx) &&
+                 isJust (contextVariable ctx) &&
+                 isJust (contextType ctx)
 
--- Additional boundary condition properties
+        , fastProperty "context with many additional fields" $
+            \additional ->
+              let ctx = emptyContext { contextAdditional = additional }
+                  count = length additional
+              in length (contextAdditional ctx) == count
 
--- Property: Error handling with empty messages
-prop_error_handling_empty :: Property
-prop_error_handling_empty =
-  let handled = handleError ""
-  in property $ not (null handled)
-  where
-    handleError _ = "[EMPTY_ERROR]"
+        , testCase "context with duplicate additional keys" $ do
+            let additional = [("key1", "value1"), ("key1", "value2"), ("key2", "value3")]
+                ctx = emptyContext { contextAdditional = additional }
+            contextAdditional ctx @?= additional
+        ]
 
--- Property: Error handling with very long messages
-prop_error_handling_long :: Int -> String -> Property
-prop_error_handling_long multiplier baseMsg =
-  multiplier > 0 && multiplier <= 100 ==> -- Limit size
-  let longMsg = concat (replicate multiplier baseMsg)
-      handled = handleError longMsg
-  in property $ not (null handled) && length handled >= length longMsg
-  where
-    handleError msg = "[HANDLED] " ++ msg
+    , testGroup "Recovery boundary conditions"
+        [ testCase "extreme recovery strategies" $ do
+            recoveryCost fatalRecovery @?= 100
+            recoveryConfidence fatalRecovery @?= 0.0
+            canRecover fatalRecovery @?= False
+            shouldContinue fatalRecovery @?= False
 
--- Property: Error context with special characters
-prop_error_context_special :: String -> Property
-prop_error_context_special specialChars =
-  let context = createContext specialChars
-      handled = handleWithContext context specialChars
-  in property $ specialChars `isInfixOf` handled
-  where
-    createContext _ = emptyContext
-    handleWithContext _ msg = "[CONTEXT] " ++ msg
+            recoveryCost infoRecovery @?= 0
+            recoveryConfidence infoRecovery @?= 1.0
+            canRecover infoRecovery @?= True
+            shouldContinue infoRecovery @?= True
 
--- Property: Error recovery with nested errors
-prop_error_recovery_nested :: [String] -> Property
-prop_error_recovery_nested errors =
-  not (null errors) ==>
-  let recovered = recoverNestedErrors errors
-      allRecovered = all isRecovered recovered
-  in property $ allRecovered
-  where
-    recoverNestedErrors errs = map (`recoverSingle` errs) errs
-    isRecovered _ = True -- Simplified
-    recoverSingle _ _ = "[RECOVERED]"
+        , fastProperty "recovery confidence boundaries" $
+            \recovery ->
+              let conf = recoveryConfidence recovery
+              in conf >= 0.0 && conf <= 1.0
 
--- Property: Error severity with mixed levels
-prop_error_severity_mixed :: [ErrorSeverity] -> Property
-prop_error_severity_mixed severities =
-  not (null severities) ==>
-  let normalized = normalizeSeverities severities
-      hasCritical = ErrorCritical `elem` severities
-      hasCriticalNormalized = ErrorCritical `elem` normalized
-  in property $ hasCritical ==> hasCriticalNormalized
-  where
-    normalizeSeverities = id -- Simplified
+        , fastProperty "recovery cost boundaries" $
+            \recovery ->
+              let cost = recoveryCost recovery
+              in cost >= 0 && cost <= 100
 
--- Property: Error location with invalid ranges
-prop_error_location_invalid :: SourcePos -> SourcePos -> Property
-prop_error_location_invalid start end =
-  posCompare start end > 0 ==> -- Invalid range
-  let span = SourceSpan start end
-      normalized = normalizeSpan span
-  in spanStart normalized `posCompare` spanEnd normalized <= 0
+        , fastProperty "custom recovery with extreme values" $
+            \canRec shouldCont ->
+              let recovery = customRecovery canRec shouldCont Nothing Nothing 100 0.0
+              in canRecover recovery == canRec &&
+                 shouldContinue recovery == shouldCont &&
+                 recoveryCost recovery == 100 &&
+                 recoveryConfidence recovery == 0.0
+
+        , testCase "recovery strategy selection with empty list" $ do
+            let best = _chooseBestRecovery []
+            best @?= fatalRecovery
+
+        , fastProperty "recovery strategy selection with equal confidence" $
+            \r1 r2 ->
+              let conf1 = recoveryConfidence r1
+                  conf2 = recoveryConfidence r2
+                  adjustedR1 = r1 { recoveryConfidence = 0.5 }
+                  adjustedR2 = r2 { recoveryConfidence = 0.5 }
+                  best = _chooseBestRecovery [adjustedR1, adjustedR2]
+              in recoveryConfidence best == 0.5
+        ]
+
+    , testGroup "Error creation boundary conditions"
+        [ fastProperty "type error with empty message" $ do
+            \errorId severity category location context ->
+              let error = TypeError errorId severity category T.empty location context
+              in T.null (message error)
+
+        , fastProperty "type error with very long message" $
+            \errorId severity category location context ->
+              let longMsg = T.pack $ replicate 10000 'a'
+                  error = TypeError errorId severity category longMsg location context
+              in T.length (message error) == 10000
+
+        , fastProperty "type error with empty ID" $
+            \severity category message location context ->
+              let error = TypeError "" severity category message location context
+              in null (errorId error)
+
+        , fastProperty "type error with unknown location" $
+            \errorId severity category message context ->
+              let error = TypeError errorId severity category message _unknownLocation context
+                  loc = location error
+              in loc == _unknownLocation
+
+        , fastProperty "type error with empty context" $
+            \errorId severity category message location ->
+              let error = TypeError errorId severity category message location emptyContext
+                  ctx = context error
+              in ctx == emptyContext
+        ]
+
+    , testGroup "Error collection boundary conditions"
+        [ testCase "collector with many errors" $ do
+            let errors = replicate 1000 $ TypeError "test" Error TypeMismatch "test" _unknownLocation emptyContext
+                collector = foldl (\c e -> addError e c) newErrorCollector errors
+            length (getErrors collector) @?= 1000
+
+        , fastProperty "collector with mixed severity levels" $
+            \errors ->
+              let collector = foldl (\c e -> addError e c) newErrorCollector errors
+                  errorCount = length $ filter (\e -> severity e `elem` [Error, Fatal]) errors
+                  warningCount = length $ filter (\e -> severity e == Warning) errors
+                  infoCount = length $ filter (\e -> severity e == Info) errors
+              in length (getErrors collector) == errorCount &&
+                 length (getWarnings collector) == warningCount
+
+        , fastProperty "collector handles duplicate errors" $
+            \error ->
+              let collector = addError error (addError error newErrorCollector)
+              in length (getErrors collector) == 2
+
+        , testCase "collector with no messages" $ do
+            let collector = newErrorCollector
+            getAllMessages collector @?= []
+        ]
+
+    , testGroup "Error formatting boundary conditions"
+        [ fastProperty "formatting errors with empty fields" $
+            \severity category ->
+              let error = TypeError "" severity category T.empty _unknownLocation emptyContext
+                  formatted = formatError error
+              in not $ T.null formatted
+
+        , fastProperty "formatting errors with unicode content" $
+            \errorId severity category ->
+              let unicodeMsg = T.pack "测试消息 🚀"
+                  error = TypeError errorId severity category unicodeMsg _unknownLocation emptyContext
+                  formatted = formatError error
+              in T.unpack formatted `contains` "测试消息"
+
+        , fastProperty "formatting many errors doesn't crash" $
+            \errors ->
+              let formatted = formatErrors errors
+              in length formatted == length errors
+
+        , fastProperty "formatting with location handles unknown location" $
+            \errorId severity category message context ->
+              let error = TypeError errorId severity category message _unknownLocation context
+                  formatted = formatErrorWithLocation error
+              in not $ T.null formatted
+
+        , testCase "formatting with extreme location values" $ do
+            let extremeLoc = ErrorLocation Nothing (-1) (-1) (Just (-2)) (Just (-2))
+                error = TypeError "test" Error TypeMismatch "test" extremeLoc emptyContext
+                formatted = formatErrorWithLocation error
+            not $ T.null formatted
+        ]
+
+    , testGroup "Error filtering boundary conditions"
+        [ testCase "filtering empty error list" $ do
+            filterBySeverity Fatal [] @?= []
+            filterByCategory TypeMismatch [] @?= []
+
+        , fastProperty "filtering by severity preserves order" $
+            \errors sev ->
+              let filtered = filterBySeverity sev errors
+                  originalIndices = map fst $ filter (\e -> severity (snd e) == sev) (zip [0..] errors)
+              in length filtered == length originalIndices
+
+        , fastProperty "filtering by category preserves order" $
+            \errors cat ->
+              let filtered = filterByCategory cat errors
+                  originalIndices = map fst $ filter (\e -> category (snd e) == cat) (zip [0..] errors)
+              in length filtered == length originalIndices
+
+        , fastProperty "hasCategory works correctly" $
+            \errors cat ->
+              let hasCat = hasCategory cat errors
+                  hasCat' = any (\e -> category e == cat) errors
+              in hasCat == hasCat'
+
+        , testCase "error statistics with empty list" $ do
+            let stats = getErrorStatistics []
+            stats @?= []
+        ]
+    ]
+
+-- Helper function for string contains check
+contains :: String -> String -> Bool
+contains needle haystack = needle `isInfixOf` haystack
+
+-- Helper function for infix check
+isInfixOf :: Eq a => [a] -> [a] -> Bool
+isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
   where
-    posCompare pos1 pos2 = 
-      let (SourcePos l1 c1 o1) = pos1
-          (SourcePos l2 c2 o2) = pos2
-      in compare (l1, c1, o1) (l2, c2, o2)
-    normalizeSpan (SourceSpan s e) = 
-      if posCompare s e <= 0 then SourceSpan s e else SourceSpan e s
+    isPrefixOf [] _ = True
+    isPrefixOf _ [] = False
+    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    tails [] = [[]]
+    tails xs@(_:ys) = xs : tails ys

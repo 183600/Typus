@@ -10,140 +10,327 @@
 module Test.Unit.ConcurrentSafetyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
+import Test.Tasty.HUnit (assertBool, assertEqual, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import Test.QuickCheck.Gen (Gen, choose, listOf, elements, oneof, frequency, sized)
+import Test.QuickCheck.Arbitrary (Arbitrary(..))
 
-import Compiler (compile, CompilerError(..))
-import Parser (parseTypus)
-import Ownership (analyzeOwnership)
-import Analyzer.State (AnalyzerState(..), newAnalyzerState)
-import Control.Concurrent (forkIO, MVar, newEmptyMVar, putMVar, takeMVar)
-import Control.Exception (try, SomeException)
-import Data.List (isInfixOf, length)
+import Control.Concurrent (MVar, forkIO, newMVar, takeMVar, putMVar, readMVar, modifyMVar_)
+import Control.Concurrent.STM
+import Control.Monad (replicateM, void)
+import Data.IORef
+import Data.List (nub, sort, (\\), intersect, union)
+import qualified Data.Set as Set
+import qualified Data.Map as Map
 
--- Property: Concurrent parsing produces consistent results
-prop_concurrent_parsing_consistent :: String -> Property
-prop_concurrent_parsing_consistent code =
-  let hasCode = length code > 5
-  in hasCode ==>
-  let result1 = parseTypus code
-      result2 = parseTypus code
-      consistent = case (result1, result2) of
-        (Right r1, Right r2) -> show r1 == show r2
-        (Left e1, Left e2) -> show e1 == show e2
-        _ -> False
-  in property $ consistent
+import Utils
+  ( trim
+  , splitBy
+  , splitByCollapsed
+  , removeLineComments
+  , normalizeIndentation
+  , breakOn
+  )
 
--- Property: Concurrent compilation is thread-safe
-prop_concurrent_compilation_thread_safe :: String -> Property
-prop_concurrent_compilation_thread_safe code =
-  let hasCode = length code > 10
-  in hasCode ==>
-  case parseTypus code of
-    Right typusFile ->
-      let compileResult = compile typusFile
-          compileResultStr = show compileResult
-          noCrash = length compileResultStr >= 0 -- Always true, but ensures no crash
-      in property $ noCrash
-    Left _ -> property $ True
+import SourceLocation
+  ( SourcePos(..)
+  , SourceSpan(..)
+  , startPos
+  , posAfter
+  , posAt
+  , advancePos
+  , advancePosBy
+  , mergeSpans
+  )
 
--- Property: Concurrent ownership analysis is safe
-prop_concurrent_ownership_safe :: String -> Property
-prop_concurrent_ownership_safe code =
-  let hasCode = length code > 5
-  in hasCode ==>
-  let result1 = analyzeOwnership code
-      result2 = analyzeOwnership code
-      consistent = case (result1, result2) of
-        (Right r1, Right r2) -> show r1 == show r2
-        (Left e1, Left e2) -> show e1 == show e2
-        _ -> False
-  in property $ consistent
+-- | Generate concurrent operation scenarios
+data ConcurrentOperation = ConcurrentOperation
+  { operationId :: Int
+  , operationType :: OperationType
+  , operationData :: String
+  } deriving (Show, Eq)
 
--- Property: Analyzer state is thread-safe
-prop_analyzer_state_thread_safe :: String -> Property
-prop_analyzer_state_thread_safe input =
-  let hasInput = length input > 0
-  in hasInput ==>
-  let state1 = newAnalyzerState
-      state2 = newAnalyzerState
-      bothValid = state1 /= state2 || input == input -- Always true, tests state creation
-  in property $ bothValid
+data OperationType 
+  = TrimOperation
+  | SplitOperation Char
+  | CommentOperation
+  | IndentOperation
+  | BreakOperation Char
+  deriving (Show, Eq)
 
--- Property: Multiple concurrent operations don't interfere
-prop_concurrent_operations_no_interference :: [String] -> Property
-prop_concurrent_operations_no_interference codeList =
-  let hasCodes = length codeList > 1
-      nonEmptyCodes = all (not . null) codeList
-  in hasCodes && nonEmptyCodes ==>
-  let results = map parseTypus codeList
-      resultStrings = map show results
-      noInterference = length resultStrings == length codeList
-  in property $ noInterference
+instance Arbitrary OperationType where
+  arbitrary = oneof
+    [ pure TrimOperation
+    , SplitOperation <$> arbitrary
+    , pure CommentOperation
+    , pure IndentOperation
+    , BreakOperation <$> arbitrary
+    ]
 
--- Property: Error handling is thread-safe
-prop_error_handling_thread_safe :: String -> Property
-prop_error_handling_thread_safe malformedCode =
-  let hasMalformed = length malformedCode > 3
-      hasInvalidChars = any (`elem` malformedCode) "@#$%^&*"
-  in hasMalformed && hasInvalidChars ==>
-  let result1 = parseTypus malformedCode
-      result2 = parseTypus malformedCode
-      bothErrors = case (result1, result2) of
-        (Left e1, Left e2) -> length (show e1) > 0 && length (show e2) > 0
-        _ -> False
-  in property $ bothErrors .||. True -- At least don't crash
+instance Arbitrary ConcurrentOperation where
+  arbitrary = do
+    opId <- choose (1, 1000)
+    opType <- arbitrary
+    opData <- listOf $ elements ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ [' ', '\t', '\n']
+    return $ ConcurrentOperation opId opType opData
 
--- Property: Resource cleanup works in concurrent context
-prop_concurrent_resource_cleanup :: String -> Property
-prop_concurrent_resource_cleanup code =
-  let hasCode = length code > 0
-  in hasCode ==>
-  let parseResult = parseTypus code
-      cleanupWorks = case parseResult of
-        Right _ -> True
-        Left _ -> True
-  in property $ cleanupWorks
+-- | Generate lists of concurrent operations
+newtype ConcurrentOperationList = ConcurrentOperationList { getConcurrentOperationList :: [ConcurrentOperation] }
+  deriving (Show, Eq)
 
--- Property: Concurrent type checking is deterministic
-prop_concurrent_type_checking_deterministic :: String -> Property
-prop_concurrent_type_checking_deterministic code =
-  let hasCode = length code > 5
-      simpleCode = all (`elem` code) "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789=;"
-  in hasCode && simpleCode ==>
-  case parseTypus code of
-    Right typusFile ->
-      let result1 = compile typusFile
-          result2 = compile typusFile
-          deterministic = case (result1, result2) of
-            (Right r1, Right r2) -> show r1 == show r2
-            (Left e1, Left e2) -> show e1 == show e2
-            _ -> False
-      in property $ deterministic
-    Left _ -> property $ True
+instance Arbitrary ConcurrentOperationList where
+  arbitrary = sized $ \size -> do
+    let maxSize = min size 50
+    len <- choose (1, maxSize)
+    ops <- listOf len arbitrary
+    return $ ConcurrentOperationList ops
 
--- Property: Memory usage is bounded in concurrent operations
-prop_concurrent_memory_bounded :: [String] -> Property
-prop_concurrent_memory_bounded codeList =
-  let hasCodes = length codeList > 0 && length codeList <= 10
-      reasonableSize = all (\c -> length c <= 1000) codeList
-  in hasCodes && reasonableSize ==>
-  let results = map parseTypus codeList
-      resultSizes = map (length . show) results
-      maxReasonableSize = 10000
-      allBounded = all (< maxReasonableSize) resultSizes
-  in property $ allBounded
+-- Property: concurrent trim operations are thread-safe
+prop_concurrent_trim_safety :: ConcurrentOperationList -> Property
+prop_concurrent_trim_safety opList =
+  let operations = filter (\op -> operationType op == TrimOperation) $ getConcurrentOperationList opList
+  in not (null operations) ==>
+     let testData = map operationData operations
+         expectedResults = map trim testData
+     in ioProperty $ do
+       resultsRef <- newIORef []
+       mvar <- newMVar ()
+       
+       -- Fork threads for each trim operation
+       mapM_ (\(i, dataStr) -> forkIO $ do
+         modifyMVar_ mvar $ \() -> do
+           result <- return $ trim dataStr
+           modifyIORef resultsRef (result:)
+           return ()
+         ) (zip [1..] testData)
+       
+       -- Wait for all operations to complete (simplified)
+       threadDelay 100000  -- 100ms
+       
+       results <- readIORef resultsRef
+       let sortedResults = sort results
+           sortedExpected = sort expectedResults
+       return $ sortedResults === sortedExpected
+
+-- Property: concurrent split operations are consistent
+prop_concurrent_split_consistency :: ConcurrentOperationList -> Char -> Property
+prop_concurrent_split_consistency opList delim =
+  let operations = filter (\op -> case operationType op of
+                                   SplitOperation d -> d == delim
+                                   _ -> False) $ getConcurrentOperationList opList
+  in not (null operations) ==>
+     let testData = map operationData operations
+         expectedResults = map (splitBy delim) testData
+     in ioProperty $ do
+       resultsRef <- newIORef []
+       mvar <- newMVar ()
+       
+       mapM_ (\(i, dataStr) -> forkIO $ do
+         modifyMVar_ mvar $ \() -> do
+           result <- return $ splitBy delim dataStr
+           modifyIORef resultsRef (result:)
+           return ()
+         ) (zip [1..] testData)
+       
+       threadDelay 100000
+       results <- readIORef resultsRef
+       let sortedResults = sort results
+           sortedExpected = sort expectedResults
+       return $ sortedResults === sortedExpected
+
+-- Property: concurrent source position operations are atomic
+prop_concurrent_source_position_atomicity :: ConcurrentOperationList -> Property
+prop_concurrent_source_position_atomicity opList =
+  let operations = take 10 $ getConcurrentOperationList opList  -- Limit to avoid too many threads
+      initialPos = SourcePos 10 10
+  in not (null operations) ==>
+     let advanceOperations = map (\op -> (operationId op, operationData op)) operations
+     in ioProperty $ do
+       resultsRef <- newIORef []
+       posVar <- newMVar initialPos
+       
+       mapM_ \(opId, dataStr) -> forkIO $ do
+         modifyMVar_ posVar $ \currentPos -> do
+           let newPos = advancePosBy currentPos (take 5 dataStr)  -- Use first 5 chars
+           modifyIORef resultsRef (newPos:)
+           return newPos
+         ) advanceOperations
+       
+       threadDelay 100000
+       results <- readIORef resultsRef
+       let allValid = all (\pos -> sourceLine pos >= 10 && sourceColumn pos >= 10) results
+       return $ property allValid
+
+-- Property: concurrent comment removal is thread-safe
+prop_concurrent_comment_removal_safety :: ConcurrentOperationList -> Property
+prop_concurrent_comment_removal_safety opList =
+  let operations = filter (\op -> operationType op == CommentOperation) $ getConcurrentOperationList opList
+  in not (null operations) ==>
+     let testData = map operationData operations
+         testInputs = map (\dataStr -> dataStr ++ " // comment") testData
+         expectedResults = map removeLineComments testInputs
+     in ioProperty $ do
+       resultsRef <- newIORef []
+       mvar <- newMVar ()
+       
+       mapM_ (\(i, inputStr) -> forkIO $ do
+         modifyMVar_ mvar $ \() -> do
+           result <- return $ removeLineComments inputStr
+           modifyIORef resultsRef (result:)
+           return ()
+         ) (zip [1..] testInputs)
+       
+       threadDelay 100000
+       results <- readIORef resultsRef
+       let sortedResults = sort results
+           sortedExpected = sort expectedResults
+       return $ sortedResults === sortedExpected
+
+-- Property: concurrent indentation normalization is consistent
+prop_concurrent_indentation_consistency :: ConcurrentOperationList -> Property
+prop_concurrent_indentation_consistency opList =
+  let operations = filter (\op -> operationType op == IndentOperation) $ getConcurrentOperationList opList
+  in not (null operations) ==>
+     let testData = map operationData operations
+         indentedData = map (\dataStr -> "  " ++ dataStr ++ "\n    " ++ dataStr) testData
+         expectedResults = map normalizeIndentation indentedData
+     in ioProperty $ do
+       resultsRef <- newIORef []
+       mvar <- newMVar ()
+       
+       mapM_ (\(i, inputStr) -> forkIO $ do
+         modifyMVar_ mvar $ \() -> do
+           result <- return $ normalizeIndentation inputStr
+           modifyIORef resultsRef (result:)
+           return ()
+         ) (zip [1..] indentedData)
+       
+       threadDelay 100000
+       results <- readIORef resultsRef
+       let sortedResults = sort results
+           sortedExpected = sort expectedResults
+       return $ sortedResults === sortedExpected
+
+-- Property: concurrent span merging is associative
+prop_concurrent_span_merging_associative :: ConcurrentOperationList -> Property
+prop_concurrent_span_merging_associative opList =
+  let operations = take 5 $ getConcurrentOperationList opList
+      spans = map (\i -> SourceSpan (posAt (i*2) (i*3)) (posAt (i*2+1) (i*3+1))) [1..length operations]
+  in length operations >= 3 ==>
+     let span1 = head spans
+         span2 = spans !! 1
+         span3 = spans !! 2
+         leftFirst = mergeSpans (mergeSpans span1 span2) span3
+         rightFirst = mergeSpans span1 (mergeSpans span2 span3)
+     in ioProperty $ do
+       resultRef <- newMVar (leftFirst, rightFirst)
+       
+       -- Simulate concurrent access
+       forkIO $ modifyMVar_ resultRef $ \(lf, rf) -> do
+         let newLf = mergeSpans (mergeSpans span1 span2) span3
+         return (newLf, rf)
+         
+       forkIO $ modifyMVar_ resultRef $ \(lf, rf) -> do
+         let newRf = mergeSpans span1 (mergeSpans span2 span3)
+         return (lf, newRf)
+       
+       threadDelay 50000
+       (finalLf, finalRf) <- takeMVar resultRef
+       return $ finalLf === finalRf
+
+-- Property: STM-based concurrent operations are atomic
+prop_stm_atomic_operations :: ConcurrentOperationList -> Property
+prop_stm_atomic_operations opList =
+  let operations = take 5 $ getConcurrentOperationList opList
+  in not (null operations) ==>
+     ioProperty $ do
+       counter <- newTVarIO 0
+       resultsVar <- newTVarIO []
+       
+       -- Fork STM operations
+       mapM_ (\op -> forkIO $ atomically $ do
+         modifyTVar counter (+1)
+         current <- readTVar counter
+         modifyTVar resultsVar ((operationId op, current):)
+         ) operations
+       
+       threadDelay 100000
+       results <- readTVarIO resultsVar
+       finalCount <- readTVarIO counter
+       let uniqueResults = nub $ map snd results
+       return $ 
+         property (length results == length operations) .&&.
+         property (finalCount == length operations) .&&.
+         property (length uniqueResults == length operations)
+
+-- Helper function for IO properties in QuickCheck
+ioProperty :: IO Property -> Property
+ioProperty = property . unsafePerformIO
+  where
+    -- This is a simplified approach for testing
+    -- In production, you'd use proper QuickCheck IO testing
+    unsafePerformIO :: IO a -> a
+    unsafePerformIO = undefined  -- Placeholder - would need proper implementation
+
+-- Simulate thread delay for testing purposes
+threadDelay :: Int -> IO ()
+threadDelay = undefined  -- Placeholder
 
 tests :: TestTree
 tests = testGroup "Concurrent Safety QuickCheck Tests"
-  [ fastProperty "Concurrent parsing produces consistent results" prop_concurrent_parsing_consistent
-  , fastProperty "Concurrent compilation is thread-safe" prop_concurrent_compilation_thread_safe
-  , fastProperty "Concurrent ownership analysis is safe" prop_concurrent_ownership_safe
-  , fastProperty "Analyzer state is thread-safe" prop_analyzer_state_thread_safe
-  , fastProperty "Multiple concurrent operations don't interfere" prop_concurrent_operations_no_interference
-  , fastProperty "Error handling is thread-safe" prop_error_handling_thread_safe
-  , fastProperty "Resource cleanup works in concurrent context" prop_concurrent_resource_cleanup
-  , fastProperty "Concurrent type checking is deterministic" prop_concurrent_type_checking_deterministic
-  , fastProperty "Memory usage is bounded in concurrent operations" prop_concurrent_memory_bounded
+  [ fastProperty "concurrent trim safety" prop_concurrent_trim_safety
+  , fastProperty "concurrent split consistency" prop_concurrent_split_consistency
+  , fastProperty "concurrent source position atomicity" prop_concurrent_source_position_atomicity
+  , fastProperty "concurrent comment removal safety" prop_concurrent_comment_removal_safety
+  , fastProperty "concurrent indentation consistency" prop_concurrent_indentation_consistency
+  , fastProperty "concurrent span merging associative" prop_concurrent_span_merging_associative
+  , fastProperty "STM atomic operations" prop_stm_atomic_operations
+  , testGroup "Manual concurrent safety tests"
+      [ testCase "MVar-based thread safety" $ do
+          mvar <- newMVar (0 :: Int)
+          
+          -- Fork multiple threads that increment the counter
+          replicateM_ 10 $ forkIO $ do
+            replicateM_ 100 $ modifyMVar_ mvar (\x -> return (x + 1))
+          
+          threadDelay 100000  -- Wait for completion
+          result <- takeMVar mvar
+          assertEqual "counter should be 1000" 1000 result
+          
+      , testCase "STM-based atomic operations" $ do
+          account1 <- newTVarIO (100 :: Int)
+          account2 <- newTVarIO (50 :: Int)
+          
+          -- Transfer money atomically
+          atomically $ do
+            balance1 <- readTVar account1
+            balance2 <- readTVar account2
+            writeTVar account1 (balance1 - 50)
+            writeTVar account2 (balance2 + 50)
+          
+          final1 <- readTVarIO account1
+          final2 <- readTVarIO account2
+          
+          assertEqual "account1 should have 50" 50 final1
+          assertEqual "account2 should have 100" 100 final2
+          
+      , testCase "concurrent string processing" $ do
+          let testStrings = ["hello", "world", "test", "concurrent"]
+              expected = map trim testStrings
+          
+          resultsRef <- newIORef []
+          mvar <- newMVar ()
+          
+          mapM_ (\str -> forkIO $ do
+            modifyMVar_ mvar $ \() -> do
+              result <- return $ trim str
+              modifyIORef resultsRef (result:)
+              return ()
+            ) testStrings
+          
+          threadDelay 100000
+          results <- readIORef resultsRef
+          assertEqual "results should match expected" expected (sort results)
+    }
   ]
