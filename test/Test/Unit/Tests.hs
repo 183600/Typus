@@ -49,6 +49,16 @@ import qualified Test.Unit.CoreCompilerSpec
 import qualified Test.Unit.NewCoreFunctionalityQuickCheckTests
 
 -- ============================================================================
+-- New Cabal QuickCheck Test Modules (2025) - 7 comprehensive tests
+-- ============================================================================
+import qualified Test.Unit.NewCabalUtilsQuickCheckTestsSpec
+import qualified Test.Unit.NewCabalSourceLocationQuickCheckTestsSpec
+import qualified Test.Unit.NewCabalParserQuickCheckTestsSpec
+import qualified Test.Unit.NewCabalErrorHandlerQuickCheckTestsSpec
+import qualified Test.Unit.NewCabalOwnershipQuickCheckTestsSpec
+import qualified Test.Unit.NewCabalDependenciesQuickCheckTestsSpec
+
+-- ============================================================================
 -- Additional Enhanced QuickCheck Test Modules (10 comprehensive tests)
 -- ============================================================================
 import qualified Test.Unit.EnhancedTextProcessingQuickCheckSpec
@@ -3288,6 +3298,18 @@ tests =
     -- New Comprehensive Typus Test Module (2025)
     -- ============================================================================
     , Test.Unit.NewComprehensiveTypusTestSpec.tests
+
+    -- ============================================================================
+    -- New Cabal QuickCheck Test Modules (2025) - 7 comprehensive tests
+    -- ============================================================================
+    , testGroup "New Cabal QuickCheck Test Modules - Core Functionality Testing"
+        [ Test.Unit.NewCabalUtilsQuickCheckTestsSpec.tests
+        , Test.Unit.NewCabalSourceLocationQuickCheckTestsSpec.tests
+        , Test.Unit.NewCabalParserQuickCheckTestsSpec.tests
+        , Test.Unit.NewCabalErrorHandlerQuickCheckTestsSpec.tests
+        , Test.Unit.NewCabalOwnershipQuickCheckTestsSpec.tests
+        , Test.Unit.NewCabalDependenciesQuickCheckTestsSpec.tests
+        ]
 
     -- ============================================================================
     -- Enhanced Cabal Test Suite - 8 comprehensive QuickCheck tests
