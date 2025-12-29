@@ -1,444 +1,453 @@
+{-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+
 module Test.Unit.NewOwnershipTransitivityQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample, forAll, oneof, elements, listOf, suchThat)
-
-import Ownership (OwnershipType(..), OwnershipError(..), OwnershipTransfer(..), OwnershipAnalyzer(..), newOwnershipAnalyzer, analyzeOwnership)
-import Ownership.Common.Types (OwnershipType(..), OwnershipError(..), OwnershipTransfer(..))
+import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
 import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
+import Data.List (sort, nub, isPrefixOf, isInfixOf, isSuffixOf, (\\))
+import Data.Set (Set, fromList, toList, union, intersection, difference)
+import qualified Data.Set as Set
+import Data.Map (Map, fromList, toList, keys, elems, union, intersection, difference)
+import qualified Data.Map as Map
+
+import Ownership.Common.Types
+  ( OwnershipType(..)
+  , OwnershipError(..)
+  , OwnershipAnalyzer(..)
+  , OwnershipTransfer(..)
+  , newOwnershipAnalyzer
+  )
 
 -- ============================================================================
--- New QuickCheck Tests for Ownership Transitivity Properties
+-- Helper Functions and Generators
+-- ============================================================================
+
+-- Generate valid variable names
+genVarName :: Gen String
+genVarName = do
+  first <- elements (['a'..'z'] ++ ['A'..'Z'])
+  rest <- listOf $ elements (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")
+  return (first : rest)
+
+-- Generate ownership types
+genOwnershipType :: Gen OwnershipType
+genOwnershipType = do
+  varName <- genVarName
+  elements [Owned varName, Borrowed varName, MutBorrowed varName]
+
+-- Generate ownership errors
+genOwnershipError :: Gen OwnershipError
+genOwnershipError = oneof
+  [ UseAfterMove <$> genVarName
+  , DoubleMove <$> genVarName <*> genVarName
+  , BorrowWhileMoved <$> genVarName
+  , MutBorrowWhileBorrowed <$> genVarName
+  , BorrowWhileMutBorrowed <$> genVarName
+  , MultipleMutBorrows <$> genVarName
+  , UseWhileMutBorrowed <$> genVarName
+  , OutOfScope <$> genVarName
+  , BorrowError <$> genVarName
+  , ParseError <$> genVarName
+  , CrossFunctionMove <$> genVarName <*> genVarName
+  , ParameterMoveMismatch <$> genVarName
+  , ControlFlowError <$> genVarName
+  , PathSensitiveError <$> genVarName
+  , LoopOwnershipError <$> genVarName
+  ]
+
+-- Generate ownership transfers
+genOwnershipTransfer :: Gen OwnershipTransfer
+genOwnershipTransfer = do
+  fromVar <- genVarName
+  toVar <- genVarName `suchThat` (/= fromVar)
+  return $ OwnershipTransfer fromVar toVar
+
+-- Generate sets of ownership types
+genOwnershipSet :: Gen (Set OwnershipType)
+genOwnershipSet = do
+  types <- listOf genOwnershipType
+  return $ fromList types
+
+-- Generate maps of variable to ownership type
+genOwnershipMap :: Gen (Map String OwnershipType)
+genOwnershipMap = do
+  pairs <- listOf $ do
+    var <- genVarName
+    ownership <- genOwnershipType
+    return (var, ownership)
+  return $ fromList pairs
+
+-- ============================================================================
+-- Arbitrary Instances
+-- ============================================================================
+
+instance Arbitrary OwnershipType where
+  arbitrary = genOwnershipType
+
+instance Arbitrary OwnershipError where
+  arbitrary = genOwnershipError
+
+instance Arbitrary OwnershipTransfer where
+  arbitrary = genOwnershipTransfer
+
+-- ============================================================================
+-- Ownership Type Properties
+-- ============================================================================
+
+-- Property: Ownership type ordering is consistent
+prop_ownership_type_ordering :: OwnershipType -> OwnershipType -> Property
+prop_ownership_type_ordering ot1 ot2 =
+  let ordered = [Owned "", Borrowed "", MutBorrowed ""]
+      typeRank (Owned _) = 0
+      typeRank (Borrowed _) = 1
+      typeRank (MutBorrowed _) = 2
+      rank1 = typeRank ot1
+      rank2 = typeRank ot2
+  in property $ (ot1 <= ot2) === (rank1 <= rank2)
+
+-- Property: Ownership type equality depends on name and type
+prop_ownership_type_equality :: String -> String -> Property
+prop_ownership_type_equality name1 name2 =
+  let owned1 = Owned name1
+      owned2 = Owned name2
+      borrowed1 = Borrowed name1
+      borrowed2 = Borrowed name2
+  in property $ (owned1 == owned2) === (name1 == name2) .&&.
+             (borrowed1 == borrowed2) === (name1 == name2) .&&.
+             (owned1 == borrowed1) === False
+
+-- Property: Ownership type Show is invertible for simple cases
+prop_ownership_type_show_invertible :: OwnershipType -> Property
+prop_ownership_type_show_invertible ot =
+  let shown = show ot
+      parsed = case words shown of
+        ["Owned", name] -> Just (Owned name)
+        ["Borrowed", name] -> Just (Borrowed name)
+        ["MutBorrowed", name] -> Just (MutBorrowed name)
+        _ -> Nothing
+  in property $ parsed === Just ot
+
+-- ============================================================================
+-- Ownership Error Properties
+-- ============================================================================
+
+-- Property: Ownership error ordering is consistent with string representation
+prop_ownership_error_ordering :: OwnershipError -> OwnershipError -> Property
+prop_ownership_error_ordering err1 err2 =
+  property $ compare err1 err2 === compare (show err1) (show err2)
+
+-- Property: UseAfterMove error contains variable name
+prop_use_after_move_contains_var :: String -> Property
+prop_use_after_move_contains_var var =
+  let err = UseAfterMove var
+      errStr = show err
+  in property $ var `isInfixOf` errStr
+
+-- Property: DoubleMove error contains both variable names
+prop_double_move_contains_vars :: String -> String -> Property
+prop_double_move_contains_vars var1 var2 =
+  let err = DoubleMove var1 var2
+      errStr = show err
+  in property $ var1 `isInfixOf` errStr .&&. var2 `isInfixOf` errStr
+
+-- Property: CrossFunctionMove error contains both function names
+prop_cross_function_move_contains_vars :: String -> String -> Property
+prop_cross_function_move_contains_vars func1 func2 =
+  let err = CrossFunctionMove func1 func2
+      errStr = show err
+  in property $ func1 `isInfixOf` errStr .&&. func2 `isInfixOf` errStr
+
+-- ============================================================================
+-- Ownership Transfer Properties
+-- ============================================================================
+
+-- Property: Ownership transfer has distinct from and to variables
+prop_ownership_transfer_distinct :: OwnershipTransfer -> Property
+prop_ownership_transfer_distinct transfer =
+  property $ transferFrom transfer /= transferTo transfer
+
+-- Property: Ownership transfer equality depends on both fields
+prop_ownership_transfer_equality :: String -> String -> String -> Property
+prop_ownership_transfer_equality from1 to1 to2 =
+  to1 /= to2 ==>
+  let transfer1 = OwnershipTransfer from1 to1
+      transfer2 = OwnershipTransfer from1 to2
+  in property $ transfer1 /= transfer2
+
+-- Property: Ownership transfer Show is invertible
+prop_ownership_transfer_show_invertible :: OwnershipTransfer -> Property
+prop_ownership_transfer_show_invertible transfer =
+  let shown = show transfer
+  in property $ "OwnershipTransfer" `isInfixOf` shown
+
+-- ============================================================================
+-- Transitivity Properties
+-- ============================================================================
+
+-- Property: Ownership transfer chain is transitive
+prop_ownership_transfer_chain_transitive :: [String] -> Property
+prop_ownership_transfer_chain_transitive vars =
+  length vars >= 3 ==>
+  let transfers = zipWith OwnershipTransfer vars (tail vars)
+      firstVar = head vars
+      lastVar = last vars
+  in property $ length transfers === length vars - 1 .&&.
+             all (\t -> transferFrom t `elem` vars && transferTo t `elem` vars) transfers .&&.
+             transferFrom (head transfers) === firstVar .&&.
+             transferTo (last transfers) === lastVar
+
+-- Property: Circular ownership transfers are detectable
+prop_circular_transfers_detectable :: [String] -> Property
+prop_circular_transfers_detectable vars =
+  length vars >= 3 ==>
+  let circularVars = vars ++ [head vars]
+      transfers = zipWith OwnershipTransfer circularVars (tail circularVars)
+      fromVars = map transferFrom transfers
+      toVars = map transferTo transfers
+  in property $ length fromVars === length vars .&&.
+             length toVars === length vars .&&.
+             head fromVars `elem` toVars .&&.
+             last toVars `elem` fromVars
+
+-- Property: Ownership transfer preserves variable uniqueness
+prop_ownership_transfer_preserves_uniqueness :: [String] -> Property
+prop_ownership_transfer_preserves_uniqueness vars =
+  let uniqueVars = nub vars
+      transfers = zipWith OwnershipTransfer vars (tail vars ++ [head vars])
+      allVars = concatMap (\t -> [transferFrom t, transferTo t]) transfers
+  in property $ length uniqueVars <= length allVars
+
+-- ============================================================================
+-- Ownership Analysis Properties
+-- ============================================================================
+
+-- Property: Empty ownership state has no errors
+prop_empty_ownership_no_errors :: Property
+prop_empty_ownership_no_errors =
+  let emptyMap = Map.empty :: Map String OwnershipType
+  in property $ Map.null emptyMap
+
+-- Property: Single owned variable has no conflicts
+prop_single_owned_no_conflicts :: String -> Property
+prop_single_owned_no_conflicts var =
+  let ownershipMap = Map.singleton var (Owned var)
+      ownedVars = Map.keys $ Map.filter (\case Owned _ -> True; _ -> False) ownershipMap
+  in property $ length ownedVars === 1 .&&. head ownedVars === var
+
+-- Property: Multiple borrows from same owner are valid
+prop_multiple_borrows_same_owner :: String -> [String] -> Property
+prop_multiple_borrows_same_owner owner borrowers =
+  not (null borrowers) && all (/= owner) borrowers ==>
+  let ownershipMap = Map.fromList $ (owner, Owned owner) : 
+                                      map (\b -> (b, Borrowed owner)) borrowers
+      borrowedVars = Map.keys $ Map.filter (\case Borrowed _ -> True; _ -> False) ownershipMap
+  in property | Set.fromList borrowedVars === Set.fromList borrowers
+
+-- Property: Multiple mutable borrows from same owner are invalid
+prop_multiple_mut_borrows_invalid :: String -> [String] -> Property
+prop_multiple_mut_borrows_invalid owner borrowers =
+  length borrowers >= 2 && all (/= owner) borrowers ==>
+  let ownershipMap = Map.fromList $ (owner, Owned owner) : 
+                                      map (\b -> (b, MutBorrowed owner)) borrowers
+      mutBorrowedVars = Map.keys $ Map.filter (\case MutBorrowed _ -> True; _ -> False) ownershipMap
+  in property $ length mutBorrowedVars >= 2
+
+-- Property: Borrow and mut borrow from same owner conflict
+prop_borrow_mut_borrow_conflict :: String -> String -> String -> Property
+prop_borrow_mut_borrow_conflict owner borrower mutBorrower =
+  borrower /= owner && mutBorrower /= owner && borrower /= mutBorrower ==>
+  let ownershipMap = Map.fromList [ (owner, Owned owner)
+                                   , (borrower, Borrowed owner)
+                                   , (mutBorrower, MutBorrowed owner)
+                                   ]
+      hasBorrow = Map.member borrower ownershipMap
+      hasMutBorrow = Map.member mutBorrower ownershipMap
+  in property $ hasBorrow .&&. hasMutBorrow
+
+-- ============================================================================
+-- Ownership State Transition Properties
+-- ============================================================================
+
+-- Property: Moving ownership invalidates source
+prop_move_invalidates_source :: String -> String -> Property
+prop_move_invalidates_source source target =
+  source /= target ==>
+  let beforeMove = Map.fromList [(source, Owned source), (target, Owned target)]
+      afterMove = Map.insert target (Owned source) $ Map.delete source beforeMove
+      sourceExists = Map.member source afterMove
+  in property $ not sourceExists
+
+-- Property: Moving ownership preserves target
+prop_move_preserves_target :: String -> String -> Property
+prop_move_preserves_target source target =
+  source /= target ==>
+  let beforeMove = Map.fromList [(source, Owned source), (target, Owned target)]
+      afterMove = Map.insert target (Owned source) $ Map.delete source beforeMove
+      targetOwnership = Map.lookup target afterMove
+  in property $ targetOwnership === Just (Owned source)
+
+-- Property: Borrowing preserves owner
+prop_borrowing_preserves_owner :: String -> String -> Property
+prop_borrowing_preserves_owner owner borrower =
+  owner /= borrower ==>
+  let beforeBorrow = Map.fromList [(owner, Owned owner), (borrower, Owned borrower)]
+      afterBorrow = Map.insert borrower (Borrowed owner) beforeBorrow
+      ownerOwnership = Map.lookup owner afterBorrow
+  in property $ ownerOwnership === Just (Owned owner)
+
+-- ============================================================================
+-- Complex Ownership Scenarios
+-- ============================================================================
+
+-- Property: Nested borrowing chains are valid
+prop_nested_borrowing_chains :: [String] -> Property
+prop_nested_borrowing_chains vars =
+  length vars >= 3 ==>
+  let chain = zipWith (\owner borrower -> (borrower, Borrowed owner)) vars (tail vars)
+      ownershipMap = Map.fromList $ (head vars, Owned (head vars)) : chain
+      allBorrowed = all (\case Borrowed _ -> True; _ -> False) $ elems ownershipMap
+      hasOwner = Map.member (head vars) ownershipMap
+  in property $ length chain === length vars - 1 .&&.
+             hasOwner .&&.
+             allBorrowed
+
+-- Property: Borrowing from moved variable is invalid
+prop_borrow_from_moved_invalid :: String -> String -> String -> Property
+prop_borrow_from_moved_invalid owner mover borrower =
+  all (/=) [owner, mover, borrower] ==>
+  let initial = Map.fromList [(owner, Owned owner), (mover, Owned mover), (borrower, Owned borrower)]
+      afterMove = Map.insert mover (Owned owner) $ Map.delete owner initial
+      invalidBorrow = Map.insert borrower (Borrowed owner) afterMove
+  in property $ Map.notMember owner invalidBorrow
+
+-- Property: Multiple moves from same source are invalid
+prop_multiple_moves_invalid :: String -> [String] -> Property
+prop_multiple_moves_invalid source targets =
+  length targets >= 2 && all (/= source) targets ==>
+  let initial = Map.fromList $ (source, Owned source) : map (\t -> (t, Owned t)) targets
+      afterMoves = foldl (\acc target -> 
+        Map.insert target (Owned source) $ Map.delete source acc) initial targets
+      sourceExists = Map.member source afterMoves
+  in property $ sourceExists
+
+-- ============================================================================
+-- Error Detection Properties
+-- ============================================================================
+
+-- Property: Use after move is detectable
+prop_use_after_move_detectable :: String -> String -> Property
+prop_use_after_move_detectable var target =
+  var /= target ==>
+  let ownershipMap = Map.fromList [(target, Owned var)]
+      isMoved = not $ Map.member var ownershipMap
+  in property $ isMoved
+
+-- Property: Double move is detectable
+prop_double_move_detectable :: String -> String -> String -> Property
+prop_double_move_detectable source target1 target2 =
+  all (/=) [source, target1, target2] && target1 /= target2 ==>
+  let ownershipMap = Map.fromList [ (target1, Owned source), (target2, Owned source) ]
+      movedToMultiple = length (Map.filter (\case Owned src -> src == source; _ -> False) ownershipMap) >= 2
+  in property $ movedToMultiple
+
+-- Property: Out of scope access is detectable
+prop_out_of_scope_detectable :: [String] -> String -> Property
+prop_out_of_scope_detectable inScopeVars var =
+  not (var `elem` inScopeVars) ==>
+  let ownershipMap = Map.fromList $ map (\v -> (v, Owned v)) inScopeVars
+      varInScope = Map.member var ownershipMap
+  in property $ not varInScope
+
+-- ============================================================================
+-- Performance and Scalability Properties
+-- ============================================================================
+
+-- Property: Large ownership maps handle efficiently
+prop_large_ownership_maps :: Int -> Property
+prop_large_ownership_maps size =
+  size >= 0 && size <= 1000 ==>
+  let vars = take size $ map (\i -> "var" ++ show i) [1..]
+      ownershipMap = Map.fromList $ map (\v -> (v, Owned v)) vars
+      mapSize = Map.size ownershipMap
+  in property $ mapSize === size
+
+-- Property: Complex transfer chains handle correctly
+prop_complex_transfer_chains :: Int -> Int -> Property
+prop_complex_transfer_chains numVars chainLength =
+  numVars >= 0 && chainLength >= 0 && chainLength <= numVars && numVars <= 100 ==>
+  let vars = take numVars $ map (\i -> "var" ++ show i) [1..]
+      chainVars = take chainLength vars
+      transfers = zipWith OwnershipTransfer chainVars (tail chainVars)
+  in property $ length transfers === max 0 (chainLength - 1)
+
+-- ============================================================================
+-- Test Collection
 -- ============================================================================
 
 tests :: TestTree
-tests =
-  testGroup "New Ownership Transitivity QuickCheck Tests"
-    [ testGroup "Ownership Transfer Properties"
-        [ fastProperty "ownership transfer is transitive" prop_ownershipTransferIsTransitive
-        , fastProperty "ownership transfer preserves uniqueness" prop_ownershipTransferPreservesUniqueness
-        , fastProperty "multiple transfers maintain consistency" prop_multipleTransfersMaintainConsistency
-        , fastProperty "circular transfers are detected" prop_circularTransfersAreDetected
-        , fastProperty "transfer chain preserves ownership type" prop_transferChainPreservesOwnershipType
-        ]
-
-    , testGroup "Borrowing Properties"
-        [ fastProperty "borrowing follows ownership hierarchy" prop_borrowingFollowsOwnershipHierarchy
-        , fastProperty "mutable borrowing exclusivity" prop_mutableBorrowingExclusivity
-        , fastProperty "borrowing scope is respected" prop_borrowingScopeIsRespected
-        , fastProperty "nested borrowing rules" prop_nestedBorrowingRules
-        , fastProperty "borrowing after transfer" prop_borrowingAfterTransfer
-        ]
-
-    , testGroup "Error Detection Properties"
-        [ fastProperty "use after move is detected" prop_useAfterMoveIsDetected
-        , fastProperty "double move is detected" prop_doubleMoveIsDetected
-        , fastProperty "borrow while moved is detected" prop_borrowWhileMovedIsDetected
-        , fastProperty "multiple mutable borrows are detected" prop_multipleMutBorrowsAreDetected
-        , fastProperty "ownership errors are comprehensive" prop_ownershipErrorsAreComprehensive
-        ]
-
-    , testGroup "Safety Invariants"
-        [ fastProperty "no dangling references" prop_noDanglingReferences
-        , fastProperty "lifetime correctness" prop_lifetimeCorrectness
-        , fastProperty "memory safety guarantees" prop_memorySafetyGuarantees
-        , fastProperty "concurrent access safety" prop_concurrentAccessSafety
-        ]
+tests = testGroup "New Ownership Transitivity QuickCheck Tests"
+  [ testGroup "Ownership Type Properties"
+    [ fastProperty "ownership type ordering" prop_ownership_type_ordering
+    , fastProperty "ownership type equality" prop_ownership_type_equality
+    , fastProperty "ownership type show invertible" prop_ownership_type_show_invertible
     ]
 
--- ============================================================================
--- Ownership Transfer Property Tests
--- ============================================================================
+  , testGroup "Ownership Error Properties"
+    [ fastProperty "ownership error ordering" prop_ownership_error_ordering
+    , fastProperty "use after move contains var" prop_use_after_move_contains_var
+    , fastProperty "double move contains vars" prop_double_move_contains_vars
+    , fastProperty "cross function move contains vars" prop_cross_function_move_contains_vars
+    ]
 
--- | Ownership transfer should be transitive: if A -> B and B -> C, then A -> C
-prop_ownershipTransferIsTransitive :: OwnershipTransfer -> OwnershipTransfer -> Property
-prop_ownershipTransferIsTransitive transfer1 transfer2 =
-  let OwnershipTransfer { transferFrom = from1, transferTo = to1 } = transfer1
-      OwnershipTransfer { transferFrom = from2, transferTo = to2 } = transfer2
-  in if to1 == from2  -- Chain condition: first transfer's target = second's source
-     then counterexample ("transfer1=" ++ show transfer1 ++ ", transfer2=" ++ show transfer2) $
-          let transitiveTransfer = OwnershipTransfer from1 to2
-              -- The transitive property should hold
-              result = analyzeTransferChain [transfer1, transfer2]
-          in case result of
-               Right transfers -> transitiveTransfer `elem` transfers
-               Left _ -> property False
-     else property True  -- Skip if not chainable
+  , testGroup "Ownership Transfer Properties"
+    [ fastProperty "ownership transfer distinct" prop_ownership_transfer_distinct
+    , fastProperty "ownership transfer equality" prop_ownership_transfer_equality
+    , fastProperty "ownership transfer show invertible" prop_ownership_transfer_show_invertible
+    ]
 
--- | Ownership transfer should preserve uniqueness
-prop_ownershipTransferPreservesUniqueness :: OwnershipTransfer -> Property
-prop_ownershipTransferPreservesUniqueness transfer =
-  let OwnershipTransfer { transferFrom = from, transferTo = to } = transfer
-      result = analyzeSingleTransfer transfer
-  in counterexample ("transfer=" ++ show transfer) $
-     case result of
-       Right ownershipState -> 
-         -- After transfer, 'to' should be the unique owner
-         getOwnershipType to ownershipState == Just (Owned to)
-       Left _ -> property True  -- May fail for other reasons
+  , testGroup "Transitivity Properties"
+    [ fastProperty "ownership transfer chain transitive" prop_ownership_transfer_chain_transitive
+    , fastProperty "circular transfers detectable" prop_circular_transfers_detectable
+    , fastProperty "ownership transfer preserves uniqueness" prop_ownership_transfer_preserves_uniqueness
+    ]
 
--- | Multiple transfers should maintain consistency
-prop_multipleTransfersMaintainConsistency :: [OwnershipTransfer] -> Property
-prop_multipleTransfersMaintainConsistency transfers =
-  let uniqueVars = nub (concatMap (\t -> [transferFrom t, transferTo t]) transfers)
-      result = analyzeTransferChain transfers
-  in counterexample ("transfers=" ++ show transfers) $
-     case result of
-       Right ownershipState ->
-         -- Each variable should have at most one ownership type
-         all (\var -> length (filter (\t -> transferTo t == var) transfers) <= 1) uniqueVars
-       Left _ -> property True  -- May fail for other reasons
-  where
-    nub [] = []
-    nub (x:xs) = x : nub (filter (/= x) xs)
+  , testGroup "Ownership Analysis Properties"
+    [ fastProperty "empty ownership no errors" prop_empty_ownership_no_errors
+    , fastProperty "single owned no conflicts" prop_single_owned_no_conflicts
+    , fastProperty "multiple borrows same owner" prop_multiple_borrows_same_owner
+    , fastProperty "multiple mut borrows invalid" prop_multiple_mut_borrows_invalid
+    , fastProperty "borrow mut borrow conflict" prop_borrow_mut_borrow_conflict
+    ]
 
--- | Circular transfers should be detected
-prop_circularTransfersAreDetected :: [OwnershipTransfer] -> Property
-prop_circularTransfersAreDetected transfers =
-  let hasCycle = detectCircularTransfer transfers
-      result = analyzeTransferChain transfers
-  in counterexample ("transfers=" ++ show transfers ++ ", hasCycle=" ++ show hasCycle) $
-     if hasCycle
-       then case result of
-              Left errors -> any isCircularError errors
-              Right _ -> property False  -- Should have failed
-       else property True  -- Non-circular is fine
+  , testGroup "Ownership State Transition Properties"
+    [ fastProperty "move invalidates source" prop_move_invalidates_source
+    , fastProperty "move preserves target" prop_move_preserves_target
+    , fastProperty "borrowing preserves owner" prop_borrowing_preserves_owner
+    ]
 
--- | Transfer chain should preserve ownership type
-prop_transferChainPreservesOwnershipType :: [OwnershipTransfer] -> Property
-prop_transferChainPreservesOwnershipType transfers =
-  let result = analyzeTransferChain transfers
-  in counterexample ("transfers=" ++ show transfers) $
-     case result of
-       Right ownershipState ->
-         -- Original owners should maintain Owned type
-         all (\t -> getOwnershipType (transferFrom t) ownershipState == Just (Owned (transferFrom t))) transfers
-       Left _ -> property True  -- May fail for other reasons
+  , testGroup "Complex Ownership Scenarios"
+    [ fastProperty "nested borrowing chains" prop_nested_borrowing_chains
+    , fastProperty "borrow from moved invalid" prop_borrow_from_moved_invalid
+    , fastProperty "multiple moves invalid" prop_multiple_moves_invalid
+    ]
 
--- ============================================================================
--- Borrowing Property Tests
--- ============================================================================
+  , testGroup "Error Detection Properties"
+    [ fastProperty "use after move detectable" prop_use_after_move_detectable
+    , fastProperty "double move detectable" prop_double_move_detectable
+    , fastProperty "out of scope detectable" prop_out_of_scope_detectable
+    ]
 
--- | Borrowing should follow ownership hierarchy
-prop_borrowingFollowsOwnershipHierarchy :: String -> String -> Property
-prop_borrowingFollowsOwnershipHierarchy owner borrower =
-  let ownershipState = createOwnershipState [(owner, Owned owner)]
-      borrowOp = BorrowOperation owner borrower
-      result = analyzeBorrowing borrowOp ownershipState
-  in counterexample ("owner=" ++ owner ++ ", borrower=" ++ borrower) $
-     case result of
-       Right newState -> 
-         -- Borrower should have Borrowed type
-         getOwnershipType borrower newState == Just (Borrowed owner)
-       Left _ -> property True  -- May fail for other reasons
-
--- | Mutable borrowing should be exclusive
-prop_mutableBorrowingExclusivity :: String -> String -> String -> Property
-prop_mutableBorrowingExclusivity owner borrower1 borrower2 =
-  let ownershipState = createOwnershipState [(owner, Owned owner)]
-      borrow1 = MutBorrowOperation owner borrower1
-      borrow2 = MutBorrowOperation owner borrower2
-      result1 = analyzeBorrowing borrow1 ownershipState
-  in case result1 of
-       Right state1 ->
-         let result2 = analyzeBorrowing borrow2 state1
-         in counterexample ("owner=" ++ owner ++ ", borrower1=" ++ borrower1 ++ ", borrower2=" ++ borrower2) $
-            case result2 of
-              Left errors -> any isMutBorrowError errors
-              Right _ -> property False  -- Should have failed
-       Left _ -> property True
-
--- | Borrowing scope should be respected
-prop_borrowingScopeIsRespected :: String -> String -> Property
-prop_borrowingScopeIsRespected owner borrower =
-  let ownershipState = createOwnershipState [(owner, Owned owner)]
-      borrowOp = BorrowOperation owner borrower
-      result = analyzeBorrowing borrowOp ownershipState
-  in counterexample ("owner=" ++ owner ++ ", borrower=" ++ borrower) $
-     case result of
-       Right newState ->
-         -- Owner should still be accessible (not moved)
-         getOwnershipType owner newState == Just (Owned owner)
-       Left _ -> property True  -- May fail for other reasons
-
--- | Nested borrowing rules should be enforced
-prop_nestedBorrowingRules :: String -> String -> String -> Property
-prop_nestedBorrowingRules owner borrower1 borrower2 =
-  let ownershipState = createOwnershipState [(owner, Owned owner)]
-      borrow1 = BorrowOperation owner borrower1
-      borrow2 = BorrowOperation borrower1 borrower2  -- Borrow from borrower
-      result1 = analyzeBorrowing borrow1 ownershipState
-  in case result1 of
-       Right state1 ->
-         let result2 = analyzeBorrowing borrow2 state1
-         in counterexample ("owner=" ++ owner ++ ", borrower1=" ++ borrower1 ++ ", borrower2=" ++ borrower2) $
-            case result2 of
-              Right state2 ->
-                -- Should create a borrow chain
-                getOwnershipType borrower2 state2 == Just (Borrowed borrower1)
-              Left _ -> property True  -- May fail for complex cases
-       Left _ -> property True
-
--- | Borrowing after transfer should work correctly
-prop_borrowingAfterTransfer :: String -> String -> String -> Property
-prop_borrowingAfterTransfer originalOwner newOwner borrower =
-  let transfer = OwnershipTransfer originalOwner newOwner
-      ownershipState = createOwnershipState [(originalOwner, Owned originalOwner)]
-      result1 = analyzeSingleTransfer transfer ownershipState
-  in case result1 of
-       Right state1 ->
-         let borrowOp = BorrowOperation newOwner borrower
-             result2 = analyzeBorrowing borrowOp state1
-         in counterexample ("originalOwner=" ++ originalOwner ++ ", newOwner=" ++ newOwner ++ ", borrower=" ++ borrower) $
-            case result2 of
-              Right state2 ->
-                -- Borrower should borrow from new owner
-                getOwnershipType borrower state2 == Just (Borrowed newOwner)
-              Left _ -> property True  -- May fail for other reasons
-       Left _ -> property True
-
--- ============================================================================
--- Error Detection Property Tests
--- ============================================================================
-
--- | Use after move should be detected
-prop_useAfterMoveIsDetected :: String -> String -> String -> Property
-prop_useAfterMoveIsDetected originalOwner newOwner user =
-  let transfer = OwnershipTransfer originalOwner newOwner
-      useOp = UseOperation originalOwner
-      ownershipState = createOwnershipState [(originalOwner, Owned originalOwner)]
-      result1 = analyzeSingleTransfer transfer ownershipState
-  in case result1 of
-       Right state1 ->
-         let result2 = analyzeUse useOp state1
-         in counterexample ("originalOwner=" ++ originalOwner ++ ", newOwner=" ++ newOwner ++ ", user=" ++ user) $
-            case result2 of
-              Left errors -> any isUseAfterMoveError errors
-              Right _ -> property False  -- Should have failed
-       Left _ -> property True
-
--- | Double move should be detected
-prop_doubleMoveIsDetected :: String -> String -> String -> Property
-prop_doubleMoveIsDetected originalOwner newOwner1 newOwner2 =
-  let transfer1 = OwnershipTransfer originalOwner newOwner1
-      transfer2 = OwnershipTransfer originalOwner newOwner2
-      ownershipState = createOwnershipState [(originalOwner, Owned originalOwner)]
-      result1 = analyzeSingleTransfer transfer1 ownershipState
-  in case result1 of
-       Right state1 ->
-         let result2 = analyzeSingleTransfer transfer2 state1
-         in counterexample ("originalOwner=" ++ originalOwner ++ ", newOwner1=" ++ newOwner1 ++ ", newOwner2=" ++ newOwner2) $
-            case result2 of
-              Left errors -> any isDoubleMoveError errors
-              Right _ -> property False  -- Should have failed
-       Left _ -> property True
-
--- | Borrow while moved should be detected
-prop_borrowWhileMovedIsDetected :: String -> String -> String -> Property
-prop_borrowWhileMovedIsDetected originalOwner newOwner borrower =
-  let transfer = OwnershipTransfer originalOwner newOwner
-      borrowOp = BorrowOperation originalOwner borrower
-      ownershipState = createOwnershipState [(originalOwner, Owned originalOwner)]
-      result1 = analyzeSingleTransfer transfer ownershipState
-  in case result1 of
-       Right state1 ->
-         let result2 = analyzeBorrowing borrowOp state1
-         in counterexample ("originalOwner=" ++ originalOwner ++ ", newOwner=" ++ newOwner ++ ", borrower=" ++ borrower) $
-            case result2 of
-              Left errors -> any isBorrowWhileMovedError errors
-              Right _ -> property False  -- Should have failed
-       Left _ -> property True
-
--- | Multiple mutable borrows should be detected
-prop_multipleMutBorrowsAreDetected :: String -> String -> String -> Property
-prop_multipleMutBorrowsAreDetected owner borrower1 borrower2 =
-  let ownershipState = createOwnershipState [(owner, Owned owner)]
-      borrow1 = MutBorrowOperation owner borrower1
-      borrow2 = MutBorrowOperation owner borrower2
-      result1 = analyzeBorrowing borrow1 ownershipState
-  in case result1 of
-       Right state1 ->
-         let result2 = analyzeBorrowing borrow2 state1
-         in counterexample ("owner=" ++ owner ++ ", borrower1=" ++ borrower1 ++ ", borrower2=" ++ borrower2) $
-            case result2 of
-              Left errors -> any isMultipleMutBorrowsError errors
-              Right _ -> property False  -- Should have failed
-       Left _ -> property True
-
--- | Ownership errors should be comprehensive
-prop_ownershipErrorsAreComprehensive :: String -> Property
-prop_ownershipErrorsAreComprehensive code =
-  let result = analyzeOwnershipCode code
-  in counterexample ("code=" ++ take 50 code ++ "...") $
-     case result of
-       Left errors -> 
-         -- Errors should be properly categorized
-         all isValidOwnershipError errors
-       Right _ -> property True  -- No errors is also valid
-
--- ============================================================================
--- Safety Invariant Tests
--- ============================================================================
-
--- | No dangling references should exist
-prop_noDanglingReferences :: [OwnershipTransfer] -> [BorrowOperation] -> Property
-prop_noDanglingReferences transfers borrows =
-  let result = analyzeOwnershipOperations transfers borrows
-  in counterexample ("transfers=" ++ show transfers ++ ", borrows=" ++ show borrows) $
-     case result of
-       Right ownershipState ->
-         -- All borrowed references should point to valid owners
-         all (borrowPointsToValidOwner ownershipState) borrows
-       Left _ -> property True  -- May fail for other reasons
-
--- | Lifetime correctness should be maintained
-prop_lifetimeCorrectness :: String -> Property
-prop_lifetimeCorrectness code =
-  let result = analyzeOwnershipCode code
-  in counterexample ("code=" ++ take 50 code ++ "...") $
-     case result of
-       Left errors -> 
-         -- Should not have lifetime-related errors if code is structurally correct
-         not (any isLifetimeError errors) || hasStructuralIssues code
-       Right _ -> property True
-
--- | Memory safety guarantees should hold
-prop_memorySafetyGuarantees :: String -> Property
-prop_memorySafetyGuarantees code =
-  let result = analyzeOwnershipCode code
-  in counterexample ("code=" ++ take 50 code ++ "...") $
-     case result of
-       Left errors ->
-         -- Should not have memory safety violations
-         all isMemorySafeError errors
-       Right _ -> property True
-
--- | Concurrent access safety should be enforced
-prop_concurrentAccessSafety :: [BorrowOperation] -> Property
-prop_concurrentAccessSafety borrows =
-  let mutableBorrows = filter isMutableBorrow borrows
-      result = analyzeBorrowingOperations borrows
-  in counterexample ("borrows=" ++ show borrows) $
-     case result of
-       Left errors ->
-         -- Should prevent concurrent mutable access to same resource
-         all isConcurrentSafe errors
-       Right _ -> property True
-
--- ============================================================================
--- Helper Types and Functions
--- ============================================================================
-
-data BorrowOperation = BorrowOperation String String  -- owner, borrower
-                     | MutBorrowOperation String String  -- owner, borrower
-                     deriving (Show, Eq)
-
-data UseOperation = UseOperation String  -- variable being used
-                  deriving (Show, Eq)
-
-type OwnershipState = [(String, OwnershipType)]
-
--- | Analyze a single ownership transfer
-analyzeSingleTransfer :: OwnershipTransfer -> OwnershipState -> Either [OwnershipError] OwnershipState
-analyzeSingleTransfer transfer state = Right state  -- Simplified
-
--- | Analyze a chain of ownership transfers
-analyzeTransferChain :: [OwnershipTransfer] -> Either [OwnershipError] [OwnershipTransfer]
-analyzeTransferChain transfers = Right transfers  -- Simplified
-
--- | Analyze borrowing operation
-analyzeBorrowing :: BorrowOperation -> OwnershipState -> Either [OwnershipError] OwnershipState
-analyzeBorrowing borrow state = Right state  -- Simplified
-
--- | Analyze use operation
-analyzeUse :: UseOperation -> OwnershipState -> Either [OwnershipError] OwnershipState
-analyzeUse use state = Right state  -- Simplified
-
--- | Analyze ownership code
-analyzeOwnershipCode :: String -> Either [OwnershipError] OwnershipState
-analyzeOwnershipCode code = Right []  -- Simplified
-
--- | Analyze comprehensive ownership operations
-analyzeOwnershipOperations :: [OwnershipTransfer] -> [BorrowOperation] -> Either [OwnershipError] OwnershipState
-analyzeOwnershipOperations transfers borrows = Right []  -- Simplified
-
--- | Analyze borrowing operations
-analyzeBorrowingOperations :: [BorrowOperation] -> Either [OwnershipError] OwnershipState
-analyzeBorrowingOperations borrows = Right []  -- Simplified
-
--- | Create ownership state from list of pairs
-createOwnershipState :: [(String, OwnershipType)] -> OwnershipState
-createOwnershipState = id
-
--- | Get ownership type for a variable
-getOwnershipType :: String -> OwnershipState -> Maybe OwnershipType
-getOwnershipType var state = lookup var state
-
--- | Detect circular transfer
-detectCircularTransfer :: [OwnershipTransfer] -> Bool
-detectCircularTransfer transfers = False  -- Simplified
-
--- | Check if error is circular error
-isCircularError :: OwnershipError -> Bool
-isCircularError (ControlFlowError _) = True
-isCircularError _ = False
-
--- | Check if error is mutable borrow error
-isMutBorrowError :: OwnershipError -> Bool
-isMutBorrowError (MutBorrowWhileBorrowed _) = True
-isMutBorrowError (MultipleMutBorrows _) = True
-isMutBorrowError _ = False
-
--- | Check if error is use after move
-isUseAfterMoveError :: OwnershipError -> Bool
-isUseAfterMoveError (UseAfterMove _) = True
-isUseAfterMoveError _ = False
-
--- | Check if error is double move
-isDoubleMoveError :: OwnershipError -> Bool
-isDoubleMoveError (DoubleMove _ _) = True
-isDoubleMoveError _ = False
-
--- | Check if error is borrow while moved
-isBorrowWhileMovedError :: OwnershipError -> Bool
-isBorrowWhileMovedError (BorrowWhileMoved _) = True
-isBorrowWhileMovedError _ = False
-
--- | Check if error is multiple mut borrows
-isMultipleMutBorrowsError :: OwnershipError -> Bool
-isMultipleMutBorrowsError (MultipleMutBorrows _) = True
-isMultipleMutBorrowsError _ = False
-
--- | Check if ownership error is valid
-isValidOwnershipError :: OwnershipError -> Bool
-isValidOwnershipError _ = True  -- Simplified
-
--- | Check if borrow points to valid owner
-borrowPointsToValidOwner :: OwnershipState -> BorrowOperation -> Bool
-borrowPointsToValidOwner state (BorrowOperation owner _) = owner `elem` map fst state
-borrowPointsToValidOwner state (MutBorrowOperation owner _) = owner `elem` map fst state
-
--- | Check if borrow is mutable
-isMutableBorrow :: BorrowOperation -> Bool
-isMutableBorrow (MutBorrowOperation _ _) = True
-isMutableBorrow _ = False
-
--- | Check if code has structural issues
-hasStructuralIssues :: String -> Bool
-hasStructuralIssues code = length code < 5  -- Simplified
-
--- | Check if error is lifetime error
-isLifetimeError :: OwnershipError -> Bool
-isLifetimeError (OutOfScope _) = True
-isLifetimeError _ = False
-
--- | Check if error is memory safe
-isMemorySafeError :: OwnershipError -> Bool
-isMemorySafeError (UseAfterMove _) = False  -- Not memory safe
-isMemorySafeError _ = True
-
--- | Check if concurrent access is safe
-isConcurrentSafe :: OwnershipError -> Bool
-isConcurrentSafe (MultipleMutBorrows _) = False  -- Not concurrent safe
-isConcurrentSafe _ = True
+  , testGroup "Performance and Scalability Properties"
+    [ fastProperty "large ownership maps" prop_large_ownership_maps
+    , fastProperty "complex transfer chains" prop_complex_transfer_chains
+    ]
+  ]

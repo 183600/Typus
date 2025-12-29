@@ -1526,6 +1526,18 @@ import qualified Test.Unit.IntegrationEnhancedTestSpec
 import qualified Test.Unit.EdgeCaseHandlingTestSpec
 import qualified Test.Unit.PerformanceBoundaryTestSpec
 
+-- New QuickCheck Test Modules (2025) - 10 comprehensive tests
+import qualified Test.Unit.NewSourceLocationMathPropertiesQuickCheckSpec
+import qualified Test.Unit.NewParserCombinatorPropertiesQuickCheckSpec
+import qualified Test.Unit.NewErrorHandlerConsistencyQuickCheckSpec
+import qualified Test.Unit.NewUtilsStringBoundaryQuickCheckSpec
+import qualified Test.Unit.NewOwnershipTransitivityQuickCheckSpec
+import qualified Test.Unit.NewDependenciesCycleDetectionQuickCheckSpec
+import qualified Test.Unit.NewCompilerIRConsistencyQuickCheckSpec
+import qualified Test.Unit.NewSyntaxValidatorValidationQuickCheckSpec
+import qualified Test.Unit.NewGoToolchainIntegrationQuickCheckSpec
+import qualified Test.Unit.NewEndToEndIntegrationQuickCheckSpec
+
 -- | Aggregate all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
 --
@@ -1675,6 +1687,18 @@ tests =
         , Test.Unit.OwnershipTransferQuickCheckSpec.tests
         , Test.Unit.SourceLocationMathQuickCheckSpec.tests
         , Test.Unit.ErrorHandlingQuickCheckSpec.tests
+        ]
+    , testGroup "New Comprehensive QuickCheck Test Modules (2025)"
+        [ Test.Unit.NewSourceLocationMathPropertiesQuickCheckSpec.tests
+        , Test.Unit.NewParserCombinatorPropertiesQuickCheckSpec.tests
+        , Test.Unit.NewErrorHandlerConsistencyQuickCheckSpec.tests
+        , Test.Unit.NewUtilsStringBoundaryQuickCheckSpec.tests
+        , Test.Unit.NewOwnershipTransitivityQuickCheckSpec.tests
+        , Test.Unit.NewDependenciesCycleDetectionQuickCheckSpec.tests
+        , Test.Unit.NewCompilerIRConsistencyQuickCheckSpec.tests
+        , Test.Unit.NewSyntaxValidatorValidationQuickCheckSpec.tests
+        , Test.Unit.NewGoToolchainIntegrationQuickCheckSpec.tests
+        , Test.Unit.NewEndToEndIntegrationQuickCheckSpec.tests
         ]
     , testGroup "New Cabal Test Modules (5 comprehensive tests)"
         [ Test.Unit.SourceLocationCoreQuickCheckSpec.tests

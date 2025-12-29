@@ -881,7 +881,6 @@ test-suite typus-test
         , Test.Unit.CompilerOwnershipQuickCheckSpec
         , Test.Unit.DependenciesErrorHandlingQuickCheckSpec
         , Test.Unit.SyntaxValidatorGoToolchainQuickCheckSpec
-        , Test.Unit.NewEndToEndIntegrationQuickCheckSpec
 
         -- Additional Enhanced QuickCheck Test Modules (10 comprehensive tests)
         , Test.Unit.EnhancedTextProcessingQuickCheckSpec
@@ -1107,6 +1106,18 @@ test-suite typus-test
         , Test.Unit.NewDependenciesQuickCheckPropertySpec
         , Test.Unit.NewIntegrationQuickCheckPropertySpec
         , Test.Unit.NewBoundaryConditionQuickCheckPropertySpec
+        
+        -- New Comprehensive QuickCheck Test Modules (2025) - 10 additional tests
+        , Test.Unit.NewSourceLocationMathPropertiesQuickCheckSpec
+        , Test.Unit.NewParserCombinatorPropertiesQuickCheckSpec
+        , Test.Unit.NewErrorHandlerConsistencyQuickCheckSpec
+        , Test.Unit.NewUtilsStringBoundaryQuickCheckSpec
+        , Test.Unit.NewOwnershipTransitivityQuickCheckSpec
+        , Test.Unit.NewDependenciesCycleDetectionQuickCheckSpec
+        , Test.Unit.NewCompilerIRConsistencyQuickCheckSpec
+        , Test.Unit.NewSyntaxValidatorValidationQuickCheckSpec
+        , Test.Unit.NewGoToolchainIntegrationQuickCheckSpec
+        , Test.Unit.NewEndToEndIntegrationQuickCheckSpec
         
     other-modules:
             Test.Dependencies.Arbitrary,

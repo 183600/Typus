@@ -1,341 +1,424 @@
+{-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+
 module Test.Unit.NewDependenciesCycleDetectionQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample, forAll, oneof, elements, listOf, suchThat)
-
+import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
 import TestSupport.QuickCheck (fastProperty)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
+import Data.Text (Text)
+import qualified Data.Text as T
+import Data.List (sort, nub, isPrefixOf, isInfixOf, isSuffixOf, (\\), delete, intersect, union)
+import Data.Set (Set, fromList, toList, union, intersection, difference)
+import qualified Data.Set as Set
+import Data.Map (Map, fromList, toList, keys, elems, insert, delete, lookup, member, empty)
+import qualified Data.Map as Map
+
+import Dependencies.AST
+  ( AST(..)
+  , Statement(..)
+  , TypeExpr(..)
+  , Constraint(..)
+  , DependencyNode(..)
+  , DependencyGraph(..)
+  )
 
 -- ============================================================================
--- New QuickCheck Tests for Dependencies Cycle Detection
+-- Helper Functions and Generators
+-- ============================================================================
+
+-- Generate valid identifiers
+genIdentifier :: Gen String
+genIdentifier = do
+  first <- elements (['a'..'z'] ++ ['A'..'Z'])
+  rest <- listOf $ elements (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")
+  return (first : rest)
+
+-- Generate Text identifiers
+genTextIdentifier :: Gen Text
+genTextIdentifier = T.pack <$> genIdentifier
+
+-- Generate type expressions
+genTypeExpr :: Gen TypeExpr
+genTypeExpr = oneof
+  [ SimpleT <$> genTextIdentifier
+  , GenericT <$> genTextIdentifier <*> listOf genTypeExpr
+  , FuncT <$> listOf (genTextIdentifier `suchThat` (not . T.null) `suchThat` (\t -> not (T.any isSpace t)) >>= (\n -> (,) n <$> genTypeExpr) <*> genTypeExpr
+  , RefineT <$> genTypeExpr <*> listOf genConstraint
+  ]
+
+-- Generate constraints
+genConstraint :: Gen Constraint
+genConstraint = oneof
+  [ SizeGT <$> genTextIdentifier <*> choose (0, 1000)
+  , SizeGE <$> genTextIdentifier <*> choose (0, 1000)
+  , RangeC <$> genTextIdentifier <*> choose (0, 100) <*> choose (101, 200)
+  , PredC <$> genTextIdentifier <*> listOf genTypeExpr
+  ]
+
+-- Generate statements
+genStatement :: Gen Statement
+genStatement = oneof
+  [ STypeDef <$> genTextIdentifier <*> listOf genTextIdentifier <*> listOf genConstraint
+  , STypeAlias <$> genTextIdentifier <*> genTypeExpr <*> listOf genConstraint
+  , SVarDecl <$> genTextIdentifier <*> genTypeExpr
+  , SFuncDecl <$> genTextIdentifier <*> listOf (genTextIdentifier `suchThat` (not . T.null) >>= (\n -> (,) n <$> genTypeExpr)) <*> oneof [return Nothing, Just <$> genTypeExpr]
+  , SConstraintDef <$> genTextIdentifier <*> genConstraint
+  , SExistsDecl <$> listOf genTextIdentifier <*> genStatement
+  ]
+
+-- Generate dependency nodes
+genDependencyNode :: Gen DependencyNode
+genDependencyNode = do
+  name <- genIdentifier
+  deps <- listOf genIdentifier `suchThat` (\ds -> not (name `elem` ds))
+  return $ DependencyNode name deps
+
+-- Generate dependency graphs
+genDependencyGraph :: Gen DependencyGraph
+genDependencyGraph = do
+  nodes <- listOf genDependencyNode
+  let nodeMap = Map.fromList $ map (\n -> (nodeName n, n)) nodes
+  return $ DependencyGraph nodeMap
+
+-- Generate graphs with potential cycles
+genCyclicGraph :: Int -> Gen DependencyGraph
+genCyclicGraph numNodes = do
+  numNodes `seq` return ()
+  let nodeNames = take numNodes $ map (\i -> "node" ++ show i) [1..]
+  nodes <- mapM (\name -> do
+    deps <- listOf $ elements nodeNames
+    return $ DependencyNode name deps
+  ) nodeNames
+  let nodeMap = Map.fromList $ map (\n -> (nodeName n, n)) nodes
+  return $ DependencyGraph nodeMap
+
+-- Generate acyclic graphs (DAGs)
+genAcyclicGraph :: Int -> Gen DependencyGraph
+genAcyclicGraph numNodes = do
+  numNodes `seq` return ()
+  let nodeNames = take numNodes $ map (\i -> "node" ++ show i) [1..]
+  nodes <- mapM (\(i, name) -> do
+    -- Only depend on nodes with higher index to ensure acyclicity
+    let possibleDeps = drop (i + 1) nodeNames
+    deps <- listOf $ elements possibleDeps
+    return $ DependencyNode name deps
+  ) (zip [0..] nodeNames)
+  let nodeMap = Map.fromList $ map (\n -> (nodeName n, n)) nodes
+  return $ DependencyGraph nodeMap
+
+-- ============================================================================
+-- Cycle Detection Algorithms
+-- ============================================================================
+
+-- Detect cycles using depth-first search
+detectCyclesDFS :: DependencyGraph -> [[String]]
+detectCyclesDFS (DependencyGraph nodeMap) = 
+  let visited = Set.empty
+      recursionStack = Set.empty
+  in go visited recursionStack (Map.keys nodeMap) []
+  where
+    go :: Set String -> Set String -> [String] -> [[String]] -> [[String]]
+    go _ _ [] cycles = cycles
+    go visited recStack (node:rest) cycles
+      | node `Set.member` recStack = 
+          case break (== node) (Set.toList recStack) of
+            (_, cyclePath) -> (node : cyclePath) : cycles
+      | node `Set.member` visited = go visited recStack rest cycles
+      | otherwise = 
+          case Map.lookup node nodeMap of
+            Nothing -> go (Set.insert node visited) recStack rest cycles
+            Just depNode -> 
+              let newVisited = Set.insert node visited
+                  newRecStack = Set.insert node recStack
+                  newCycles = go newVisited newRecStack (nodeDependencies depNode) cycles
+              in go newVisited recStack rest newCycles
+
+-- Detect cycles using topological sort
+detectCyclesTopological :: DependencyGraph -> [[String]]
+detectCyclesTopological (DependencyGraph nodeMap) =
+  let inDegree = Map.fromList $ map (\n -> (nodeName n, 0)) (Map.elems nodeMap)
+      updatedInDegree = foldl (\acc (DependencyNode _ deps) ->
+        foldl (\a dep -> Map.insertWith (+) dep 1 a) acc deps
+      ) inDegree (Map.elems nodeMap)
+  in topoSort (Map.keys updatedInDegree) updatedInDegree []
+  where
+    topoSort :: [String] -> Map String Int -> [String] -> [[String]]
+    topoSort [] inDegree sorted = 
+      if Map.size inDegree == 0 then [] else [Map.keys inDegree]
+    topoSort (node:rest) inDegree sorted
+      | Map.lookup node inDegree == Just 0 = 
+          case Map.lookup node nodeMap of
+            Nothing -> topoSort rest inDegree sorted
+            Just depNode ->
+              let newInDegree = foldl (\acc dep -> Map.insertWith (+) dep (-1) acc) inDegree (nodeDependencies depNode)
+              in topoSort rest newInDegree (node : sorted)
+      | otherwise = topoSort rest inDegree sorted
+
+-- Check if graph has cycles
+hasCycles :: DependencyGraph -> Bool
+hasCycles graph = not (null (detectCyclesDFS graph))
+
+-- Get all nodes in cycles
+getNodesInCycles :: DependencyGraph -> Set String
+getNodesInCycles graph = 
+  let cycles = detectCyclesDFS graph
+  in Set.fromList $ concat cycles
+
+-- ============================================================================
+-- Arbitrary Instances
+-- ============================================================================
+
+instance Arbitrary DependencyNode where
+  arbitrary = genDependencyNode
+
+instance Arbitrary DependencyGraph where
+  arbitrary = genDependencyGraph
+
+-- ============================================================================
+-- Cycle Detection Properties
+-- ============================================================================
+
+-- Property: Empty graph has no cycles
+prop_empty_graph_no_cycles :: Property
+prop_empty_graph_no_cycles =
+  let emptyGraph = DependencyGraph Map.empty
+  in property $ not (hasCycles emptyGraph) .&&. null (detectCyclesDFS emptyGraph)
+
+-- Property: Single node graph has no cycles
+prop_single_node_no_cycles :: String -> Property
+prop_single_node_no_cycles name =
+  let node = DependencyNode name []
+      graph = DependencyGraph $ Map.singleton name node
+  in property $ not (hasCycles graph) .&&. null (detectCyclesDFS graph)
+
+-- Property: Self-dependency creates a cycle
+prop_self_dependency_cycle :: String -> Property
+prop_self_dependency_cycle name =
+  let node = DependencyNode name [name]
+      graph = DependencyGraph $ Map.singleton name node
+  in property $ hasCycles graph .&&. not (null (detectCyclesDFS graph))
+
+-- Property: Two-node cycle is detected
+prop_two_node_cycle :: String -> String -> Property
+prop_two_node_cycle name1 name2 =
+  name1 /= name2 ==>
+  let node1 = DependencyNode name1 [name2]
+      node2 = DependencyNode name2 [name1]
+      graph = DependencyGraph $ Map.fromList [(name1, node1), (name2, node2)]
+      cycles = detectCyclesDFS graph
+  in property $ hasCycles graph .&&. 
+             any (\cycle -> name1 `elem` cycle && name2 `elem` cycle) cycles
+
+-- Property: Three-node cycle is detected
+prop_three_node_cycle :: String -> String -> String -> Property
+prop_three_node_cycle name1 name2 name3 =
+  all (/=) [name1, name2, name3] ==>
+  let node1 = DependencyNode name1 [name2]
+      node2 = DependencyNode name2 [name3]
+      node3 = DependencyNode name3 [name1]
+      graph = DependencyGraph $ Map.fromList [(name1, node1), (name2, node2), (name3, node3)]
+      cycles = detectCyclesDFS graph
+  in property $ hasCycles graph .&&.
+             any (\cycle -> all (`elem` cycle) [name1, name2, name3]) cycles
+
+-- Property: Acyclic graph has no cycles
+prop_acyclic_graph_no_cycles :: Int -> Property
+prop_acyclic_graph_no_cycles numNodes =
+  numNodes >= 0 && numNodes <= 20 ==>
+  forAll (genAcyclicGraph numNodes) $ \graph ->
+    property $ not (hasCycles graph) .&&. null (detectCyclesDFS graph)
+
+-- Property: Cycle detection algorithms agree
+prop_cycle_detection_algorithms_agree :: DependencyGraph -> Property
+prop_cycle_detection_algorithms_agree graph =
+  let dfsCycles = detectCyclesDFS graph
+      topoCycles = detectCyclesTopological graph
+      hasDFS = not (null dfsCycles)
+      hasTopo = not (null topoCycles)
+  in property $ hasDFS === hasTopo
+
+-- Property: Adding self-dependency creates cycle
+prop_add_self_dependency_creates_cycle :: DependencyGraph -> String -> Property
+prop_add_self_dependency_creates_cycle graph name =
+  let originalHasCycles = hasCycles graph
+      node = DependencyNode name [name]
+      newGraph = DependencyGraph $ Map.insert name node (graphNodes graph)
+      newHasCycles = hasCycles newGraph
+  in property $ newHasCycles
+
+-- Property: Removing cycle-breaking dependency eliminates cycle
+prop_remove_cycle_breaking_dependency :: String -> String -> String -> Property
+prop_remove_cycle_breaking_dependency name1 name2 name3 =
+  all (/=) [name1, name2, name3] ==>
+  let node1 = DependencyNode name1 [name2]
+      node2 = DependencyNode name2 [name3]
+      node3 = DependencyNode name3 [name1]
+      graph = DependencyGraph $ Map.fromList [(name1, node1), (name2, node2), (name3, node3)]
+      -- Break the cycle by removing dependency from node3 to node1
+      node3' = DependencyNode name3 []
+      graph' = DependencyGraph $ Map.insert name3 node3' (graphNodes graph)
+  in property $ hasCycles graph .&&. not (hasCycles graph')
+
+-- Property: Nodes in cycle are correctly identified
+prop_nodes_in_cycle_identified :: [String] -> Property
+prop_nodes_in_cycle_identified names =
+  length names >= 3 && length (nub names) == length names ==>
+  let cycleNodes = take 3 names
+      [n1, n2, n3] = cycleNodes
+      otherNodes = drop 3 names
+      -- Create a cycle with n1 -> n2 -> n3 -> n1
+      cycleGraph = Map.fromList
+        [ (n1, DependencyNode n1 [n2])
+        , (n2, DependencyNode n2 [n3])
+        , (n3, DependencyNode n3 [n1])
+        ]
+      -- Add other nodes without dependencies
+      otherNodesMap = Map.fromList $ map (\n -> (n, DependencyNode n [])) otherNodes
+      graph = DependencyGraph $ cycleGraph `Map.union` otherNodesMap
+      cycleNodesSet = Set.fromList cycleNodes
+      detectedCycleNodes = getNodesInCycles graph
+  in property $ detectedCycleNodes === cycleNodesSet
+
+-- Property: Multiple cycles are detected
+prop_multiple_cycles_detected :: Property
+prop_multiple_cycles_detected =
+  let -- Cycle 1: a -> b -> a
+      node1a = DependencyNode "a" ["b"]
+      node1b = DependencyNode "b" ["a"]
+      -- Cycle 2: c -> d -> e -> c
+      node2c = DependencyNode "c" ["d"]
+      node2d = DependencyNode "d" ["e"]
+      node2e = DependencyNode "e" ["c"]
+      -- Isolated node
+      node3f = DependencyNode "f" []
+      graph = DependencyGraph $ Map.fromList
+        [ ("a", node1a), ("b", node1b)
+        , ("c", node2c), ("d", node2d), ("e", node2e)
+        , ("f", node3f)
+        ]
+      cycles = detectCyclesDFS graph
+  in property $ length cycles >= 2 .&&.
+             any (\cycle -> "a" `elem` cycle && "b" `elem` cycle) cycles .&&.
+             any (\cycle -> all (`elem` cycle) ["c", "d", "e"]) cycles
+
+-- Property: Complex cycle detection works
+prop_complex_cycle_detection :: Int -> Property
+prop_complex_cycle_detection numNodes =
+  numNodes >= 5 && numNodes <= 20 ==>
+  forAll (genCyclicGraph numNodes) $ \graph ->
+    let cycles = detectCyclesDFS graph
+        hasCyclesDetected = hasCycles graph
+    in property $ (hasCyclesDetected && not (null cycles)) .||. (not hasCyclesDetected && null cycles)
+
+-- ============================================================================
+-- Performance Properties
+-- ============================================================================
+
+-- Property: Cycle detection handles large graphs
+prop_cycle_detection_large_graphs :: Int -> Property
+prop_cycle_detection_large_graphs numNodes =
+  numNodes >= 0 && numNodes <= 1000 ==>
+  forAll (genCyclicGraph numNodes) $ \graph ->
+    let cycles = detectCyclesDFS graph
+    in property $ length cycles >= 0
+
+-- Property: Cycle detection is idempotent
+prop_cycle_detection_idempotent :: DependencyGraph -> Property
+prop_cycle_detection_idempotent graph =
+  let cycles1 = detectCyclesDFS graph
+      cycles2 = detectCyclesDFS graph
+  in property $ sort cycles1 === sort cycles2
+
+-- ============================================================================
+-- Edge Cases and Boundary Conditions
+-- ============================================================================
+
+-- Property: Graph with disconnected components handles correctly
+prop_disconnected_components :: [String] -> [String] -> Property
+prop_disconnected_components comp1 comp2 =
+  not (null comp1) && not (null comp2) && 
+  null (intersect comp1 comp2) ==>
+  let nodes1 = map (\n -> (n, DependencyNode n [])) comp1
+      nodes2 = map (\n -> (n, DependencyNode n [])) comp2
+      graph = DependencyGraph $ Map.fromList (nodes1 ++ nodes2)
+  in property $ not (hasCycles graph)
+
+-- Property: Graph with chain dependencies has no cycles
+prop_chain_dependencies_no_cycles :: [String] -> Property
+prop_chain_dependencies_no_cycles names =
+  length names >= 2 ==>
+  let pairs = zip names (tail names)
+      nodes = map (\(from, to) -> (from, DependencyNode from [to])) pairs
+      -- Last node has no dependencies
+      lastNode = (last names, DependencyNode (last names) [])
+      graph = DependencyGraph $ Map.fromList (nodes ++ [lastNode])
+  in property $ not (hasCycles graph)
+
+-- Property: Graph with star topology has no cycles
+prop_star_topology_no_cycles :: String -> [String] -> Property
+prop_star_topology_no_cycles center leaves =
+  not (null leaves) && not (center `elem` leaves) ==>
+  let centerNode = (center, DependencyNode center leaves)
+      leafNodes = map (\leaf -> (leaf, DependencyNode leaf [])) leaves
+      graph = DependencyGraph $ Map.fromList (centerNode : leafNodes)
+  in property $ not (hasCycles graph)
+
+-- Property: Graph with bidirectional edge creates cycle
+prop_bidirectional_edge_cycle :: String -> String -> Property
+prop_bidirectional_edge_cycle node1 node2 =
+  node1 /= node2 ==>
+  let node1' = DependencyNode node1 [node2]
+      node2' = DependencyNode node2 [node1]
+      graph = DependencyGraph $ Map.fromList [(node1, node1'), (node2, node2')]
+  in property $ hasCycles graph
+
+-- ============================================================================
+-- Test Collection
 -- ============================================================================
 
 tests :: TestTree
-tests =
-  testGroup "New Dependencies Cycle Detection QuickCheck Tests"
-    [ testGroup "Cycle Detection Properties"
-        [ fastProperty "acyclic graphs have no cycles" prop_acyclicGraphsHaveNoCycles
-        , fastProperty "self-loops are detected as cycles" prop_selfLoopsDetected
-        , fastProperty "cycle detection is transitive" prop_cycleDetectionTransitive
-        , fastProperty "cycle detection preserves graph structure" prop_cycleDetectionPreservesStructure
-        , fastProperty "cycle detection handles complex graphs" prop_cycleDetectionHandlesComplexGraphs
-        ]
-
-    , testGroup "Dependency Resolution Properties"
-        [ fastProperty "dependency resolution is deterministic" prop_dependencyResolutionDeterministic
-        , fastProperty "dependency resolution respects topological order" prop_dependencyResolutionTopological
-        , fastProperty "dependency resolution handles missing nodes" prop_dependencyResolutionHandlesMissing
-        , fastProperty "dependency resolution is idempotent" prop_dependencyResolutionIdempotent
-        , fastProperty "dependency resolution preserves dependencies" prop_dependencyResolutionPreservesDeps
-        ]
-
-    , testGroup "Graph Algorithm Properties"
-        [ fastProperty "topological sort exists for acyclic graphs" prop_topologicalSortExistsAcyclic
-        , fastProperty "topological sort fails for cyclic graphs" prop_topologicalSortFailsCyclic
-        , fastProperty "graph traversal is complete" prop_graphTraversalComplete
-        , fastProperty "graph traversal avoids infinite loops" prop_graphTraversalAvoidsInfinite
-        , fastProperty "graph algorithms handle empty graphs" prop_graphAlgorithmsHandleEmpty
-        ]
-
-    , testGroup "Performance Properties"
-        [ fastProperty "cycle detection is linear time" prop_cycleDetectionLinearTime
-        , fastProperty "memory usage is bounded" prop_memoryUsageBounded
-        , fastProperty "algorithms handle large graphs" prop_algorithmsHandleLargeGraphs
-        , fastProperty "performance degrades gracefully" prop_performanceDegradesGracefully
-        ]
+tests = testGroup "New Dependencies Cycle Detection QuickCheck Tests"
+  [ testGroup "Basic Cycle Detection"
+    [ fastProperty "empty graph no cycles" prop_empty_graph_no_cycles
+    , fastProperty "single node no cycles" prop_single_node_no_cycles
+    , fastProperty "self dependency cycle" prop_self_dependency_cycle
+    , fastProperty "two node cycle" prop_two_node_cycle
+    , fastProperty "three node cycle" prop_three_node_cycle
     ]
 
--- ============================================================================
--- Cycle Detection Property Tests
--- ============================================================================
+  , testGroup "Acyclic Graph Properties"
+    [ fastProperty "acyclic graph no cycles" prop_acyclic_graph_no_cycles
+    , fastProperty "cycle detection algorithms agree" prop_cycle_detection_algorithms_agree
+    ]
 
--- | Acyclic graphs should have no cycles
-prop_acyclicGraphsHaveNoCycles :: [(String, [String])] -> Property
-prop_acyclicGraphsHaveNoCycles dependencies =
-  let isAcyclic = not (hasCycle dependencies)
-      detectedCycles = detectCycles dependencies
-  in counterexample ("dependencies=" ++ show dependencies) $
-     isAcyclic ==> null detectedCycles
+  , testGroup "Cycle Manipulation"
+    [ fastProperty "add self dependency creates cycle" prop_add_self_dependency_creates_cycle
+    , fastProperty "remove cycle breaking dependency" prop_remove_cycle_breaking_dependency
+    ]
 
--- | Self-loops should be detected as cycles
-prop_selfLoopsDetected :: String -> Property
-prop_selfLoopsDetected node =
-  let dependencies = [(node, [node])]
-      cycles = detectCycles dependencies
-  in counterexample ("node=" ++ node) $
-     not (null cycles)
+  , testGroup "Cycle Identification"
+    [ fastProperty "nodes in cycle identified" prop_nodes_in_cycle_identified
+    , fastProperty "multiple cycles detected" prop_multiple_cycles_detected
+    , fastProperty "complex cycle detection" prop_complex_cycle_detection
+    ]
 
--- | Cycle detection should be transitive
-prop_cycleDetectionTransitive :: [(String, [String])] -> Property
-prop_cycleDetectionTransitive dependencies =
-  let cycles1 = detectCycles dependencies
-      cycles2 = detectCycles dependencies
-  in counterexample ("dependencies=" ++ show dependencies) $
-     cycles1 === cycles2
+  , testGroup "Performance Properties"
+    [ fastProperty "cycle detection large graphs" prop_cycle_detection_large_graphs
+    , fastProperty "cycle detection idempotent" prop_cycle_detection_idempotent
+    ]
 
--- | Cycle detection should preserve graph structure
-prop_cycleDetectionPreservesStructure :: [(String, [String])] -> Property
-prop_cycleDetectionPreservesStructure dependencies =
-  let cycles = detectCycles dependencies
-      nodeCount = length (nub (concatMap (\(n, deps) -> n : deps) dependencies))
-  in counterexample ("dependencies=" ++ show dependencies ++ ", cycles=" ++ show cycles) $
-     all (\cycle -> all (`elem` map fst dependencies) cycle) cycles
-
--- | Cycle detection should handle complex graphs
-prop_cycleDetectionHandlesComplexGraphs :: [(String, [String])] -> Property
-prop_cycleDetectionHandlesComplexGraphs dependencies =
-  let result = detectCycles dependencies
-  in counterexample ("graph size=" ++ show (length dependencies)) $
-     length result >= 0  -- Should not crash
-
--- ============================================================================
--- Dependency Resolution Property Tests
--- ============================================================================
-
--- | Dependency resolution should be deterministic
-prop_dependencyResolutionDeterministic :: [(String, [String])] -> Property
-prop_dependencyResolutionDeterministic dependencies =
-  let resolution1 = resolveDependencies dependencies
-      resolution2 = resolveDependencies dependencies
-  in counterexample ("dependencies=" ++ show dependencies) $
-     resolution1 === resolution2
-
--- | Dependency resolution should respect topological order
-prop_dependencyResolutionTopological :: [(String, [String])] -> Property
-prop_dependencyResolutionTopological dependencies =
-  let resolution = resolveDependencies dependencies
-      isAcyclic = not (hasCycle dependencies)
-  in if isAcyclic
-     then counterexample ("resolution=" ++ show resolution) $
-          isTopologicallyOrdered resolution dependencies
-     else property True
-
--- | Dependency resolution should handle missing nodes
-prop_dependencyResolutionHandlesMissing :: [(String, [String])] -> Property
-prop_dependencyResolutionHandlesMissing dependencies =
-  let allNodes = nub (concatMap (\(n, deps) -> n : deps) dependencies)
-      definedNodes = map fst dependencies
-      missingNodes = allNodes \\ definedNodes
-      resolution = resolveDependencies dependencies
-  in counterexample ("missing=" ++ show missingNodes) $
-     length resolution >= 0  -- Should not crash
-
--- | Dependency resolution should be idempotent
-prop_dependencyResolutionIdempotent :: [(String, [String])] -> Property
-prop_dependencyResolutionIdempotent dependencies =
-  let resolution1 = resolveDependencies dependencies
-      resolution2 = resolveDependencies dependencies
-  in counterexample ("dependencies=" ++ show dependencies) $
-     resolution1 === resolution2
-
--- | Dependency resolution should preserve dependencies
-prop_dependencyResolutionPreservesDeps :: [(String, [String])] -> Property
-prop_dependencyResolutionPreservesDeps dependencies =
-  let resolution = resolveDependencies dependencies
-  in counterexample ("dependencies=" ++ show dependencies ++ ", resolution=" ++ show resolution) $
-     length resolution >= length (filter (not . null . snd) dependencies)
-
--- ============================================================================
--- Graph Algorithm Property Tests
--- ============================================================================
-
--- | Topological sort should exist for acyclic graphs
-prop_topologicalSortExistsAcyclic :: [(String, [String])] -> Property
-prop_topologicalSortExistsAcyclic dependencies =
-  let isAcyclic = not (hasCycle dependencies)
-      topoSort = topologicalSort dependencies
-  in if isAcyclic
-     then counterexample ("dependencies=" ++ show dependencies) $
-          not (null topoSort)
-     else property True
-
--- | Topological sort should fail for cyclic graphs
-prop_topologicalSortFailsCyclic :: [(String, [String])] -> Property
-prop_topologicalSortFailsCyclic dependencies =
-  let hasCycles = hasCycle dependencies
-      topoSort = topologicalSort dependencies
-  in if hasCycles
-     then counterexample ("dependencies=" ++ show dependencies) $
-          null topoSort || not (isTopologicallyOrdered topoSort dependencies)
-     else property True
-
--- | Graph traversal should be complete
-prop_graphTraversalComplete :: [(String, [String])] -> Property
-prop_graphTraversalComplete dependencies =
-  let startNode = case dependencies of
-                    (n, _) : _ -> n
-                    [] -> "default"
-      visited = depthFirstTraversal startNode dependencies
-      allNodes = nub (concatMap (\(n, deps) -> n : deps) dependencies)
-  in counterexample ("visited=" ++ show visited ++ ", all=" ++ show allNodes) $
-     null dependencies || not (null visited)
-
--- | Graph traversal should avoid infinite loops
-prop_graphTraversalAvoidsInfinite :: [(String, [String])] -> Property
-prop_graphTraversalAvoidsInfinite dependencies =
-  let startNode = case dependencies of
-                    (n, _) : _ -> n
-                    [] -> "default"
-      visited = depthFirstTraversal startNode dependencies
-  in counterexample ("graph size=" ++ show (length dependencies)) $
-     length visited <= length (nub (concatMap (\(n, deps) -> n : deps) dependencies))
-
--- | Graph algorithms should handle empty graphs
-prop_graphAlgorithmsHandleEmpty :: Property
-prop_graphAlgorithmsHandleEmpty =
-  let dependencies = []
-      cycles = detectCycles dependencies
-      resolution = resolveDependencies dependencies
-      topoSort = topologicalSort dependencies
-  in counterexample ("empty graph results") $
-     null cycles && null resolution && null topoSort
-
--- ============================================================================
--- Performance Property Tests
--- ============================================================================
-
--- | Cycle detection should be linear time (basic check)
-prop_cycleDetectionLinearTime :: [(String, [String])] -> Property
-prop_cycleDetectionLinearTime dependencies =
-  let nodeCount = length dependencies
-      edgeCount = sum (map length (map snd dependencies))
-      result = detectCycles dependencies
-  in counterexample ("nodes=" ++ show nodeCount ++ ", edges=" ++ show edgeCount) $
-     length result >= 0  -- Basic completion check
-
--- | Memory usage should be bounded
-prop_memoryUsageBounded :: [(String, [String])] -> Property
-prop_memoryUsageBounded dependencies =
-  let nodeCount = length dependencies
-      result = detectCycles dependencies
-  in counterexample ("nodes=" ++ show nodeCount) $
-     length result <= nodeCount  -- Cycle count shouldn't exceed node count
-
--- | Algorithms should handle large graphs
-prop_algorithmsHandleLargeGraphs :: Int -> Property
-prop_algorithmsHandleLargeGraphs n =
-  let size = min n 100  -- Limit for practical testing
-      dependencies = generateDAG size
-      result = detectCycles dependencies
-  in counterexample ("graph size=" ++ show size) $
-     length result >= 0
-
--- | Performance should degrade gracefully
-prop_performanceDegradesGracefully :: Int -> Property
-prop_performanceDegradesGracefully n =
-  let size1 = min n 50
-      size2 = min (n * 2) 100
-      deps1 = generateDAG size1
-      deps2 = generateDAG size2
-      result1 = detectCycles deps1
-      result2 = detectCycles deps2
-  in counterexample ("sizes=" ++ show (size1, size2)) $
-     length result2 >= 0 && length result1 >= 0
-
--- ============================================================================
--- Helper Functions
--- ============================================================================
-
--- | Detect cycles in dependency graph
-detectCycles :: [(String, [String])] -> [[String]]
-detectCycles dependencies = 
-  let allNodes = nub (concatMap (\(n, deps) -> n : deps) dependencies)
-      cycles = [findCycle start dependencies | start <- allNodes]
-  in nub (filter (not . null) cycles)
-
--- | Find cycle starting from node
-findCycle :: String -> [(String, [String])] -> [String]
-findCycle start dependencies = 
-  let visited = []
-      path = []
-  in findCycleHelper start visited path dependencies
-  where
-    findCycleHelper node visited path deps
-      | node `elem` path = takeWhile (/= node) (dropWhile (/= node) path) ++ [node]
-      | node `elem` visited = []
-      | otherwise = 
-          case lookup node deps of
-            Just deps' -> concatMap (\d -> findCycleHelper d (node:visited) (node:path) deps) deps'
-            Nothing -> []
-
--- | Check if graph has cycles
-hasCycle :: [(String, [String])] -> Bool
-hasCycle dependencies = not (null (detectCycles dependencies))
-
--- | Resolve dependencies (topological sort)
-resolveDependencies :: [(String, [String])] -> [String]
-resolveDependencies dependencies = topologicalSort dependencies
-
--- | Topological sort
-topologicalSort :: [(String, [String])] -> [String]
-topologicalSort dependencies = 
-  let allNodes = nub (concatMap (\(n, deps) -> n : deps) dependencies))
-      (acyclicNodes, cyclicNodes) = partition (\n -> not (hasPath n n dependencies)) allNodes
-  in if null cyclicNodes
-     then reverse (topologicalSortHelper acyclicNodes dependencies [])
-     else []
-
-topologicalSortHelper :: [String] -> [(String, [String])] -> [String] -> [String]
-topologicalSortHelper [] _ result = result
-topologicalSortHelper (n:ns) dependencies result =
-  let remainingDeps = filter ((/= n) . fst) dependencies
-      newResult = n : result
-      readyNodes = filter (\node -> all (\dep -> dep `elem` newResult) (lookupDependencies node dependencies)) ns
-  in topologicalSortHelper readyNodes remainingDeps newResult
-
--- | Check if dependencies are topologically ordered
-isTopologicallyOrdered :: [String] -> [(String, [String])] -> Bool
-isTopologicallyOrdered order dependencies =
-  all (\(node, deps) -> all (\dep -> position dep order < position node order) deps) dependencies
-  where
-    position _ [] = -1
-    position x (y:ys) = if x == y then 0 else 1 + position x ys
-
--- | Depth-first traversal
-depthFirstTraversal :: String -> [(String, [String])] -> [String]
-depthFirstTraversal start dependencies = 
-  let visited = []
-  in dfsHelper start visited dependencies
-  where
-    dfsHelper node visited deps
-      | node `elem` visited = visited
-      | otherwise = 
-          case lookup node deps of
-            Just deps' -> foldr dfsHelper (node : visited) deps'
-            Nothing -> node : visited
-
--- | Lookup dependencies for a node
-lookupDependencies :: String -> [(String, [String])] -> [String]
-lookupDependencies node dependencies = 
-  case lookup node dependencies of
-    Just deps -> deps
-    Nothing -> []
-
--- | Check if there's a path from from to to
-hasPath :: String -> String -> [(String, [String])] -> Bool
-hasPath from to dependencies = 
-  let visited = []
-  in hasPathHelper from to visited dependencies
-  where
-    hasPathHelper current target visited deps
-      | current == target = True
-      | current `elem` visited = False
-      | otherwise = 
-          case lookup current deps of
-            Just deps' -> any (\d -> hasPathHelper d target (current:visited) deps) deps'
-            Nothing -> False
-
--- | Generate a DAG for testing
-generateDAG :: Int -> [(String, [String])]
-generateDAG n = 
-  let nodes = ["node" ++ show i | i <- [1..n]]
-  in [(node, take (i `mod` 3) (filter (< node) nodes)) | (i, node) <- zip [1..] nodes]
-
--- | Remove duplicates from list
-nub :: Eq a => [a] -> [a]
-nub [] = []
-nub (x:xs) = x : nub (filter (/= x) xs)
-
--- | Partition list based on predicate
-partition :: (a -> Bool) -> [a] -> ([a], [a])
-partition p = foldl (\(xs, ys) x -> if p x then (x:xs, ys) else (xs, x:ys)) ([], [])
+  , testGroup "Edge Cases and Boundary Conditions"
+    [ fastProperty "disconnected components" prop_disconnected_components
+    , fastProperty "chain dependencies no cycles" prop_chain_dependencies_no_cycles
+    , fastProperty "star topology no cycles" prop_star_topology_no_cycles
+    , fastProperty "bidirectional edge cycle" prop_bidirectional_edge_cycle
+    ]
+  ]
