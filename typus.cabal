@@ -1092,6 +1092,16 @@ test-suite typus-test
         , Test.Unit.NewMemorySafetySpec
         , Test.Unit.NewConcurrentSafetySpec
         
+        -- New QuickCheck Test Modules (2025) - 8 comprehensive tests
+        , Test.Unit.NewUtilsQuickCheckPropertySpec
+        , Test.Unit.NewSourceLocationQuickCheckPropertySpec
+        , Test.Unit.NewParserQuickCheckPropertySpec
+        , Test.Unit.NewErrorHandlerQuickCheckPropertySpec
+        , Test.Unit.NewOwnershipQuickCheckPropertySpec
+        , Test.Unit.NewDependenciesQuickCheckPropertySpec
+        , Test.Unit.NewIntegrationQuickCheckPropertySpec
+        , Test.Unit.NewBoundaryConditionQuickCheckPropertySpec
+        
     other-modules:
             Test.Dependencies.Arbitrary,
             Test.Unit.NewCabalQuickCheckTestSuite,

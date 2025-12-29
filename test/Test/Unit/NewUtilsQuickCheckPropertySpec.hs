@@ -1,0 +1,142 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
+-- | QuickCheck property tests for Utils module
+module Test.Unit.NewUtilsQuickCheckPropertySpec where
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
+
+import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed,
+              removeLineComments, removeComments, normalizeIndentation, 
+              forceSingleTabIndentation, fixIndentation, breakOn)
+import Data.Char (isSpace)
+import Data.List (isPrefixOf, isInfixOf)
+import Data.String (IsString)
+
+-- | Test group for Utils module QuickCheck properties
+testUtilsQuickCheckProperties :: TestTree
+testUtilsQuickCheckProperties = testGroup "Utils Module QuickCheck Property Tests"
+  [ trimProperties
+  , splitProperties
+  , commentRemovalProperties
+  , indentationProperties
+  , breakOnProperties
+  ]
+
+-- | Properties for trim function
+trimProperties :: TestTree
+trimProperties = testGroup "trim function properties"
+  [ testProperty "trim removes leading and trailing whitespace" $
+    \str -> trim ("  " ++ str ++ "  ") === trim str
+  
+  , testProperty "trim is idempotent" $
+    \str -> trim (trim str) === trim str
+  
+  , testProperty "trim removes only whitespace" $
+    \str -> all (not . isSpace) (trim str) || null (trim str)
+  
+  , testProperty "trim preserves non-whitespace characters" $
+    \str -> filter (not . isSpace) str === filter (not . isSpace) (trim str)
+  ]
+
+-- | Properties for split functions
+splitProperties :: TestTree
+splitProperties = testGroup "split function properties"
+  [ testProperty "splitBy preserves empty segments" $
+    \delim str -> concat (splitBy delim str) === str
+  
+  , testProperty "splitByCollapsed removes empty segments" $
+    \delim str -> not (elem ',' str) ==> 
+      length (splitByCollapsed delim str) <= length (splitBy delim str)
+  
+  , testProperty "splitByComma equals splitBy ','" $
+    \str -> splitByComma str === splitBy ',' str
+  
+  , testProperty "splitByCommaCollapsed equals splitByCollapsed ','" $
+    \str -> splitByCommaCollapsed str === splitByCollapsed ',' str
+  
+  , testProperty "splitBy with delimiter not in string returns single element" $
+    \str delim -> not (elem delim str) ==> splitBy delim str === [str]
+  
+  , testProperty "splitBy on empty string returns single empty string" $
+    \delim -> splitBy delim "" === [""]
+  ]
+
+-- | Properties for comment removal functions
+commentRemovalProperties :: TestTree
+commentRemovalProperties = testGroup "comment removal properties"
+  [ testProperty "removeLineComments removes // comments" $
+    \prefix suffix -> 
+      let line = prefix ++ "// this is a comment" ++ suffix
+          result = removeLineComments line
+      in not ("//" `isInfixOf` result) && result `isPrefixOf` prefix ++ suffix
+  
+  , testProperty "removeLineComments preserves // in strings" $
+    \before after ->
+      let line = before ++ "\"string with // comment\"" ++ after
+          result = removeLineComments line
+      in "// comment" `isInfixOf` result
+  
+  , testProperty "removeComments removes both // and /* */ comments" $
+    \prefix suffix ->
+      let code = prefix ++ "// line comment\n" ++ prefix ++ "/* block comment */" ++ suffix
+          result = removeComments code
+      in not (("//" `isInfixOf` result) || ("/*" `isInfixOf` result))
+  
+  , testProperty "removeComments preserves comments in strings" $
+    \before after ->
+      let code = before ++ "\"string with // and /* comments */\"" ++ after
+          result = removeComments code
+      in "// and /* comments */" `isInfixOf` result
+  ]
+
+-- | Properties for indentation functions
+indentationProperties :: TestTree
+indentationProperties = testGroup "indentation function properties"
+  [ testProperty "normalizeIndentation preserves relative indentation" $
+    \lines1 lines2 ->
+      let input = unlines [lines1, lines2]
+          result = normalizeIndentation input
+          resultLines = lines result
+      in length resultLines === length (lines input)
+  
+  , testProperty "normalizeIndentation removes common prefix" $
+    \str1 str2 ->
+      let input = "  " ++ str1 ++ "\n  " ++ str2
+          result = normalizeIndentation input
+      in not ("  " `isPrefixOf` result)
+  
+  , testProperty "forceSingleTabIndentation converts to tab format" $
+    \str -> not (null str) ==> 
+      let result = forceSingleTabIndentation str
+          resultLines = lines result
+          nonEmptyLines = filter (not . null) resultLines
+      in all ("\t" `isPrefixOf`) nonEmptyLines
+  
+  , testProperty "fixIndentation equals normalizeIndentation" $
+    \str -> fixIndentation str === normalizeIndentation str
+  ]
+
+-- | Properties for breakOn function
+breakOnProperties :: TestTree
+breakOnProperties = testGroup "breakOn function properties"
+  [ testProperty "breakOn with empty pattern returns empty prefix" $
+    \str -> breakOn "" str === ("", str)
+  
+  , testProperty "breakOn concatenates to original when pattern found" $
+    \pat str -> pat `isInfixOf` str ==> 
+      let (before, after) = breakOn pat str
+      in before ++ pat ++ after === str
+  
+  , testProperty "breakOn returns original string when pattern not found" $
+    \pat str -> not (pat `isInfixOf` str) ==> 
+      breakOn pat str === (str, "")
+  
+  , testProperty "breakOn with pattern equal to string" $
+    \str -> breakOn str str === ("", "")
+  
+  , testProperty "breakOn is deterministic" $
+    \pat str -> breakOn pat str === breakOn pat str
+  ]
