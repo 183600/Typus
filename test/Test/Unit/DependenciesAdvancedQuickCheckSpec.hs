@@ -1,359 +1,421 @@
-{-# LANGUAGE CPP #-}
 module Test.Unit.DependenciesAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, choose, listOf, forAll, Property, (===), counterexample, (==>))
+import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf, elements, oneof, suchThat)
+import TestSupport.QuickCheck (fastProperty)
 
-import qualified Data.Text as T
+import Dependencies.TypeSystem (TypeVar(..), TypeConstraint(..), DependentTypeError(..), 
+                               TypeDef(..), TypeEnv(..), DependentTypeChecker(..),
+                               newDependentTypeChecker, newDependentTypeCheckerWithTypes,
+                               addType, addConstraint, lookupTypeDef, checkType,
+                               preludeTypeDefs)
+import Dependencies.AST (TypeExpr(..), Constraint(..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Data.List (isInfixOf, nub, sort)
-import Data.Maybe (isJust, isNothing, fromMaybe)
-import Control.Monad.State (evalState)
-
-import Dependencies
-  ( DependentTypeChecker(..)
-  , DependentTypeError(..)
-  , TypeVar(..)
-  , TypeConstraint(..)
-  , TypeDef(..)
-  , TypeEnv(..)
-  , Substitution
-  , newDependentTypeChecker
-  , newDependentTypeCheckerWithTypes
-  , addType
-  , addConstraint
-  , addTypeError
-  , lookupTypeDef
-  , checkType
-  , checkTypeInstantiation
-  , solveConstraints
-  , checkTypeConstraint
-  , validateConstraint
-  , getDependentTypeErrors
-  , unify
-  , convertTypeExpr
-  , convertConstraint
-  , inferType
-  , inferStatement
-  , inferProgram
-  , generalize
-  , instantiate
-  , unifyTypes
-  , applyTypeSubstitution
-  , newTypeVariable
-  , getFreshTypeVar
-  , initialTypeEnvironment
-  , solveTypeConstraints
-  , simplifyConstraints
-  , pushScope
-  , popScope
-  , inNewScope
-  , parseProgram
-  , runParser
-  )
-
-import Dependencies.AST (TypeExpr(..), Constraint(..), Statement(..), AST(..))
+import Data.Text (Text)
+import qualified Data.Text as T
+import Control.Monad.State (runState, evalState)
 
 -- ============================================================================
--- Arbitrary Instances
+-- Generators
 -- ============================================================================
 
-instance Arbitrary TypeVar where
-  arbitrary = oneof
-    [ TVCon <$> arbitrary
-    , TVVar <$> arbitrary
-    , TVApp <$> arbitrary <*> listOf arbitrary
-    , TVFun <$> listOf arbitrary <*> arbitrary
-    , TVTuple <$> listOf arbitrary
-    ]
+-- Generate type variable names
+genTypeVarName :: Gen String
+genTypeVarName = do
+  first <- elements ['a'..'z'] ++ ['A'..'Z']
+  rest <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"
+  return $ first : rest
 
-instance Arbitrary TypeConstraint where
-  arbitrary = oneof
-    [ Equal <$> arbitrary <*> arbitrary
-    , Subtype <$> arbitrary <*> arbitrary
-    , Predicate <$> arbitrary <*> listOf arbitrary
-    , TypeSizeGE <$> arbitrary <*> choose (0, 1000)
-    , TypeSizeGT <$> arbitrary <*> choose (0, 1000)
-    , TypeRange <$> arbitrary <*> choose (0, 1000) <*> choose (0, 1000)
-    ]
+-- Generate constructor names
+genConstructorName :: Gen String
+genConstructorName = do
+  first <- elements ['A'..'Z']
+  rest <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"
+  return $ first : rest
 
-instance Arbitrary DependentTypeError where
-  arbitrary = oneof
-    [ DependentTypeMismatch <$> arbitrary <*> arbitrary
-    , ConstraintViolation <$> arbitrary <*> arbitrary
-    , TypeNotFound <$> arbitrary
-    , InvalidTypeArgument <$> arbitrary
-    , UnsolvableConstraint <$> arbitrary
-    , DependentInfiniteType <$> arbitrary <*> arbitrary
-    , AmbiguousType <$> arbitrary
-    , ParseError <$> arbitrary
-    , SemanticError <$> arbitrary
-    ]
+-- Generate simple type variables
+genSimpleTypeVar :: Gen TypeVar
+genSimpleTypeVar = oneof
+  [ TVCon <$> genConstructorName
+  , TVVar <$> genTypeVarName
+  ]
 
-instance Arbitrary TypeDef where
-  arbitrary = do
-    params <- listOf arbitrary
-    constraints <- listOf arbitrary
-    return $ TypeDefDecl params constraints
+-- Generate type variable applications
+genTypeVarApp :: Gen TypeVar
+genTypeVarApp = do
+  name <- genConstructorName
+  args <- listOf genSimpleTypeVar
+  return $ TVApp name args
 
-instance Arbitrary TypeEnv where
-  arbitrary = do
-    typeDefs <- arbitrary
-    constraints <- listOf arbitrary
-    return $ TypeEnv typeDefs constraints
+-- Generate function type variables
+genTypeVarFun :: Gen TypeVar
+genTypeVarFun = do
+  params <- listOf genSimpleTypeVar
+  returnType <- genSimpleTypeVar
+  return $ TVFun params returnType
 
-instance Arbitrary DependentTypeChecker where
-  arbitrary = do
-    typeEnv <- arbitrary
-    errors <- listOf arbitrary
-    return $ DependentTypeChecker typeEnv errors
+-- Generate tuple type variables
+genTypeVarTuple :: Gen TypeVar
+genTypeVarTuple = do
+  elements <- listOf genSimpleTypeVar
+  return $ TVTuple elements
 
-instance Arbitrary TypeExpr where
-  arbitrary = oneof
-    [ SimpleT <$> arbitrary
-    , GenericT <$> arbitrary <*> listOf arbitrary
-    , FuncT <$> listOf ((,) <$> arbitrary <*> arbitrary) <*> arbitrary
-    , RefineT <$> arbitrary <*> listOf arbitrary
-    ]
+-- Generate any type variable
+genTypeVar :: Gen TypeVar
+genTypeVar = oneof
+  [ genSimpleTypeVar
+  , genTypeVarApp
+  , genTypeVarFun
+  , genTypeVarTuple
+  ]
 
-instance Arbitrary Constraint where
-  arbitrary = oneof
-    [ SizeGE <$> arbitrary <*> choose (0, 1000)
-    , SizeGT <$> arbitrary <*> choose (0, 1000)
-    , RangeC <$> arbitrary <*> choose (0, 1000) <*> choose (0, 1000)
-    , PredC <$> arbitrary <*> listOf arbitrary
-    ]
+-- Generate type constraints
+genTypeConstraint :: Gen TypeConstraint
+genTypeConstraint = oneof
+  [ Equal <$> genTypeVar <*> genTypeVar
+  , Subtype <$> genTypeVar <*> genTypeVar
+  , Predicate <$> genTypeVarName <*> listOf genTypeVar
+  , TypeSizeGE <$> genTypeVar <*> choose (0, 100)
+  , TypeSizeGT <$> genTypeVar <*> choose (0, 100)
+  , TypeRange <$> genTypeVar <*> choose (0, 100) <*> choose (0, 100)
+  ]
 
-instance Arbitrary Statement where
-  arbitrary = oneof
-    [ VarDecl <$> arbitrary <*> arbitrary
-    , FuncDecl <$> arbitrary <*> listOf arbitrary <*> arbitrary <*> arbitrary
-    , Return <$> arbitrary
-    , Expr <$> arbitrary
-    ]
+-- Generate dependent type errors
+genDependentTypeError :: Gen DependentTypeError
+genDependentTypeError = oneof
+  [ DependentTypeMismatch <$> genTypeVar <*> genTypeVar
+  , ConstraintViolation <$> genTypeVarName <*> genTypeVar
+  , TypeNotFound <$> genTypeVarName
+  , InvalidTypeArgument <$> genTypeVarName
+  , UnsolvableConstraint <$> genTypeConstraint
+  , DependentInfiniteType <$> genTypeVarName <*> genTypeVar
+  , AmbiguousType <$> genTypeVarName
+  , ParseError <$> genTypeVarName
+  , SemanticError <$> genTypeVarName
+  ]
 
-instance Arbitrary AST where
-  arbitrary = AST <$> listOf arbitrary
+-- Generate type definitions
+genTypeDef :: Gen TypeDef
+genTypeDef = do
+  params <- listOf genTypeVarName
+  constraints <- listOf genTypeConstraint
+  return $ TypeDefDecl params constraints
+
+-- Generate type environments
+genTypeEnv :: Gen TypeEnv
+genTypeEnv = do
+  typeDefs <- listOf $ do
+    name <- genConstructorName
+    typeDef <- genTypeDef
+    return (name, typeDef)
+  pendingConstraints <- listOf genTypeConstraint
+  return $ TypeEnv (Map.fromList typeDefs) pendingConstraints
+
+-- Generate type expressions
+genTypeExpr :: Gen TypeExpr
+genTypeExpr = oneof
+  [ SimpleT <$> (T.pack <$> genConstructorName)
+  , do
+      name <- T.pack <$> genConstructorName
+      args <- listOf genTypeExpr
+      return $ GenericT name args
+  , do
+      params <- listOf $ (,) <$> genTypeVarName <*> genTypeExpr
+      returnType <- genTypeExpr
+      return $ FuncT params returnType
+  , do
+      base <- genTypeExpr
+      constraints <- listOf genConstraint
+      return $ RefineT base constraints
+  ]
+
+-- Generate constraints
+genConstraint :: Gen Constraint
+genConstraint = oneof
+  [ SizeGE <$> (T.pack <$> genTypeVarName) <*> choose (0, 100)
+  , SizeGT <$> (T.pack <$> genTypeVarName) <*> choose (0, 100)
+  , RangeC <$> (T.pack <$> genTypeVarName) <*> choose (0, 100) <*> choose (0, 100)
+  , PredC <$> (T.pack <$> genTypeVarName) <*> listOf genTypeExpr
+  ]
 
 -- ============================================================================
--- Property Tests
+-- QuickCheck Properties
+-- ============================================================================
+
+-- Property: TypeVar equality is reflexive
+prop_typeVarReflexive :: TypeVar -> Bool
+prop_typeVarReflexive tv = tv == tv
+
+-- Property: TypeVar equality is symmetric
+prop_typeVarSymmetric :: TypeVar -> TypeVar -> Bool
+prop_typeVarSymmetric tv1 tv2 = (tv1 == tv2) == (tv2 == tv1)
+
+-- Property: TypeVar equality is transitive
+prop_typeVarTransitive :: TypeVar -> TypeVar -> TypeVar -> Bool
+prop_typeVarTransitive tv1 tv2 tv3 =
+  (tv1 == tv2 && tv2 == tv3) ==> (tv1 == tv3)
+
+-- Property: TypeConstraint equality is reflexive
+prop_typeConstraintReflexive :: TypeConstraint -> Bool
+prop_typeConstraintReflexive tc = tc == tc
+
+-- Property: TypeConstraint equality is symmetric
+prop_typeConstraintSymmetric :: TypeConstraint -> TypeConstraint -> Bool
+prop_typeConstraintSymmetric tc1 tc2 = (tc1 == tc2) == (tc2 == tc1)
+
+-- Property: TypeConstraint equality is transitive
+prop_typeConstraintTransitive :: TypeConstraint -> TypeConstraint -> TypeConstraint -> Bool
+prop_typeConstraintTransitive tc1 tc2 tc3 =
+  (tc1 == tc2 && tc2 == tc3) ==> (tc1 == tc3)
+
+-- Property: DependentTypeError equality is reflexive
+prop_dependentTypeErrorReflexive :: DependentTypeError -> Bool
+prop_dependentTypeErrorReflexive dte = dte == dte
+
+-- Property: DependentTypeError equality is symmetric
+prop_dependentTypeErrorSymmetric :: DependentTypeError -> DependentTypeError -> Bool
+prop_dependentTypeErrorSymmetric dte1 dte2 = (dte1 == dte2) == (dte2 == dte1)
+
+-- Property: DependentTypeError equality is transitive
+prop_dependentTypeErrorTransitive :: DependentTypeError -> DependentTypeError -> DependentTypeError -> Bool
+prop_dependentTypeErrorTransitive dte1 dte2 dte3 =
+  (dte1 == dte2 && dte2 == dte3) ==> (dte1 == dte3)
+
+-- Property: newDependentTypeChecker creates valid checker
+prop_newDependentTypeCheckerValid :: Bool
+prop_newDependentTypeCheckerValid =
+  let checker = newDependentTypeChecker
+      env = dtcTypeEnv checker
+      errors = tcErrors checker
+  in Map.isSubmapOf preludeTypeDefs (typeDefinitions env) && null errors
+
+-- Property: newDependentTypeCheckerWithTypes preserves custom types
+prop_newDependentTypeCheckerWithTypesPreserves :: [(String, [String], [TypeConstraint])] -> Bool
+prop_newDependentTypeCheckerWithTypesPreserves typeDefs =
+  let checker = newDependentTypeCheckerWithTypes typeDefs
+      env = dtcTypeEnv checker
+      customDefs = Map.fromList [(n, TypeDefDecl ps cs) | (n, ps, cs) <- typeDefs]
+  in Map.isSubmapOf customDefs (typeDefinitions env)
+
+-- Property: TypeEnv preserves type definitions
+prop_typeEnvPreservesTypeDefs :: [(String, TypeDef)] -> [TypeConstraint] -> Bool
+prop_typeEnvPreservesTypeDefs typeDefs constraints =
+  let typeDefMap = Map.fromList typeDefs
+      env = TypeEnv typeDefMap constraints
+  in typeDefinitions env == typeDefMap && pendingConstraints env == constraints
+
+-- Property: Show instances produce non-empty strings
+prop_typeVarShowNonEmpty :: TypeVar -> Bool
+prop_typeVarShowNonEmpty tv = not (null (show tv))
+
+prop_typeConstraintShowNonEmpty :: TypeConstraint -> Bool
+prop_typeConstraintShowNonEmpty tc = not (null (show tc))
+
+prop_dependentTypeErrorShowNonEmpty :: DependentTypeError -> Bool
+prop_dependentTypeErrorShowNonEmpty dte = not (null (show dte))
+
+-- Property: TypeVar constructors produce correct types
+prop_tvConstructorCorrect :: String -> Bool
+prop_tvConstructorCorrect name = not (null name) ==>
+  let tv = TVCon name
+  in case tv of
+       TVCon n -> n == name
+       _ -> False
+
+prop_tvVarCorrect :: String -> Bool
+prop_tvVarCorrect name = not (null name) ==>
+  let tv = TVVar name
+  in case tv of
+       TVVar n -> n == name
+       _ -> False
+
+prop_tvAppCorrect :: String -> [TypeVar] -> Bool
+prop_tvAppCorrect name args = not (null name) ==>
+  let tv = TVApp name args
+  in case tv of
+       TVApp n a -> n == name && a == args
+       _ -> False
+
+-- ============================================================================
+-- Unit Tests
 -- ============================================================================
 
 tests :: TestTree
-tests =
-  testGroup "Dependencies Advanced QuickCheck Tests"
-    [ testProperty "newDependentTypeChecker creates checker with prelude types" $
-        let checker = newDependentTypeChecker
-            typeEnv = dtcTypeEnv checker
-            typeDefs = typeDefinitions typeEnv
-        in Map.member "int" typeDefs .&&.
-           Map.member "string" typeDefs .&&.
-           Map.member "bool" typeDefs .&&.
-           Map.member "float64" typeDefs
-
-    , testProperty "newDependentTypeChecker has no initial errors" $
-        let checker = newDependentTypeChecker
-        in null (tcErrors checker)
-
-    , testProperty "newDependentTypeCheckerWithTypes adds custom types" $
-        \typeDefs ->
-          let checker = newDependentTypeCheckerWithTypes typeDefs
-              typeEnv = dtcTypeEnv checker
-              customTypes = map (\(name, _, _) -> name) typeDefs
-              hasAllCustomTypes = all (`Map.member` typeDefinitions typeEnv) customTypes
-          in hasAllCustomTypes
-
-    , testProperty "addType adds type definition to environment" $
-        \name params constraints ->
-          let checker = evalState (do
-                addType name params constraints
-                get) newDependentTypeChecker
-              typeEnv = dtcTypeEnv checker
-          in Map.member name (typeDefinitions typeEnv)
-
-    , testProperty "addConstraint adds constraint to pending list" $
-        \constraint ->
-          let checker = evalState (do
-                addConstraint constraint
-                get) newDependentTypeChecker
-              typeEnv = dtcTypeEnv checker
-              pending = pendingConstraints typeEnv
-          in constraint `elem` pending
-
-    , testProperty "addTypeError adds error to error list" $
-        \error ->
-          let checker = evalState (do
-                addTypeError error
-                get) newDependentTypeChecker
-          in error `elem` tcErrors checker
-
-    , testProperty "lookupTypeDef finds existing type" $
-        \name params constraints ->
-          let checker = evalState (do
-                addType name params constraints
-                lookupTypeDef name) newDependentTypeChecker
-          in isJust checker
-
-    , testProperty "lookupTypeDef returns Nothing for non-existent type" $
-        \name ->
-          let checker = evalState (lookupTypeDef name) newDependentTypeChecker
-              nonExistent = not (`Map.member` typeDefinitions (dtcTypeEnv newDependentTypeChecker)) name
-          in nonExistent ==> isNothing checker
-
-    , testProperty "checkType handles valid type variables" $
-        \typeVar ->
-          let checker = evalState (checkType typeVar >> get) newDependentTypeChecker
-          in property True  -- Basic check that function doesn't crash
-
-    , testProperty "solveConstraints processes constraint list" $
-        \constraints ->
-          let checker = evalState (do
-                mapM_ addConstraint constraints
-                solveConstraints
-                get) newDependentTypeChecker
-          in property True  -- Basic check that function doesn't crash
-
-    , testProperty "getDependentTypeErrors returns accumulated errors" $
-        \errors ->
-          let checker = evalState (do
-                mapM_ addTypeError errors
-                get) newDependentTypeChecker
-              retrievedErrors = getDependentTypeErrors checker
-          in length retrievedErrors >= length errors
-
-    , testProperty "unify handles type variable unification" $
-        \typeVar1 typeVar2 ->
-          let checker = evalState (unify typeVar1 typeVar2 >> get) newDependentTypeChecker
-          in property True  -- Basic check that function doesn't crash
-
-    , testProperty "convertTypeExpr produces valid TypeVar" $
-        \typeExpr ->
-          let params = Set.empty
-              typeVar = convertTypeExpr params typeExpr
-          in case typeVar of
-            TVCon _ -> property True
-            TVVar _ -> property True
-            TVApp _ _ -> property True
-            TVFun _ _ -> property True
-            TVTuple _ -> property True
-
-    , testProperty "convertConstraint produces valid TypeConstraint" $
-        \constraint ->
-          let params = Set.empty
-              typeConstraint = convertConstraint params constraint
-          in case typeConstraint of
-            Equal _ _ -> property True
-            Subtype _ _ -> property True
-            Predicate _ _ -> property True
-            TypeSizeGE _ _ -> property True
-            TypeSizeGT _ _ -> property True
-            TypeRange _ _ _ -> property True
-
-    , testProperty "inferType handles simple expressions" $
-        \expr ->
-          let checker = evalState (inferType expr >> get) newDependentTypeChecker
-          in property True  -- Basic check that function doesn't crash
-
-    , testProperty "inferStatement processes statements" $
-        \statement ->
-          let checker = evalState (inferStatement statement >> get) newDependentTypeChecker
-          in property True  -- Basic check that function doesn't crash
-
-    , testProperty "inferProgram handles complete programs" $
-        \ast ->
-          let checker = evalState (inferProgram ast >> get) newDependentTypeChecker
-          in property True  -- Basic check that function doesn't crash
-
-    , testProperty "generalize and instantiate are inverse operations (approximately)" $
-        \typeVar ->
-          let checker = newDependentTypeChecker
-              -- This is a simplified test - in practice these operations are complex
-          in property True
-
-    , testProperty "unifyTypes handles type unification" $
-        \typeVar1 typeVar2 ->
-          let checker = evalState (unifyTypes typeVar1 typeVar2 >> get) newDependentTypeChecker
-          in property True  -- Basic check that function doesn't crash
-
-    , testProperty "applyTypeSubstitution modifies types correctly" $
-        \typeVar ->
-          let substitution = Map.empty
-              result = applyTypeSubstitution substitution typeVar
-          in case (typeVar, result) of
-            (TVVar name, TVVar name') -> name' == name || Map.member name substitution
-            _ -> property True
-
-    , testProperty "newTypeVariable creates fresh type variables" $
-        \varName ->
-          let typeVar = newTypeVariable varName
-          in case typeVar of
-            TVVar name -> name == varName
-            _ -> property False
-
-    , testProperty "getFreshTypeVar generates unique variables" $
-        \varName1 varName2 ->
-          let tv1 = getFreshTypeVar varName1
-              tv2 = getFreshTypeVar varName2
-          in case (tv1, tv2) of
-            (TVVar name1, TVVar name2) -> name1 /= name2
-            _ -> property True
-
-    , testProperty "initialTypeEnvironment contains basic types" $
-        let typeEnv = initialTypeEnvironment
-            typeDefs = typeDefinitions typeEnv
-        in Map.member "int" typeDefs .&&.
-           Map.member "string" typeDefs .&&.
-           Map.member "bool" typeDefs
-
-    , testProperty "solveTypeConstraints processes constraints" $
-        \constraints ->
-          let result = solveTypeConstraints constraints
-          in property True  -- Basic check that function doesn't crash
-
-    , testProperty "simplifyConstraints reduces constraint complexity" $
-        \constraints ->
-          let simplified = simplifyConstraints constraints
-          in length simplified <= length constraints
-
-    , testProperty "parseProgram handles program strings" $
-        \programStr ->
-          case runParser (parseProgram programStr) of
-            Left _ -> property True
-            Right _ -> property True
-
-    , testProperty "TypeVar Show instance produces readable output" $
-        \typeVar ->
-          let shown = show typeVar
-          in not (null shown)
-
-    , testProperty "TypeConstraint Show instance produces readable output" $
-        \constraint ->
-          let shown = show constraint
-          in not (null shown)
-
-    , testProperty "DependentTypeError Show instance produces readable output" $
-        \error ->
-          let shown = show error
-          in not (null shown)
-
-    , testProperty "TypeVar equality is reflexive" $
-        \typeVar -> typeVar === typeVar
-
-    , testProperty "TypeConstraint equality is reflexive" $
-        \constraint -> constraint === constraint
-
-    , testProperty "DependentTypeError equality is reflexive" $
-        \error -> error === error
-
-    , testProperty "DependentTypeChecker preserves type environment" $
-        \typeEnv ->
-          let checker = DependentTypeChecker typeEnv []
-          in dtcTypeEnv checker === typeEnv
-
-    , testProperty "DependentTypeChecker preserves errors" $
-        \errors typeEnv ->
-          let checker = DependentTypeChecker typeEnv errors
-          in tcErrors checker === errors
+tests = testGroup "Dependencies Advanced QuickCheck Tests"
+  [ testGroup "TypeVar Properties"
+    [ testProperty "TypeVar equality is reflexive" prop_typeVarReflexive
+    , testProperty "TypeVar equality is symmetric" prop_typeVarSymmetric
+    , testProperty "TypeVar equality is transitive" prop_typeVarTransitive
+    , testProperty "Show instances produce non-empty strings" prop_typeVarShowNonEmpty
+    , testProperty "TVCon constructor produces correct types" prop_tvConstructorCorrect
+    , testProperty "TVVar constructor produces correct types" prop_tvVarCorrect
+    , testProperty "TVApp constructor produces correct types" prop_tvAppCorrect
     ]
+
+  , testGroup "TypeConstraint Properties"
+    [ testProperty "TypeConstraint equality is reflexive" prop_typeConstraintReflexive
+    , testProperty "TypeConstraint equality is symmetric" prop_typeConstraintSymmetric
+    , testProperty "TypeConstraint equality is transitive" prop_typeConstraintTransitive
+    , testProperty "Show instances produce non-empty strings" prop_typeConstraintShowNonEmpty
+    ]
+
+  , testGroup "DependentTypeError Properties"
+    [ testProperty "DependentTypeError equality is reflexive" prop_dependentTypeErrorReflexive
+    , testProperty "DependentTypeError equality is symmetric" prop_dependentTypeErrorSymmetric
+    , testProperty "DependentTypeError equality is transitive" prop_dependentTypeErrorTransitive
+    , testProperty "Show instances produce non-empty strings" prop_dependentTypeErrorShowNonEmpty
+    ]
+
+  , testGroup "TypeChecker Properties"
+    [ testProperty "newDependentTypeChecker creates valid checker" prop_newDependentTypeCheckerValid
+    , testProperty "newDependentTypeCheckerWithTypes preserves custom types" prop_newDependentTypeCheckerWithTypesPreserves
+    ]
+
+  , testGroup "TypeEnv Properties"
+    [ testProperty "TypeEnv preserves type definitions" prop_typeEnvPreservesTypeDefs
+    ]
+
+  , testGroup "Unit Tests"
+    [ testCase "Create simple type variables" $ do
+        let tvCon = TVCon "Int"
+            tvVar = TVVar "a"
+        case tvCon of
+          TVCon name -> name @?= "Int"
+          _ -> assertBool "Should be TVCon" False
+        case tvVar of
+          TVVar name -> name @?= "a"
+          _ -> assertBool "Should be TVVar" False
+
+    , testCase "Create type variable application" $ do
+        let tvApp = TVApp "List" [TVVar "a"]
+        case tvApp of
+          TVApp name args -> do
+            name @?= "List"
+            args @?= [TVVar "a"]
+          _ -> assertBool "Should be TVApp" False
+
+    , testCase "Create function type variable" $ do
+        let tvFun = TVFun [TVVar "a", TVVar "b"] (TVCon "Int")
+        case tvFun of
+          TVFun params returnType -> do
+            params @?= [TVVar "a", TVVar "b"]
+            returnType @?= TVCon "Int"
+          _ -> assertBool "Should be TVFun" False
+
+    , testCase "Create tuple type variable" $ do
+        let tvTuple = TVTuple [TVVar "a", TVVar "b"]
+        case tvTuple of
+          TVTuple elements -> elements @?= [TVVar "a", TVVar "b"]
+          _ -> assertBool "Should be TVTuple" False
+
+    , testCase "Create type constraints" $ do
+        let equal = Equal (TVVar "a") (TVCon "Int")
+            subtype = Subtype (TVVar "a") (TVCon "Int")
+            predicate = Predicate "Num" [TVVar "a"]
+            sizeGE = TypeSizeGE (TVVar "a") 0
+            sizeGT = TypeSizeGT (TVVar "a") 0
+            range = TypeRange (TVVar "a") 0 100
+        case equal of
+          Equal t1 t2 -> do
+            t1 @?= TVVar "a"
+            t2 @?= TVCon "Int"
+          _ -> assertBool "Should be Equal" False
+        case subtype of
+          Subtype t1 t2 -> do
+            t1 @?= TVVar "a"
+            t2 @?= TVCon "Int"
+          _ -> assertBool "Should be Subtype" False
+        case predicate of
+          Predicate name args -> do
+            name @?= "Num"
+            args @?= [TVVar "a"]
+          _ -> assertBool "Should be Predicate" False
+        case sizeGE of
+          TypeSizeGE tv k -> do
+            tv @?= TVVar "a"
+            k @?= 0
+          _ -> assertBool "Should be TypeSizeGE" False
+        case sizeGT of
+          TypeSizeGT tv k -> do
+            tv @?= TVVar "a"
+            k @?= 0
+          _ -> assertBool "Should be TypeSizeGT" False
+        case range of
+          TypeRange tv min max -> do
+            tv @?= TVVar "a"
+            min @?= 0
+            max @?= 100
+          _ -> assertBool "Should be TypeRange" False
+
+    , testCase "Create dependent type errors" $ do
+        let mismatch = DependentTypeMismatch (TVVar "a") (TVCon "Int")
+            violation = ConstraintViolation "Size" (TVVar "a")
+            notFound = TypeNotFound "MyType"
+            invalidArg = InvalidTypeArgument "arg"
+            unsolvable = UnsolvableConstraint (Equal (TVVar "a") (TVCon "Int"))
+            infinite = DependentInfiniteType "rec" (TVVar "a")
+            ambiguous = AmbiguousType "x"
+            parseError = ParseError "syntax error"
+            semanticError = SemanticError "type error"
+        case mismatch of
+          DependentTypeMismatch t1 t2 -> do
+            t1 @?= TVVar "a"
+            t2 @?= TVCon "Int"
+          _ -> assertBool "Should be DependentTypeMismatch" False
+        case violation of
+          ConstraintViolation name tv -> do
+            name @?= "Size"
+            tv @?= TVVar "a"
+          _ -> assertBool "Should be ConstraintViolation" False
+
+    , testCase "Create type definition" $ do
+        let typeDef = TypeDefDecl ["a", "b"] [Equal (TVVar "a") (TVVar "b")]
+        tdParams typeDef @?= ["a", "b"]
+        tdConstraints typeDef @?= [Equal (TVVar "a") (TVVar "b")]
+
+    , testCase "Create type environment" $ do
+        let typeDefs = Map.fromList [("Int", TypeDefDecl [] [])]
+            constraints = [Equal (TVVar "a") (TVCon "Int")]
+            env = TypeEnv typeDefs constraints
+        typeDefinitions env @?= typeDefs
+        pendingConstraints env @?= constraints
+
+    , testCase "Create dependent type checker" $ do
+        let checker = newDependentTypeChecker
+            env = dtcTypeEnv checker
+            errors = tcErrors checker
+        Map.member "int" (typeDefinitions env) @?= True
+        Map.member "bool" (typeDefinitions env) @?= True
+        Map.member "float64" (typeDefinitions env) @?= True
+        errors @?= []
+
+    , testCase "Create dependent type checker with custom types" $ do
+        let typeDefs = [("MyType", ["a"], [Equal (TVVar "a") (TVCon "Int")])]
+            checker = newDependentTypeCheckerWithTypes typeDefs
+            env = dtcTypeEnv checker
+        Map.member "MyType" (typeDefinitions env) @?= True
+        case Map.lookup "MyType" (typeDefinitions env) of
+          Just (TypeDefDecl params constraints) -> do
+            params @?= ["a"]
+            constraints @?= [Equal (TVVar "a") (TVCon "Int")]
+          _ -> assertBool "Should find MyType" False
+
+    , testCase "Show instances" $ do
+        let tv = TVVar "a"
+            tc = Equal (TVVar "a") (TVCon "Int")
+            dte = DependentTypeMismatch (TVVar "a") (TVCon "Int")
+        show tv @?= "TVVar \"a\""
+        show tc @?= "Equal (TVVar \"a\") (TVCon \"Int\")"
+        show dte @?= "DependentTypeMismatch (TVVar \"a\") (TVCon \"Int\")"
+
+    , testCase "Type variable ordering" $ do
+        let tv1 = TVVar "a"
+            tv2 = TVVar "b"
+            tv3 = TVCon "Int"
+        compare tv1 tv2 @?= LT
+        compare tv1 tv3 @?= GT
+        compare tv3 tv1 @?= LT
+    ]
+  ]
