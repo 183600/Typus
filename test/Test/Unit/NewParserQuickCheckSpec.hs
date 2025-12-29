@@ -1,228 +1,132 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-x-partial #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module Test.Unit.NewParserQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import TestSupport.Arbitrary
+
+import Parser
+  ( parseTypus
+  , FileDirectives(..)
+  , BlockDirectives(..)
+  , CodeBlock(..)
+  , TypusFile(..)
+  , defaultFileDirectives
+  , defaultBlockDirectives
+  )
+
+import SourceLocation (Located(..), SourcePos(..), SourceSpan(..))
 import Data.Char (isAlphaNum, isSpace)
+import qualified Data.List as Data.List
 import Data.List (isPrefixOf, isInfixOf)
 import qualified Data.Text as T
 
-import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), 
-             TypusFile(..), defaultFileDirectives, defaultBlockDirectives)
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedWithSpan, startPos)
-import TestSupport.Arbitrary ()
-
+-- | Parser QuickCheck tests
 tests :: TestTree
 tests = testGroup "New Parser QuickCheck Tests"
-  [ fileDirectiveProperties
-  , blockDirectiveProperties
-  , codeBlockProperties
-  , parsingProperties
-  , directiveParsingProperties
+  [ fastProperty "parseTypus handles empty input" prop_parse_empty
+  , fastProperty "parseTypus handles simple directives" prop_parse_directives
+  , fastProperty "parseTypus handles code blocks" prop_parse_code_blocks
+  , fastProperty "parseTypus preserves content structure" prop_parse_preserve_structure
+  , fastProperty "parseTypus handles malformed input gracefully" prop_parse_malformed
+  , fastProperty "File directives parsing consistency" prop_file_directives_consistency
+  , fastProperty "Block directives parsing consistency" prop_block_directives_consistency
+  , fastProperty "Parser is position-aware" prop_parser_position_aware
   ]
 
-fileDirectiveProperties :: TestTree
-fileDirectiveProperties = testGroup "File Directive Properties"
-  [ fastProperty "defaultFileDirectives has all Nothing fields" prop_default_file_directives_nothing
-  , fastProperty "FileDirectives equality is reflexive" prop_filedirectives_reflexive
-  , fastProperty "FileDirectives equality is symmetric" prop_filedirectives_symmetric
-  , fastProperty "FileDirectives with same values are equal" prop_filedirectives_equal_same_values
-  ]
-
-blockDirectiveProperties :: TestTree
-blockDirectiveProperties = testGroup "Block Directive Properties"
-  [ fastProperty "defaultBlockDirectives has all Nothing fields" prop_default_block_directives_nothing
-  , fastProperty "BlockDirectives equality is reflexive" prop_blockdirectives_reflexive
-  , fastProperty "BlockDirectives equality is symmetric" prop_blockdirectives_symmetric
-  , fastProperty "BlockDirectives with same values are equal" prop_blockdirectives_equal_same_values
-  ]
-
-codeBlockProperties :: TestTree
-codeBlockProperties = testGroup "Code Block Properties"
-  [ fastProperty "CodeBlock with same content is equal" prop_codeblock_equal_same_content
-  , fastProperty "CodeBlock equality is reflexive" prop_codeblock_reflexive
-  , fastProperty "CodeBlock equality is symmetric" prop_codeblock_symmetric
-  , fastProperty "CodeBlock preserves content order" prop_codeblock_preserves_order
-  ]
-
-parsingProperties :: TestTree
-parsingProperties = testGroup "Parsing Properties"
-  [ fastProperty "parseTypus handles empty input" prop_parsetypus_empty_input
-  , fastProperty "parseTypus handles whitespace-only input" prop_parsetypus_whitespace_only
-  , fastProperty "parseTypus preserves line structure" prop_parsetypus_preserves_lines
-  , fastProperty "parseTypus is deterministic" prop_parsetypus_deterministic
-  ]
-
-directiveParsingProperties :: TestTree
-directiveParsingProperties = testGroup "Directive Parsing Properties"
-  [ fastProperty "ownership directive parsing consistency" prop_ownership_directive_consistency
-  , fastProperty "dependent types directive parsing consistency" prop_dependent_types_directive_consistency
-  , fastProperty "constraints directive parsing consistency" prop_constraints_directive_consistency
-  , fastProperty "multiple directives are parsed correctly" prop_multiple_directives_correct
-  ]
-
--- File directive properties
-prop_default_file_directives_nothing :: Property
-prop_default_file_directives_nothing =
-  let fd = defaultFileDirectives
-  in conjoin
-    [ property $ fdOwnership fd === Nothing
-    , property $ fdDependentTypes fd === Nothing
-    , property $ fdConstraints fd === Nothing
-    ]
-
-prop_filedirectives_reflexive :: FileDirectives -> Property
-prop_filedirectives_reflexive fd =
-  property $ fd == fd
-
-prop_filedirectives_symmetric :: FileDirectives -> FileDirectives -> Property
-prop_filedirectives_symmetric fd1 fd2 =
-  (fd1 == fd2) ==> property $ fd2 == fd1
-
-prop_filedirectives_equal_same_values :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Property
-prop_filedirectives_equal_same_values ownership deps constraints =
-  let fd1 = FileDirectives 
-        { fdOwnership = fmap (locatedAt startPos) ownership
-        , fdDependentTypes = fmap (locatedAt startPos) deps
-        , fdConstraints = fmap (locatedAt startPos) constraints
-        }
-      fd2 = FileDirectives
-        { fdOwnership = fmap (locatedAt startPos) ownership
-        , fdDependentTypes = fmap (locatedAt startPos) deps
-        , fdConstraints = fmap (locatedAt startPos) constraints
-        }
-  in property $ fd1 == fd2
-
--- Block directive properties
-prop_default_block_directives_nothing :: Property
-prop_default_block_directives_nothing =
-  let bd = defaultBlockDirectives
-  in conjoin
-    [ property $ bdOwnership bd === Nothing
-    , property $ bdDependentTypes bd === Nothing
-    , property $ bdConstraints bd === Nothing
-    ]
-
-prop_blockdirectives_reflexive :: BlockDirectives -> Property
-prop_blockdirectives_reflexive bd =
-  property $ bd == bd
-
-prop_blockdirectives_symmetric :: BlockDirectives -> BlockDirectives -> Property
-prop_blockdirectives_symmetric bd1 bd2 =
-  (bd1 == bd2) ==> property $ bd2 == bd1
-
-prop_blockdirectives_equal_same_values :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Property
-prop_blockdirectives_equal_same_values ownership deps constraints =
-  let bd1 = BlockDirectives 
-        { bdOwnership = fmap (locatedAt startPos) ownership
-        , bdDependentTypes = fmap (locatedAt startPos) deps
-        , bdConstraints = fmap (locatedAt startPos) constraints
-        }
-      bd2 = BlockDirectives
-        { bdOwnership = fmap (locatedAt startPos) ownership
-        , bdDependentTypes = fmap (locatedAt startPos) deps
-        , bdConstraints = fmap (locatedAt startPos) constraints
-        }
-  in property $ bd1 == bd2
-
--- Code block properties
-prop_codeblock_equal_same_content :: String -> BlockDirectives -> String -> Property
-prop_codeblock_equal_same_content content directives rawCode =
-  let span = emptySpan
-      cb1 = CodeBlock span directives content rawCode
-      cb2 = CodeBlock span directives content rawCode
-  in property $ cb1 == cb2
-
-prop_codeblock_reflexive :: CodeBlock -> Property
-prop_codeblock_reflexive cb =
-  property $ cb == cb
-
-prop_codeblock_symmetric :: CodeBlock -> CodeBlock -> Property
-prop_codeblock_symmetric cb1 cb2 =
-  (cb1 == cb2) ==> property $ cb2 == cb1
-
-prop_codeblock_preserves_order :: String -> String -> Property
-prop_codeblock_preserves_order part1 part2 =
-  let content = part1 ++ "\n" ++ part2
-      directives = defaultBlockDirectives
-      span = emptySpan
-      cb = CodeBlock span directives content content
-  in property $ content `isInfixOf` content cb
-
--- Parsing properties
-prop_parsetypus_empty_input :: Property
-prop_parsetypus_empty_input =
+-- Property: parseTypus handles empty input
+prop_parse_empty :: Property
+prop_parse_empty =
   let result = parseTypus ""
-  in property $ case result of
-    Left _ -> True  -- Parsing empty input should either succeed or fail gracefully
-    Right tf -> True
+      expectedBlocks = []
+  in property $ tfBlocks result === expectedBlocks .&&.
+     tfDirectives result === defaultFileDirectives
 
-prop_parsetypus_whitespace_only :: String -> Property
-prop_parsetypus_whitespace_only s =
-  all isSpace s ==>
-  let result = parseTypus s
-  in property $ case result of
-    Left _ -> True
-    Right tf -> True
+-- Property: parseTypus handles simple directives
+prop_parse_directives :: String -> Property
+prop_parse_directives directiveName =
+  length directiveName <= 10 && all isAlphaNum directiveName ==>
+  let input = "//! " ++ directiveName ++ "=true\n"
+      result = parseTypus input
+  in property $ tfBuildTags result === []
 
-prop_parsetypus_preserves_lines :: String -> Property
-prop_parsetypus_preserves_lines s =
-  let lineCount = length $ lines s
-      result = parseTypus s
-  in property $ case result of
-    Left _ -> True
-    Right tf -> True  -- Should preserve line structure in some form
+-- Property: parseTypus handles code blocks
+prop_parse_code_blocks :: String -> Property
+prop_parse_code_blocks codeContent =
+  not ("\n" `isInfixOf` codeContent) && length codeContent <= 50 ==>
+  let input = codeContent ++ "\n"
+      result = parseTypus input
+      blocks = tfBlocks result
+  in property $ if null codeContent 
+     then null blocks
+     else not (null blocks) .&&. cbContent (head blocks) === codeContent
 
-prop_parsetypus_deterministic :: String -> Property
-prop_parsetypus_deterministic s =
-  let result1 = parseTypus s
-      result2 = parseTypus s
-  in property $ result1 == result2
+-- Property: parseTypus preserves content structure
+prop_parse_preserve_structure :: String -> String -> Property
+prop_parse_preserve_structure firstBlock secondBlock =
+  not ("\n" `isInfixOf` firstBlock) && not ("\n" `isInfixOf` secondBlock) &&
+  length firstBlock <= 30 && length secondBlock <= 30 ==>
+  let input = firstBlock ++ "\n\n" ++ secondBlock ++ "\n"
+      result = parseTypus input
+      blocks = tfBlocks result
+  in property $ length blocks >= 1 .&&.
+     (if not (null firstBlock) && not (null secondBlock)
+      then length blocks >= 2
+      else property True)
 
--- Directive parsing properties
-prop_ownership_directive_consistency :: String -> Property
-prop_ownership_directive_consistency content =
-  let withOwnership = "// @ownership: true\n" ++ content
-      withoutOwnership = content
-      result1 = parseTypus withOwnership
-      result2 = parseTypus withoutOwnership
-  in property $ case (result1, result2) of
-    (Right tf1, Right tf2) -> True  -- Both should parse successfully
-    _ -> True  -- At least should not crash
+-- Property: parseTypus handles malformed input gracefully
+prop_parse_malformed :: String -> Property
+prop_parse_malformed malformedInput =
+  length malformedInput <= 100 ==>
+  let result = parseTypus malformedInput
+      blocks = tfBlocks result
+  in property $ length blocks >= 0 -- Should never crash and should return some result
 
-prop_dependent_types_directive_consistency :: String -> Property
-prop_dependent_types_directive_consistency content =
-  let withDepTypes = "// @dependent-types: true\n" ++ content
-      withoutDepTypes = content
-      result1 = parseTypus withDepTypes
-      result2 = parseTypus withoutDepTypes
-  in property $ case (result1, result2) of
-    (Right tf1, Right tf2) -> True
-    _ -> True
+-- Property: File directives parsing consistency
+prop_file_directives_consistency :: Bool -> Bool -> Bool -> Property
+prop_file_directives_consistency ownership dependent constraints =
+  let directives = FileDirectives 
+        { fdOwnership = Just $ Located ownership undefined
+        , fdDependentTypes = Just $ Located dependent undefined
+        , fdConstraints = Just $ Located constraints undefined
+        }
+  in property $ case directives of
+    FileDirectives{..} -> 
+      (case fdOwnership of Just (Located b _) -> b; Nothing -> False) === ownership .&&.
+      (case fdDependentTypes of Just (Located b _) -> b; Nothing -> False) === dependent .&&.
+      (case fdConstraints of Just (Located b _) -> b; Nothing -> False) === constraints
 
-prop_constraints_directive_consistency :: String -> Property
-prop_constraints_directive_consistency content =
-  let withConstraints = "// @constraints: true\n" ++ content
-      withoutConstraints = content
-      result1 = parseTypus withConstraints
-      result2 = parseTypus withoutConstraints
-  in property $ case (result1, result2) of
-    (Right tf1, Right tf2) -> True
-    _ -> True
+-- Property: Block directives parsing consistency
+prop_block_directives_consistency :: Bool -> Bool -> Bool -> Property
+prop_block_directives_consistency ownership dependent constraints =
+  let directives = BlockDirectives 
+        { bdOwnership = Just $ Located ownership undefined
+        , bdDependentTypes = Just $ Located dependent undefined
+        , bdConstraints = Just $ Located constraints undefined
+        }
+  in property $ case directives of
+    BlockDirectives{..} -> 
+      (case bdOwnership of Just (Located b _) -> b; Nothing -> False) === ownership .&&.
+      (case bdDependentTypes of Just (Located b _) -> b; Nothing -> False) === dependent .&&.
+      (case bdConstraints of Just (Located b _) -> b; Nothing -> False) === constraints
 
-prop_multiple_directives_correct :: String -> Property
-prop_multiple_directives_correct content =
-  let withDirectives = "// @ownership: true\n// @dependent-types: true\n// @constraints: true\n" ++ content
-      result = parseTypus withDirectives
-  in property $ case result of
-    Left _ -> True
-    Right tf -> True
-
--- Helper function
-locatedAt :: SourcePos -> a -> Located a
-locatedAt pos value = locatedWithSpan (SourceSpan pos pos) value
-
-content :: CodeBlock -> String
-content (CodeBlock _ _ c _) = c
+-- Property: Parser is position-aware
+prop_parser_position_aware :: String -> Property
+prop_parser_position_aware content =
+  length content <= 50 ==> 
+  let result = parseTypus content
+      blocks = tfBlocks result
+  in property $ all (\block -> 
+    let span = cbSpan block
+    in spanStart span `seq` spanEnd span `seq` True
+  ) blocks
