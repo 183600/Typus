@@ -586,6 +586,9 @@ import qualified Test.Unit.NewErrorHandlerValidationSpec
 import qualified Test.Unit.NewIntegrationValidationSpec
 import qualified Test.Unit.NewBoundaryConditionSpec
 import qualified Test.Unit.NewPerformanceSpec
+
+-- New Comprehensive Typus Test Module (2025)
+import qualified Test.Unit.NewComprehensiveTypusTestSpec
 import qualified Test.Unit.AdditionalCorePropertiesSpec
 import qualified Test.Unit.CompilerCorePropertiesSpec
 import qualified Test.Unit.BoundaryCasePropertiesSpec
@@ -3268,5 +3271,10 @@ tests =
         , Test.Unit.StringProcessingBoundaryQuickCheckSpec.tests
         , Test.Unit.TypeSystemInferenceQuickCheckSpec.tests
         ]
+
+    -- ============================================================================
+    -- New Comprehensive Typus Test Module (2025)
+    -- ============================================================================
+    , Test.Unit.NewComprehensiveTypusTestSpec.tests
 
         ]
