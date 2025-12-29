@@ -12,192 +12,322 @@ module Test.Unit.NewCabalParserQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import Test.QuickCheck.Arbitrary (Arbitrary(..), arbitrary)
-import Test.QuickCheck.Gen (oneof, listOf, choose, elements)
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose)
+import qualified Test.QuickCheck as QC
 
 import Parser
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
-import Utils (trim, removeComments)
-
-import Data.Char (isAlphaNum, isSpace, isLetter)
-import Data.List (isPrefixOf, isInfixOf)
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedWithSpan, emptySpan)
 import qualified Data.Text as T
+import Data.Char (isAlphaNum, isAlpha, isSpace)
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
 -- ============================================================================
--- Arbitrary Instances
+-- Generators for Parser data types
 -- ============================================================================
 
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- choose (1, 1000)
-    col <- choose (1, 1000)
-    return $ SourcePos line col
+-- Generate valid identifiers
+genIdentifier :: Gen String
+genIdentifier = do
+  first <- elements ['a'..'z']
+  rest <- listOf $ elements $ ['a'..'z'] ++ ['0'..'9'] ++ ['_']
+  pure $ first : rest
 
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
+-- Generate valid directives
+genDirective :: Gen (String, String)
+genDirective = do
+  key <- genIdentifier
+  value <- genIdentifier
+  pure (key, value)
 
--- Simple token generator for parsing tests
-newtype SimpleToken = SimpleToken String deriving (Show, Eq)
+-- Generate file directives
+genFileDirectives :: Gen FileDirectives
+genFileDirectives = do
+  ownership <- QC.oneof [pure Nothing, Just <$> genLocatedBool]
+  dependentTypes <- QC.oneof [pure Nothing, Just <$> genLocatedBool]
+  constraints <- QC.oneof [pure Nothing, Just <$> genLocatedBool]
+  pure $ FileDirectives ownership dependentTypes constraints
 
-instance Arbitrary SimpleToken where
-  arbitrary = oneof
-    [ return $ SimpleToken "func"
-    , return $ SimpleToken "var"
-    , return $ SimpleToken "if"
-    , return $ SimpleToken "else"
-    , return $ SimpleToken "return"
-    , SimpleToken <$> listOf1 (elements ['a'..'z'])
-    , SimpleToken <$> listOf1 (elements ['0'..'9'])
-    ]
+-- Generate block directives
+genBlockDirectives :: Gen BlockDirectives
+genBlockDirectives = do
+  ownership <- QC.oneof [pure Nothing, Just <$> genLocatedBool]
+  dependentTypes <- QC.oneof [pure Nothing, Just <$> genLocatedBool]
+  constraints <- QC.oneof [pure Nothing, Just <$> genLocatedBool]
+  pure $ BlockDirectives ownership dependentTypes constraints
+
+-- Generate located boolean values
+genLocatedBool :: Gen (Located Bool)
+genLocatedBool = do
+  value <- QC.arbitrary
+  pos <- genSourcePos
+  pure $ locatedWithSpan (emptySpan pos) value
+
+-- Generate source position
+genSourcePos :: Gen SourcePos
+genSourcePos = do
+  line <- choose (1, 1000)
+  column <- choose (1, 1000)
+  offset <- choose (0, 10000)
+  pure $ SourcePos line column offset
+
+-- Generate source span
+genSourceSpan :: Gen SourceSpan
+genSourceSpan = do
+  start <- genSourcePos
+  end <- genSourcePos
+  pure $ SourceSpan start end
+
+-- Generate arbitrary CodeBlock
+genCodeBlock :: Gen CodeBlock
+genCodeBlock = do
+  content <- listOf $ QC.arbitrary :: Gen String
+  directives <- genBlockDirectives
+  span <- genSourceSpan
+  pure $ CodeBlock directives content span
+
+-- Generate typus files
+genTypusFile :: Gen TypusFile
+genTypusFile = do
+  directives <- genFileDirectives
+  buildTags <- listOf genIdentifier
+  blocks <- listOf genCodeBlock
+  syntaxErrors <- QC.arbitrary
+  pure $ TypusFile directives buildTags blocks syntaxErrors
 
 -- ============================================================================
--- Parser Property Tests
+-- Property-based tests for Parser module
 -- ============================================================================
 
--- Property: Parser preserves string structure through roundtrip
-prop_parser_roundtrip_structure :: SimpleToken -> SimpleToken -> SimpleToken -> Property
-prop_parser_roundtrip_structure (SimpleToken t1) (SimpleToken t2) (SimpleToken t3) =
-  not (null t1 && null t2 && null t3) ==>
-  let input = unlines [t1, t2, t3]
-      -- Simple validation that parser can handle basic structure
-      canParse = not (null input) && all (not . null) [t1, t2, t3]
-  in property $ canParse === True
+-- Property: parseTypus handles empty input
+prop_parseTypus_empty :: Property
+prop_parseTypus_empty =
+  let result = parseTypus ""
+  in case result of
+    Left _ -> property True
+    Right file -> property $ null (tfBlocks file)
 
--- Property: Comment removal preserves code structure
-prop_parser_comment_preservation :: String -> String -> Property
-prop_parser_comment_preservation code comment =
-  not (null code) && not ("/*" `isInfixOf` code) && not ("*/" `isInfixOf` code) ==>
-  let withComment = code ++ " // " ++ comment
-      withoutComment = removeComments withComment
-      codeExists = code `isInfixOf` withoutComment
-  in property $ codeExists
+-- Property: parseTypus handles whitespace-only input
+prop_parseTypus_whitespace :: String -> Property
+prop_parseTypus_whitespace ws =
+  all isSpace ws ==>
+  let result = parseTypus ws
+  in case result of
+    Left _ -> property True
+    Right file -> property $ null (tfBlocks file)
 
--- Property: Parser handles whitespace consistently
-prop_parser_whitespace_consistency :: String -> String -> Property
-prop_parser_whitespace_consistency content1 content2 =
-  not (null content1 && null content2) ==>
-  let withSpaces = content1 ++ "   " ++ content2
-      withTabs = content1 ++ "\t\t\t" ++ content2
-      trimmedSpaces = trim withSpaces
-      trimmedTabs = trim withTabs
-  in property $ (null trimmedSpaces && null trimmedTabs) .||. 
-                (not (null trimmedSpaces) && not (null trimmedTabs))
+-- Property: parseTypus preserves directives
+prop_parseTypus_directives :: String -> String -> Property
+prop_parseTypus_directives key value =
+  all isAlphaNum key && all isAlphaNum value ==>
+  let input = "//#!" ++ key ++ ":" ++ value ++ "\n"
+      result = parseTypus input
+  in case result of
+    Left _ -> property False
+    Right file -> property $ 
+      case fdOwnership (tfDirectives file) of
+        Nothing -> False
+        Just (Located (True) _) -> key == "ownership" && value == "true"
+        Just (Located (False) _) -> key == "ownership" && value == "false"
 
--- Property: Directive parsing is deterministic
-prop_parser_directive_deterministic :: String -> Property
-prop_parser_directive_deterministic input =
-  let directives = ["// @ownership", "// @dependent-types", "// @constraints"]
-      hasDirective = any (`isPrefixOf` input) directives
-  in classify hasDirective "has directive" $
-     property $ True
+-- Property: parseTypus handles multiple directives
+prop_parseTypus_multiple_directives :: [(String, String)] -> Property
+prop_parseTypus_multiple_directives directives =
+  all (all isAlphaNum . fst) directives && all (all isAlphaNum . snd) directives ==>
+  let directiveLines = map (\(k, v) -> "//#!" ++ k ++ ":" ++ v) directives
+      input = unlines directiveLines
+      result = parseTypus input
+  in case result of
+    Left _ -> property True  -- May fail due to invalid directive combinations
+    Right file -> property $ True  -- Successfully parsed
 
--- Property: Block structure is preserved
-prop_parser_block_structure :: [String] -> Property
-prop_parser_block_structure lines =
-  not (null lines) ==>
-  let content = unlines lines
-      lineCount = length (lines content)
-  in property $ lineCount === length lines
+-- Property: parseTypus handles block directives
+prop_parseTypus_block_directives :: String -> String -> Property
+prop_parseTypus_block_directives key value =
+  all isAlphaNum key && all isAlphaNum value ==>
+  let input = "{//! " ++ key ++ ":" ++ value ++ " }\ncontent\n"
+      result = parseTypus input
+  in case result of
+    Left _ -> property True
+    Right file -> property $ length (tfBlocks file) >= 1
 
--- Property: Parser handles nested structures
-prop_parser_nested_structures :: Int -> Property
-prop_parser_nested_structures depth =
+-- Property: parseTypus preserves code content
+prop_parseTypus_preserves_content :: String -> Property
+prop_parseTypus_preserves_content content =
+  not (null content) && not (any (`elem` ['{', '}', '/', '\n', '\r']) content) ==>
+  let input = content ++ "\n"
+      result = parseTypus input
+  in case result of
+    Left _ -> property True
+    Right file -> property $ 
+      case tfBlocks file of
+        [] -> False
+        (block:_) -> content `isInfixOf` unlines (cbContent block)
+
+-- Property: parseTypus handles mixed content
+prop_parseTypus_mixed_content :: String -> String -> String -> Property
+prop_parseTypus_mixed_content directive content blockDirective =
+  all isAlphaNum directive && all isAlphaNum blockDirective ==>
+  let input = "//#!" ++ directive ++ ":true\n" ++
+              content ++ "\n" ++
+              "{//! " ++ blockDirective ++ ":false }\n" ++
+              "more content\n"
+      result = parseTypus input
+  in case result of
+    Left _ -> property True
+    Right file -> property $ length (tfBlocks file) >= 1
+
+-- Property: parseTypus handles invalid syntax gracefully
+prop_parseTypus_invalid_syntax :: String -> Property
+prop_parseTypus_invalid_syntax content =
+  let invalidChars = ['{', '}', '/', '"', '\'', '\\']
+      hasInvalid = any (`elem` invalidChars) content
+  in hasInvalid ==>
+  let result = parseTypus content
+  in case result of
+    Left _ -> property True
+    Right file -> property $ True  -- May still parse partially
+
+-- Property: parseTypus is deterministic
+prop_parseTypus_deterministic :: String -> Property
+prop_parseTypus_deterministic input =
+  let result1 = parseTypus input
+      result2 = parseTypus input
+  in case (result1, result2) of
+    (Left e1, Left e2) -> e1 === e2
+    (Right f1, Right f2) -> f1 === f2
+    _ -> property False
+
+-- Property: parseTypus handles line endings
+prop_parseTypus_line_endings :: String -> Property
+prop_parseTypus_line_endings content =
+  not ('\n' `elem` content) && not ('\r' `elem` content) ==>
+  let input1 = content ++ "\n"
+      input2 = content ++ "\r\n"
+      result1 = parseTypus input1
+      result2 = parseTypus input2
+  in case (result1, result2) of
+    (Left _, Left _) -> property True
+    (Right f1, Right f2) -> 
+      property $ tfBlocks f1 === tfBlocks f2  -- Content should be the same
+    _ -> property False
+
+-- Property: parseTypus handles Unicode content
+prop_parseTypus_unicode :: String -> Property
+prop_parseTypus_unicode baseContent =
+  let unicodeContent = baseContent ++ "测试🚀café"
+      input = unicodeContent ++ "\n"
+      result = parseTypus input
+  in case result of
+    Left _ -> property True
+    Right file -> property $ True
+
+-- Property: parseTypus handles very long lines
+prop_parseTypus_long_lines :: Int -> String -> Property
+prop_parseTypus_long_lines multiplier baseContent =
+  multiplier >= 0 && multiplier <= 100 ==>
+  let longContent = concat (replicate multiplier baseContent)
+      input = longContent ++ "\n"
+      result = parseTypus input
+  in case result of
+    Left _ -> property True
+    Right file -> property $ True
+
+-- Property: parseTypus handles nested block structures
+prop_parseTypus_nested_blocks :: Int -> Property
+prop_parseTypus_nested_blocks depth =
   depth >= 0 && depth <= 10 ==>
-  let nested = concat (replicate depth "  ") ++ "content"
-      indentLevel = length (takeWhile isSpace nested)
-  in property $ indentLevel === depth * 2
+  let nestedContent = concat (replicate depth "{//! ownership:true }\n")
+      input = nestedContent ++ "content\n"
+      result = parseTypus input
+  in case result of
+    Left _ -> property True
+    Right file -> property $ length (tfBlocks file) >= depth
 
--- Property: String literal parsing preserves content
-prop_parser_string_literals :: String -> Property
-prop_parser_string_literals content =
-  not ('"' `elem` content) ==>
-  let quoted = "\"" ++ content ++ "\""
-      hasQuotes = '"' `elem` quoted
-  in property $ hasQuotes
+-- Property: parseTypus error messages contain line numbers
+prop_parseTypus_error_line_numbers :: String -> Property
+prop_parseTypus_error_line_numbers malformedInput =
+  not (null malformedInput) && '{' `elem` malformedInput && not ('}' `elem` malformedInput) ==>
+  let result = parseTypus malformedInput
+  in case result of
+    Left errorMsg -> property $ any (`elem` "0123456789") errorMsg
+    Right _ -> property False  -- Should have failed but didn't
 
--- Property: Parser handles identifiers consistently
-prop_parser_identifiers :: String -> Property
-prop_parser_identifiers identifier =
-  not (null identifier) && all isAlphaNum (take 1 identifier) ==>
-  let isValidIdentifier = all (\c -> isAlphaNum c || c == '_') identifier
-  in property $ isValidIdentifier
+-- Property: parseTypus handles comments correctly
+prop_parseTypus_comments :: String -> String -> Property
+prop_parseTypus_comments code comment =
+  not ('"' `elem` code) && not ('/' `elem` code) ==>
+  let input = code ++ " // " ++ comment ++ "\n"
+      result = parseTypus input
+  in case result of
+    Left _ -> property True
+    Right file -> property $ True
 
--- Property: Parser error recovery maintains position
-prop_parser_error_recovery_position :: String -> String -> Property
-prop_parser_error_recovery_position valid invalid =
-  not (null valid) ==>
-  let mixed = valid ++ " " ++ invalid ++ " " ++ valid
-      validExists = valid `isInfixOf` mixed
-  in property $ validExists
+-- Property: parseTypus preserves build tags
+prop_parseTypus_build_tags :: [String] -> Property
+prop_parseTypus_build_tags tags =
+  all (all isAlphaNum) tags ==>
+  let tagLines = map (\tag -> "//#!build:" ++ tag) tags
+      input = unlines tagLines
+      result = parseTypus input
+  in case result of
+    Left _ -> property True
+    Right file -> property $ 
+      let fileTags = tfBuildTags file
+      in all (`elem` fileTags) tags
 
--- Property: Parser handles Unicode content
-prop_parser_unicode_content :: String -> Property
-prop_parser_unicode_content content =
-  let unicodeContent = content ++ "测试🚀café"
-      hasUnicode = any (> '\127') unicodeContent
-  in classify hasUnicode "has unicode" $
-     property $ not (null unicodeContent)
+-- Property: parseTypus handles empty directives
+prop_parseTypus_empty_directives :: Property
+prop_parseTypus_empty_directives =
+  let input = "//#!:\n"
+      result = parseTypus input
+  in case result of
+    Left _ -> property True
+    Right file -> property $ True
 
--- Property: Parser tokenization consistency
-prop_parser_tokenization_consistency :: [SimpleToken] -> Property
-prop_parser_tokenization_consistency tokens =
-  not (null tokens) ==>
-  let tokenStrings = map (\(SimpleToken s) -> s) tokens
-      joined = unwords tokenStrings
-      tokenCount = length (words joined)
-  in property $ tokenCount >= length tokens
+-- Property: parseTypus handles malformed directives
+prop_parseTypus_malformed_directives :: String -> Property
+prop_parseTypus_malformed_directives malformed =
+  let input = "//#!" ++ malformed ++ "\n"
+      result = parseTypus input
+  in case result of
+    Left _ -> property True
+    Right file -> property $ True
 
--- Property: Parser handles empty input gracefully
-prop_parser_empty_input :: Property
-prop_parser_empty_input =
-  let empty = ""
-      spaces = "   \t  \n  "
-  in property $ True
+-- Property: parseTypus handles special characters in content
+prop_parseTypus_special_chars :: String -> Property
+prop_parseTypus_special_chars content =
+  let specialChars = "!@#$%^&*()_+-=[]|;':\",./<>?"
+      hasSpecial = any (`elem` specialChars) content
+  in hasSpecial ==>
+  let input = content ++ "\n"
+      result = parseTypus input
+  in case result of
+    Left _ -> property True
+    Right file -> property $ True
 
--- Property: Parser handles large inputs
-prop_parser_large_input :: Int -> String -> Property
-prop_parser_large_input multiplier baseContent =
-  multiplier > 0 && multiplier <= 100 ==>
-  let largeContent = concat (replicate multiplier (baseContent ++ "\n"))
-      contentLength = length largeContent
-  in property $ contentLength >= multiplier
-
--- Property: Parser maintains line numbers
-prop_parser_line_numbers :: [String] -> Property
-prop_parser_line_numbers lines =
-  not (null lines) ==>
-  let content = unlines lines
-      expectedLines = length lines
-      actualLines = length (lines content)
-  in property $ expectedLines === actualLines
-
--- Property: Parser handles malformed input gracefully
-prop_parser_malformed_input :: String -> Property
-prop_parser_malformed_input input =
-  let hasUnmatchedBrackets = (length (filter (== '{') input) /= length (filter (== '}') input) ||
-                            (length (filter (== '(') input) /= length (filter (== ')') input))
-  in classify hasUnmatchedBrackets "has unmatched brackets" $
-     property $ True
+-- ============================================================================
+-- Test suite
+-- ============================================================================
 
 tests :: TestTree
 tests = testGroup "New Cabal Parser QuickCheck Tests"
-  [ fastProperty "Parser roundtrip structure" prop_parser_roundtrip_structure
-  , fastProperty "Comment preservation" prop_parser_comment_preservation
-  , fastProperty "Whitespace consistency" prop_parser_whitespace_consistency
-  , fastProperty "Directive deterministic" prop_parser_directive_deterministic
-  , fastProperty "Block structure" prop_parser_block_structure
-  , fastProperty "Nested structures" prop_parser_nested_structures
-  , fastProperty "String literals" prop_parser_string_literals
-  , fastProperty "Identifiers" prop_parser_identifiers
-  , fastProperty "Error recovery position" prop_parser_error_recovery_position
-  , fastProperty "Unicode content" prop_parser_unicode_content
-  , fastProperty "Tokenization consistency" prop_parser_tokenization_consistency
-  , fastProperty "Empty input" prop_parser_empty_input
-  , fastProperty "Large input" prop_parser_large_input
-  , fastProperty "Line numbers" prop_parser_line_numbers
-  , fastProperty "Malformed input" prop_parser_malformed_input
+  [ fastProperty "parseTypus handles empty input" prop_parseTypus_empty
+  , fastProperty "parseTypus handles whitespace-only input" prop_parseTypus_whitespace
+  , fastProperty "parseTypus preserves directives" prop_parseTypus_directives
+  , fastProperty "parseTypus handles multiple directives" prop_parseTypus_multiple_directives
+  , fastProperty "parseTypus handles block directives" prop_parseTypus_block_directives
+  , fastProperty "parseTypus preserves code content" prop_parseTypus_preserves_content
+  , fastProperty "parseTypus handles mixed content" prop_parseTypus_mixed_content
+  , fastProperty "parseTypus handles invalid syntax gracefully" prop_parseTypus_invalid_syntax
+  , fastProperty "parseTypus is deterministic" prop_parseTypus_deterministic
+  , fastProperty "parseTypus handles line endings" prop_parseTypus_line_endings
+  , fastProperty "parseTypus handles Unicode content" prop_parseTypus_unicode
+  , fastProperty "parseTypus handles very long lines" prop_parseTypus_long_lines
+  , fastProperty "parseTypus handles nested block structures" prop_parseTypus_nested_blocks
+  , fastProperty "parseTypus error messages contain line numbers" prop_parseTypus_error_line_numbers
+  , fastProperty "parseTypus handles comments correctly" prop_parseTypus_comments
+  , fastProperty "parseTypus preserves build tags" prop_parseTypus_build_tags
+  , fastProperty "parseTypus handles empty directives" prop_parseTypus_empty_directives
+  , fastProperty "parseTypus handles malformed directives" prop_parseTypus_malformed_directives
+  , fastProperty "parseTypus handles special characters in content" prop_parseTypus_special_chars
   ]

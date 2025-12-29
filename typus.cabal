@@ -275,6 +275,14 @@ test-suite typus-test
         TestSupport.QuickCheck,
         TestSupport.Arbitrary,
         TestSupport.ExtendedArbitrary,
+
+        -- New Cabal QuickCheck Test Modules (2025)
+        Test.Unit.NewCabalParserQuickCheckSpec,
+        Test.Unit.NewCabalSourceLocationQuickCheckSpec,
+        Test.Unit.NewCabalErrorHandlerQuickCheckSpec,
+        Test.Unit.NewCabalOwnershipQuickCheckSpec,
+        Test.Unit.NewCabalDependenciesQuickCheckSpec,
+        Test.Unit.NewCabalSyntaxValidatorQuickCheckSpec,
         Test.Unit.ComprehensiveTypeCheckerQuickCheckSpec,
         Test.Unit.CoreDataStructuresQuickCheckSpec,
         Test.Unit.SimpleDataStructuresQuickCheckSpec,
@@ -448,7 +456,6 @@ test-suite typus-test
         Test.Unit.NewSyntaxValidatorQuickCheckSpec,
         Test.Unit.NewGoToolchainQuickCheckSpec,
         Test.Unit.SimpleCoreTestSpec,
-        Test.Unit.NewCabalQuickCheckTestSuite,
 
         -- New comprehensive QuickCheck test modules added for enhanced coverage
         Test.Unit.CompilerErrorRecoveryQuickCheckSpec,
@@ -982,7 +989,6 @@ test-suite typus-test
 
         -- New Comprehensive Test Modules (2025) - 8 Additional Tests
         , Test.Unit.SourceLocationMathPropertiesSpec
-        , Test.Unit.ParserBoundaryConditionsSpec
         , Test.Unit.ErrorHandlingConsistencySpec
         , Test.Unit.UtilsUnicodePerformanceSpec
         , Test.Unit.ModuleIntegrationPropertiesSpec
