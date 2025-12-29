@@ -213,7 +213,8 @@ test-suite typus-test
         Test.Unit.GoToolchainSpec,
         Test.Unit.VerbositySpec,
         Test.Unit.UtilsSpec,
-        Test.Unit.AdvancedParserSpec,
+                Test.Unit.AdditionalQuickCheckTests2025,
+                Test.Unit.AdvancedParserSpec,
         Test.Unit.IntegrationSpec,
         Test.Unit.PerformanceSpec,
         Test.Unit.EdgeCaseSpec,
@@ -341,7 +342,7 @@ test-suite typus-test
         Test.Unit.ErrorRecoveryQuickCheckSpec,
         Test.Unit.NewCoreQuickCheckSpec,
         Test.Unit.NewCoreFunctionalitySpec,
-        Test.Unit.NewCoreQuickCheckTests,
+        Test.Unit.NewFreshCoreQuickCheckTests,
         Test.Unit.SimpleCoreQuickCheckSpec,
         Test.Unit.ParserPropertiesQuickCheckSpec,
         Test.Unit.SourceLocationPropertiesQuickCheckSpec,
@@ -451,7 +452,7 @@ test-suite typus-test
         -- Test.Unit.CodeGenerationQuickCheckSpec, -- Temporarily disabled due to compilation errors
         
         
-        Test.Unit.NewDependentTypesQuickCheckSpec,
+        Test.Unit.NewFreshDependentTypesQuickCheckSpec,
         Test.Unit.NewOwnershipQuickCheckSpec,
         Test.Unit.NewSyntaxValidatorQuickCheckSpec,
         Test.Unit.NewGoToolchainQuickCheckSpec,
@@ -484,7 +485,7 @@ test-suite typus-test
         Test.Unit.NewSourceLocationQuickCheckSpec,
         Test.Unit.NewErrorHandlerQuickCheckSpec,
         Test.Unit.NewParserQuickCheckSpec,
-        Test.Unit.NewComprehensiveQuickCheckSpec,
+        Test.Unit.NewFreshComprehensiveQuickCheckSpec,
         Test.Unit.CustomParserQuickCheckSpec,
         Test.Unit.CustomUtilsQuickCheckSpec,
         Test.Unit.CustomSourceLocationQuickCheckSpec,
@@ -559,7 +560,7 @@ test-suite typus-test
         -- New QuickCheck Test Suite 2025
         Test.Unit.NewQuickCheckTestSuiteSpec,
         Test.Unit.NewParserPropertiesSpec,
-        Test.Unit.NewSourceLocationMathSpec,
+        Test.Unit.NewFreshSourceLocationMathSpec,
         Test.Unit.NewErrorHandlerCoreSpec,
         Test.Unit.NewDependenciesCoreSpec,
         Test.Unit.NewGoToolchainCoreSpec,
@@ -766,8 +767,8 @@ test-suite typus-test
         Test.Unit.NewCompilerIRQuickCheckSpec,
         Test.Unit.NewDependenciesQuickCheckSpec,
         Test.Unit.NewTypeSystemQuickCheckSpec,
-        Test.Unit.NewIntegrationQuickCheckSpec,
-        Test.Unit.NewPerformanceQuickCheckSpec,
+        Test.Unit.NewFreshIntegrationQuickCheckSpec,
+        Test.Unit.NewFreshPerformanceQuickCheckSpec,
 
         -- New Enhanced Test Modules (2025) - Additional
         Test.Unit.SourceLocationAdvancedFeaturesSpec,
