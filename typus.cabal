@@ -731,6 +731,18 @@ test-suite typus-test
         Test.Unit.PerformanceRegressionCabalsSpec,
         Test.Unit.SecurityValidationCabalsSpec,
 
+        -- New Core Cabal QuickCheck Test Modules (2025) - 10 comprehensive tests
+        Test.Unit.NewCoreCabalQuickCheckSpec1,
+        Test.Unit.NewCoreCabalQuickCheckSpec2,
+        Test.Unit.NewCoreCabalQuickCheckSpec3,
+        Test.Unit.NewCoreCabalQuickCheckSpec4,
+        Test.Unit.NewCoreCabalQuickCheckSpec5,
+        Test.Unit.NewCoreCabalQuickCheckSpec6,
+        Test.Unit.NewCoreCabalQuickCheckSpec7,
+        Test.Unit.NewCoreCabalQuickCheckSpec8,
+        Test.Unit.NewCoreCabalQuickCheckSpec9,
+        Test.Unit.NewCoreCabalQuickCheckSpec10,
+
         -- New Additional QuickCheck Test Modules (2025)
         Test.Unit.UtilsBoundaryQuickCheckSpec,
         Test.Unit.SourceLocationMathQuickCheckSpec,

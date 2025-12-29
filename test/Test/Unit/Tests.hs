@@ -522,6 +522,20 @@ import qualified Test.Unit.AdditionalCorePropertiesSpec
 import qualified Test.Unit.CompilerCorePropertiesSpec
 import qualified Test.Unit.BoundaryCasePropertiesSpec
 
+-- ============================================================================
+-- New Core Cabal QuickCheck Test Modules (2025) - 10 comprehensive tests
+-- ============================================================================
+import qualified Test.Unit.NewCoreCabalQuickCheckSpec1
+import qualified Test.Unit.NewCoreCabalQuickCheckSpec2
+import qualified Test.Unit.NewCoreCabalQuickCheckSpec3
+import qualified Test.Unit.NewCoreCabalQuickCheckSpec4
+import qualified Test.Unit.NewCoreCabalQuickCheckSpec5
+import qualified Test.Unit.NewCoreCabalQuickCheckSpec6
+import qualified Test.Unit.NewCoreCabalQuickCheckSpec7
+import qualified Test.Unit.NewCoreCabalQuickCheckSpec8
+import qualified Test.Unit.NewCoreCabalQuickCheckSpec9
+import qualified Test.Unit.NewCoreCabalQuickCheckSpec10
+
 -- New QuickCheck Test Modules (2025)
 import qualified Test.Unit.SourceLocationNewQuickCheckSpec
 import qualified Test.Unit.ErrorHandlerNewQuickCheckSpec
@@ -3029,7 +3043,22 @@ tests =
     , Test.Unit.DependenciesComprehensiveQuickCheckSpec.dependenciesComprehensiveQuickCheckSpec
     , Test.Unit.DependentTypesComprehensiveQuickCheckSpec.dependentTypesComprehensiveQuickCheckSpec
     , Test.Unit.SyntaxValidatorComprehensiveQuickCheckSpec.syntaxValidatorComprehensiveQuickCheckSpec
-    ]
-
-  
-  ]
+      ]
+    
+      -- ============================================================================
+      -- New Core Cabal QuickCheck Test Modules (2025) - 10 comprehensive tests
+      -- ============================================================================
+      , testGroup "New Core Cabal QuickCheck Tests - Comprehensive Test Suite"
+        [ Test.Unit.NewCoreCabalQuickCheckSpec1.tests
+        , Test.Unit.NewCoreCabalQuickCheckSpec2.tests
+        , Test.Unit.NewCoreCabalQuickCheckSpec3.tests
+        , Test.Unit.NewCoreCabalQuickCheckSpec4.tests
+        , Test.Unit.NewCoreCabalQuickCheckSpec5.tests
+        , Test.Unit.NewCoreCabalQuickCheckSpec6.tests
+        , Test.Unit.NewCoreCabalQuickCheckSpec7.tests
+        , Test.Unit.NewCoreCabalQuickCheckSpec8.tests
+        , Test.Unit.NewCoreCabalQuickCheckSpec9.tests
+        , Test.Unit.NewCoreCabalQuickCheckSpec10.tests
+        ]
+    
+      ]
