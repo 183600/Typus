@@ -38,6 +38,9 @@ import qualified Test.Unit.CoreErrorHandlerSpec
 import qualified Test.Unit.CoreParserSpec
 import qualified Test.Unit.CoreCompilerSpec
 
+-- New Core Functionality QuickCheck Tests
+import qualified Test.Unit.NewCoreFunctionalityQuickCheckTests
+
 -- New Basic Test Modules Added
 import qualified Test.Unit.SourceLocationBasicPropertiesSpec
 import qualified Test.Unit.ParserBasicFunctionsSpec
@@ -2946,6 +2949,13 @@ tests =
     , Test.Unit.CoreParserEssentialSpec.tests
     , Test.Unit.CoreCompilerEssentialSpec.tests
     , Test.Unit.IntegrationEssentialSpec.tests
+    ]
+
+  -- ============================================================================
+  -- New Core Functionality QuickCheck Tests
+  -- ============================================================================
+  , testGroup "New Core Functionality QuickCheck Tests"
+    [ Test.Unit.NewCoreFunctionalityQuickCheckTests.tests
     ]
 
   

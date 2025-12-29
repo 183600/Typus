@@ -951,6 +951,9 @@ test-suite typus-test
         , Test.Unit.NewParserEnhancedQuickCheckSpec
         , Test.Unit.NewErrorHandlerEnhancedQuickCheckSpec
         
+        -- New Core Functionality QuickCheck Tests
+        , Test.Unit.NewCoreFunctionalityQuickCheckTests
+        
         -- New Cabal Test Modules (10 comprehensive tests added)
         , Test.Unit.NewUtilsStringProcessingSpec
         , Test.Unit.NewSourceLocationCalculationSpec
