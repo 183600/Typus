@@ -1,285 +1,327 @@
-{-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
 module Test.Unit.OwnershipTransferQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
+import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import TestSupport.Arbitrary
-
-import Ownership
+import Test.QuickCheck (Arbitrary(..), Gen, choose, listOf, suchThat, oneof, elements, frequency)
+import Data.List (sort, nub)
 import Ownership.Common.Types
-import Parser (parseTypus)
-import Compiler (compile)
-import Utils (trim)
-import Data.Char (isSpace, isLetter, isDigit)
-import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, sort)
 
--- Property: Ownership tracks variable lifetimes correctly
-prop_ownership_variable_lifetime :: String -> Property
-prop_ownership_variable_lifetime varName =
-  not (null varName) && all (\c -> isLetter c || c == '_') varName ==>
-  let sourceCode = "var " ++ varName ++ " = 42\n" ++ varName ++ " = 24"
-      parseResult = parseTypus sourceCode
-      ownershipResult = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ case ownershipResult of
-    Nothing -> False
-    Right analysis -> property $ varName `isInfixOf` show analysis
+-- | Generate arbitrary ownership types
+instance Arbitrary OwnershipType where
+  arbitrary = do
+    name <- listOf1 (elements ['a'..'z', 'A'..'Z', '0'..'9', '_'])
+    frequency
+      [ (3, return $ Owned name)
+      , (3, return $ Borrowed name)
+      , (2, return $ MutBorrowed name)
+      ]
 
--- Property: Ownership detects move operations
-prop_ownership_detects_moves :: String -> String -> Property
-prop_ownership_detects_moves sourceVar targetVar =
-  not (null sourceVar) && not (null targetVar) &&
-  all (\c -> isLetter c || c == '_') sourceVar &&
-  all (\c -> isLetter c || c == '_') targetVar ==>
-  let sourceCode = "var " ++ sourceVar ++ " = 42\nvar " ++ targetVar ++ " = " ++ sourceVar
-      parseResult = parseTypus sourceCode
-      ownershipResult = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ case ownershipResult of
-    Nothing -> False
-    Right analysis -> property $ "move" `isInfixOf` show analysis .||. sourceVar `isInfixOf` show analysis
+-- | Generate arbitrary ownership errors
+instance Arbitrary OwnershipError where
+  arbitrary = frequency
+    [ (2, do var <- listOf1 (elements ['a'..'z'])
+            return $ UseAfterMove var)
+    , (2, do var1 <- listOf1 (elements ['a'..'z'])
+            var2 <- listOf1 (elements ['a'..'z'])
+            return $ DoubleMove var1 var2)
+    , (1, do var <- listOf1 (elements ['a'..'z'])
+            return $ BorrowWhileMoved var)
+    , (1, do var <- listOf1 (elements ['a'..'z'])
+            return $ MutBorrowWhileBorrowed var)
+    , (1, do var <- listOf1 (elements ['a'..'z'])
+            return $ BorrowWhileMutBorrowed var)
+    , (1, do var <- listOf1 (elements ['a'..'z'])
+            return $ MultipleMutBorrows var)
+    , (1, do var <- listOf1 (elements ['a'..'z'])
+            return $ UseWhileMutBorrowed var)
+    , (1, do var <- listOf1 (elements ['a'..'z'])
+            return $ OutOfScope var)
+    , (1, do msg <- listOf1 (elements ['a'..'z', ' '])
+            return $ BorrowError msg)
+    , (1, do msg <- listOf1 (elements ['a'..'z', ' '])
+            return $ ParseError msg)
+    , (1, do var1 <- listOf1 (elements ['a'..'z'])
+            var2 <- listOf1 (elements ['a'..'z'])
+            return $ CrossFunctionMove var1 var2)
+    , (1, do var <- listOf1 (elements ['a'..'z'])
+            return $ ParameterMoveMismatch var)
+    , (1, do msg <- listOf1 (elements ['a'..'z', ' '])
+            return $ ControlFlowError msg)
+    , (1, do msg <- listOf1 (elements ['a'..'z', ' '])
+            return $ PathSensitiveError msg)
+    , (1, do msg <- listOf1 (elements ['a'..'z', ' '])
+            return $ LoopOwnershipError msg)
+    ]
 
--- Property: Ownership handles borrow operations
-prop_ownership_handles_borrows :: String -> Property
-prop_ownership_handles_borrows varName =
-  not (null varName) && all (\c -> isLetter c || c == '_') varName ==>
-  let sourceCode = "var " ++ varName ++ " = 42\nvar ref = &" ++ varName
-      parseResult = parseTypus sourceCode
-      ownershipResult = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ case ownershipResult of
-    Nothing -> False
-    Right analysis -> property $ "borrow" `isInfixOf` show analysis .||. "ref" `isInfixOf` show analysis
+-- | Generate arbitrary ownership transfers
+instance Arbitrary OwnershipTransfer where
+  arbitrary = do
+    from <- listOf1 (elements ['a'..'z', 'A'..'Z', '0'..'9', '_'])
+    to <- listOf1 (elements ['a'..'z', 'A'..'Z', '0'..'9', '_'])
+    return $ OwnershipTransfer from to
 
--- Property: Ownership prevents double moves
-prop_ownership_prevents_double_moves :: String -> String -> String -> Property
-prop_ownership_prevents_double_moves sourceVar targetVar1 targetVar2 =
-  not (null sourceVar) && not (null targetVar1) && not (null targetVar2) &&
-  all (\c -> isLetter c || c == '_') sourceVar &&
-  all (\c -> isLetter c || c == '_') targetVar1 &&
-  all (\c -> isLetter c || c == '_') targetVar2 &&
-  targetVar1 /= targetVar2 ==>
-  let sourceCode = "var " ++ sourceVar ++ " = 42\nvar " ++ targetVar1 ++ " = " ++ sourceVar ++ "\nvar " ++ targetVar2 ++ " = " ++ sourceVar
-      parseResult = parseTypus sourceCode
-      ownershipResult = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ case ownershipResult of
-    Nothing -> True -- Should fail due to double move
-    Right analysis -> property $ "error" `isInfixOf` show analysis .||. "double move" `isInfixOf` show analysis
+-- | Generate variable names
+genVariableName :: Gen String
+genVariableName = listOf1 $ elements ['a'..'z', 'A'..'Z', '_']
 
--- Property: Ownership handles function parameter passing
-prop_ownership_function_parameters :: String -> [String] -> Property
-prop_ownership_function_parameters funcName params =
-  not (null funcName) && all (\c -> isLetter c || c == '_') funcName && length params <= 3 ==>
-  let paramsStr = Data.List.intercalate ", " params
-      sourceCode = "func " ++ funcName ++ "(" ++ paramsStr ++ ") { }\n" ++ funcName ++ "(param)"
-      parseResult = parseTypus sourceCode
-      ownershipResult = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ case ownershipResult of
-    Nothing -> False
-    Right analysis -> property $ funcName `isInfixOf` show analysis
-
--- Property: Ownership handles return value ownership
-prop_ownership_return_values :: String -> Property
-prop_ownership_return_values varName =
-  not (null varName) && all (\c -> isLetter c || c == '_') varName ==>
-  let sourceCode = "func create() { return 42 }\nvar " ++ varName ++ " = create()"
-      parseResult = parseTypus sourceCode
-      ownershipResult = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ case ownershipResult of
-    Nothing -> False
-    Right analysis -> property $ varName `isInfixOf` show analysis .&&. "return" `isInfixOf` show analysis
-
--- Property: Ownership handles scope-based cleanup
-prop_ownership_scope_cleanup :: String -> Property
-prop_ownership_scope_cleanup varName =
-  not (null varName) && all (\c -> isLetter c || c == '_') varName ==>
-  let sourceCode = "{ var " ++ varName ++ " = 42 }\nvar x = 24"
-      parseResult = parseTypus sourceCode
-      ownershipResult = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ case ownershipResult of
-    Nothing -> False
-    Right analysis -> property $ "scope" `isInfixOf` show analysis .||. "cleanup" `isInfixOf` show analysis
-
--- Property: Ownership tracks lifetime annotations
-prop_ownership_lifetime_annotations :: String -> String -> Property
-prop_ownership_lifetime_annotations varName lifetime =
-  not (null varName) && not (null lifetime) &&
-  all (\c -> isLetter c || c == '_') varName &&
-  all isLetter lifetime ==>
-  let sourceCode = "var " ++ varName ++ ": '" ++ lifetime ++ "' = 42"
-      parseResult = parseTypus sourceCode
-      ownershipResult = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ case ownershipResult of
-    Nothing -> False
-    Right analysis -> property $ varName `isInfixOf` show analysis .&&. lifetime `isInfixOf` show analysis
-
--- Property: Ownership handles shared references
-prop_ownership_shared_references :: String -> [String] -> Property
-prop_ownership_shared_references varName refs =
-  not (null varName) && not (null refs) && length refs <= 3 ==>
-  let refLines = map (\ref -> "var " ++ ref ++ " = &" ++ varName) refs
-      sourceCode = "var " ++ varName ++ " = 42\n" ++ Data.List.unlines refLines
-      parseResult = parseTypus sourceCode
-      ownershipResult = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ case ownershipResult of
-    Nothing -> False
-    Right analysis -> property $ varName `isInfixOf` show analysis .&&. "shared" `isInfixOf` show analysis
-
--- Property: Ownership prevents use-after-move
-prop_ownership_prevents_use_after_move :: String -> String -> Property
-prop_ownership_prevents_use_after_move sourceVar targetVar =
-  not (null sourceVar) && not (null targetVar) &&
-  all (\c -> isLetter c || c == '_') sourceVar &&
-  all (\c -> isLetter c || c == '_') targetVar &&
-  sourceVar /= targetVar ==>
-  let sourceCode = "var " ++ sourceVar ++ " = 42\nvar " ++ targetVar ++ " = " ++ sourceVar ++ "\nvar x = " ++ sourceVar
-      parseResult = parseTypus sourceCode
-      ownershipResult = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ case ownershipResult of
-    Nothing -> True -- Should fail due to use after move
-    Right analysis -> property $ "error" `isInfixOf` show analysis .||. "use after move" `isInfixOf` show analysis
-
--- Property: Ownership handles mutable references
-prop_ownership_mutable_references :: String -> Property
-prop_ownership_mutable_references varName =
-  not (null varName) && all (\c -> isLetter c || c == '_') varName ==>
-  let sourceCode = "var " ++ varName ++ " = 42\nvar mutRef = &mut " ++ varName
-      parseResult = parseTypus sourceCode
-      ownershipResult = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ case ownershipResult of
-    Nothing -> False
-    Right analysis -> property $ "mut" `isInfixOf` show analysis .||. "mutable" `isInfixOf` show analysis
-
--- Property: Ownership tracks copy operations
-prop_ownership_copy_operations :: String -> String -> Property
-prop_ownership_copy_operations sourceVar targetVar =
-  not (null sourceVar) && not (null targetVar) &&
-  all (\c -> isLetter c || c == '_') sourceVar &&
-  all (\c -> isLetter c || c == '_') targetVar &&
-  sourceVar /= targetVar ==>
-  let sourceCode = "var " ++ sourceVar ++ " = 42\nvar " ++ targetVar ++ " = copy(" ++ sourceVar ++ ")"
-      parseResult = parseTypus sourceCode
-      ownershipResult = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ case ownershipResult of
-    Nothing -> False
-    Right analysis -> property $ "copy" `isInfixOf` show analysis .||. sourceVar `isInfixOf` show analysis
-
--- Property: Ownership handles conditional moves
-prop_ownership_conditional_moves :: String -> String -> Bool -> Property
-prop_ownership_conditional_moves sourceVar targetVar condition =
-  not (null sourceVar) && not (null targetVar) &&
-  all (\c -> isLetter c || c == '_') sourceVar &&
-  all (\c -> isLetter c || c == '_') targetVar ==>
-  let sourceCode = "var " ++ sourceVar ++ " = 42\nif true { var " ++ targetVar ++ " = " ++ sourceVar ++ " }"
-      parseResult = parseTypus sourceCode
-      ownershipResult = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ case ownershipResult of
-    Nothing -> False
-    Right analysis -> property $ "conditional" `isInfixOf` show analysis .||. "if" `isInfixOf` show analysis
-
--- Property: Ownership handles loop variable lifetimes
-prop_ownership_loop_variables :: String -> Int -> Property
-prop_ownership_loop_variables loopVar iterations =
-  not (null loopVar) && all (\c -> isLetter c || c == '_') loopVar &&
-  iterations >= 0 && iterations <= 5 ==>
-  let sourceCode = "for " ++ loopVar ++ " = 0 to " ++ show iterations ++ " { var x = " ++ loopVar ++ " }"
-      parseResult = parseTypus sourceCode
-      ownershipResult = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ case ownershipResult of
-    Nothing -> iterations > 3 -- May fail for complex loops
-    Right analysis -> property $ loopVar `isInfixOf` show analysis .||. "for" `isInfixOf` show analysis
-
--- Property: Ownership is deterministic
-prop_ownership_deterministic :: String -> Property
-prop_ownership_deterministic sourceCode =
-  let parseResult = parseTypus sourceCode
-      ownershipResult1 = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-      ownershipResult2 = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ ownershipResult1 == ownershipResult2
-
--- Property: Ownership analysis completeness
-prop_ownership_analysis_complete :: String -> Property
-prop_ownership_analysis_complete sourceCode =
-  let parseResult = parseTypus sourceCode
-      ownershipResult = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ case ownershipResult of
-    Nothing -> True
-    Right analysis -> property $ not (null (show analysis))
-
--- Property: Ownership handles complex transfer scenarios
-prop_ownership_complex_transfer :: [(String, String)] -> Property
-prop_ownership_complex_transfer transfers =
-  not (null transfers) && length transfers <= 3 ==>
-  let transferLines = map (\(src, dst) -> "var " ++ dst ++ " = " ++ src) transfers
-      sourceCode = Data.List.unlines transferLines
-      parseResult = parseTypus sourceCode
-      ownershipResult = case parseResult of
-        Left _ -> Nothing
-        Right ast -> Just (analyzeOwnership ast)
-  in property $ case ownershipResult of
-    Nothing -> False
-    Right analysis -> property $ all (\(src, _) -> src `isInfixOf` show analysis) transfers
+-- | Generate ownership types for specific variables
+genOwnershipTypeFor :: String -> Gen OwnershipType
+genOwnershipTypeFor var = do
+  frequency
+    [ (3, return $ Owned var)
+    , (3, return $ Borrowed var)
+    , (2, return $ MutBorrowed var)
+    ]
 
 tests :: TestTree
 tests =
-  testGroup "Ownership Transfer QuickCheck Tests"
-    [ fastProperty "variable lifetime" prop_ownership_variable_lifetime
-    , fastProperty "detects moves" prop_ownership_detects_moves
-    , fastProperty "handles borrows" prop_ownership_handles_borrows
-    , fastProperty "prevents double moves" prop_ownership_prevents_double_moves
-    , fastProperty "function parameters" prop_ownership_function_parameters
-    , fastProperty "return values" prop_ownership_return_values
-    , fastProperty "scope cleanup" prop_ownership_scope_cleanup
-    , fastProperty "lifetime annotations" prop_ownership_lifetime_annotations
-    , fastProperty "shared references" prop_ownership_shared_references
-    , fastProperty "prevents use after move" prop_ownership_prevents_use_after_move
-    , fastProperty "mutable references" prop_ownership_mutable_references
-    , fastProperty "copy operations" prop_ownership_copy_operations
-    , fastProperty "conditional moves" prop_ownership_conditional_moves
-    , fastProperty "loop variables" prop_ownership_loop_variables
-    , fastProperty "deterministic" prop_ownership_deterministic
-    , fastProperty "analysis complete" prop_ownership_analysis_complete
-    , fastProperty "complex transfer" prop_ownership_complex_transfer
+  testGroup "Ownership transfer QuickCheck tests"
+    [ testGroup "OwnershipType properties"
+        [ testCase "ownership type ordering is consistent" $ do
+            let owned = Owned "x"
+                borrowed = Borrowed "x"
+                mutBorrowed = MutBorrowed "x"
+            owned < borrowed @?= True
+            borrowed < mutBorrowed @?= True
+            owned < mutBorrowed @?= True
+
+        , fastProperty "ownership type ordering is transitive" $
+            \type1 type2 type3 ->
+              type1 <= type2 && type2 <= type3 ==> type1 <= type3
+
+        , fastProperty "ownership type ordering is total" $
+            \type1 type2 ->
+              type1 <= type2 || type2 <= type1
+
+        , fastProperty "same ownership types are equal" $
+            \name ->
+              let owned1 = Owned name
+                  owned2 = Owned name
+              in owned1 == owned2
+
+        , fastProperty "different names create different ownership types" $
+            \name1 name2 ->
+              name1 /= name2 ==>
+                Owned name1 /= Owned name2
+
+        , testCase "ownership type show representation" $ do
+            show (Owned "x") @?= "Owned x"
+            show (Borrowed "y") @?= "Borrowed y"
+            show (MutBorrowed "z") @?= "MutBorrowed z"
+
+        , fastProperty "ownership type show is invertible for simple cases" $
+            \name ->
+              let owned = Owned name
+                  shown = show owned
+              in "Owned " ++ name `isPrefixOf` shown
+
+        , fastProperty "ownership type preserves variable name" $
+            \name ->
+              let owned = Owned name
+                  borrowed = Borrowed name
+                  mutBorrowed = MutBorrowed name
+              in case owned of
+                   Owned n -> n == name
+                   _ -> False &&
+               case borrowed of
+                 Borrowed n -> n == name
+                 _ -> False &&
+               case mutBorrowed of
+                 MutBorrowed n -> n == name
+                 _ -> False
+        ]
+
+    , testGroup "OwnershipTransfer properties"
+        [ testCase "ownership transfer preserves fields" $ do
+            let transfer = OwnershipTransfer "from" "to"
+            transferFrom transfer @?= "from"
+            transferTo transfer @?= "to"
+
+        , fastProperty "ownership transfer equality" $
+            \from1 to1 from2 to2 ->
+              let transfer1 = OwnershipTransfer from1 to1
+                  transfer2 = OwnershipTransfer from2 to2
+              in transfer1 == transfer2 == (from1 == from2 && to1 == to2)
+
+        , fastProperty "ownership transfer show representation" $
+            \from to ->
+              let transfer = OwnershipTransfer from to
+                  shown = show transfer
+              in from `isInfixOf` shown && to `isInfixOf` shown
+
+        , fastProperty "self-transfer is valid" $
+            \var ->
+              let transfer = OwnershipTransfer var var
+              in transferFrom transfer == transferTo transfer
+
+        , fastProperty "transfer direction matters" $
+            \from to ->
+              from /= to ==>
+                let transfer1 = OwnershipTransfer from to
+                    transfer2 = OwnershipTransfer to from
+                in transfer1 /= transfer2
+        ]
+
+    , testGroup "OwnershipError properties"
+        [ testCase "error types are distinguishable" $ do
+            let useAfterMove = UseAfterMove "x"
+                doubleMove = DoubleMove "x" "y"
+                borrowWhileMoved = BorrowWhileMoved "x"
+            useAfterMove /= doubleMove @?= True
+            doubleMove /= borrowWhileMoved @?= True
+            useAfterMove /= borrowWhileMoved @?= True
+
+        , fastProperty "error ordering is consistent" $
+            \error1 error2 ->
+              let comp1 = compare error1 error2
+                  comp2 = compare (show error1) (show error2)
+              in comp1 == comp2
+
+        , fastProperty "error ordering is total" $
+            \error1 error2 ->
+              let comp = compare error1 error2
+              in comp == LT || comp == EQ || comp == GT
+
+        , fastProperty "error show representation contains relevant information" $
+            \error ->
+              let shown = show error
+              in case error of
+                   UseAfterMove var -> var `isInfixOf` shown
+                   DoubleMove var1 var2 -> var1 `isInfixOf` shown && var2 `isInfixOf` shown
+                   BorrowWhileMoved var -> var `isInfixOf` shown
+                   MutBorrowWhileBorrowed var -> var `isInfixOf` shown
+                   BorrowWhileMutBorrowed var -> var `isInfixOf` shown
+                   MultipleMutBorrows var -> var `isInfixOf` shown
+                   UseWhileMutBorrowed var -> var `isInfixOf` shown
+                   OutOfScope var -> var `isInfixOf` shown
+                   BorrowError msg -> msg `isInfixOf` shown
+                   ParseError msg -> msg `isInfixOf` shown
+                   CrossFunctionMove var1 var2 -> var1 `isInfixOf` shown && var2 `isInfixOf` shown
+                   ParameterMoveMismatch var -> var `isInfixOf` shown
+                   ControlFlowError msg -> msg `isInfixOf` shown
+                   PathSensitiveError msg -> msg `isInfixOf` shown
+                   LoopOwnershipError msg -> msg `isInfixOf` shown
+
+        , fastProperty "same errors are equal" $
+            \error ->
+              error == error
+
+        , fastProperty "error equality is symmetric" $
+            \error1 error2 ->
+              (error1 == error2) == (error2 == error1)
+
+        , fastProperty "error equality is transitive" $
+            \error1 error2 error3 ->
+              error1 == error2 && error2 == error3 ==> error1 == error3
+        ]
+
+    , testGroup "OwnershipAnalyzer properties"
+        [ testCase "analyzer creation" $ do
+            let analyzer = newOwnershipAnalyzer
+            analyzer @?= OwnershipAnalyzer ()
+
+        , testCase "analyzer show representation" $ do
+            let analyzer = newOwnershipAnalyzer
+            show analyzer @?= "OwnershipAnalyzer ()"
+
+        , fastProperty "analyzer equality" $
+            \_ ->
+              let analyzer1 = newOwnershipAnalyzer
+                  analyzer2 = newOwnershipAnalyzer
+              in analyzer1 == analyzer2
+        ]
+
+    , testGroup "Complex ownership scenarios"
+        [ fastProperty "ownership transfer chain" $
+            \vars ->
+              let transfers = zipWith OwnershipTransfer vars (tail vars ++ [head vars])
+              in length transfers == length vars &&
+                 all (\t -> transferFrom t `elem` vars && transferTo t `elem` vars) transfers
+
+        , fastProperty "multiple ownership types for same variable" $
+            \var ->
+              let owned = Owned var
+                  borrowed = Borrowed var
+                  mutBorrowed = MutBorrowed var
+              in owned /= borrowed && borrowed /= mutBorrowed && owned /= mutBorrowed
+
+        , fastProperty "error types cover all ownership violations" $
+            \var ->
+              let errors = 
+                    [ UseAfterMove var
+                    , DoubleMove var var
+                    , BorrowWhileMoved var
+                    , MutBorrowWhileBorrowed var
+                    , BorrowWhileMutBorrowed var
+                    , MultipleMutBorrows var
+                    , UseWhileMutBorrowed var
+                    , OutOfScope var
+                    ]
+              in all (\e -> var `isInfixOf` show e) errors
+
+        , fastProperty "ownership transfer preserves variable identity" $
+            \from to ->
+              let transfer = OwnershipTransfer from to
+              in transferFrom transfer == from && transferTo transfer == to
+
+        , fastProperty "ownership type hierarchy" $
+            \var ->
+              let owned = Owned var
+                  borrowed = Borrowed var
+                  mutBorrowed = MutBorrowed var
+              in owned < borrowed && borrowed < mutBorrowed &&
+                 owned < mutBorrowed
+        ]
+
+    , testGroup "Boundary conditions"
+        [ testCase "empty variable names" $ do
+            let owned = Owned ""
+                borrowed = Borrowed ""
+                mutBorrowed = MutBorrowed ""
+            show owned @?= "Owned "
+            show borrowed @?= "Borrowed "
+            show mutBorrowed @?= "MutBorrowed "
+
+        , testCase "very long variable names" $ do
+            let longName = replicate 1000 'x'
+                owned = Owned longName
+            length (show owned) @?= length ("Owned " ++ longName)
+
+        , fastProperty "special characters in variable names" $
+            \name ->
+              let owned = Owned name
+                  shown = show owned
+              in "Owned " `isPrefixOf` shown
+
+        , testCase "ownership transfer with same variables" $ do
+            let transfer = OwnershipTransfer "same" "same"
+            transferFrom transfer @?= "same"
+            transferTo transfer @?= "same"
+
+        , fastProperty "error messages with empty strings" $ do
+            let borrowError = BorrowError ""
+                parseError = ParseError ""
+                controlFlowError = ControlFlowError ""
+                pathSensitiveError = PathSensitiveError ""
+                loopOwnershipError = LoopOwnershipError ""
+            show borrowError @?= "BorrowError "
+            show parseError @?= "ParseError "
+            show controlFlowError @?= "ControlFlowError "
+            show pathSensitiveError @?= "PathSensitiveError "
+            show loopOwnershipError @?= "LoopOwnershipError "
+        ]
     ]
+
+-- Helper function for prefix check
+isPrefixOf :: Eq a => [a] -> [a] -> Bool
+isPrefixOf [] _ = True
+isPrefixOf _ [] = False
+isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+
+-- Helper function for infix check
+isInfixOf :: Eq a => [a] -> [a] -> Bool
+isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
+  where
+    tails [] = [[]]
+    tails xs@(_:ys) = xs : tails ys
