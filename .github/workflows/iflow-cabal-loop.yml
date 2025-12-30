@@ -133,4 +133,4 @@ jobs:
           # 推送到 GitHub（origin）和 Gitee（gitee）
           # --follow-tags 会推送可达的 annotated tags（你的 release tag 是 annotated）
           git push origin "HEAD:${BRANCH}" --follow-tags
-          git push gitee "HEAD:${BRANCH}" --follow-tags
+          git push gitee "HEAD:${BRANCH}" --follow-tags --force
